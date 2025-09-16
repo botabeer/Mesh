@@ -60,11 +60,21 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    text = event.message.text
-    if text == "سؤال":
+    text = event.message.text.strip()
+
+    # الكلمات الصحيحة والأخطاء الشائعة
+    trigger_words = [
+        "سؤال", "سوال",
+        "أسئلة", "اسئلة", "اسأله", "اساله", "أساله", "أسالة"
+    ]
+
+    if text in trigger_words:
         questions = random.sample(personal_questions, 10)
         reply = "\n".join(questions)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply)
+        )
 
 if __name__ == "__main__":
     app.run(port=5000)
