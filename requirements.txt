@@ -1,3 +1,2 @@
 flask
-line-bot-sdk==1.20.0
-gunicorn
+line-bot-sdk
