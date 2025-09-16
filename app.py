@@ -1,54 +1,32 @@
 from flask import Flask, request, abort
+from dotenv import load_dotenv
+import os
+import random
+
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-    Mention, Mentionee
-)
-import os
-import re
-import random
-from collections import defaultdict
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
+
+load_dotenv()
 
 app = Flask(__name__)
 
-# بيانات البوت من .env
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
+handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
+# تخزين حالة تشغيل البوت
+bot_enabled = True
 
-# حالة البوت (تشغيل / تعطيل)
-bot_active = True
-
-# عداد الروابط
-link_count = defaultdict(int)
-
-# نمط الروابط
-url_pattern = re.compile(r'https?://\\S+')
+# تخزين عدد الروابط لكل مستخدم
+link_counter = {}
 
 # تحميل الأسئلة
-def load_questions():
-    try:
-        with open("questions.txt", "r", encoding="utf-8") as f:
-            return [line.strip() for line in f if line.strip()]
-    except FileNotFoundError:
-        return ["ملف الأسئلة غير موجود"]
+with open("questions.txt", "r", encoding="utf-8") as f:
+    QUESTIONS = [q.strip() for q in f.readlines() if q.strip()]
 
-questions = load_questions()
-
-# تحميل المساعدة
-def load_help():
-    try:
-        with open("help.txt", "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return "لا يوجد ملف مساعدة"
-
-@app.route("/callback", methods=['POST'])
+@app.route("/callback", methods=["POST"])
 def callback():
-    signature = request.headers.get('X-Line-Signature', '')
+    signature = request.headers["X-Line-Signature"]
     body = request.get_data(as_text=True)
 
     try:
@@ -56,108 +34,49 @@ def callback():
     except InvalidSignatureError:
         abort(400)
 
-    return 'OK'
+    return "OK"
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    global bot_active, questions
+    global bot_enabled
 
     user_id = event.source.user_id
     text = event.message.text.strip()
 
     # أمر تشغيل
     if text == "تشغيل":
-        bot_active = True
-        questions = load_questions()
-        start_msg = TextSendMessage(
-            text="تم تشغيل البوت بواسطة <MENTION>",
-            mention=Mention(
-                mentionees=[Mentionee(user_id=user_id, type="user")]
-            )
+        bot_enabled = True
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="البوت يعمل الآن")
         )
-        line_bot_api.reply_message(event.reply_token, start_msg)
         return
 
     # أمر تعطيل
     if text == "تعطيل":
-        bot_active = False
-        stop_msg = TextSendMessage(
-            text="تم إيقاف البوت مؤقتًا بواسطة <MENTION>",
-            mention=Mention(
-                mentionees=[Mentionee(user_id=user_id, type="user")]
-            )
-        )
-        line_bot_api.reply_message(event.reply_token, stop_msg)
-        return
-
-    # أمر الحالة
-    if text == "الحالة":
-        status_text = "البوت يعمل الآن" if bot_active else "البوت متوقف حاليًا"
-        status_msg = TextSendMessage(
-            text=f"{status_text} <MENTION>",
-            mention=Mention(
-                mentionees=[Mentionee(user_id=user_id, type="user")]
-            )
-        )
-        line_bot_api.reply_message(event.reply_token, status_msg)
-        return
-
-    # لو البوت متوقف → ما يرد
-    if not bot_active:
-        return
-
-    # حماية الروابط
-    if url_pattern.search(text):
-        link_count[user_id] += 1
-
-        if link_count[user_id] == 2:
-            try:
-                line_bot_api.delete_message(event.message.id)
-            except Exception as e:
-                print("خطأ عند حذف الرسالة:", e)
-
-            warning_text = TextSendMessage(
-                text="الرجاء عدم تكرار الروابط <MENTION>",
-                mention=Mention(
-                    mentionees=[Mentionee(user_id=user_id, type="user")]
-                )
-            )
-            line_bot_api.reply_message(event.reply_token, warning_text)
-
-        elif link_count[user_id] >= 3 and event.source.type == "group":
-            try:
-                line_bot_api.delete_message(event.message.id)
-            except Exception as e:
-                print("خطأ عند حذف الرسالة:", e)
-
-            try:
-                line_bot_api.kickout_from_group(event.source.group_id, user_id)
-                alert_text = TextSendMessage(
-                    text="تم طرد <MENTION> بسبب تكرار الروابط",
-                    mention=Mention(
-                        mentionees=[Mentionee(user_id=user_id, type="user")]
-                    )
-                )
-                line_bot_api.push_message(event.source.group_id, alert_text)
-
-            except Exception as e:
-                print("خطأ عند الطرد:", e)
-        return
-
-    # أمر مساعدة
-    if text == "مساعدة":
-        help_text = load_help()
-        reply_msg = f"قائمة الأوامر:\n{help_text}"
+        bot_enabled = False
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=reply_msg)
+            TextSendMessage(text="تم إيقاف البوت")
         )
         return
 
-    # أوامر الأسئلة
-    keywords = ["سوال", "سؤال", "اسئله", "اسئلة", "أساله", "أسألة"]
-    if any(word in text for word in keywords):
-        question = random.choice(questions)
+    if not bot_enabled:
+        return
+
+    # حماية من تكرار الروابط
+    if "http://" in text or "https://" in text:
+        link_counter[user_id] = link_counter.get(user_id, 0) + 1
+        if link_counter[user_id] >= 2:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"ممنوع تكرار الروابط يا @{user_id}")
+            )
+        return
+
+    # الأسئلة
+    if text in ["سؤال", "اسئلة", "اساله", "اسألة"]:
+        question = random.choice(QUESTIONS)
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=question)
@@ -165,5 +84,4 @@ def handle_message(event):
         return
 
 if __name__ == "__main__":
-    # خادوم افتراضي للتشغيل المحلي
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    app.run(port=8000)
