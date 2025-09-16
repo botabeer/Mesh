@@ -1,5 +1,5 @@
 flask
 python-dotenv
-line-bot-sdk==2.5.0
+line-bot-sdk==2.4.2
 apscheduler
 gunicorn
