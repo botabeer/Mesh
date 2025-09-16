@@ -5,7 +5,7 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os
 import random
 
-from questions import questions  # استيراد الأسئلة
+from questions import questions  # استيراد قائمة الأسئلة
 
 app = Flask(__name__)
 
@@ -18,6 +18,22 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 # فلتر الروابط
 links_count = {}
+
+# تتبع الأسئلة المستخدمة
+used_questions = []
+
+def get_random_questions(num=10):
+    global used_questions
+    
+    # إعادة التهيئة إذا ما بقي أسئلة كافية
+    if len(used_questions) + num > len(questions):
+        used_questions = []
+    
+    remaining = list(set(questions) - set(used_questions))
+    selected = random.sample(remaining, num)
+    used_questions.extend(selected)
+    
+    return selected
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -49,7 +65,7 @@ def handle_message(event):
         help_text = (
             "أوامر البوت:\n\n"
             "تشغيل ← لتشغيل البوت\n"
-            "سؤال ← يعطيك 10 أسئلة عشوائية\n"
+            "سؤال ← يعطيك 10 أسئلة عشوائية بدون تكرار حتى تنتهي القائمة\n"
             "الروابط المكررة غير مسموحة"
         )
         line_bot_api.reply_message(
@@ -57,9 +73,9 @@ def handle_message(event):
             TextSendMessage(text=help_text)
         )
 
-    # الأسئلة (10 عشوائية كل مرة)
+    # الأسئلة (10 عشوائية كل مرة بدون تكرار)
     elif text in ["سؤال", "اسئلة", "سوال", "اساله", "اسالة", "أساله", "أسألة"]:
-        selected = random.sample(questions, 10)
+        selected = get_random_questions(10)
         reply_text = "\n".join(f"- {q}" for q in selected)
         line_bot_api.reply_message(
             event.reply_token,
