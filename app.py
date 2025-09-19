@@ -95,5 +95,5 @@ def handle_message(event):
                     TextSendMessage(text="الرجاء عدم تكرار الروابط")
                 )
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => console.log(`Running on ${PORT}`));
