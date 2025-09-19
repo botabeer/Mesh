@@ -22,18 +22,26 @@ links_count = {}
 # تتبع الأسئلة المستخدمة
 used_questions = []
 
+
 def get_random_questions(num=10):
     global used_questions
-    
-    # إعادة التهيئة إذا ما بقي أسئلة كافية
-    if len(used_questions) + num > len(questions):
-        used_questions = []
-    
+
     remaining = list(set(questions) - set(used_questions))
+
+    # إذا خلصت الأسئلة كلها → نعيد التهيئة ونعيد الخلط من جديد
+    if len(remaining) == 0:
+        used_questions = []
+        remaining = questions.copy()
+
+    # إذا الباقي أقل من العدد المطلوب
+    if len(remaining) < num:
+        num = len(remaining)
+
     selected = random.sample(remaining, num)
     used_questions.extend(selected)
-    
+
     return selected
+
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -65,7 +73,7 @@ def handle_message(event):
         help_text = (
             "أوامر البوت:\n\n"
             "تشغيل ← لتشغيل البوت\n"
-            "سؤال ← يعطيك 10 أسئلة عشوائية بدون تكرار حتى تنتهي القائمة\n"
+            "سؤال ← يعطيك 10 أسئلة عشوائية بدون تكرار حتى تنتهي القائمة ثم يعيد الخلط\n"
             "الروابط المكررة غير مسموحة"
         )
         line_bot_api.reply_message(
@@ -73,7 +81,7 @@ def handle_message(event):
             TextSendMessage(text=help_text)
         )
 
-    # الأسئلة (10 عشوائية كل مرة بدون تكرار)
+    # الأسئلة (10 عشوائية كل مرة بدون تكرار حتى تنتهي القائمة)
     elif text in ["سؤال", "اسئلة", "سوال", "اساله", "اسالة", "أساله", "أسألة"]:
         selected = get_random_questions(10)
         reply_text = "\n".join(f"- {q}" for q in selected)
@@ -95,5 +103,8 @@ def handle_message(event):
                     TextSendMessage(text="الرجاء عدم تكرار الروابط")
                 )
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`Running on ${PORT}`));
+
+# نقطة تشغيل التطبيق
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
