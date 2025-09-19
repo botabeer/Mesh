@@ -43,6 +43,13 @@ def get_random_questions(num=10):
     return selected
 
 
+# الصفحة الرئيسية (للتأكد أن السيرفر شغال)
+@app.route("/", methods=["GET"])
+def home():
+    return "✅ البوت شغال تمام"
+
+
+# Webhook للـ LINE
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
