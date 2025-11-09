@@ -6,91 +6,66 @@ class GuessGame:
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
         self.current_word = None
-        self.current_synonyms = None
-        self.first_letter = None
+        self.hint = None
         self.category = None
-
-        # قاعدة بيانات ضخمة جداً مع فصحى وعامية سعودية
+        self.first_letter = None
+        self.current_question = 1
+        self.max_questions = 10
+        self.players_scores = {}
+        self.hint_used = False
+        
+        # قائمة الألغاز المنظمة حسب الفئات
         self.riddles = [
-            # المطبخ
-            {"category": "المطبخ", "answer": "قدر", "synonyms": ["قدر", "طنجرة", "طنجره"], "first_letter": "ق"},
-            {"category": "المطبخ", "answer": "ملعقة", "synonyms": ["ملعقة", "ملاعق"], "first_letter": "م"},
-            {"category": "المطبخ", "answer": "صحن", "synonyms": ["صحن", "طبق"], "first_letter": "ص"},
-            {"category": "المطبخ", "answer": "فرن", "synonyms": ["فرن", "مواقد"], "first_letter": "ف"},
-            {"category": "المطبخ", "answer": "كوب", "synonyms": ["كوب", "كاسة"], "first_letter": "ك"},
-            {"category": "المطبخ", "answer": "مقلاة", "synonyms": ["مقلاة", "طاسة"], "first_letter": "م"},
-            {"category": "المطبخ", "answer": "براد", "synonyms": ["براد", "غلاية"], "first_letter": "ب"},
-            {"category": "المطبخ", "answer": "سكاكين", "synonyms": ["سكاكين", "سكين"], "first_letter": "س"},
-
-            # غرفة النوم
-            {"category": "غرفة النوم", "answer": "سرير", "synonyms": ["سرير", "فراش"], "first_letter": "س"},
-            {"category": "غرفة النوم", "answer": "وسادة", "synonyms": ["وسادة", "مخدة"], "first_letter": "و"},
-            {"category": "غرفة النوم", "answer": "خزانة", "synonyms": ["خزانة", "دولاب"], "first_letter": "خ"},
-            {"category": "غرفة النوم", "answer": "مصباح", "synonyms": ["مصباح", "لمبة", "لمبه"], "first_letter": "م"},
-            {"category": "غرفة النوم", "answer": "ستارة", "synonyms": ["ستارة", "بردايه"], "first_letter": "س"},
-            {"category": "غرفة النوم", "answer": "مكتب", "synonyms": ["مكتب", "ترابيزه"], "first_letter": "م"},
-
-            # المجلس
-            {"category": "المجلس", "answer": "كنب", "synonyms": ["كنب", "أريكة", "صوفا"], "first_letter": "ك"},
-            {"category": "المجلس", "answer": "مفرش", "synonyms": ["مفرش", "سجاد", "سجاده"], "first_letter": "م"},
-            {"category": "المجلس", "answer": "طاولة", "synonyms": ["طاولة", "ترابيزة"], "first_letter": "ط"},
-            {"category": "المجلس", "answer": "كرسي", "synonyms": ["كرسي", "كرسيه"], "first_letter": "ك"},
-
-            # المدرسة
-            {"category": "المدرسة", "answer": "قلم", "synonyms": ["قلم", "قلام"], "first_letter": "ق"},
-            {"category": "المدرسة", "answer": "دفتر", "synonyms": ["دفتر", "كراسة"], "first_letter": "د"},
-            {"category": "المدرسة", "answer": "ممحاة", "synonyms": ["ممحاة", "ممسحه"], "first_letter": "م"},
-            {"category": "المدرسة", "answer": "سبورة", "synonyms": ["سبورة", "لوح"], "first_letter": "س"},
-            {"category": "المدرسة", "answer": "حقيبة", "synonyms": ["حقيبة", "شنطة"], "first_letter": "ح"},
-            {"category": "المدرسة", "answer": "ألوان", "synonyms": ["ألوان", "دراجات"], "first_letter": "أ"},
-
-            # أدوات شخصية
-            {"category": "أدوات شخصية", "answer": "فرشاة أسنان", "synonyms": ["فرشاة أسنان", "فرشاه"], "first_letter": "ف"},
-            {"category": "أدوات شخصية", "answer": "مشط", "synonyms": ["مشط", "مشطه"], "first_letter": "م"},
-            {"category": "أدوات شخصية", "answer": "صابون", "synonyms": ["صابون", "صابونه"], "first_letter": "ص"},
-            {"category": "أدوات شخصية", "answer": "مزيل عرق", "synonyms": ["مزيل عرق", "ديودرنت"], "first_letter": "م"},
-            {"category": "أدوات شخصية", "answer": "مناشف", "synonyms": ["مناشف", "فوطة"], "first_letter": "م"},
-
-            # الفواكه
-            {"category": "الفواكه", "answer": "تفاح", "synonyms": ["تفاح", "تفاحه"], "first_letter": "ت"},
-            {"category": "الفواكه", "answer": "موز", "synonyms": ["موز", "موزه"], "first_letter": "م"},
-            {"category": "الفواكه", "answer": "برتقال", "synonyms": ["برتقال", "برتقاله"], "first_letter": "ب"},
-            {"category": "الفواكه", "answer": "كيوي", "synonyms": ["كيوي", "كيوا"], "first_letter": "ك"},
-            {"category": "الفواكه", "answer": "عنب", "synonyms": ["عنب", "عِنب"], "first_letter": "ع"},
-            {"category": "الفواكه", "answer": "رمان", "synonyms": ["رمان"], "first_letter": "ر"},
-            {"category": "الفواكه", "answer": "خوخ", "synonyms": ["خوخ"], "first_letter": "خ"},
-
-            # الحلويات
-            {"category": "الحلويات", "answer": "كيك", "synonyms": ["كيك", "كعكة", "كيكه"], "first_letter": "ك"},
-            {"category": "الحلويات", "answer": "بسكويت", "synonyms": ["بسكويت", "كعك"], "first_letter": "ب"},
-            {"category": "الحلويات", "answer": "شوكولاتة", "synonyms": ["شوكولاتة", "شوكولا"], "first_letter": "ش"},
-            {"category": "الحلويات", "answer": "حلاوة", "synonyms": ["حلاوة", "حلا"], "first_letter": "ح"},
-
-            # الحيوانات
-            {"category": "حيوانات", "answer": "قطة", "synonyms": ["قطة", "بسة"], "first_letter": "ق"},
-            {"category": "حيوانات", "answer": "كلب", "synonyms": ["كلب", "جرو"], "first_letter": "ك"},
-            {"category": "حيوانات", "answer": "حصان", "synonyms": ["حصان", "خيل"], "first_letter": "ح"},
-            {"category": "حيوانات", "answer": "جمل", "synonyms": ["جمل", "ناقة"], "first_letter": "ج"},
-            {"category": "حيوانات", "answer": "غزال", "synonyms": ["غزال"], "first_letter": "غ"},
-
-            # الطبيعة
-            {"category": "الطبيعة", "answer": "شجرة", "synonyms": ["شجرة", "نخلة"], "first_letter": "ش"},
-            {"category": "الطبيعة", "answer": "زهرة", "synonyms": ["زهرة", "وردة"], "first_letter": "ز"},
-            {"category": "الطبيعة", "answer": "نهر", "synonyms": ["نهر", "جدول"], "first_letter": "ن"},
-            {"category": "الطبيعة", "answer": "جبل", "synonyms": ["جبل", "هضبة"], "first_letter": "ج"},
-
-            # السيارات
-            {"category": "السيارات", "answer": "سيارة", "synonyms": ["سيارة", "عربية"], "first_letter": "س"},
-            {"category": "السيارات", "answer": "دراجة", "synonyms": ["دراجة", "موتوسيكل"], "first_letter": "د"},
-            {"category": "السيارات", "answer": "حافلة", "synonyms": ["حافلة", "باص"], "first_letter": "ح"},
-
-            # الرياضة
-            {"category": "الرياضة", "answer": "كرة قدم", "synonyms": ["كرة قدم", "كورة"], "first_letter": "ك"},
-            {"category": "الرياضة", "answer": "سباحة", "synonyms": ["سباحة"], "first_letter": "س"},
-            {"category": "الرياضة", "answer": "جري", "synonyms": ["جري", "ركض"], "first_letter": "ج"},
+            {"category": "المطبخ", "answer": "قدر", "first_letter": "ق"},
+            {"category": "المطبخ", "answer": "ملعقة", "first_letter": "م"},
+            {"category": "المطبخ", "answer": "سكين", "first_letter": "س"},
+            {"category": "المطبخ", "answer": "طنجرة", "first_letter": "ط"},
+            {"category": "المطبخ", "answer": "كوب", "first_letter": "ك"},
+            {"category": "المطبخ", "answer": "صحن", "first_letter": "ص"},
+            {"category": "المطبخ", "answer": "فرن", "first_letter": "ف"},
+            {"category": "المطبخ", "answer": "ثلاجة", "first_letter": "ث"},
+            {"category": "المطبخ", "answer": "خلاط", "first_letter": "خ"},
+            {"category": "المطبخ", "answer": "مقلاة", "first_letter": "م"},
+            {"category": "المدرسة", "answer": "مسطرة", "first_letter": "م"},
+            {"category": "المدرسة", "answer": "قلم", "first_letter": "ق"},
+            {"category": "المدرسة", "answer": "كتاب", "first_letter": "ك"},
+            {"category": "المدرسة", "answer": "دفتر", "first_letter": "د"},
+            {"category": "المدرسة", "answer": "ممحاة", "first_letter": "م"},
+            {"category": "المدرسة", "answer": "شنطة", "first_letter": "ش"},
+            {"category": "المدرسة", "answer": "طاولة", "first_letter": "ط"},
+            {"category": "المدرسة", "answer": "سبورة", "first_letter": "س"},
+            {"category": "المدرسة", "answer": "براية", "first_letter": "ب"},
+            {"category": "المدرسة", "answer": "حقيبة", "first_letter": "ح"},
+            {"category": "البيت", "answer": "باب", "first_letter": "ب"},
+            {"category": "البيت", "answer": "نافذة", "first_letter": "ن"},
+            {"category": "البيت", "answer": "سرير", "first_letter": "س"},
+            {"category": "البيت", "answer": "كرسي", "first_letter": "ك"},
+            {"category": "البيت", "answer": "مرآة", "first_letter": "م"},
+            {"category": "البيت", "answer": "تلفاز", "first_letter": "ت"},
+            {"category": "البيت", "answer": "ساعة", "first_letter": "س"},
+            {"category": "البيت", "answer": "مكتب", "first_letter": "م"},
+            {"category": "الشارع", "answer": "سيارة", "first_letter": "س"},
+            {"category": "الشارع", "answer": "إشارة", "first_letter": "ا"},
+            {"category": "الشارع", "answer": "رصيف", "first_letter": "ر"},
+            {"category": "الشارع", "answer": "شجرة", "first_letter": "ش"},
+            {"category": "الشارع", "answer": "دراجة", "first_letter": "د"},
+            {"category": "الشارع", "answer": "حافلة", "first_letter": "ح"},
+            {"category": "المستشفى", "answer": "سرير", "first_letter": "س"},
+            {"category": "المستشفى", "answer": "حقنة", "first_letter": "ح"},
+            {"category": "المستشفى", "answer": "دواء", "first_letter": "د"},
+            {"category": "المستشفى", "answer": "كرسي", "first_letter": "ك"},
+            {"category": "المستشفى", "answer": "ميزان", "first_letter": "م"},
+            {"category": "الملابس", "answer": "قميص", "first_letter": "ق"},
+            {"category": "الملابس", "answer": "بنطال", "first_letter": "ب"},
+            {"category": "الملابس", "answer": "حذاء", "first_letter": "ح"},
+            {"category": "الملابس", "answer": "جورب", "first_letter": "ج"},
+            {"category": "الملابس", "answer": "معطف", "first_letter": "م"},
+            {"category": "الملابس", "answer": "طاقية", "first_letter": "ط"},
+            {"category": "الملابس", "answer": "عباءة", "first_letter": "ع"}
         ]
-
+    
     def normalize_text(self, text):
+        """تطبيع النص للمقارنة"""
         text = text.strip().lower()
         text = re.sub(r'^ال', '', text)
         text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
@@ -98,40 +73,117 @@ class GuessGame:
         text = text.replace('ى', 'ي')
         text = re.sub(r'[\u064B-\u065F]', '', text)
         return text
-
+    
     def start_game(self):
+        self.current_question = 1
+        self.players_scores = {}
+        return self.next_question()
+    
+    def next_question(self):
+        """الانتقال للسؤال التالي"""
+        if self.current_question > self.max_questions:
+            return self.end_game()
+        
         riddle = random.choice(self.riddles)
         self.current_word = riddle["answer"].lower()
-        self.current_synonyms = [self.normalize_text(s) for s in riddle.get("synonyms", [self.current_word])]
         self.category = riddle["category"]
         self.first_letter = riddle["first_letter"]
-
+        self.hint_used = False
+        
         return TextSendMessage(
-            text=f"خمن:\nشيء في {self.category}\nيبدأ بحرف: {self.first_letter}\nما هو؟"
+            text=f"السؤال {self.current_question}/{self.max_questions}\n\nشيء في {self.category}\nيبدأ بحرف: {self.first_letter}\n\nما هو؟"
         )
-
+    
+    def get_hint(self):
+        """الحصول على تلميح"""
+        if self.hint_used:
+            return TextSendMessage(text="تم استخدام التلميح مسبقاً")
+        
+        self.hint_used = True
+        hint = f"عدد الأحرف: {len(self.current_word)}"
+        
+        return TextSendMessage(text=f"تلميح:\n{hint}")
+    
+    def show_answer(self):
+        """عرض الإجابة الصحيحة"""
+        msg = f"الإجابة الصحيحة: {self.current_word}"
+        
+        self.current_question += 1
+        
+        if self.current_question <= self.max_questions:
+            return self.next_question()
+        else:
+            return self.end_game()
+    
+    def end_game(self):
+        """إنهاء اللعبة وعرض النتائج"""
+        if not self.players_scores:
+            return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
+        
+        sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        
+        msg = "النتائج النهائية\n\n"
+        for i, (name, data) in enumerate(sorted_players[:5], 1):
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
+            msg += f"{emoji} {name}: {data['score']} نقطة\n"
+        
+        winner = sorted_players[0]
+        msg += f"\nالفائز: {winner[0]}"
+        
+        return TextSendMessage(text=msg)
+    
     def check_answer(self, answer, user_id, display_name):
         if not self.current_word:
             return None
-
-        user_answer = self.normalize_text(answer)
-
-        if user_answer in self.current_synonyms:
-            points = 10
-            msg = f"ممتاز يا {display_name}!\nالإجابة: {self.current_word}\nمن {self.category}\n+{points} نقطة"
-            self.current_word = None
-            self.current_synonyms = None
+        
+        # التحقق من أوامر التلميح والإجابة
+        if answer == 'لمح':
             return {
-                'message': msg,
-                'points': points,
-                'won': True,
-                'game_over': True,
-                'response': TextSendMessage(text=msg)
-            }
-        else:
-            return {
-                'message': f"خطأ! حاول مرة أخرى\nشيء في {self.category} يبدأ بـ: {self.first_letter}",
+                'message': '',
                 'points': 0,
                 'game_over': False,
-                'response': TextSendMessage(text=f"خطأ! حاول مرة أخرى\nشيء في {self.category} يبدأ بـ: {self.first_letter}")
+                'response': self.get_hint()
             }
+        
+        if answer == 'جاوب':
+            return {
+                'message': '',
+                'points': 0,
+                'game_over': self.current_question > self.max_questions,
+                'response': self.show_answer()
+            }
+        
+        user_answer = self.normalize_text(answer)
+        correct_answer = self.normalize_text(self.current_word)
+        
+        if user_answer == correct_answer:
+            points = 10 if not self.hint_used else 5
+            
+            if display_name not in self.players_scores:
+                self.players_scores[display_name] = {'score': 0}
+            self.players_scores[display_name]['score'] += points
+            
+            msg = f"صحيح يا {display_name}\n+{points} نقطة"
+            
+            self.current_question += 1
+            
+            if self.current_question <= self.max_questions:
+                next_q = self.next_question()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': False,
+                    'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+                }
+            else:
+                end_msg = self.end_game()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': True,
+                    'response': TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+                }
+        
+        return None
