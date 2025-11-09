@@ -12,8 +12,11 @@ class WordColorGame:
         self.switch_key = switch_key
         self.current_color = None
         self.current_category = None
-        self.start_time = None
         self.model = None
+        self.current_question = 1
+        self.max_questions = 10
+        self.players_scores = {}
+        self.hint_used = False
         
         # تهيئة AI
         if self.use_ai and self.get_api_key:
@@ -26,32 +29,32 @@ class WordColorGame:
                 print(f"AI initialization error: {e}")
                 self.use_ai = False
         
-        # قائمة الفئات والألوان
+        # قائمة الفئات والألوان مع أمثلة كثيرة
         self.categories_colors = {
             "فاكهة": {
-                "أحمر": ["تفاح", "تفاحة", "فراولة", "كرز", "رمان"],
-                "أخضر": ["عنب", "تفاح", "كيوي"],
-                "أصفر": ["موز", "ليمون", "مانجو", "أناناس"],
-                "برتقالي": ["برتقال", "برتقالة", "مانجو", "خوخ"],
-                "بنفسجي": ["عنب", "توت"]
+                "أحمر": ["تفاح", "تفاحة", "فراولة", "كرز", "رمان", "فراوله", "توت"],
+                "أخضر": ["عنب", "تفاح", "كيوي", "تفاح أخضر", "عنب أخضر"],
+                "أصفر": ["موز", "ليمون", "مانجو", "أناناس", "ليمونة", "موزة"],
+                "برتقالي": ["برتقال", "برتقالة", "مانجو", "خوخ", "مشمش"],
+                "بنفسجي": ["عنب", "توت", "عنب أحمر", "تين"]
             },
             "خضار": {
-                "أحمر": ["طماطم", "فلفل", "بنجر", "شمندر"],
-                "أخضر": ["خيار", "خس", "ملوخية", "فلفل", "بقدونس"],
-                "أصفر": ["فلفل", "ذرة"],
-                "برتقالي": ["جزر", "يقطين", "قرع"],
-                "أبيض": ["بصل", "ثوم", "قرنبيط"]
+                "أحمر": ["طماطم", "فلفل", "بنجر", "شمندر", "فلفل أحمر"],
+                "أخضر": ["خيار", "خس", "ملوخية", "فلفل", "بقدونس", "كوسة", "فاصوليا"],
+                "أصفر": ["فلفل", "ذرة", "فلفل أصفر"],
+                "برتقالي": ["جزر", "يقطين", "قرع", "جزرة"],
+                "أبيض": ["بصل", "ثوم", "قرنبيط", "بصلة", "فجل"]
             },
             "حيوان": {
-                "أسود": ["غراب", "قط", "كلب"],
-                "أبيض": ["قط", "أرنب", "حمامة", "بجعة"],
-                "بني": ["جمل", "كلب", "دب"],
-                "أصفر": ["كناري", "عصفور"],
-                "رمادي": ["فيل", "ذئب", "حمار"]
+                "أسود": ["غراب", "قط", "كلب", "دب", "قطة"],
+                "أبيض": ["قط", "أرنب", "حمامة", "بجعة", "قطة"],
+                "بني": ["جمل", "كلب", "دب", "حصان", "أسد"],
+                "أصفر": ["كناري", "عصفور", "أسد"],
+                "رمادي": ["فيل", "ذئب", "حمار", "فأر"]
             },
             "طيور": {
                 "أسود": ["غراب", "نسر"],
-                "أبيض": ["حمامة", "بجعة"],
+                "أبيض": ["حمامة", "بجعة", "نورس"],
                 "أحمر": ["فلامنجو"],
                 "أصفر": ["كناري", "عصفور"],
                 "أزرق": ["طاووس", "ببغاء"]
@@ -69,36 +72,110 @@ class WordColorGame:
         return text
     
     def start_game(self):
+        self.current_question = 1
+        self.players_scores = {}
+        return self.next_question()
+    
+    def next_question(self):
+        """الانتقال للسؤال التالي"""
+        if self.current_question > self.max_questions:
+            return self.end_game()
+        
         self.current_category = random.choice(list(self.categories_colors.keys()))
         available_colors = list(self.categories_colors[self.current_category].keys())
         self.current_color = random.choice(available_colors)
-        self.start_time = datetime.now()
+        self.hint_used = False
         
         return TextSendMessage(
-            text=f"🎨 اذكر {self.current_category} لونها {self.current_color}\n\n⏱️ لديك وقت محدود"
+            text=f"السؤال {self.current_question}/{self.max_questions}\n\nاذكر {self.current_category} لونها {self.current_color}"
         )
+    
+    def get_hint(self):
+        """الحصول على تلميح"""
+        if self.hint_used:
+            return TextSendMessage(text="تم استخدام التلميح مسبقاً")
+        
+        self.hint_used = True
+        examples = self.categories_colors[self.current_category][self.current_color][:2]
+        hint = f"أمثلة: {', '.join(examples)}"
+        
+        return TextSendMessage(text=f"تلميح:\n{hint}")
+    
+    def show_answer(self):
+        """عرض الإجابة الصحيحة"""
+        examples = self.categories_colors[self.current_category][self.current_color][:3]
+        msg = f"أمثلة صحيحة:\n{', '.join(examples)}"
+        
+        self.current_question += 1
+        
+        if self.current_question <= self.max_questions:
+            next_q = self.next_question()
+            return TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+        else:
+            end_msg = self.end_game()
+            return TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+    
+    def end_game(self):
+        """إنهاء اللعبة وعرض النتائج"""
+        if not self.players_scores:
+            return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
+        
+        sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        
+        msg = "النتائج النهائية\n\n"
+        for i, (name, data) in enumerate(sorted_players[:5], 1):
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
+            msg += f"{emoji} {name}: {data['score']} نقطة\n"
+        
+        winner = sorted_players[0]
+        msg += f"\nالفائز: {winner[0]}"
+        
+        return TextSendMessage(text=msg)
+    
+    def check_with_ai(self, answer):
+        """التحقق من الإجابة باستخدام AI"""
+        if not self.model:
+            return False
+        
+        try:
+            prompt = f"هل '{answer}' من فئة {self.current_category} ولونها {self.current_color}؟ أجب بنعم أو لا فقط"
+            response = self.model.generate_content(prompt)
+            ai_result = response.text.strip().lower()
+            
+            return 'نعم' in ai_result or 'yes' in ai_result
+        except Exception as e:
+            print(f"AI check error: {e}")
+            if self.switch_key:
+                self.switch_key()
+            return False
     
     def check_answer(self, answer, user_id, display_name):
         if not self.current_color or not self.current_category:
             return None
         
-        elapsed = (datetime.now() - self.start_time).total_seconds()
+        # التحقق من أوامر التلميح والإجابة
+        if answer == 'لمح':
+            return {
+                'message': '',
+                'points': 0,
+                'game_over': False,
+                'response': self.get_hint()
+            }
+        
+        if answer == 'جاوب':
+            return {
+                'message': '',
+                'points': 0,
+                'game_over': self.current_question > self.max_questions,
+                'response': self.show_answer()
+            }
+        
         user_answer = self.normalize_text(answer)
         
-        # التحقق باستخدام AI
+        # التحقق باستخدام AI أولاً
         is_correct = False
-        if self.use_ai and self.model:
-            try:
-                prompt = f"هل '{answer}' من فئة {self.current_category} ولونها {self.current_color}؟ أجب بنعم أو لا فقط"
-                response = self.model.generate_content(prompt)
-                ai_result = response.text.strip().lower()
-                
-                if 'نعم' in ai_result or 'yes' in ai_result:
-                    is_correct = True
-            except Exception as e:
-                print(f"AI check error: {e}")
-                if self.switch_key:
-                    self.switch_key()
+        if self.use_ai:
+            is_correct = self.check_with_ai(answer)
         
         # التحقق التقليدي كاحتياطي
         if not is_correct:
@@ -107,30 +184,33 @@ class WordColorGame:
                 is_correct = True
         
         if is_correct:
-            if elapsed <= 5:
-                points = 20
-                speed = "سريع جداً"
+            points = 10 if not self.hint_used else 5
+            
+            if display_name not in self.players_scores:
+                self.players_scores[display_name] = {'score': 0}
+            self.players_scores[display_name]['score'] += points
+            
+            msg = f"صحيح يا {display_name}"
+            
+            self.current_question += 1
+            
+            if self.current_question <= self.max_questions:
+                next_q = self.next_question()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': False,
+                    'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+                }
             else:
-                points = 15
-                speed = "جيد"
-            
-            msg = f"✅ صحيح يا {display_name}!\n⚡ {speed} ({elapsed:.1f}ث)\n⭐ +{points} نقطة"
-            self.current_color = None
-            self.current_category = None
-            
-            return {
-                'message': msg,
-                'points': points,
-                'won': True,
-                'game_over': True,
-                'response': TextSendMessage(text=msg)
-            }
-        else:
-            examples = ', '.join(self.categories_colors[self.current_category][self.current_color][:3])
-            msg = f"❌ خطأ! أمثلة صحيحة:\n{examples}"
-            return {
-                'message': msg,
-                'points': 0,
-                'game_over': True,
-                'response': TextSendMessage(text=msg)
-            }
+                end_msg = self.end_game()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': True,
+                    'response': TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+                }
+        
+        return None
