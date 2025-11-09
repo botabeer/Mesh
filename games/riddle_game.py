@@ -1,147 +1,223 @@
-# riddle_game.py
 import random
+import re
 from linebot.models import TextSendMessage
+import google.generativeai as genai
 
 class RiddleGame:
-    def __init__(self, line_bot_api):
+    def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
         self.line_bot_api = line_bot_api
-        
-        self.riddles = [
-            {"riddle": "ما هو الشيء الذي يحتوي على مفاتيح ولكن لا يوجد به أقفال؟", "answer": "لوحة المفاتيح", "hint": "تستخدم في الحاسوب", "alternatives":["الكيبورد"]},
-            {"riddle": "ما هو الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "answer": "السحابة", "hint": "يطفو في السماء ويسقط مطرًا", "alternatives":[]},
-            {"riddle": "شيء له فروع وأوراق ولكنه لا لحاء له، فما هو؟", "answer": "الكتاب", "hint": "تقرأه لتتعلم", "alternatives":[]},
-            {"riddle": "شيء له أربع أرجل ولكنه لا يمشي؟", "answer": "الطاولة", "hint": "يوضع عليه الأشياء", "alternatives":[]},
-            {"riddle": "شهر إذا حذفنا أول حرف منه أصبح اسم فاكهة، فما هو؟", "answer": "تموز", "hint": "حذف حرف التاء يصبح موز", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له رقبة ولا رأس؟", "answer": "الزجاجة", "hint": "يُستخدم لوضع السوائل", "alternatives":[]},
-            {"riddle": "شيء لا بداية له ولا نهاية؟", "answer": "الدائرة", "hint": "شكل هندسي مستمر", "alternatives":[]},
-            {"riddle": "شيء يمكنه ملء الغرفة ولكنه لا يشغل أي مساحة؟", "answer": "الضوء", "hint": "يضيء المكان", "alternatives":[]},
-            {"riddle": "شيء له أسنان لكنه لا يأكل؟", "answer": "المشط", "hint": "يستخدم لتصفيف الشعر", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يزيد ولا ينقص أبدًا؟", "answer": "العمر", "hint": "مرتبط بالوقت منذ الولادة", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي ينام وهو يرتدي حذائه؟", "answer": "الحصان", "hint": "يستخدم في الركوب والعمل", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي لا يمشي إلا بالضرب؟", "answer": "المسمار", "hint": "يُثبت الأشياء في الحائط", "alternatives":[]},
-            {"riddle": "حاصل ضرب ثلاثة أعداد يساوي حاصل جمعها، ما هي؟", "answer": "1، 2، 3", "hint": "أعداد صحيحة صغيرة", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له عين ولا يرى؟", "answer": "الإبرة", "hint": "تستخدم في الخياطة", "alternatives":[]},
-            {"riddle": "أخت خالتك وليست خالتك؟", "answer": "أمك", "hint": "أقرب إنسان لك", "alternatives":["امك","والدة"]},
-            {"riddle": "ما هو الشيء الذي يجري ولا يمشي؟", "answer": "الماء", "hint": "سائل ضروري للحياة", "alternatives":["نهر"]},
-            {"riddle": "من هو الذي يكتب ولا يقرأ؟", "answer": "القلم", "hint": "أداة للكتابة", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يأكل ولا يشبع؟", "answer": "النار", "hint": "تحرق كل شيء", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له أسنان ولكن لا يعض؟", "answer": "المشط", "hint": "يساعد في ترتيب الشعر", "alternatives":[]},
-            {"riddle": "شيء يمشي ويقف ولا يتحرك من مكانه؟", "answer": "الساعة", "hint": "تعطي الوقت", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي تراه في الليل والنهار ولكنه لا يتحرك؟", "answer": "القمر", "hint": "يدور حول الأرض", "alternatives":[]},
-            {"riddle": "شيء تملكه أنت ولكن يستخدمه الآخرون أكثر منك، ما هو؟", "answer": "اسمك", "hint": "هو هويتك", "alternatives":[]},
-            {"riddle": "شيء تملكه منذ ولادتك ولكنه يزداد طولاً كل يوم؟", "answer": "العمر", "hint": "مرتبط بالوقت", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له قلب ولكنه لا ينبض؟", "answer": "الخس", "hint": "نوع من الخضار", "alternatives":[]},
-            {"riddle": "شيء كلما أخذت منه كبر، ما هو؟", "answer": "الحفرة", "hint": "تحفره الأرض", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يملك مدخلًا ولكن لا يملك مخرج؟", "answer": "الإبرة", "hint": "لخياطة الملابس", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له مدينة ولكنه لا يعيش فيها؟", "answer": "الخريطة", "hint": "ترسم لتعرف الأماكن", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يستطيع الكتابة دون حبر؟", "answer": "القلم الرصاص", "hint": "يكتب ويُمحى", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يرى كل شيء ولكن لا يستطيع الكلام؟", "answer": "المرآة", "hint": "تعكس ما أمامها", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يسمع بلا أذن ويتحدث بلا لسان؟", "answer": "الصدى", "hint": "يتكرر الصوت", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمتلئ بالماء ولكنه لا يبتل؟", "answer": "الإسفنج", "hint": "يمتص الماء", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يوجد في كل بيت ويُستخدم للطعام؟", "answer": "الملعقة", "hint": "لتناول الطعام", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمشي بلا قدمين ويطير بلا أجنحة؟", "answer": "الزمن", "hint": "يمر بسرعة", "alternatives":[]},
-            {"riddle": "شيء يُكسر بدون أن يُلمس، ما هو؟", "answer": "الوعد", "hint": "الوفاء مهم", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له وجه ولا يُرى إلا عند النظر إليه؟", "answer": "الساعة", "hint": "تخبر الوقت", "alternatives":[]},
-            {"riddle": "شيء موجود في كل مكان ولا يُرى، ما هو؟", "answer": "الهواء", "hint": "ضروري للتنفس", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُشاهد ولا يُسمع؟", "answer": "الصورة", "hint": "يمكن تعليقها على الحائط", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي كلما أخذت منه يكبر؟", "answer": "الحفرة", "hint": "تُحفر الأرض", "alternatives":[]},
-            {"riddle": "شيء يُسافر حول العالم ويبقى في الزاوية؟", "answer": "الطابع البريدي", "hint": "يوضع على الرسائل", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُفتح ولا يُغلق؟", "answer": "العين", "hint": "للنظر", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له أوراق ولكنه لا يُزرع؟", "answer": "الكتاب", "hint": "تقرأه لتتعلم", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُمكن أن يكسر الجليد ولكنه لا يلمس؟", "answer": "الكلام", "hint": "يُستخدم للتواصل", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يتحرك دائماً ولا يمل؟", "answer": "النهر", "hint": "يسيل باستمرار", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له جذر ولا شجرة؟", "answer": "الكلمة", "hint": "يُكتب أو يُقال", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يطفو ولا يغرق؟", "answer": "الخشب", "hint": "يُستخدم للبناء", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُرى في الظلام ويختفي في النهار؟", "answer": "النجوم", "hint": "تزين السماء ليلاً", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يتكلم جميع لغات العالم؟", "answer": "الصدى", "hint": "يكرر ما تقوله", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُعطيك القوة ولا يخصك؟", "answer": "المعرفة", "hint": "مفتاح النجاح", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي لا يموت أبداً؟", "answer": "الذكرى", "hint": "يبقى في الأذهان", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يتحرك في كل مكان لكنه لا يلمس؟", "answer": "الوقت", "hint": "مرتبط بالحياة", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُشاهد ولا يُلمس؟", "answer": "الظل", "hint": "يتغير مع الضوء", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي لا يبتل إذا غُمر في الماء؟", "answer": "الظل", "hint": "يظهر على الأرض", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يملك بداية ولكن لا نهاية؟", "answer": "الخط", "hint": "يمكن رسمه", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمتلك قلبًا ولا ينبض؟", "answer": "الخس", "hint": "خضار", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يكسر دون أن يُلمس؟", "answer": "الوعد", "hint": "الوفاء مهم", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمشي بلا أرجل؟", "answer": "الزمن", "hint": "يمر سريعًا", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمتلئ ولا يشغل مساحة؟", "answer": "الضوء", "hint": "يضيء المكان", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُكتب بدون قلم؟", "answer": "الكتابة على الشاشة", "hint": "عن طريق الحاسوب أو الهاتف", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمكن أن تكسره بدون لمسه؟", "answer": "الوعد", "hint": "الوفاء شيء مهم", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يملأ الغرفة بدون أن يلمس شيئًا؟", "answer": "الضوء", "hint": "ينير المكان", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له وجه ولكن لا يمكن رؤيته إلا عند النظر إليه؟", "answer": "الساعة", "hint": "تحدد الوقت", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمشي ويقف بلا قدمين؟", "answer": "الساعة", "hint": "تحدد الوقت", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يسير أمامك ولا تراه؟", "answer": "المستقبل", "hint": "الزمن الذي لم يأت بعد", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يمشي بلا أقدام ولا يستطيع الطيران؟", "answer": "النهر", "hint": "يسيل باستمرار", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يرى كل شيء لكنه لا يتحرك؟", "answer": "المرآة", "hint": "تعكس ما أمامها", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يملك مدخلًا ولا يملك مخرج؟", "answer": "الإبرة", "hint": "لخياطة الملابس", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يتكلم ولا يملك لسان؟", "answer": "الصدى", "hint": "يكرر الصوت", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يتحرك دائمًا ولا يمل؟", "answer": "النهر", "hint": "يسيل باستمرار", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي له أوراق ولكنه لا يُزرع؟", "answer": "الكتاب", "hint": "تقرأه لتتعلم", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُكسر بدون أن يُلمس؟", "answer": "الوعد", "hint": "الوفاء مهم", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُسافر حول العالم ويبقى في الزاوية؟", "answer": "الطابع البريدي", "hint": "يوضع على الرسائل", "alternatives":[]},
-            {"riddle": "ما هو الشيء الذي يُفتح ولا يُغلق؟", "answer": "العين", "hint": "للنظر", "alternatives":[]},
-        ]
-        
-        self.remaining_riddles = self.riddles.copy()
-        random.shuffle(self.remaining_riddles)
-        
+        self.use_ai = use_ai
+        self.get_api_key = get_api_key
+        self.switch_key = switch_key
         self.current_riddle = None
-        self.current_answer = None
-        self.current_hint = None
-        self.current_alternatives = []
+        self.correct_answer = None
+        self.model = None
+        self.current_question = 1
+        self.max_questions = 10
+        self.players_scores = {}
+        self.hint_used = False
+        
+        # تهيئة AI
+        if self.use_ai and self.get_api_key:
+            try:
+                api_key = self.get_api_key()
+                if api_key:
+                    genai.configure(api_key=api_key)
+                    self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            except Exception as e:
+                print(f"AI initialization error: {e}")
+                self.use_ai = False
+        
+        # مجموعة ألغاز كبيرة
+        self.riddles = [
+            {"riddle": "له أسنان ولا يعض، ما هو؟", "answer": "مشط"},
+            {"riddle": "يسير بلا قدمين ويدخل الأذنين، ما هو؟", "answer": "صوت"},
+            {"riddle": "كلما زاد نقص، ما هو؟", "answer": "عمر"},
+            {"riddle": "له رأس ولا عين له، ما هو؟", "answer": "دبوس"},
+            {"riddle": "يكتب ولا يقرأ، ما هو؟", "answer": "قلم"},
+            {"riddle": "له عين ولا يرى، ما هو؟", "answer": "ابرة"},
+            {"riddle": "يجري ولا يمشي، ما هو؟", "answer": "ماء"},
+            {"riddle": "أخت خالك وليست خالتك، من هي؟", "answer": "امي"},
+            {"riddle": "شيء موجود في السماء إذا أضفت له حرف أصبح في الأرض؟", "answer": "نجم"},
+            {"riddle": "ما هو الشيء الذي يمشي ويقف وليس له أرجل؟", "answer": "ساعة"},
+            {"riddle": "بيت بلا أبواب ولا نوافذ، ما هو؟", "answer": "بيض"},
+            {"riddle": "له عنق ولا رأس له، ما هو؟", "answer": "زجاجة"},
+            {"riddle": "أمشي بدون قدمين وأطير بلا جناحين وأبكي بلا عينين، من أنا؟", "answer": "سحابة"},
+            {"riddle": "أنا في الماء ولدت وفي الماء أموت، من أنا؟", "answer": "ثلج"},
+            {"riddle": "له أوراق وليس بشجر، ما هو؟", "answer": "كتاب"},
+            {"riddle": "يحرق نفسه ليضيء للآخرين، ما هو؟", "answer": "شمعة"},
+            {"riddle": "له قلب ولا يحب، ما هو؟", "answer": "شجرة"},
+            {"riddle": "يسمع بلا أذن ويتكلم بلا لسان، ما هو؟", "answer": "تلفون"},
+            {"riddle": "كلما أخذت منه كبر، ما هو؟", "answer": "حفرة"},
+            {"riddle": "له أربع أرجل ولا يستطيع المشي، ما هو؟", "answer": "كرسي"}
+        ]
+    
+    def normalize_text(self, text):
+        """تطبيع النص للمقارنة"""
+        text = text.strip().lower()
+        text = re.sub(r'^ال', '', text)
+        text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+        text = text.replace('ة', 'ه')
+        text = text.replace('ى', 'ي')
+        text = re.sub(r'[\u064B-\u065F]', '', text)
+        return text
+    
+    def generate_ai_riddle(self):
+        """توليد لغز باستخدام AI"""
+        if not self.model:
+            return None
+        
+        try:
+            prompt = """أنشئ لغز عربي بسيط.
+            
+            الرد يجب أن يكون بالصيغة التالية فقط:
+            اللغز: [اللغز هنا]
+            الإجابة: [الإجابة]
+            
+            اللغز يجب أن يكون سهل ومفهوم."""
+            
+            response = self.model.generate_content(prompt)
+            text = response.text.strip()
+            
+            lines = text.split('\n')
+            riddle = None
+            answer = None
+            
+            for line in lines:
+                if 'اللغز:' in line or 'لغز:' in line:
+                    riddle = line.split(':', 1)[1].strip()
+                elif 'الإجابة:' in line or 'إجابة:' in line or 'الجواب:' in line:
+                    answer = line.split(':', 1)[1].strip()
+            
+            if riddle and answer:
+                return {"riddle": riddle, "answer": answer}
+            
+        except Exception as e:
+            print(f"AI riddle generation error: {e}")
+            if self.switch_key:
+                self.switch_key()
+        
+        return None
     
     def start_game(self):
-        if not self.remaining_riddles:
-            self.remaining_riddles = self.riddles.copy()
-            random.shuffle(self.remaining_riddles)
+        self.current_question = 1
+        self.players_scores = {}
+        return self.next_question()
+    
+    def next_question(self):
+        """الانتقال للسؤال التالي"""
+        if self.current_question > self.max_questions:
+            return self.end_game()
         
-        riddle_data = self.remaining_riddles.pop()
+        # محاولة توليد لغز بالذكاء الاصطناعي
+        riddle_data = None
+        if self.use_ai:
+            riddle_data = self.generate_ai_riddle()
+        
+        if not riddle_data:
+            riddle_data = random.choice(self.riddles)
+        
         self.current_riddle = riddle_data["riddle"]
-        self.current_answer = riddle_data["answer"]
-        self.current_hint = riddle_data["hint"]
-        self.current_alternatives = riddle_data.get("alternatives", [])
+        self.correct_answer = riddle_data["answer"]
+        self.hint_used = False
         
         return TextSendMessage(
-            text=f"لعبة الألغاز الصعبة\n\n{self.current_riddle}\n\nاكتب الإجابة أو اطلب تلميح"
+            text=f"السؤال {self.current_question}/{self.max_questions}\n\n{self.current_riddle}"
         )
     
     def get_hint(self):
-        return self.current_hint if self.current_hint else "لا يوجد تلميح متاح"
+        """الحصول على تلميح"""
+        if self.hint_used:
+            return TextSendMessage(text="تم استخدام التلميح مسبقاً")
+        
+        self.hint_used = True
+        first_letter = self.correct_answer[0]
+        hint = f"يبدأ بحرف: {first_letter}\nعدد الأحرف: {len(self.correct_answer)}"
+        
+        return TextSendMessage(text=f"تلميح:\n{hint}")
     
-    def get_answer(self):
-        return self.current_answer if self.current_answer else "لا يوجد لغز حالي"
+    def show_answer(self):
+        """عرض الإجابة الصحيحة"""
+        msg = f"الإجابة الصحيحة: {self.correct_answer}"
+        
+        self.current_question += 1
+        
+        if self.current_question <= self.max_questions:
+            next_q = self.next_question()
+            return TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+        else:
+            end_msg = self.end_game()
+            return TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+    
+    def end_game(self):
+        """إنهاء اللعبة وعرض النتائج"""
+        if not self.players_scores:
+            return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
+        
+        sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        
+        msg = "النتائج النهائية\n\n"
+        for i, (name, data) in enumerate(sorted_players[:5], 1):
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
+            msg += f"{emoji} {name}: {data['score']} نقطة\n"
+        
+        winner = sorted_players[0]
+        msg += f"\nالفائز: {winner[0]}"
+        
+        return TextSendMessage(text=msg)
     
     def check_answer(self, answer, user_id, display_name):
-        if not self.current_answer:
+        if not self.current_riddle:
             return None
         
-        normalized_answer = answer.strip().lower()
-        correct_answer = self.current_answer.lower()
-        normalized_alternatives = [alt.lower() for alt in self.current_alternatives]
-        
-        if normalized_answer == correct_answer or normalized_answer in normalized_alternatives:
-            points = 20
-            
-            if not self.remaining_riddles:
-                self.remaining_riddles = self.riddles.copy()
-                random.shuffle(self.remaining_riddles)
-            new_riddle_data = self.remaining_riddles.pop()
-            self.current_riddle = new_riddle_data["riddle"]
-            self.current_answer = new_riddle_data["answer"]
-            self.current_hint = new_riddle_data["hint"]
-            self.current_alternatives = new_riddle_data.get("alternatives", [])
-            
+        # التحقق من أوامر التلميح والإجابة
+        if answer == 'لمح':
             return {
-                'points': points,
-                'won': True,
-                'response': TextSendMessage(
-                    text=f"✅ أحسنت يا {display_name}! +{points}\n\nلغز جديد:\n{self.current_riddle}"
-                )
+                'message': '',
+                'points': 0,
+                'game_over': False,
+                'response': self.get_hint()
             }
         
-        return {
-            'points': 0,
-            'won': False,
-            'response': TextSendMessage(
-                text=f"❌ إجابة خاطئة، حاول مرة أخرى.\n{self.current_riddle}"
-            )
-        }
+        if answer == 'جاوب':
+            return {
+                'message': '',
+                'points': 0,
+                'game_over': self.current_question > self.max_questions,
+                'response': self.show_answer()
+            }
+        
+        user_answer = self.normalize_text(answer)
+        correct_answer = self.normalize_text(self.correct_answer)
+        
+        if user_answer == correct_answer or correct_answer in user_answer:
+            points = 10 if not self.hint_used else 5
+            
+            if display_name not in self.players_scores:
+                self.players_scores[display_name] = {'score': 0}
+            self.players_scores[display_name]['score'] += points
+            
+            msg = f"صحيح يا {display_name}"
+            
+            self.current_question += 1
+            
+            if self.current_question <= self.max_questions:
+                next_q = self.next_question()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': False,
+                    'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+                }
+            else:
+                end_msg = self.end_game()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': True,
+                    'response': TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+                }
+        
+        return None
