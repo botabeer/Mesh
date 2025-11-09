@@ -76,7 +76,7 @@ class ChainWordsGame:
         # التحقق من نهاية اللعبة
         if self.round > self.max_rounds:
             total_points = points * (self.max_rounds)
-            msg = f"🎉 أحسنت يا {display_name}!\nأكملت جميع الجولات!\n⭐ إجمالي النقاط: {total_points}"
+            msg = f" أحسنت يا {display_name}!\nأكملت جميع الجولات!\n إجمالي النقاط: {total_points}"
             return {
                 'message': msg,
                 'points': total_points,
