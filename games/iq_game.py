@@ -1,7 +1,7 @@
 import random
-from linebot.models import TextSendMessage
-import json
 import re
+from linebot.models import TextSendMessage
+import google.generativeai as genai
 
 class IQGame:
     def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
@@ -9,187 +9,248 @@ class IQGame:
         self.use_ai = use_ai
         self.get_api_key = get_api_key
         self.switch_key = switch_key
+        self.current_question_text = None
+        self.correct_answer = None
+        self.model = None
+        self.current_question = 1
+        self.max_questions = 10
+        self.players_scores = {}
+        self.hint_used = False
         
-        # أسئلة احتياطية
-        self.backup_questions = [
-            {"question": "ما هو الشيء الذي يحتوي على مفاتيح ولكن لا يوجد به أقفال؟",
-             "answer": "لوحة المفاتيح", "alternatives": ["الكيبورد"], "hint": "تستخدم في الحاسوب"},
-            {"question": "ما هو الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟",
-             "answer": "السحابة", "alternatives": [], "hint": "يطفو في السماء ويسقط مطرًا"},
-            {"question": "شيء له فروع وأوراق ولكنه لا لحاء له، فما هو؟",
-             "answer": "الكتاب", "alternatives": [], "hint": "تقرأه لتتعلم"},
-            {"question": "شيء له أربع أرجل ولكنه لا يمشي؟",
-             "answer": "الطاولة", "alternatives": [], "hint": "يوضع عليه الأشياء"},
-            {"question": "شهر إذا حذفنا أول حرف منه أصبح اسم فاكهة، فما هو؟",
-             "answer": "تموز", "alternatives": [], "hint": "حذف حرف التاء يصبح موز"},
-            {"question": "ما هو الشيء الذي له رقبة ولا رأس؟",
-             "answer": "الزجاجة", "alternatives": [], "hint": "يُستخدم لوضع السوائل"},
-            {"question": "شيء لا بداية له ولا نهاية؟",
-             "answer": "الدائرة", "alternatives": [], "hint": "شكل هندسي مستمر"},
-            {"question": "شيء يمكنه ملء الغرفة ولكنه لا يشغل أي مساحة؟",
-             "answer": "الضوء", "alternatives": [], "hint": "يضيء المكان"},
-            {"question": "شيء له أسنان لكنه لا يأكل؟",
-             "answer": "المشط", "alternatives": [], "hint": "يستخدم لتصفيف الشعر"},
-            {"question": "ما هو الشيء الذي يزيد ولا ينقص أبدًا؟",
-             "answer": "العمر", "alternatives": [], "hint": "مرتبط بالوقت منذ الولادة"},
-            {"question": "ما هو الشيء الذي ينام وهو يرتدي حذائه؟",
-             "answer": "الحصان", "alternatives": [], "hint": "يستخدم في الركوب والعمل"},
-            {"question": "ما هو الشيء الذي لا يمشي إلا بالضرب؟",
-             "answer": "المسمار", "alternatives": [], "hint": "يُثبت الأشياء في الحائط"},
-            {"question": "حاصل ضرب ثلاثة أعداد يساوي حاصل جمعها، ما هي؟",
-             "answer": "1، 2، 3", "alternatives": [], "hint": "أعداد صحيحة صغيرة"},
-            {"question": "ما هو الشيء الذي له عين ولا يرى؟",
-             "answer": "الإبرة", "alternatives": [], "hint": "تستخدم في الخياطة"},
-            {"question": "أخت خالتك وليست خالتك؟",
-             "answer": "أمك", "alternatives": ["امك","والدة"], "hint": "أقرب إنسان لك"},
-            {"question": "ما هو الشيء الذي يجري ولا يمشي؟",
-             "answer": "الماء", "alternatives": ["نهر"], "hint": "سائل ضروري للحياة"},
-            {"question": "من هو الذي يكتب ولا يقرأ؟",
-             "answer": "القلم", "alternatives": [], "hint": "أداة للكتابة"},
-            {"question": "ما هو الشيء الذي يأكل ولا يشبع؟",
-             "answer": "النار", "alternatives": [], "hint": "تحرق كل شيء"},
-            {"question": "ما هو الشيء الذي له أسنان ولكن لا يعض؟",
-             "answer": "المشط", "alternatives": [], "hint": "يساعد في ترتيب الشعر"},
-            {"question": "شيء يمشي ويقف ولا يتحرك من مكانه؟",
-             "answer": "الساعة", "alternatives": [], "hint": "تعطي الوقت"},
-            {"question": "ما هو الشيء الذي تراه في الليل والنهار ولكنه لا يتحرك؟",
-             "answer": "القمر", "alternatives": [], "hint": "يدور حول الأرض"},
-            {"question": "شيء تملكه أنت ولكن يستخدمه الآخرون أكثر منك، ما هو؟",
-             "answer": "اسمك", "alternatives": [], "hint": "هو هويتك"},
-            {"question": "شيء تملكه منذ ولادتك ولكنه يزداد طولاً كل يوم؟",
-             "answer": "العمر", "alternatives": [], "hint": "مرتبط بالوقت"},
-            {"question": "ما هو الشيء الذي له قلب ولكنه لا ينبض؟",
-             "answer": "الخس", "alternatives": [], "hint": "نوع من الخضار"},
-            {"question": "شيء كلما أخذت منه كبر، ما هو؟",
-             "answer": "الحفرة", "alternatives": [], "hint": "تحفره الأرض"},
-            {"question": "ما هو الشيء الذي يملك مدخلًا ولكن لا يملك مخرج؟",
-             "answer": "الإبرة", "alternatives": [], "hint": "لخياطة الملابس"},
-            {"question": "ما هو الشيء الذي له مدينة ولكنه لا يعيش فيها؟",
-             "answer": "الخريطة", "alternatives": [], "hint": "ترسم لتعرف الأماكن"},
-            {"question": "ما هو الشيء الذي يستطيع الكتابة دون حبر؟",
-             "answer": "القلم الرصاص", "alternatives": [], "hint": "يكتب ويُمحى"},
-            {"question": "ما هو الشيء الذي يرى كل شيء ولكن لا يستطيع الكلام؟",
-             "answer": "المرآة", "alternatives": [], "hint": "تعكس ما أمامها"},
-            {"question": "ما هو الشيء الذي يسمع بلا أذن ويتحدث بلا لسان؟",
-             "answer": "الصدى", "alternatives": [], "hint": "يتكرر الصوت"},
-            {"question": "ما هو الشيء الذي يمتلئ بالماء ولكنه لا يبتل؟",
-             "answer": "الإسفنج", "alternatives": [], "hint": "يمتص الماء"},
-            {"question": "ما هو الشيء الذي يوجد في كل بيت ويُستخدم للطعام؟",
-             "answer": "الملعقة", "alternatives": [], "hint": "لتناول الطعام"},
-            {"question": "ما هو الشيء الذي يمشي بلا قدمين ويطير بلا أجنحة؟",
-             "answer": "الزمن", "alternatives": [], "hint": "يمر بسرعة"},
-            {"question": "شيء يُكسر بدون أن يُلمس، ما هو؟",
-             "answer": "الوعد", "alternatives": [], "hint": "الوفاء مهم"},
-            {"question": "ما هو الشيء الذي له وجه ولا يُرى إلا عند النظر إليه؟",
-             "answer": "الساعة", "alternatives": [], "hint": "تخبر الوقت"},
-            {"question": "شيء موجود في كل مكان ولا يُرى، ما هو؟",
-             "answer": "الهواء", "alternatives": [], "hint": "ضروري للتنفس"},
-            {"question": "ما هو الشيء الذي يُشاهد ولا يُسمع؟",
-             "answer": "الصورة", "alternatives": [], "hint": "يمكن تعليقها على الحائط"},
-            {"question": "شيء يُسافر حول العالم ويبقى في الزاوية؟",
-             "answer": "الطابع البريدي", "alternatives": [], "hint": "يوضع على الرسائل"},
-            {"question": "ما هو الشيء الذي يُفتح ولا يُغلق؟",
-             "answer": "العين", "alternatives": [], "hint": "للنظر"},
-            {"question": "ما هو الشيء الذي له أوراق ولكنه لا يُزرع؟",
-             "answer": "الكتاب", "alternatives": [], "hint": "تقرأه لتتعلم"},
+        # تهيئة AI
+        if self.use_ai and self.get_api_key:
+            try:
+                api_key = self.get_api_key()
+                if api_key:
+                    genai.configure(api_key=api_key)
+                    self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            except Exception as e:
+                print(f"AI initialization error: {e}")
+                self.use_ai = False
+        
+        # بنك أسئلة كبير
+        self.questions = [
+            {"question": "ما هو عدد أركان الإسلام؟", "answer": "5", "hint": "رقم أقل من 10"},
+            {"question": "ما هو ناتج 15 × 4؟", "answer": "60", "hint": "رقم بين 50 و 70"},
+            {"question": "كم عدد أيام السنة الهجرية؟", "answer": "354", "hint": "رقم يبدأ بـ 3"},
+            {"question": "ما هي عاصمة المملكة العربية السعودية؟", "answer": "الرياض", "hint": "مدينة في وسط السعودية"},
+            {"question": "من هو أول خليفة راشدي؟", "answer": "أبو بكر الصديق", "hint": "صاحب النبي في الغار"},
+            {"question": "كم سورة في القرآن الكريم؟", "answer": "114", "hint": "رقم أكبر من 100"},
+            {"question": "ما هو أطول نهر في العالم؟", "answer": "النيل", "hint": "نهر في أفريقيا"},
+            {"question": "كم عدد ألوان قوس قزح؟", "answer": "7", "hint": "رقم أقل من 10"},
+            {"question": "ما هو أكبر كوكب في المجموعة الشمسية؟", "answer": "المشتري", "hint": "كوكب غازي عملاق"},
+            {"question": "كم عدد أحرف الأبجدية العربية؟", "answer": "28", "hint": "رقم بين 25 و 30"},
+            {"question": "ما هي عاصمة مصر؟", "answer": "القاهرة", "hint": "مدينة كبيرة في مصر"},
+            {"question": "كم عدد قارات العالم؟", "answer": "7", "hint": "رقم أقل من 10"},
+            {"question": "ما هو أسرع حيوان بري؟", "answer": "الفهد", "hint": "حيوان مفترس سريع"},
+            {"question": "كم عدد أيام الأسبوع؟", "answer": "7", "hint": "رقم أقل من 10"},
+            {"question": "ما اسم أطول سورة في القرآن؟", "answer": "البقرة", "hint": "سورة في بداية المصحف"},
+            {"question": "كم عدد أشهر السنة الميلادية؟", "answer": "12", "hint": "رقم بين 10 و 15"},
+            {"question": "ما هي عاصمة فرنسا؟", "answer": "باريس", "hint": "مدينة الأنوار"},
+            {"question": "كم عدد أسنان الإنسان البالغ؟", "answer": "32", "hint": "رقم بين 30 و 35"},
+            {"question": "ما هو أكبر محيط في العالم؟", "answer": "المحيط الهادئ", "hint": "محيط بين آسيا وأمريكا"},
+            {"question": "من هو النبي الذي ابتلعه الحوت؟", "answer": "يونس", "hint": "نبي ورد ذكره في سورة تحمل اسمه"}
         ]
-        
-        self.current_question = None
-        self.current_answer = None
-        self.current_alternatives = []
-        self.current_hint = None
-
-    def _generate_ai_question(self):
-        """توليد سؤال بالذكاء الاصطناعي"""
-        if not self.use_ai:
+    
+    def normalize_text(self, text):
+        """تطبيع النص للمقارنة"""
+        text = text.strip().lower()
+        text = re.sub(r'^ال', '', text)
+        text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+        text = text.replace('ة', 'ه')
+        text = text.replace('ى', 'ي')
+        text = re.sub(r'[\u064B-\u065F]', '', text)
+        return text
+    
+    def generate_ai_question(self):
+        """توليد سؤال باستخدام AI"""
+        if not self.model:
             return None
         
         try:
-            import google.generativeai as genai
-            api_key = self.get_api_key()
-            if not api_key:
-                return None
+            prompt = """أنشئ سؤال ذكاء أو ثقافة عامة باللغة العربية.
             
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            الرد يجب أن يكون بالصيغة التالية فقط:
+            السؤال: [السؤال هنا]
+            الإجابة: [الإجابة المختصرة]
             
-            prompt = """أنت منشئ ألغاز ذكية وممتعة باللغة العربية.
-أنشئ لغزاً واحداً بصيغة JSON كما يلي:
-{"question": "نص السؤال", "answer": "الإجابة", "alternatives": ["بديل1", "بديل2"], "hint": "تلميح"}
-            """
+            السؤال يجب أن يكون واضح ومباشر، والإجابة مختصرة."""
             
-            response = model.generate_content(prompt)
+            response = self.model.generate_content(prompt)
             text = response.text.strip()
             
-            json_match = re.search(r'\{.*\}', text, re.DOTALL)
-            if json_match:
-                question_data = json.loads(json_match.group())
-                return question_data
+            lines = text.split('\n')
+            question = None
+            answer = None
             
-            return None
+            for line in lines:
+                if 'السؤال:' in line or 'سؤال:' in line:
+                    question = line.split(':', 1)[1].strip()
+                elif 'الإجابة:' in line or 'إجابة:' in line or 'الجواب:' in line:
+                    answer = line.split(':', 1)[1].strip()
+            
+            if question and answer:
+                return {"question": question, "answer": answer, "hint": "لا يوجد تلميح"}
             
         except Exception as e:
-            print(f"خطأ في توليد السؤال بالـ AI: {e}")
+            print(f"AI question generation error: {e}")
             if self.switch_key and self.switch_key():
-                return self._generate_ai_question()
-            return None
-
-    def start_game(self):
-        """بدء اللعبة"""
-        question_data = self._generate_ai_question()
-        if not question_data:
-            question_data = random.choice(self.backup_questions)
+                try:
+                    api_key = self.get_api_key()
+                    genai.configure(api_key=api_key)
+                    self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                    return self.generate_ai_question()
+                except:
+                    pass
         
-        self.current_question = question_data["question"]
-        self.current_answer = question_data["answer"]
-        self.current_alternatives = question_data.get("alternatives", [])
-        self.current_hint = question_data.get("hint", "فكر جيداً في السؤال")
+        return None
+    
+    def start_game(self):
+        self.current_question = 1
+        self.players_scores = {}
+        return self.next_question()
+    
+    def next_question(self):
+        """الانتقال للسؤال التالي"""
+        if self.current_question > self.max_questions:
+            return self.end_game()
+        
+        # محاولة توليد سؤال بالذكاء الاصطناعي
+        question_data = None
+        if self.use_ai:
+            question_data = self.generate_ai_question()
+        
+        if not question_data:
+            question_data = random.choice(self.questions)
+        
+        self.current_question_text = question_data["question"]
+        self.correct_answer = question_data["answer"].strip().lower()
+        self.current_hint = question_data.get("hint", "لا يوجد تلميح")
+        self.hint_used = False
         
         return TextSendMessage(
-            text=f"لعبة الذكاء\n\n{self.current_question}\n\n💡 لمح: تلميح\n✅ جاوب: الإجابة"
+            text=f"السؤال {self.current_question}/{self.max_questions}\n\n{self.current_question_text}"
         )
     
     def get_hint(self):
-        return self.current_hint or "لا يوجد تلميح متاح"
+        """الحصول على تلميح"""
+        if self.hint_used:
+            return TextSendMessage(text="تم استخدام التلميح مسبقاً")
+        
+        self.hint_used = True
+        return TextSendMessage(text=f"تلميح:\n{self.current_hint}")
     
-    def get_answer(self):
-        return self.current_answer or "لا يوجد سؤال حالي"
+    def show_answer(self):
+        """عرض الإجابة الصحيحة"""
+        msg = f"الإجابة الصحيحة: {self.correct_answer}"
+        
+        self.current_question += 1
+        
+        if self.current_question <= self.max_questions:
+            return self.next_question()
+        else:
+            return self.end_game()
+    
+    def end_game(self):
+        """إنهاء اللعبة وعرض النتائج"""
+        if not self.players_scores:
+            return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
+        
+        sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        
+        msg = "النتائج النهائية\n\n"
+        for i, (name, data) in enumerate(sorted_players[:5], 1):
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
+            msg += f"{emoji} {name}: {data['score']} نقطة\n"
+        
+        winner = sorted_players[0]
+        msg += f"\nالفائز: {winner[0]}"
+        
+        return TextSendMessage(text=msg)
+    
+    def check_answer_with_ai(self, answer):
+        """التحقق من الإجابة باستخدام AI"""
+        if not self.model:
+            return False
+        
+        try:
+            prompt = f"""هل الإجابة '{answer}' صحيحة للسؤال '{self.current_question_text}'؟
+            الإجابة الصحيحة هي: {self.correct_answer}
+            
+            أجب فقط بـ 'نعم' أو 'لا'"""
+            
+            response = self.model.generate_content(prompt)
+            ai_result = response.text.strip().lower()
+            
+            return 'نعم' in ai_result or 'yes' in ai_result
+        except Exception as e:
+            print(f"AI check error: {e}")
+            if self.switch_key:
+                self.switch_key()
+            return False
     
     def check_answer(self, answer, user_id, display_name):
-        if not self.current_answer:
+        if not self.current_question_text:
             return None
         
-        normalized_answer = answer.strip().lower()
-        normalized_answer = normalized_answer.replace('أ','ا').replace('إ','ا').replace('آ','ا')
-        normalized_answer = normalized_answer.replace('ة','ه').replace('ى','ي').replace('ال','')
-        
-        correct_answer = self.current_answer.lower()
-        correct_answer = correct_answer.replace('أ','ا').replace('إ','ا').replace('آ','ا')
-        correct_answer = correct_answer.replace('ة','ه').replace('ى','ي').replace('ال','')
-        
-        normalized_alternatives = []
-        for alt in self.current_alternatives:
-            norm_alt = alt.lower().replace('أ','ا').replace('إ','ا').replace('آ','ا')
-            norm_alt = norm_alt.replace('ة','ه').replace('ى','ي').replace('ال','')
-            normalized_alternatives.append(norm_alt)
-        
-        if normalized_answer == correct_answer or normalized_answer in normalized_alternatives:
-            points = 10
-            question_data = self._generate_ai_question()
-            if not question_data:
-                question_data = random.choice(self.backup_questions)
-            
-            self.current_question = question_data["question"]
-            self.current_answer = question_data["answer"]
-            self.current_alternatives = question_data.get("alternatives", [])
-            self.current_hint = question_data.get("hint", "فكر جيداً في السؤال")
-            
+        # التحقق من أوامر التلميح والإجابة
+        if answer == 'لمح':
             return {
-                'points': points,
-                'won': True,
-                'response': TextSendMessage(
-                    text=f"✅ صحيح يا {display_name}! +{points}\n\nسؤال جديد:\n{self.current_question}\n\n💡 لمح: تلميح\n✅ جاوب: الإجابة"
-                )
+                'message': '',
+                'points': 0,
+                'game_over': False,
+                'response': self.get_hint()
             }
+        
+        if answer == 'جاوب':
+            return {
+                'message': '',
+                'points': 0,
+                'game_over': self.current_question > self.max_questions,
+                'response': self.show_answer()
+            }
+        
+        user_answer = self.normalize_text(answer)
+        correct_answer = self.normalize_text(self.correct_answer)
+        
+        # التحقق باستخدام AI
+        is_correct = False
+        if self.use_ai:
+            is_correct = self.check_answer_with_ai(answer)
+        
+        # التحقق التقليدي
+        if not is_correct:
+            if user_answer == correct_answer or correct_answer in user_answer or user_answer in correct_answer:
+                is_correct = True
+        
+        if is_correct:
+            points = 10 if not self.hint_used else 5
+            
+            if display_name not in self.players_scores:
+                self.players_scores[display_name] = {'score': 0}
+            self.players_scores[display_name]['score'] += points
+            
+            msg = f"صحيح يا {display_name}\n+{points} نقطة"
+            
+            self.current_question += 1
+            
+            if self.current_question <= self.max_questions:
+                next_q = self.next_question()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': False,
+                    'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+                }
+            else:
+                end_msg = self.end_game()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': True,
+                    'response': TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+                }
         
         return None
