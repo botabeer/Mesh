@@ -11,8 +11,13 @@ class LettersWordsGame:
         self.switch_key = switch_key
         self.available_letters = []
         self.used_words = set()
-        self.total_points = 0
         self.model = None
+        self.current_question = 1
+        self.max_questions = 10
+        self.players_scores = {}
+        self.hint_used = False
+        self.words_per_question = 2  # عدد الكلمات المطلوبة لكل سؤال
+        self.current_round_words = 0
         
         # تهيئة AI
         if self.use_ai and self.get_api_key:
@@ -25,7 +30,7 @@ class LettersWordsGame:
                 print(f"AI initialization error: {e}")
                 self.use_ai = False
         
-        # مجموعات الحروف الموسعة
+        # مجموعات الحروف
         self.letter_sets = [
             list("سيارةمنزل"),
             list("مدرسةكتاب"),
@@ -33,73 +38,28 @@ class LettersWordsGame:
             list("شجرةزهرة"),
             list("سماءنجم"),
             list("بحرماء"),
-            list("قمرليل"),
-            list("نورشمس"),
-            list("سعيدضحك"),
-            list("قلبحب"),
-            list("وردةحمراء"),
-            list("صباحخير"),
-            list("ليلنجمة"),
-            list("بيتباب"),
-            list("عيننور"),
-            list("وقتسعادة"),
-            list("كلمةحرف"),
-            list("طريقسفر"),
-            list("مدينةقرية"),
-            list("قلمدفتر"),
-            list("كتابعلم"),
-            list("سيفدرع"),
-            list("ملكعرش"),
-            list("بحرسفينة"),
-            list("قهوةفنجان"),
-            list("مطرغيم"),
-            list("أملحياة"),
-            list("سحابسماء"),
-            list("ناردفء"),
-            list("بردثلج"),
-            list("صوتنغمة"),
-            list("قطةكلب"),
-            list("زمنوقت"),
-            list("عينرؤية"),
-            list("يدعمل"),
-            list("جبلوادي"),
-            list("حلمواقع"),
-            list("حبرورق"),
-            list("سماءقمر"),
-            list("نجمليل"),
-            list("بيتسقف")
+            list("حديقةورد"),
+            list("مكتبقلم"),
+            list("سريرباب"),
+            list("قمرليل")
         ]
         
-        # كلمات صحيحة موسعة (مئات الكلمات المحتملة)
+        # كلمات صحيحة شائعة (موسّعة)
         self.valid_words = {
-            # من المجموعات الأصلية
-            "سيارة", "سير", "سار", "يسير", "منزل", "نزل", "نزيل", "زلة",
-            "مدرسة", "درس", "مدر", "سرد", "كتاب", "كتب", "تاب",
-            "طعام", "طام", "شراب", "شرب", "راب", "بار",
-            "شجرة", "شجر", "زهرة", "زهر", "هرة",
-            "سماء", "سما", "ماء", "نجم", "جمن", "بحر", "حرب", "بار",
-            
-            # مضافة جديدة
-            "قمر", "ليل", "نور", "شمس", "حب", "قلب", "وردة", "صباح", "خير",
-            "بيت", "باب", "عين", "وقت", "سعادة", "كلمة", "حرف", "طريق",
-            "سفر", "مدينة", "قرية", "قلم", "دفتر", "علم", "ملك", "عرش",
-            "بحر", "سفينة", "قهوة", "فنجان", "مطر", "غيم", "ثلج", "برد",
-            "نار", "دفء", "صوت", "نغمة", "زمن", "وقت", "يد", "عمل",
-            "حلم", "واقع", "سماء", "قمر", "سحاب", "ضوء", "شروق",
-            "غروب", "ليل", "نهار", "أمل", "حياة", "جبل", "وادي",
-            "أرض", "ريح", "ماء", "نهر", "عين", "بصر", "سمع", "قوة",
-            "سرور", "ضحك", "سعيد", "فرح", "نجمة", "هلال",
-            "كتاب", "علم", "قلم", "فكر", "فهم", "قطة", "كلب", "لعب",
-            "مفتاح", "باب", "سقف", "بيت", "غرفة", "حائط", "سرير",
-            "صباح", "مساء", "ليل", "نجوم", "سماء", "بحر", "غيم",
-            "قارب", "شجرة", "طير", "حياة", "وقت", "سنة", "يوم", "شهر",
-            "قلب", "رومانسية", "مشاعر", "ورد", "أمل", "حلم", "رؤية",
-            "نوم", "صحوة", "نشاط", "راحة", "سرير", "بطانية", "مطر",
-            "شتاء", "صيف", "خريف", "ربيع", "زهور", "أزهار", "نهر",
-            "ضوء", "ظلام", "ليل", "فجر", "نجمة", "شعاع"
+            "سيارة", "سير", "سار", "يسير", "منزل", "نزل", "زلة", "نزيل", "سيار",
+            "مدرسة", "درس", "مدر", "سرد", "كتاب", "كتب", "تاب", "رسم", "دار",
+            "طعام", "طام", "معط", "شراب", "شرب", "راب", "بار", "طبع",
+            "شجرة", "شجر", "زهرة", "زهر", "هرة", "جرة",
+            "سماء", "سما", "ماء", "نجم", "جمن", "سام",
+            "بحر", "حرب", "ماء", "بار", "حبر",
+            "حديقة", "ورد", "حدق", "وقد", "قدر",
+            "مكتب", "قلم", "كتب", "ملك", "قبل",
+            "سرير", "باب", "سير", "رسي", "بار",
+            "قمر", "ليل", "مري", "قير", "ملي"
         }
     
     def normalize_text(self, text):
+        """تطبيع النص للمقارنة"""
         text = text.strip().lower()
         text = re.sub(r'^ال', '', text)
         text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
@@ -109,23 +69,95 @@ class LettersWordsGame:
         return text
     
     def start_game(self):
+        self.current_question = 1
+        self.players_scores = {}
+        return self.next_question()
+    
+    def next_question(self):
+        """الانتقال للسؤال التالي"""
+        if self.current_question > self.max_questions:
+            return self.end_game()
+        
         self.available_letters = random.choice(self.letter_sets).copy()
         random.shuffle(self.available_letters)
         self.used_words.clear()
-        self.total_points = 0
+        self.hint_used = False
+        self.current_round_words = 0
         
         letters_str = ' '.join(self.available_letters)
         return TextSendMessage(
-            text=f"🧩 كون كلمات من هذه الحروف:\n\n{letters_str}\n\n💡 كل كلمة صحيحة = +5 نقاط\nاللعبة تنتهي عند بقاء حرف واحد"
+            text=f"السؤال {self.current_question}/{self.max_questions}\n\nكون كلمتين من هذه الحروف:\n{letters_str}"
         )
     
+    def get_hint(self):
+        """الحصول على تلميح"""
+        if self.hint_used:
+            return TextSendMessage(text="تم استخدام التلميح مسبقاً")
+        
+        self.hint_used = True
+        hint = "حاول تكوين كلمة من 3-4 أحرف"
+        
+        return TextSendMessage(text=f"تلميح:\n{hint}")
+    
+    def show_answer(self):
+        """عرض كلمات مقترحة"""
+        letters_str = ''.join(self.available_letters).lower()
+        suggestions = []
+        
+        for word in self.valid_words:
+            if len(word) >= 2:
+                temp_letters = list(letters_str)
+                valid = True
+                for char in word:
+                    if char in temp_letters:
+                        temp_letters.remove(char)
+                    else:
+                        valid = False
+                        break
+                if valid:
+                    suggestions.append(word)
+        
+        if suggestions:
+            msg = f"كلمات مقترحة:\n{', '.join(suggestions[:3])}"
+        else:
+            msg = "لم نجد كلمات مقترحة"
+        
+        self.current_question += 1
+        
+        if self.current_question <= self.max_questions:
+            next_q = self.next_question()
+            return TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+        else:
+            end_msg = self.end_game()
+            return TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+    
+    def end_game(self):
+        """إنهاء اللعبة وعرض النتائج"""
+        if not self.players_scores:
+            return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
+        
+        sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
+        
+        msg = "النتائج النهائية\n\n"
+        for i, (name, data) in enumerate(sorted_players[:5], 1):
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
+            msg += f"{emoji} {name}: {data['score']} نقطة\n"
+        
+        winner = sorted_players[0]
+        msg += f"\nالفائز: {winner[0]}"
+        
+        return TextSendMessage(text=msg)
+    
     def check_word_with_ai(self, word):
+        """التحقق من صحة الكلمة باستخدام AI"""
         if not self.model:
             return False
+        
         try:
             prompt = f"هل '{word}' كلمة عربية صحيحة؟ أجب بنعم أو لا فقط"
             response = self.model.generate_content(prompt)
             ai_result = response.text.strip().lower()
+            
             return 'نعم' in ai_result or 'yes' in ai_result
         except Exception as e:
             print(f"AI word check error: {e}")
@@ -134,24 +166,35 @@ class LettersWordsGame:
             return False
     
     def check_answer(self, answer, user_id, display_name):
-        if len(self.available_letters) <= 1:
+        # التحقق من أوامر التلميح والإجابة
+        if answer == 'لمح':
             return {
-                'message': "🎮 اللعبة انتهت",
+                'message': '',
                 'points': 0,
-                'game_over': True,
-                'response': TextSendMessage(text="🎮 اللعبة انتهت")
+                'game_over': False,
+                'response': self.get_hint()
+            }
+        
+        if answer == 'جاوب':
+            return {
+                'message': '',
+                'points': 0,
+                'game_over': self.current_question > self.max_questions,
+                'response': self.show_answer()
             }
         
         user_word = answer.strip().lower()
         
+        # التحقق من التكرار
         if user_word in self.used_words:
             return {
-                'message': f"❌ الكلمة '{user_word}' مستخدمة مسبقاً",
+                'message': f"الكلمة '{user_word}' مستخدمة مسبقاً",
                 'points': 0,
                 'game_over': False,
-                'response': TextSendMessage(text=f"❌ الكلمة '{user_word}' مستخدمة مسبقاً")
+                'response': TextSendMessage(text=f"الكلمة '{user_word}' مستخدمة مسبقاً")
             }
         
+        # التحقق من توفر الحروف
         temp_letters = self.available_letters.copy()
         for letter in user_word:
             if letter in temp_letters:
@@ -159,25 +202,29 @@ class LettersWordsGame:
             else:
                 letters_str = ' '.join(self.available_letters)
                 return {
-                    'message': f"❌ الحرف '{letter}' غير متوفر!\nالحروف المتاحة: {letters_str}",
+                    'message': f"الحرف '{letter}' غير متوفر",
                     'points': 0,
                     'game_over': False,
-                    'response': TextSendMessage(text=f"❌ الحرف '{letter}' غير متوفر!\nالحروف المتاحة: {letters_str}")
+                    'response': TextSendMessage(text=f"الحرف '{letter}' غير متوفر\nالحروف المتاحة: {letters_str}")
                 }
         
+        # التحقق من طول الكلمة
         if len(user_word) < 2:
             return {
-                'message': "❌ الكلمة يجب أن تكون حرفين على الأقل",
+                'message': "الكلمة يجب أن تكون حرفين على الأقل",
                 'points': 0,
                 'game_over': False,
-                'response': TextSendMessage(text="❌ الكلمة يجب أن تكون حرفين على الأقل")
+                'response': TextSendMessage(text="الكلمة يجب أن تكون حرفين على الأقل")
             }
         
+        # التحقق من صحة الكلمة
         is_valid = False
         
+        # التحقق بالذكاء الاصطناعي أولاً
         if self.use_ai:
             is_valid = self.check_word_with_ai(user_word)
         
+        # التحقق التقليدي كاحتياطي
         if not is_valid:
             normalized_word = self.normalize_text(user_word)
             normalized_valid = {self.normalize_text(w) for w in self.valid_words}
@@ -185,33 +232,51 @@ class LettersWordsGame:
         
         if not is_valid:
             return {
-                'message': f"❌ '{user_word}' ليست كلمة صحيحة",
+                'message': f"'{user_word}' ليست كلمة صحيحة",
                 'points': 0,
                 'game_over': False,
-                'response': TextSendMessage(text=f"❌ '{user_word}' ليست كلمة صحيحة")
+                'response': TextSendMessage(text=f"'{user_word}' ليست كلمة صحيحة")
             }
         
+        # إجابة صحيحة
         self.used_words.add(user_word)
-        self.available_letters = temp_letters
-        points = 5
-        self.total_points += points
+        self.current_round_words += 1
+        points = 5 if not self.hint_used else 3
         
-        if len(self.available_letters) <= 1:
-            msg = f"🎉 أحسنت يا {display_name}!\nانتهت الحروف!\n⭐ إجمالي النقاط: {self.total_points}"
+        if display_name not in self.players_scores:
+            self.players_scores[display_name] = {'score': 0}
+        self.players_scores[display_name]['score'] += points
+        
+        # التحقق من اكتمال الكلمتين
+        if self.current_round_words >= self.words_per_question:
+            msg = f"صحيح يا {display_name}"
+            self.current_question += 1
+            
+            if self.current_question <= self.max_questions:
+                next_q = self.next_question()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'game_over': False,
+                    'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")
+                }
+            else:
+                end_msg = self.end_game()
+                return {
+                    'message': msg,
+                    'points': points,
+                    'won': True,
+                    'game_over': True,
+                    'response': TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
+                }
+        else:
+            remaining = self.words_per_question - self.current_round_words
+            letters_str = ' '.join(self.available_letters)
+            msg = f"صحيح يا {display_name}\nكلمة أخرى ({remaining} متبقية)\n\n{letters_str}"
+            
             return {
                 'message': msg,
-                'points': self.total_points,
-                'won': True,
-                'game_over': True,
+                'points': points,
+                'game_over': False,
                 'response': TextSendMessage(text=msg)
             }
-        
-        letters_str = ' '.join(self.available_letters)
-        msg = f"✅ كلمة صحيحة! +{points}\nالنقاط الحالية: {self.total_points}\n\nالحروف المتبقية:\n{letters_str}"
-        
-        return {
-            'message': msg,
-            'points': 0,
-            'game_over': False,
-            'response': TextSendMessage(text=msg)
-        }
