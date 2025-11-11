@@ -1,171 +1,122 @@
-import random
-from linebot.models import TextSendMessage
+"""
+لعبة الرياضيات المحدثة - Math Game
+عمليات حسابية متنوعة بصعوبة متدرجة
+"""
 
-class MathGame:
-    def __init__(self, line_bot_api):
-        self.line_bot_api = line_bot_api
-        self.current_question_text = None
-        self.correct_answer = None
-        self.current_question = 1
-        self.max_questions = 10
-        self.players_scores = {}
-        self.hint_used = False
+from base_game import BaseGame
+from linebot.models import TextSendMessage
+import random
+
+
+class MathGame(BaseGame):
+    """لعبة الرياضيات - عمليات حسابية"""
     
-    def generate_question(self):
-        """إنشاء سؤال رياضي عشوائي"""
-        operation = random.choice(['+', '-', '×', '÷'])
+    def __init__(self, line_bot_api):
+        super().__init__(line_bot_api, 'رياضيات')
+        self.operations = ['+', '-', '×', '÷']
+        self.difficulty_levels = {
+            1: {'min': 1, 'max': 10},      # سهل
+            2: {'min': 10, 'max': 50},     # متوسط
+            3: {'min': 20, 'max': 100},    # صعب
+            4: {'min': 50, 'max': 200},    # صعب جداً
+            5: {'min': 100, 'max': 500}    # خبير
+        }
+    
+    def _generate_question(self):
+        """توليد سؤال رياضيات جديد"""
+        # تحديد مستوى الصعوبة بناءً على رقم السؤال
+        difficulty = min(self.current_question, 5)
+        range_vals = self.difficulty_levels[difficulty]
+        
+        # اختيار عملية عشوائية
+        operation = random.choice(self.operations)
         
         if operation == '+':
-            a = random.randint(10, 100)
-            b = random.randint(10, 100)
-            answer = a + b
-            question = f"{a} + {b}"
+            num1 = random.randint(range_vals['min'], range_vals['max'])
+            num2 = random.randint(range_vals['min'], range_vals['max'])
+            answer = num1 + num2
+            question = f"{num1} + {num2}"
         
         elif operation == '-':
-            a = random.randint(20, 100)
-            b = random.randint(10, a)
-            answer = a - b
-            question = f"{a} - {b}"
+            num1 = random.randint(range_vals['min'], range_vals['max'])
+            num2 = random.randint(range_vals['min'], num1)  # num2 أصغر من num1
+            answer = num1 - num2
+            question = f"{num1} - {num2}"
         
         elif operation == '×':
-            a = random.randint(2, 15)
-            b = random.randint(2, 15)
-            answer = a * b
-            question = f"{a} × {b}"
+            # أرقام أصغر للضرب
+            num1 = random.randint(2, min(20, range_vals['max'] // 10))
+            num2 = random.randint(2, min(20, range_vals['max'] // 10))
+            answer = num1 * num2
+            question = f"{num1} × {num2}"
         
         else:  # ÷
-            b = random.randint(2, 12)
-            answer = random.randint(2, 20)
-            a = b * answer
-            question = f"{a} ÷ {b}"
+            # إنشاء قسمة بدون باقي
+            num2 = random.randint(2, min(15, range_vals['max'] // 20))
+            answer = random.randint(2, range_vals['max'] // num2)
+            num1 = num2 * answer
+            question = f"{num1} ÷ {num2}"
         
-        return question, answer
+        self.current_answer = str(answer)
+        self.current_operation = operation
+        self.used_hints = False
+        
+        # تحديد مستوى الصعوبة بالنجوم
+        stars = "⭐" * difficulty
+        
+        message = f"➕ سؤال {self.current_question} من {self.max_questions}\n"
+        message += f"{stars} المستوى: {difficulty}\n\n"
+        message += f"❓ احسب: {question} = ?\n\n"
+        message += f"━━━━━━━━━━━━━━━━\n"
+        message += f"💡 للتلميح: لمح | 📊 النقاط: {self.total_score}"
+        
+        return TextSendMessage(text=message)
     
-    def start_game(self):
-        self.current_question = 1
-        self.players_scores = {}
-        return self.next_question()
-    
-    def next_question(self):
-        """الانتقال للسؤال التالي"""
-        if self.current_question > self.max_questions:
-            return self.end_game()
-        
-        self.current_question_text, self.correct_answer = self.generate_question()
-        self.hint_used = False
-        
-        return TextSendMessage(
-            text=f"السؤال {self.current_question}/{self.max_questions}\n\n{self.current_question_text} = ?"
-        )
-    
-    def get_hint(self):
-        """الحصول على تلميح"""
-        if self.hint_used:
-            return TextSendMessage(text="تم استخدام التلميح مسبقاً")
-        
-        self.hint_used = True
-        
-        # تلميح بناءً على الرقم
-        if self.correct_answer < 20:
-            hint = f"الناتج أقل من 20"
-        elif self.correct_answer < 50:
-            hint = f"الناتج بين 20 و 50"
-        elif self.correct_answer < 100:
-            hint = f"الناتج بين 50 و 100"
-        else:
-            hint = f"الناتج أكبر من 100"
-        
-        return TextSendMessage(text=f"تلميح:\n{hint}")
-    
-    def show_answer(self):
-        """عرض الإجابة الصحيحة"""
-        msg = f"الإجابة الصحيحة: {self.correct_answer}"
-        
-        self.current_question += 1
-        
-        if self.current_question <= self.max_questions:
-            next_q = self.next_question()
-            return TextSendMessage(text=f"{msg}\n\n{next_q.text}")
-        else:
-            end_msg = self.end_game()
-            return TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
-    
-    def end_game(self):
-        """إنهاء اللعبة وعرض النتائج"""
-        if not self.players_scores:
-            return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
-        
-        sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
-        
-        msg = "النتائج النهائية\n\n"
-        for i, (name, data) in enumerate(sorted_players[:5], 1):
-            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
-            msg += f"{emoji} {name}: {data['score']} نقطة\n"
-        
-        winner = sorted_players[0]
-        msg += f"\nالفائز: {winner[0]}"
-        
-        return TextSendMessage(text=msg)
-    
-    def check_answer(self, answer, user_id, display_name):
-        if not self.current_question_text:
-            return None
-        
-        # التحقق من أوامر التلميح والإجابة
-        if answer == 'لمح':
-            return {
-                'message': '',
-                'points': 0,
-                'game_over': False,
-                'response': self.get_hint()
-            }
-        
-        if answer == 'جاوب':
-            return {
-                'message': '',
-                'points': 0,
-                'game_over': self.current_question > self.max_questions,
-                'response': self.show_answer()
-            }
-        
+    def _check_answer_logic(self, user_answer):
+        """فحص الإجابة"""
         try:
-            user_answer = int(answer.strip())
+            # إزالة المسافات وتحويل الفواصل العربية إلى نقاط
+            user_answer = user_answer.strip().replace('٫', '.').replace('،', '.')
+            
+            # تحويل الأرقام العربية إلى إنجليزية
+            arabic_to_english = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
+            user_answer = user_answer.translate(arabic_to_english)
+            
+            # المقارنة
+            return float(user_answer) == float(self.current_answer)
         except ValueError:
-            return {
-                'message': "أدخل رقم صحيح فقط",
-                'points': 0,
-                'game_over': False,
-                'response': TextSendMessage(text="أدخل رقم صحيح فقط")
-            }
+            return False
+    
+    def _get_hint(self):
+        """الحصول على تلميح"""
+        answer_num = int(self.current_answer)
         
-        if user_answer == self.correct_answer:
-            points = 10 if not self.hint_used else 5
-            
-            if display_name not in self.players_scores:
-                self.players_scores[display_name] = {'score': 0}
-            self.players_scores[display_name]['score'] += points
-            
-            msg = f"صحيح يا {display_name}"
-            
-            self.current_question += 1
-            
-            if self.current_question <= self.max_questions:
-                next_q = self.next_question()
-                return {
-                    'message': msg,
-                    'points': points,
-                    'won': True,
-                    'game_over': False,
-                    'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")
-                }
-            else:
-                end_msg = self.end_game()
-                return {
-                    'message': msg,
-                    'points': points,
-                    'won': True,
-                    'game_over': True,
-                    'response': TextSendMessage(text=f"{msg}\n\n{end_msg.text}")
-                }
+        if self.current_operation == '+':
+            hint = f"الناتج أكبر من {answer_num - 5}"
+        elif self.current_operation == '-':
+            hint = f"الناتج بين {max(0, answer_num - 3)} و {answer_num + 3}"
+        elif self.current_operation == '×':
+            hint = f"الناتج {'زوجي' if answer_num % 2 == 0 else 'فردي'}"
+        else:  # ÷
+            hint = f"الناتج عدد {'صحيح' if float(self.current_answer).is_integer() else 'عشري'}"
         
-        return None
+        return hint
+
+
+# مثال على الاستخدام:
+"""
+from linebot import LineBotApi
+
+line_bot_api = LineBotApi('YOUR_TOKEN')
+game = MathGame(line_bot_api)
+
+# بدء اللعبة - سيبدأ من مستوى سهل ويزيد تدريجياً
+start_message = game.start_game()
+
+# فحص إجابات
+result1 = game.check_answer("15", "user123", "أحمد")  # سؤال 1
+result2 = game.check_answer("42", "user123", "أحمد")  # سؤال 2
+# ... حتى 5 أسئلة
+
+# بعد السؤال الخامس، سيظهر نافذة الفوز تلقائياً
+"""
