@@ -1387,6 +1387,67 @@ def handle_message(event):
                 )
             return
         
+        elif text == 'الصدارة':
+            leaders = get_leaderboard()
+            if leaders:
+                players_list = []
+                for i, leader in enumerate(leaders, 1):
+                    if i <= 3:
+                        rank_bg = "#4a4a4a"
+                        rank_color = "#ffffff"
+                        name_color = "#ffffff"
+                    else:
+                        rank_bg = "#f5f5f5"
+                        rank_color = "#2a2a2a"
+                        name_color = "#4a4a4a"
+
+                    player_box = {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": str(i), "size": "sm", "color": rank_color, "align": "center", "weight": "bold", "flex": 0},
+                            {"type": "text", "text": leader['display_name'], "size": "sm", "color": name_color, "flex": 3, "margin": "md", "weight": "bold" if i <= 3 else "regular"},
+                            {"type": "text", "text": str(leader['total_points']), "size": "sm", "color": name_color, "flex": 1, "align": "end", "weight": "bold" if i <= 3 else "regular"}
+                        ],
+                        "backgroundColor": rank_bg,
+                        "cornerRadius": "md",
+                        "paddingAll": "12px",
+                        "spacing": "md",
+                        "margin": "xs" if i > 1 else "none"
+                    }
+                    players_list.append(player_box)
+
+                flex_leaderboard = {
+                    "type": "bubble",
+                    "size": "mega",
+                    "header": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "xl", "color": "#1a1a1a", "align": "center"},
+                            {"type": "text", "text": "أفضل اللاعبين", "size": "sm", "color": "#6a6a6a", "align": "center", "margin": "sm"}
+                        ],
+                        "backgroundColor": "#ffffff",
+                        "paddingAll": "20px"
+                    },
+                    "body": {"type": "box", "layout": "vertical", "contents": players_list, "backgroundColor": "#ffffff", "paddingAll": "20px"},
+                    "footer": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "separator", "color": "#e8e8e8"},
+                            {"type": "button", "action": {"type": "message", "label": "▫️نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "margin": "md"}
+                        ],
+                        "backgroundColor": "#f8f8f8",
+                        "paddingAll": "16px"
+                    }
+                }
+
+                line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="لوحة الصدارة", contents=flex_leaderboard, quick_reply=get_quick_reply()))
+            else:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="لا توجد بيانات بعد", quick_reply=get_quick_reply()))
+            return
+        
         elif text in ['إيقاف', 'ايقاف', 'stop']:
             with games_lock:
                 if game_id in active_games:
@@ -1648,70 +1709,6 @@ def handle_error(error):
     """معالج الأخطاء العام"""
     logger.error(f"خطأ غير متوقع: {error}", exc_info=True)
     return 'Internal Server Error', 500
-
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    text = event.message.text
-
-    if text == 'الصدارة':
-        leaders = get_leaderboard()
-        if leaders:
-            players_list = []
-            for i, leader in enumerate(leaders, 1):
-                if i <= 3:
-                    rank_bg = "#4a4a4a"
-                    rank_color = "#ffffff"
-                    name_color = "#ffffff"
-                else:
-                    rank_bg = "#f5f5f5"
-                    rank_color = "#2a2a2a"
-                    name_color = "#4a4a4a"
-
-                player_box = {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {"type": "text", "text": str(i), "size": "sm", "color": rank_color, "align": "center", "weight": "bold", "flex": 0},
-                        {"type": "text", "text": leader['display_name'], "size": "sm", "color": name_color, "flex": 3, "margin": "md", "weight": "bold" if i <= 3 else "regular"},
-                        {"type": "text", "text": str(leader['total_points']), "size": "sm", "color": name_color, "flex": 1, "align": "end", "weight": "bold" if i <= 3 else "regular"}
-                    ],
-                    "backgroundColor": rank_bg,
-                    "cornerRadius": "md",
-                    "paddingAll": "12px",
-                    "spacing": "md",
-                    "margin": "xs" if i > 1 else "none"
-                }
-                players_list.append(player_box)
-
-            flex_leaderboard = {
-                "type": "bubble",
-                "size": "mega",
-                "header": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "xl", "color": "#1a1a1a", "align": "center"},
-                        {"type": "text", "text": "أفضل اللاعبين", "size": "sm", "color": "#6a6a6a", "align": "center", "margin": "sm"}
-                    ],
-                    "backgroundColor": "#ffffff",
-                    "paddingAll": "20px"
-                },
-                "body": {"type": "box", "layout": "vertical", "contents": players_list, "backgroundColor": "#ffffff", "paddingAll": "20px"},
-                "footer": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "separator", "color": "#e8e8e8"},
-                        {"type": "button", "action": {"type": "message", "label": "▫️نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "margin": "md"}
-                    ],
-                    "backgroundColor": "#f8f8f8",
-                    "paddingAll": "16px"
-                }
-            }
-
-            line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="لوحة الصدارة", contents=flex_leaderboard, quick_reply=get_quick_reply()))
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="لا توجد بيانات بعد", quick_reply=get_quick_reply()))
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
