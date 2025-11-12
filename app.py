@@ -301,7 +301,7 @@ def get_winner_announcement(winner_name, winner_points, game_type, total_questio
                 },
                 {
                     "type": "text",
-                    "text": "تهانينا!",
+                    "text": "تهانينا",
                     "weight": "bold",
                     "size": "xxl",
                     "color": "#1a1a1a",
@@ -428,7 +428,7 @@ def get_winner_announcement(winner_name, winner_points, game_type, total_questio
                 },
                 {
                     "type": "text",
-                    "text": "🎉 أحسنت! لعبة رائعة 🎉",
+                    "text": " أحسنت! لعبة رائعة ",
                     "size": "sm",
                     "color": "#4a4a4a",
                     "align": "center",
@@ -455,7 +455,7 @@ def get_winner_announcement(winner_name, winner_points, game_type, total_questio
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "▫️لعب مرة أخرى",
+                                "label": "إعادة",
                                 "text": game_type
                             },
                             "style": "primary",
@@ -466,7 +466,7 @@ def get_winner_announcement(winner_name, winner_points, game_type, total_questio
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "▫️الصدارة",
+                                "label": "الصدارة",
                                 "text": "الصدارة"
                             },
                             "style": "secondary",
@@ -755,7 +755,7 @@ def get_help_message():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "▫️انضم",
+                                "label": "انضم",
                                 "text": "انضم"
                             },
                             "style": "primary",
@@ -766,7 +766,7 @@ def get_help_message():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "▫️نقاطي",
+                                "label": "نقاطي",
                                 "text": "نقاطي"
                             },
                             "style": "secondary",
@@ -776,7 +776,7 @@ def get_help_message():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "▫️الصدارة",
+                                "label": "الصدارة",
                                 "text": "الصدارة"
                             },
                             "style": "secondary",
@@ -1595,7 +1595,7 @@ def handle_message(event):
                 
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="💖 لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة", quick_reply=get_quick_reply())
+                    TextSendMessage(text="🖤 لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير", quick_reply=get_quick_reply())
                 )
                 return
             
@@ -1665,7 +1665,7 @@ def handle_message(event):
                             line_bot_api.reply_message(
                                 event.reply_token,
                                 TextSendMessage(
-                                    text=f"انتهت لعبة {game_type}\n\nجرب لعبة أخرى!",
+                                    text=f"انتهت لعبة {game_type}\n\nإعادة",
                                     quick_reply=get_quick_reply()
                                 )
                             )
