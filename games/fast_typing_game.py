@@ -14,7 +14,8 @@ class FastTypingGame:
             "برمجة", "حاسوب", "إنترنت", "تطبيق", "موقع", "بيانات",
             "تكنولوجيا", "ذكاء", "مستخدم", "تطوير", "تصميم", "خوارزمية",
             "تعلم", "ابتكار", "إبداع", "إدارة", "تحليل", "خدمة", "مشروع",
-            "معرفة", "تخزين", "تحديث", "أمان", "تشفير", "خادم", "واجهة"
+            "معرفة", "تخزين", "تحديث", "أمان", "تشفير", "خادم", "واجهة",
+            "تعليم", "أمن", "كتابة", "قراءة", "بحث", "مكتبة", "شبكة", "ذاكرة"
         ]
         
         # جمل قصيرة
@@ -27,7 +28,8 @@ class FastTypingGame:
             "خير الأمور أوسطها", "رب ضارة نافعة", "الحاجة أم الاختراع", "الاتحاد قوة",
             "الصحة تاج على رؤوس الأصحاء", "العمل عبادة", "الوفاء من شيم الكرام",
             "الأخلاق الحسنة زينة الإنسان", "التواضع من صفات العظماء", "الأمل يصنع المستحيل",
-            "النجاح رحلة وليس وجهة"
+            "النجاح رحلة وليس وجهة", "الإبداع يصنع الفرق", "التفاؤل سر السعادة",
+            "المثابرة تصنع الفارق", "التعلم المستمر مفتاح التقدم"
         ]
     
     def start_game(self):
@@ -37,17 +39,34 @@ class FastTypingGame:
         self.start_time = datetime.now()
         self.finished = False
         
-        # إيموجي خفيف واحد فقط ⚡
         return TextSendMessage(
-            text=f"⚡ اكتب التالي بسرعة ودقة:\n\n{self.target_text}\n\nمن يكتبه أولاً يفوز"
+            text=f"اكتب التالي بسرعة ودقة:\n\n{self.target_text}\n\nمن يكتبه أولاً يفوز"
         )
     
     def get_hint(self):
-        """تلميح أول كلمتين للجملة أو بداية الكلمة"""
+        """تلميح أول كلمة أو كلمتين من النص مع أمثلة متنوعة"""
         if not self.target_text:
-            return "لا يوجد نص حالي"
+            return TextSendMessage(text="لا يوجد نص حالي")
+        
         words = self.target_text.split()
-        return f"تبدأ بـ: {words[0]}..." if len(words) == 1 else f"تبدأ بـ: {words[0]} {words[1]}..."
+        
+        # إظهار أول كلمة أو كلمتين كأمثلة
+        hint_options = []
+        for i in range(min(2, len(words))):
+            hint_options.append(words[i])
+        
+        # إضافة أمثلة إضافية عشوائية من الكلمات
+        if len(hint_options) == 1:
+            extra = random.sample([w for w in self.words if w != words[0]], k=3)
+            hint_options.extend(extra)
+        else:
+            extra = random.sample([w for w in self.words if w not in hint_options], k=2)
+            hint_options.extend(extra)
+        
+        random.shuffle(hint_options)
+        hint_text = ', '.join(hint_options[:5])  # عرض حتى 5 أمثلة
+        
+        return TextSendMessage(text=f"تلميح: {hint_text} ...")
     
     def get_answer(self):
         if not self.target_text:
@@ -74,7 +93,7 @@ class FastTypingGame:
                 points = 10
                 speed = "بطيء"
             
-            msg = f"فاز {display_name}!\n{speed}\nالوقت: {elapsed:.2f} ثانية\n+{points} نقطة"
+            msg = f"فاز {display_name}!\n{speed}\n⏱️ الوقت: {elapsed:.2f} ثانية\n+{points} نقطة"
             
             return {
                 'message': msg,
