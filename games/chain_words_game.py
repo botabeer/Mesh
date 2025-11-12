@@ -35,7 +35,7 @@ class ChainWordsGame:
         return self.next_question()
     
     def next_question(self):
-        """الانتقال للسؤال التالي"""
+        """الانتقال للسؤال التالي بدون ترقيم"""
         if self.current_question > self.max_questions:
             return self.end_game()
         
@@ -47,7 +47,7 @@ class ChainWordsGame:
         self.hint_used = False
         
         return TextSendMessage(
-            text=f"السؤال {self.current_question}/{self.max_questions}\n\nالكلمة: {self.current_word}\nاكتب كلمة تبدأ بحرف: {last_letter}"
+            text=f"الكلمة: {self.current_word}\nاكتب كلمة تبدأ بحرف: {last_letter}"
         )
     
     def get_hint(self):
@@ -62,7 +62,7 @@ class ChainWordsGame:
         return TextSendMessage(text=f"تلميح:\n{hint}")
     
     def show_answer(self):
-        """عرض كلمة مقترحة"""
+        """عرض كلمة مقترحة بدون ترقيم"""
         last_letter = self.normalize_letter(self.current_word[-1])
         suggestions = {
             'ا': ['أمل', 'إبراهيم', 'أحمد'],
