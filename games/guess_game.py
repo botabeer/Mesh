@@ -14,7 +14,7 @@ class GuessGame:
         self.players_scores = {}
         self.hint_used = False
         
-        # قائمة الألغاز المنظمة حسب الفئات
+        # قائمة الألغاز
         self.riddles = [
             {"category": "المطبخ", "answer": "قدر", "first_letter": "ق"},
             {"category": "المطبخ", "answer": "ملعقة", "first_letter": "م"},
@@ -65,7 +65,6 @@ class GuessGame:
         ]
     
     def normalize_text(self, text):
-        """تطبيع النص للمقارنة"""
         text = text.strip().lower()
         text = re.sub(r'^ال', '', text)
         text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
@@ -80,10 +79,6 @@ class GuessGame:
         return self.next_question()
     
     def next_question(self):
-        """الانتقال للسؤال التالي"""
-        if self.current_question > self.max_questions:
-            return self.end_game()
-        
         riddle = random.choice(self.riddles)
         self.current_word = riddle["answer"].lower()
         self.category = riddle["category"]
@@ -91,23 +86,32 @@ class GuessGame:
         self.hint_used = False
         
         return TextSendMessage(
-            text=f"السؤال {self.current_question}/{self.max_questions}\n\nشيء في {self.category}\nيبدأ بحرف: {self.first_letter}\n\nما هو؟"
+            text=f"شيء في {self.category}\nيبدأ بحرف: {self.first_letter}\nما هو؟"
         )
     
     def get_hint(self):
-        """الحصول على تلميح"""
+        """تلميح متقدم: عدد الأحرف، أول حرفين، ومثال مشابه"""
         if self.hint_used:
             return TextSendMessage(text="تم استخدام التلميح مسبقاً")
         
         self.hint_used = True
-        hint = f"عدد الأحرف: {len(self.current_word)}"
+        hint_parts = [f"عدد الأحرف: {len(self.current_word)}"]
         
-        return TextSendMessage(text=f"تلميح:\n{hint}")
+        if len(self.current_word) > 2:
+            hint_parts.append(f"تبدأ بـ: {self.current_word[:2]}")
+        else:
+            hint_parts.append(f"تبدأ بـ: {self.current_word[0]}")
+        
+        similar_words = [r["answer"] for r in self.riddles if r["category"] == self.category and r["answer"] != self.current_word]
+        if similar_words:
+            example = random.choice(similar_words)
+            hint_parts.append(f"مثال مشابه: {example}")
+        
+        hint_text = " | ".join(hint_parts)
+        return TextSendMessage(text=f"تلميح:\n{hint_text}")
     
     def show_answer(self):
-        """عرض الإجابة الصحيحة"""
         msg = f"الإجابة الصحيحة: {self.current_word}"
-        
         self.current_question += 1
         
         if self.current_question <= self.max_questions:
@@ -116,12 +120,10 @@ class GuessGame:
             return self.end_game()
     
     def end_game(self):
-        """إنهاء اللعبة وعرض النتائج"""
         if not self.players_scores:
             return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
         
         sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
-        
         msg = "النتائج النهائية\n\n"
         for i, (name, data) in enumerate(sorted_players[:5], 1):
             emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
@@ -129,14 +131,12 @@ class GuessGame:
         
         winner = sorted_players[0]
         msg += f"\nالفائز: {winner[0]}"
-        
         return TextSendMessage(text=msg)
     
     def check_answer(self, answer, user_id, display_name):
         if not self.current_word:
             return None
         
-        # التحقق من أوامر التلميح والإجابة
         if answer == 'لمح':
             return {
                 'message': '',
@@ -164,7 +164,6 @@ class GuessGame:
             self.players_scores[display_name]['score'] += points
             
             msg = f"صحيح يا {display_name}\n+{points} نقطة"
-            
             self.current_question += 1
             
             if self.current_question <= self.max_questions:
