@@ -93,7 +93,7 @@ class FastTypingGame:
                 points = 10
                 speed = "بطيء"
             
-            msg = f"فاز {display_name}!\n{speed}\n⏱️ الوقت: {elapsed:.2f} ثانية\n+{points} نقطة"
+            msg = f"فاز {display_name}!\n{speed}\n⏱️ الوقت: {elapsed:.2f} ثانية\n+{points} ☑️نقطة"
             
             return {
                 'message': msg,
