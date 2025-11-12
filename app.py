@@ -1688,7 +1688,7 @@ def handle_message(event):
                             # إضافة عداد الأسئلة إلى الرسالة
                             remaining = game_data['max_questions'] - game_data['question_count']
                             if hasattr(response, 'text'):
-                                response.text += f"\n\n📊 السؤال {game_data['question_count']}/{game_data['max_questions']}"
+                                response.text += f"\n\n⏯️ السؤال {game_data['question_count']}/{game_data['max_questions']}"
                             response.quick_reply = get_quick_reply()
                     
                     line_bot_api.reply_message(event.reply_token, response)
