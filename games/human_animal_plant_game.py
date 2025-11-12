@@ -90,7 +90,6 @@ class HumanAnimalPlantGame:
         self.available_letters = ["ا", "م", "ع", "س", "ف", "ن", "ح", "ر", "ج", "ق", "د", "ز", "و", "ت", "ب", "ك", "ط", "ل", "ي"]
     
     def normalize_text(self, text):
-        """تطبيع النص للمقارنة"""
         text = text.strip().lower()
         text = re.sub(r'^ال', '', text)
         text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
@@ -105,7 +104,7 @@ class HumanAnimalPlantGame:
         return self.next_question()
     
     def next_question(self):
-        """الانتقال للسؤال التالي"""
+        """اختيار مهمة جديدة بدون ترقيم"""
         if self.current_question > self.max_questions:
             return self.end_game()
         
@@ -117,11 +116,11 @@ class HumanAnimalPlantGame:
         self.hint_used = False
         
         return TextSendMessage(
-            text=f"السؤال {self.current_question}/{self.max_questions}\n\nاذكر: {self.current_category}\nيبدأ بحرف: {self.current_letter}"
+            text=f"اذكر: {self.current_category}\nيبدأ بحرف: {self.current_letter}"
         )
     
     def get_hint(self):
-        """الحصول على تلميح"""
+        """تلميح: أمثلة أوليتين من نفس الفئة"""
         if self.hint_used:
             return TextSendMessage(text="تم استخدام التلميح مسبقاً")
         
@@ -129,7 +128,6 @@ class HumanAnimalPlantGame:
         category_data = self.categories[self.current_category]
         examples = category_data.get(self.current_letter, [])
         hint = f"أمثلة: {', '.join(examples[:2])}"
-        
         return TextSendMessage(text=f"تلميح:\n{hint}")
     
     def show_answer(self):
@@ -146,12 +144,10 @@ class HumanAnimalPlantGame:
             return self.end_game()
     
     def end_game(self):
-        """إنهاء اللعبة وعرض النتائج"""
         if not self.players_scores:
             return TextSendMessage(text="انتهت اللعبة\nلم يشارك أحد")
         
         sorted_players = sorted(self.players_scores.items(), key=lambda x: x[1]['score'], reverse=True)
-        
         msg = "النتائج النهائية\n\n"
         for i, (name, data) in enumerate(sorted_players[:5], 1):
             emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"  {i}."
@@ -159,14 +155,11 @@ class HumanAnimalPlantGame:
         
         winner = sorted_players[0]
         msg += f"\nالفائز: {winner[0]}"
-        
         return TextSendMessage(text=msg)
     
     def check_with_ai(self, answer):
-        """التحقق من الإجابة باستخدام AI"""
         if not self.model:
             return False
-        
         try:
             prompt = f"""هل '{answer}' من فئة {self.current_category} ويبدأ بحرف {self.current_letter}؟
             أجب بنعم أو لا فقط"""
@@ -185,7 +178,6 @@ class HumanAnimalPlantGame:
         if not self.current_category or not self.current_letter:
             return None
         
-        # التحقق من أوامر التلميح والإجابة
         if answer == 'لمح':
             return {
                 'message': '',
@@ -204,18 +196,14 @@ class HumanAnimalPlantGame:
         
         user_answer = answer.strip()
         user_answer_normalized = self.normalize_text(user_answer)
-        
-        # الحصول على الإجابات الصحيحة
         category_data = self.categories[self.current_category]
         valid_answers = category_data.get(self.current_letter, [])
         valid_answers_normalized = [self.normalize_text(ans) for ans in valid_answers]
         
-        # التحقق أولاً بالذكاء الاصطناعي
         is_correct = False
         if self.use_ai:
             is_correct = self.check_with_ai(user_answer)
         
-        # التحقق التقليدي كاحتياطي
         if not is_correct and user_answer_normalized in valid_answers_normalized:
             is_correct = True
         
