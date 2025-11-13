@@ -1,6 +1,6 @@
 """
-لعبة الفروقات - آلية لعب مبسطة جداً
-اللاعب يختار رقم الفرق من 1 إلى 5
+لعبة الفروقات - نسخة مبسطة جداً
+فقط عرض صور واحدة تلو الأخرى
 """
 
 from linebot.models import TextSendMessage, ImageSendMessage
@@ -11,174 +11,122 @@ logger = logging.getLogger(__name__)
 
 
 class DifferencesGame:
-    """لعبة الفروقات المبسطة"""
+    """لعبة الفروقات - نسخة بسيطة"""
     
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
-        self.current_image = None
-        self.correct_differences = set()
-        self.found_count = 0
+        self.current_index = 0
+        self.shown_images = []
         
-        # مجموعة كبيرة من الصور - ضع روابط صورك هنا
+        # ضع روابط صورك هنا (أكثر من 20 صورة)
         self.images = [
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_1.jpg',
-                'differences': {1, 3, 5}  # الفروقات الصحيحة (من 1 إلى 5)
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_2.jpg',
-                'differences': {2, 4, 5}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_3.jpg',
-                'differences': {1, 2, 3}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_4.jpg',
-                'differences': {1, 3, 4}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_5.jpg',
-                'differences': {2, 3, 5}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_6.jpg',
-                'differences': {1, 2, 5}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_7.jpg',
-                'differences': {1, 4, 5}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_8.jpg',
-                'differences': {2, 3, 4}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_9.jpg',
-                'differences': {1, 2, 4}
-            },
-            {
-                'url': 'https://i.imgur.com/YOUR_IMAGE_10.jpg',
-                'differences': {3, 4, 5}
-            },
-            # أضف المزيد من الصور هنا...
+            'https://up6.cc/2025/10/176300269322041.jpeg',
+            'https://up6.cc/2025/10/176300269324622.jpeg',
+            'https://up6.cc/2025/10/176300269325883.jpeg',
+            'https://up6.cc/2025/10/176300269328574.jpeg',
+            'https://up6.cc/2025/10/176300269333045.jpeg',
+            'https://up6.cc/2025/10/176300269328574.jpeg',
+            'https://up6.cc/2025/10/176300292845955.jpeg',
+            'https://up6.cc/2025/10/176300292842534.jpeg',
+            'https://up6.cc/2025/10/176300292839723.jpeg',
+            'https://up6.cc/2025/10/176300292838272.jpeg',
+            'https://up6.cc/2025/10/176300292836241.jpeg',
+            'https://up6.cc/2025/10/176300308283581.jpeg',
+            'https://up6.cc/2025/10/176300308285072.jpeg',
+            'https://up6.cc/2025/10/176300308289583.jpeg',
+            'https://up6.cc/2025/10/176300308292614.jpeg',
+            'https://up6.cc/2025/10/176300308294345.jpeg',
+            'https://up6.cc/2025/10/176300322419141.jpeg',
+            'https://up6.cc/2025/10/176300322424732.jpeg',
+            'https://up6.cc/2025/10/176300322426263.jpeg',
+            'https://up6.cc/2025/10/176300322433374.jpeg',
+            'https://up6.cc/2025/10/176300322435875.jpeg',
         ]
     
     def start_game(self):
-        """بدء لعبة جديدة"""
-        try:
-            self.current_image = random.choice(self.images)
-            self.correct_differences = self.current_image['differences']
-            self.found_count = 0
-            
-            # إرسال الصورة مع التعليمات
-            return [
-                ImageSendMessage(
-                    original_content_url=self.current_image['url'],
-                    preview_image_url=self.current_image['url']
-                ),
-                TextSendMessage(
-                    text=f"اوجد الفروقات!\n\n"
-                         f"اكتب رقم الفرق من 1 الى 5\n"
-                         f"مثال: 1\n\n"
-                         f"لمح - للحصول على تلميح\n"
-                         f"جاوب - لعرض الاجابة"
-                )
-            ]
-            
-        except Exception as e:
-            logger.error(f"خطأ في بدء لعبة الفروقات: {e}")
-            return TextSendMessage(text="حدث خطأ في بدء اللعبة")
+        """بدء اللعبة بأول صورة"""
+        self.current_index = 0
+        self.shown_images = []
+        
+        # اختيار صورة عشوائية
+        available_images = [img for img in self.images if img not in self.shown_images]
+        
+        if not available_images:
+            self.shown_images = []  # إعادة تعيين
+            available_images = self.images
+        
+        current_image = random.choice(available_images)
+        self.shown_images.append(current_image)
+        self.current_index += 1
+        
+        return [
+            ImageSendMessage(
+                original_content_url=current_image,
+                preview_image_url=current_image
+            ),
+            TextSendMessage(
+                text=f"صورة {self.current_index}/5\n\n"
+                     f"اوجد الفروقات!\n\n"
+                     f"اكتب: تم او التالي\n"
+                     f"للانتقال للصورة التالية"
+            )
+        ]
     
     def check_answer(self, answer, user_id, display_name):
-        """فحص إجابة اللاعب"""
-        try:
-            if not self.current_image:
-                return None
-            
-            answer = answer.strip()
-            
-            # أوامر خاصة
-            if answer in ['لمح', 'تلميح']:
-                return self._give_hint()
-            
-            if answer in ['جاوب', 'استسلم']:
-                return self._show_answer()
-            
-            # محاولة تحويل الإجابة لرقم
-            try:
-                num = int(answer)
-                if num < 1 or num > 5:
-                    return {
-                        'points': 0,
-                        'won': False,
-                        'response': TextSendMessage(text="اكتب رقم من 1 الى 5 فقط")
-                    }
-                
-                # فحص الإجابة
-                if num in self.correct_differences:
-                    self.found_count += 1
-                    remaining = len(self.correct_differences) - self.found_count
-                    
-                    if remaining == 0:
-                        # فاز اللاعب
-                        return {
-                            'points': 10,
-                            'won': True,
-                            'game_over': False,
-                            'response': TextSendMessage(
-                                text=f"ممتاز {display_name}!\n\n"
-                                     f"وجدت جميع الفروقات\n"
-                                     f"النقاط: +10"
-                            )
-                        }
-                    else:
-                        return {
-                            'points': 2,
-                            'won': False,
-                            'response': TextSendMessage(
-                                text=f"صح!\n\n"
-                                     f"النقاط: +2\n"
-                                     f"الباقي: {remaining}"
-                            )
-                        }
-                else:
-                    return {
-                        'points': 0,
-                        'won': False,
-                        'response': TextSendMessage(text="خطأ! حاول مرة اخرى")
-                    }
-                    
-            except ValueError:
-                return {
-                    'points': 0,
-                    'won': False,
-                    'response': TextSendMessage(text="اكتب رقم من 1 الى 5")
-                }
-            
-        except Exception as e:
-            logger.error(f"خطأ في فحص الإجابة: {e}")
-            return None
-    
-    def _give_hint(self):
-        """إعطاء تلميح"""
-        if self.correct_differences:
-            hint_num = list(self.correct_differences)[0]
+        """فحص الإجابة - فقط للانتقال للصورة التالية"""
+        answer_normalized = answer.strip().lower()
+        
+        # التحقق من الأوامر المسموحة
+        if answer_normalized not in ['تم', 'التالي', 'next', 'done']:
+            return None  # تجاهل أي رد آخر
+        
+        # التحقق من انتهاء الأسئلة (5 صور)
+        if self.current_index >= 5:
             return {
-                'points': 0,
-                'won': False,
-                'response': TextSendMessage(text=f"تلميح: جرب رقم {hint_num}")
+                'points': 10,
+                'won': True,
+                'game_over': False,
+                'response': TextSendMessage(
+                    text=f"احسنت {display_name}!\n\n"
+                         f"انتهيت من 5 صور\n"
+                         f"النقاط: +10"
+                )
             }
-        return None
-    
-    def _show_answer(self):
-        """عرض الإجابة"""
-        answer = ', '.join(map(str, sorted(self.correct_differences)))
-        return {
-            'points': 0,
-            'won': False,
-            'game_over': True,
-            'response': TextSendMessage(
-                text=f"الفروقات الصحيحة:\n{answer}"
+        
+        # اختيار صورة جديدة
+        available_images = [img for img in self.images if img not in self.shown_images]
+        
+        if not available_images:
+            self.shown_images = []
+            available_images = self.images
+        
+        current_image = random.choice(available_images)
+        self.shown_images.append(current_image)
+        self.current_index += 1
+        
+        # إرسال الصورة الجديدة مباشرة
+        try:
+            self.line_bot_api.push_message(
+                user_id,
+                [
+                    ImageSendMessage(
+                        original_content_url=current_image,
+                        preview_image_url=current_image
+                    ),
+                    TextSendMessage(
+                        text=f"صورة {self.current_index}/5\n\n"
+                             f"اوجد الفروقات!\n\n"
+                             f"اكتب: تم او التالي"
+                    )
+                ]
             )
+        except Exception as e:
+            logger.error(f"خطأ في إرسال الصورة: {e}")
+        
+        # إرجاع نقاط للاعب
+        return {
+            'points': 2,
+            'won': True,
+            'game_over': False,
+            'response': None  # لا نرسل رد لأننا أرسلنا الصورة مباشرة
         }
