@@ -11,7 +11,9 @@ import logging
 # استيراد الوظائف المساعدة
 from utils.helpers import get_user_profile_safe, normalize_text, check_rate_limit, cleanup_old_games
 from utils.database import init_db, update_user_points, get_user_stats, get_leaderboard
-from utils.ui_components import get_quick_reply, get_more_quick_reply, get_winner_announcement, get_help_message, get_welcome_message, get_stats_message, get_leaderboard_message, get_join_message
+from utils.ui_components import (get_quick_reply, get_more_quick_reply, get_winner_announcement, 
+                                 get_help_message, get_welcome_message, get_stats_message, 
+                                 get_leaderboard_message, get_join_message)
 from utils.gemini_config import get_gemini_api_key, switch_gemini_key, USE_AI
 
 # استيراد الألعاب
@@ -86,6 +88,39 @@ GAMES_MAP = {
     'أغنية': (SongGame, 'أغنية')
 }
 
+# قائمة الأوامر المتاحة (للمساعدة)
+COMMANDS_LIST = """
+🎮 **الأوامر المتاحة:**
+
+**📋 أوامر عامة:**
+• البداية / ابدأ / start - القائمة الرئيسية
+• مساعدة - عرض جميع الأوامر
+• نقاطي - عرض إحصائياتك
+• الصدارة - لوحة المتصدرين
+• انضم / تسجيل - التسجيل في الألعاب
+• انسحب / خروج - الانسحاب من الألعاب
+• إيقاف / stop - إيقاف اللعبة الحالية
+
+**🎯 ألعاب متاحة:**
+• ذكاء - أسئلة ذكاء
+• لون - لعبة الكلمة واللون
+• سلسلة - سلسلة الكلمات
+• ترتيب - ترتيب الحروف
+• تكوين - تكوين كلمات
+• أسرع - اكتب بسرعة
+• لعبة - إنسان حيوان نبات
+• خمن - خمن الكلمة
+• توافق - نسبة التوافق
+• رياضيات - مسائل رياضية
+• ذاكرة - لعبة الذاكرة
+• لغز - حل الألغاز
+• ضد - الكلمة المعاكسة
+• إيموجي - خمن الإيموجي
+• أغنية - خمن الأغنية
+
+اكتب اسم أي لعبة للبدء! 🚀
+"""
+
 def start_game(game_id, game_class, game_type, user_id, event):
     """بدء لعبة جديدة"""
     try:
@@ -122,10 +157,13 @@ def start_game(game_id, game_class, game_type, user_id, event):
         
     except Exception as e:
         logger.error(f"خطأ في بدء اللعبة {game_type}: {e}")
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"❌ حدث خطأ في بدء لعبة {game_type}", quick_reply=get_quick_reply())
-        )
+        try:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"❌ حدث خطأ في بدء لعبة {game_type}", quick_reply=get_quick_reply())
+            )
+        except:
+            pass
         return False
 
 @app.route("/", methods=['GET'])
@@ -135,10 +173,11 @@ def home():
     <html>
         <head>
             <title>LINE Bot - Game Server</title>
+            <meta charset="UTF-8">
             <style>
                 body {{ font-family: Arial; text-align: center; padding: 50px; background: #f5f5f5; }}
                 h1 {{ color: #00B900; }}
-                .status {{ background: white; padding: 20px; border-radius: 10px; margin: 20px auto; max-width: 600px; }}
+                .status {{ background: white; padding: 20px; border-radius: 10px; margin: 20px auto; max-width: 600px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
             </style>
         </head>
         <body>
@@ -146,7 +185,7 @@ def home():
             <div class="status">
                 <h2>✅ الخادم يعمل بنجاح</h2>
                 <p>البوت جاهز لاستقبال الرسائل</p>
-                <p><strong>الألعاب المتاحة:</strong> 15 لعبة</p>
+                <p><strong>الألعاب المتاحة:</strong> {len(GAMES_MAP)} لعبة</p>
                 <p><strong>اللاعبون المسجلون:</strong> {len(registered_players)}</p>
                 <p><strong>الألعاب النشطة:</strong> {len(active_games)}</p>
             </div>
@@ -179,115 +218,164 @@ def handle_message(event):
         
         # فحص حد المعدل
         if not check_rate_limit(user_id, user_message_count):
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="⚠️ عدد كبير من الرسائل! انتظر دقيقة.")
-            )
+            try:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="⚠️ عدد كبير من الرسائل! انتظر دقيقة.")
+                )
+            except:
+                pass
             return
         
         display_name = get_user_profile_safe(user_id, line_bot_api)
         game_id = event.source.group_id if hasattr(event.source, 'group_id') else user_id
         
-        logger.info(f"رسالة من {display_name}: {text}")
+        logger.info(f"رسالة من {display_name} ({user_id}): {text}")
+        
+        # تطبيع النص للمقارنة
+        text_normalized = normalize_text(text)
         
         # === الأوامر الأساسية ===
         
         # البداية / الترحيب
-        if text in ['البداية', 'ابدأ', 'start', 'مساعدة', 'البوت']:
-            flex_message = get_welcome_message(display_name)
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(alt_text="مرحباً", contents=flex_message, quick_reply=get_quick_reply())
-            )
+        if text_normalized in ['البداية', 'ابدا', 'ابدأ', 'start', 'قائمة', 'البوت', 'القائمة']:
+            try:
+                flex_message = get_welcome_message(display_name)
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    FlexSendMessage(alt_text="مرحباً", contents=flex_message, quick_reply=get_quick_reply())
+                )
+                logger.info(f"تم إرسال رسالة الترحيب إلى {display_name}")
+            except Exception as e:
+                logger.error(f"خطأ في إرسال رسالة الترحيب: {e}")
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=f"مرحباً {display_name}! 🎮\n\nاكتب 'مساعدة' لعرض الأوامر", quick_reply=get_quick_reply())
+                )
             return
         
         # المزيد من الألعاب
-        elif text in ['أكثر', 'المزيد', 'more']:
-            more_message = {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "ألعاب إضافية", "weight": "bold", "size": "xl", "color": "#1a1a1a", "align": "center"},
-                        {"type": "separator", "margin": "lg", "color": "#e8e8e8"},
-                        {"type": "text", "text": "اختر من الأزرار أدناه", "size": "sm", "color": "#6a6a6a", "align": "center", "margin": "lg"}
-                    ],
-                    "backgroundColor": "#ffffff",
-                    "paddingAll": "24px"
+        elif text_normalized in ['أكثر', 'اكثر', 'المزيد', 'more', 'العاب', 'ألعاب']:
+            try:
+                more_message = {
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "ألعاب إضافية", "weight": "bold", "size": "xl", "color": "#1a1a1a", "align": "center"},
+                            {"type": "separator", "margin": "lg", "color": "#e8e8e8"},
+                            {"type": "text", "text": "اختر من الأزرار أدناه", "size": "sm", "color": "#6a6a6a", "align": "center", "margin": "lg"}
+                        ],
+                        "backgroundColor": "#ffffff",
+                        "paddingAll": "24px"
+                    }
                 }
-            }
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(alt_text="ألعاب إضافية", contents=more_message, quick_reply=get_more_quick_reply())
-            )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    FlexSendMessage(alt_text="ألعاب إضافية", contents=more_message, quick_reply=get_more_quick_reply())
+                )
+                logger.info(f"تم إرسال قائمة الألعاب الإضافية إلى {display_name}")
+            except Exception as e:
+                logger.error(f"خطأ في إرسال قائمة الألعاب: {e}")
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="الألعاب الإضافية:\nذاكرة، لغز، ضد، إيموجي، أغنية", quick_reply=get_quick_reply())
+                )
             return
         
         # المساعدة
-        elif text == 'مساعدة':
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(alt_text="مساعدة", contents=get_help_message(), quick_reply=get_quick_reply())
-            )
+        elif text_normalized in ['مساعدة', 'مساعده', 'help', 'اوامر', 'أوامر', 'commands']:
+            try:
+                help_flex = get_help_message()
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    FlexSendMessage(alt_text="مساعدة", contents=help_flex, quick_reply=get_quick_reply())
+                )
+                logger.info(f"تم إرسال رسالة المساعدة إلى {display_name}")
+            except Exception as e:
+                logger.error(f"خطأ في إرسال رسالة المساعدة: {e}")
+                # استخدام رسالة نصية بديلة
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=COMMANDS_LIST, quick_reply=get_quick_reply())
+                )
             return
         
         # نقاطي
-        elif text == 'نقاطي':
-            stats = get_user_stats(user_id)
-            if stats:
-                is_registered = user_id in registered_players
-                flex_stats = get_stats_message(display_name, stats, is_registered)
+        elif text_normalized in ['نقاطي', 'نقاط', 'احصائياتي', 'إحصائياتي', 'stats', 'points']:
+            try:
+                stats = get_user_stats(user_id)
+                if stats:
+                    is_registered = user_id in registered_players
+                    flex_stats = get_stats_message(display_name, stats, is_registered)
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        FlexSendMessage(alt_text="إحصائياتك", contents=flex_stats, quick_reply=get_quick_reply())
+                    )
+                    logger.info(f"تم إرسال الإحصائيات إلى {display_name}")
+                else:
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="📊 لم تلعب أي لعبة بعد\n\nاكتب 'انضم' للتسجيل والبدء 🎮", quick_reply=get_quick_reply())
+                    )
+            except Exception as e:
+                logger.error(f"خطأ في جلب الإحصائيات: {e}")
                 line_bot_api.reply_message(
                     event.reply_token,
-                    FlexSendMessage(alt_text="إحصائياتك", contents=flex_stats, quick_reply=get_quick_reply())
-                )
-            else:
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text="لم تلعب أي لعبة بعد\n\nاكتب 'انضم' للتسجيل والبدء", quick_reply=get_quick_reply())
+                    TextSendMessage(text="❌ حدث خطأ في جلب الإحصائيات", quick_reply=get_quick_reply())
                 )
             return
         
         # الصدارة
-        elif text == 'الصدارة':
-            leaders = get_leaderboard()
-            if leaders:
-                flex_leaderboard = get_leaderboard_message(leaders)
+        elif text_normalized in ['الصدارة', 'الصداره', 'المتصدرين', 'leaderboard', 'top']:
+            try:
+                leaders = get_leaderboard()
+                if leaders:
+                    flex_leaderboard = get_leaderboard_message(leaders)
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        FlexSendMessage(alt_text="لوحة الصدارة", contents=flex_leaderboard, quick_reply=get_quick_reply())
+                    )
+                    logger.info(f"تم إرسال لوحة الصدارة إلى {display_name}")
+                else:
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="🏆 لا توجد بيانات على لوحة الصدارة بعد\n\nالعب للظهور هنا!", quick_reply=get_quick_reply())
+                    )
+            except Exception as e:
+                logger.error(f"خطأ في جلب لوحة الصدارة: {e}")
                 line_bot_api.reply_message(
                     event.reply_token,
-                    FlexSendMessage(alt_text="لوحة الصدارة", contents=flex_leaderboard, quick_reply=get_quick_reply())
-                )
-            else:
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text="لا توجد بيانات بعد", quick_reply=get_quick_reply())
+                    TextSendMessage(text="❌ حدث خطأ في جلب لوحة الصدارة", quick_reply=get_quick_reply())
                 )
             return
         
         # إيقاف اللعبة
-        elif text in ['إيقاف', 'ايقاف', 'stop']:
+        elif text_normalized in ['إيقاف', 'ايقاف', 'stop', 'انهاء', 'إنهاء']:
             with games_lock:
                 if game_id in active_games:
                     game_type = active_games[game_id]['type']
                     del active_games[game_id]
                     line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text=f"تم إيقاف لعبة {game_type}", quick_reply=get_quick_reply())
+                        TextSendMessage(text=f"⏹️ تم إيقاف لعبة {game_type}\n\nيمكنك بدء لعبة جديدة", quick_reply=get_quick_reply())
                     )
+                    logger.info(f"تم إيقاف لعبة {game_type} بواسطة {display_name}")
                 else:
                     line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text="لا توجد لعبة نشطة", quick_reply=get_quick_reply())
+                        TextSendMessage(text="❌ لا توجد لعبة نشطة حالياً\n\nاكتب اسم لعبة للبدء", quick_reply=get_quick_reply())
                     )
             return
         
         # الانضمام
-        elif text in ['انضم', 'تسجيل', 'join']:
+        elif text_normalized in ['انضم', 'تسجيل', 'join', 'register', 'اشترك']:
             with players_lock:
                 if user_id in registered_players:
                     line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text=f"أنت مسجل بالفعل يا {display_name}\n\nيمكنك اللعب في جميع الألعاب", quick_reply=get_quick_reply())
+                        TextSendMessage(text=f"✅ أنت مسجل بالفعل يا {display_name}\n\nيمكنك اللعب في جميع الألعاب 🎮", quick_reply=get_quick_reply())
                     )
                 else:
                     registered_players.add(user_id)
@@ -299,16 +387,22 @@ def handle_message(event):
                                 game_data['participants'] = set()
                             game_data['participants'].add(user_id)
                     
-                    join_message = get_join_message(display_name)
-                    line_bot_api.reply_message(
-                        event.reply_token,
-                        FlexSendMessage(alt_text="تم التسجيل", contents=join_message, quick_reply=get_quick_reply())
-                    )
-                    logger.info(f"انضم لاعب جديد: {display_name}")
+                    try:
+                        join_message = get_join_message(display_name)
+                        line_bot_api.reply_message(
+                            event.reply_token,
+                            FlexSendMessage(alt_text="تم التسجيل", contents=join_message, quick_reply=get_quick_reply())
+                        )
+                    except:
+                        line_bot_api.reply_message(
+                            event.reply_token,
+                            TextSendMessage(text=f"🎉 مرحباً {display_name}!\n\nتم تسجيلك بنجاح ✅\nيمكنك الآن اللعب في جميع الألعاب", quick_reply=get_quick_reply())
+                        )
+                    logger.info(f"انضم لاعب جديد: {display_name} ({user_id})")
             return
         
         # الانسحاب
-        elif text in ['انسحب', 'خروج', 'leave']:
+        elif text_normalized in ['انسحب', 'خروج', 'leave', 'الغاء']:
             with players_lock:
                 if user_id in registered_players:
                     registered_players.remove(user_id)
@@ -320,47 +414,56 @@ def handle_message(event):
                     
                     line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text=f"تم انسحابك يا {display_name}\n\nيمكنك الانضمام مرة أخرى بكتابة 'انضم'", quick_reply=get_quick_reply())
+                        TextSendMessage(text=f"👋 تم انسحابك يا {display_name}\n\nيمكنك الانضمام مرة أخرى بكتابة 'انضم'", quick_reply=get_quick_reply())
                     )
-                    logger.info(f"انسحب لاعب: {display_name}")
+                    logger.info(f"انسحب لاعب: {display_name} ({user_id})")
                 else:
                     line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text="أنت غير مسجل\n\nاكتب 'انضم' للتسجيل", quick_reply=get_quick_reply())
+                        TextSendMessage(text="❌ أنت غير مسجل\n\nاكتب 'انضم' للتسجيل", quick_reply=get_quick_reply())
                     )
             return
         
         # === بدء الألعاب ===
-        if text in GAMES_MAP:
-            game_class, game_type = GAMES_MAP[text]
+        if text_normalized in [normalize_text(k) for k in GAMES_MAP.keys()]:
+            # العثور على المفتاح الأصلي
+            game_key = None
+            for key in GAMES_MAP.keys():
+                if normalize_text(key) == text_normalized:
+                    game_key = key
+                    break
             
-            # حالة خاصة للعبة التوافق
-            if text == 'توافق':
-                with games_lock:
-                    with players_lock:
-                        participants = registered_players.copy()
-                        participants.add(user_id)
-                    
-                    game = CompatibilityGame(line_bot_api)
-                    active_games[game_id] = {
-                        'game': game,
-                        'type': 'توافق',
-                        'created_at': datetime.now(),
-                        'participants': participants,
-                        'question_count': 0,
-                        'max_questions': 5,
-                        'player_scores': defaultdict(int)
-                    }
+            if game_key:
+                game_class, game_type = GAMES_MAP[game_key]
                 
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text="🖤 لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير", quick_reply=get_quick_reply())
-                )
+                # حالة خاصة للعبة التوافق
+                if game_key == 'توافق':
+                    with games_lock:
+                        with players_lock:
+                            participants = registered_players.copy()
+                            participants.add(user_id)
+                        
+                        game = CompatibilityGame(line_bot_api)
+                        active_games[game_id] = {
+                            'game': game,
+                            'type': 'توافق',
+                            'created_at': datetime.now(),
+                            'participants': participants,
+                            'question_count': 0,
+                            'max_questions': 5,
+                            'player_scores': defaultdict(int)
+                        }
+                    
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="💖 لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة", quick_reply=get_quick_reply())
+                    )
+                    logger.info(f"بدأت لعبة التوافق بواسطة {display_name}")
+                    return
+                
+                # بدء اللعبة العادية
+                start_game(game_id, game_class, game_type, user_id, event)
                 return
-            
-            # بدء اللعبة العادية
-            start_game(game_id, game_class, game_type, user_id, event)
-            return
         
         # === معالجة إجابات الألعاب النشطة ===
         if game_id in active_games:
@@ -371,6 +474,11 @@ def handle_message(event):
                 is_registered = user_id in registered_players
             
             if not is_registered and 'participants' in game_data and user_id not in game_data['participants']:
+                # لاعب غير مسجل يحاول اللعب
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="⚠️ يجب عليك الانضمام أولاً\n\nاكتب 'انضم' للتسجيل", quick_reply=get_quick_reply())
+                )
                 return
             
             game = game_data['game']
@@ -387,6 +495,7 @@ def handle_message(event):
                         game_data['player_scores'][user_id] += points
                         game_data['question_count'] += 1
                         update_user_points(user_id, display_name, points, result.get('won', False), game_type)
+                        logger.info(f"{display_name} حصل على {points} نقطة في {game_type}")
                     
                     # فحص إذا انتهت الأسئلة (5 أسئلة)
                     if game_data['question_count'] >= game_data['max_questions']:
@@ -396,20 +505,30 @@ def handle_message(event):
                             winner_name = get_user_profile_safe(winner_id, line_bot_api)
                             
                             # إرسال نافذة إعلان الفائز
-                            winner_flex = get_winner_announcement(winner_name, winner_points, game_type, game_data['max_questions'])
+                            try:
+                                winner_flex = get_winner_announcement(winner_name, winner_points, game_type, game_data['max_questions'])
+                                line_bot_api.reply_message(
+                                    event.reply_token,
+                                    FlexSendMessage(
+                                        alt_text=f"🏆 {winner_name} فاز في لعبة {game_type}!",
+                                        contents=winner_flex,
+                                        quick_reply=get_quick_reply()
+                                    )
+                                )
+                            except:
+                                line_bot_api.reply_message(
+                                    event.reply_token,
+                                    TextSendMessage(
+                                        text=f"🏆 انتهت اللعبة!\n\nالفائز: {winner_name}\nالنقاط: {winner_points}\n\nأحسنت! 🎉",
+                                        quick_reply=get_quick_reply()
+                                    )
+                                )
                             
                             with games_lock:
                                 if game_id in active_games:
                                     del active_games[game_id]
                             
-                            line_bot_api.reply_message(
-                                event.reply_token,
-                                FlexSendMessage(
-                                    alt_text=f"🏆 {winner_name} فاز في لعبة {game_type}!",
-                                    contents=winner_flex,
-                                    quick_reply=get_quick_reply()
-                                )
-                            )
+                            logger.info(f"انتهت لعبة {game_type}، الفائز: {winner_name} ({winner_points} نقطة)")
                         else:
                             with games_lock:
                                 if game_id in active_games:
@@ -417,7 +536,7 @@ def handle_message(event):
                             
                             line_bot_api.reply_message(
                                 event.reply_token,
-                                TextSendMessage(text=f"انتهت لعبة {game_type}\n\nجرب لعبة أخرى!", quick_reply=get_quick_reply())
+                                TextSendMessage(text=f"⏹️ انتهت لعبة {game_type}\n\nجرب لعبة أخرى! 🎮", quick_reply=get_quick_reply())
                             )
                         return
                     
@@ -433,22 +552,47 @@ def handle_message(event):
                         if isinstance(response, TextSendMessage):
                             # إضافة عداد الأسئلة
                             if hasattr(response, 'text'):
-                                response.text += f"\n\n▫️ السؤال {game_data['question_count']}/{game_data['max_questions']}"
+                                response.text += f"\n\n📊 السؤال {game_data['question_count']}/{game_data['max_questions']}"
                             response.quick_reply = get_quick_reply()
                     
                     line_bot_api.reply_message(event.reply_token, response)
                 return
                 
             except Exception as e:
-                logger.error(f"خطأ في معالجة إجابة اللعبة: {e}")
+                logger.error(f"خطأ في معالجة إجابة اللعبة: {e}", exc_info=True)
+                try:
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="❌ حدث خطأ. حاول مرة أخرى.", quick_reply=get_quick_reply())
+                    )
+                except:
+                    pass
+                return
+        
+        # === رسالة افتراضية للرسائل غير المعروفة ===
+        else:
+            # إذا لم يكن هناك لعبة نشطة ولا أمر معروف
+            logger.info(f"رسالة غير معروفة من {display_name}: {text}")
+            try:
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ حدث خطأ. حاول مرة أخرى.", quick_reply=get_quick_reply())
+                    TextSendMessage(
+                        text="❓ أمر غير معروف\n\nاكتب 'مساعدة' لعرض الأوامر المتاحة\nأو 'البداية' للقائمة الرئيسية 🎮",
+                        quick_reply=get_quick_reply()
+                    )
                 )
-                return
+            except Exception as e:
+                logger.error(f"خطأ في إرسال رسالة الأمر غير المعروف: {e}")
     
     except Exception as e:
-        logger.error(f"خطأ في معالجة الرسالة: {e}")
+        logger.error(f"خطأ عام في معالجة الرسالة: {e}", exc_info=True)
+        try:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="❌ حدث خطأ غير متوقع\n\nحاول مرة أخرى أو اكتب 'مساعدة'")
+            )
+        except:
+            pass
 
 @app.errorhandler(Exception)
 def handle_error(error):
@@ -458,7 +602,10 @@ def handle_error(error):
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    logger.info(f"🚀 بدء الخادم على المنفذ {port}")
+    logger.info("=" * 50)
+    logger.info(f"🚀 بدء خادم LINE Bot على المنفذ {port}")
     logger.info(f"📊 اللاعبون المسجلون: {len(registered_players)}")
     logger.info(f"🎮 الألعاب النشطة: {len(active_games)}")
+    logger.info(f"🎯 عدد الألعاب المتاحة: {len(GAMES_MAP)}")
+    logger.info("=" * 50)
     app.run(host='0.0.0.0', port=port, debug=False)
