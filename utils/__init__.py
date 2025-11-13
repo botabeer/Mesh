@@ -1,8 +1,28 @@
-from .db_utils import init_db, add_user, get_user, update_user_score, get_leaderboard
-from .gemini_helper import GeminiHelper
-from .flex_messages import (
-    create_leaderboard_flex,
-    create_user_stats_flex,
-    create_win_message_flex,
-    create_help_flex
-)
+"""
+Games Package - جميع الألعاب المتاحة في البوت
+"""
+
+print("✅ games package loaded")
+
+# يمكنك استيراد الألعاب هنا إذا أردت (اختياري)
+# from .iq_game import IQGame
+# من .word_color_game import WordColorGame
+# ... إلخ
+
+__all__ = [
+    'IQGame',
+    'WordColorGame',
+    'ChainWordsGame',
+    'ScrambleWordGame',
+    'LettersWordsGame',
+    'FastTypingGame',
+    'HumanAnimalPlantGame',
+    'GuessGame',
+    'CompatibilityGame',
+    'MathGame',
+    'MemoryGame',
+    'RiddleGame',
+    'OppositeGame',
+    'EmojiGame',
+    'SongGame'
+]
