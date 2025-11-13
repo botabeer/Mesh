@@ -33,12 +33,11 @@ try:
     from games.human_animal_plant_game import HumanAnimalPlantGame
     from games.guess_game import GuessGame
     from games.compatibility_game import CompatibilityGame
-    from games.math_game import MathGame
     from games.memory_game import MemoryGame
     from games.riddle_game import RiddleGame
     from games.opposite_game import OppositeGame
-    from games.emoji_game import EmojiGame
     from games.song_game import SongGame
+    from games.differences_game import DifferencesGame  # لعبة الفروقات الجديدة
     logger.info("تم استيراد جميع الألعاب بنجاح")
 except Exception as e:
     logger.error(f"خطأ في استيراد الألعاب: {e}")
@@ -260,27 +259,26 @@ cleanup_thread.start()
 def get_quick_reply():
     """الأزرار الثابتة - ألعاب فقط"""
     return QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label="▫️أسرع", text="أسرع")),
-        QuickReplyButton(action=MessageAction(label="▫️ذكاء", text="ذكاء")),
-        QuickReplyButton(action=MessageAction(label="▫️لون", text="كلمة ولون")),
-        QuickReplyButton(action=MessageAction(label="▫️أغنية", text="أغنية")),
-        QuickReplyButton(action=MessageAction(label="▫️سلسلة", text="سلسلة")),
-        QuickReplyButton(action=MessageAction(label="▫️ترتيب", text="ترتيب الحروف")),
-        QuickReplyButton(action=MessageAction(label="▫️تكوين", text="تكوين كلمات")),
-        QuickReplyButton(action=MessageAction(label="▫️لعبة", text="لعبة")),
-        QuickReplyButton(action=MessageAction(label="▫️خمن", text="خمن")),
-        QuickReplyButton(action=MessageAction(label="▫️ضد", text="ضد")),
-        QuickReplyButton(action=MessageAction(label="▫️ذاكرة", text="ذاكرة")),
-        QuickReplyButton(action=MessageAction(label="▫️لغز", text="لغز")),
-        QuickReplyButton(action=MessageAction(label="▫️رياضيات", text="رياضيات"))
+        QuickReplyButton(action=MessageAction(label="اسرع", text="أسرع")),
+        QuickReplyButton(action=MessageAction(label="ذكاء", text="ذكاء")),
+        QuickReplyButton(action=MessageAction(label="لون", text="كلمة ولون")),
+        QuickReplyButton(action=MessageAction(label="اغنية", text="أغنية")),
+        QuickReplyButton(action=MessageAction(label="سلسلة", text="سلسلة")),
+        QuickReplyButton(action=MessageAction(label="ترتيب", text="ترتيب الحروف")),
+        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين كلمات")),
+        QuickReplyButton(action=MessageAction(label="لعبة", text="لعبة")),
+        QuickReplyButton(action=MessageAction(label="خمن", text="خمن")),
+        QuickReplyButton(action=MessageAction(label="ضد", text="ضد")),
+        QuickReplyButton(action=MessageAction(label="ذاكرة", text="ذاكرة")),
+        QuickReplyButton(action=MessageAction(label="لغز", text="لغز")),
+        QuickReplyButton(action=MessageAction(label="فروقات", text="فروقات"))
     ])
 
 def get_more_quick_reply():
     """أزرار إضافية"""
     return QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label="▫️إيموجي", text="إيموجي")),
-        QuickReplyButton(action=MessageAction(label="▫️توافق", text="توافق")),
-        QuickReplyButton(action=MessageAction(label="▫️مساعدة", text="مساعدة"))
+        QuickReplyButton(action=MessageAction(label="توافق", text="توافق")),
+        QuickReplyButton(action=MessageAction(label="مساعدة", text="مساعدة"))
     ])
 
 def get_winner_announcement(winner_name, winner_points, game_type, total_questions=5):
@@ -428,7 +426,7 @@ def get_winner_announcement(winner_name, winner_points, game_type, total_questio
                 },
                 {
                     "type": "text",
-                    "text": " أحسنت! لعبة رائعة ",
+                    "text": "أحسنت! لعبة رائعة",
                     "size": "sm",
                     "color": "#4a4a4a",
                     "align": "center",
@@ -845,7 +843,7 @@ def start_game(game_id, game_class, game_type, user_id, event):
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(
-                text=f"❌ حدث خطأ في بدء لعبة {game_type}. حاول مرة أخرى.",
+                text=f"حدث خطأ في بدء لعبة {game_type}. حاول مرة أخرى.",
                 quick_reply=get_quick_reply()
             )
         )
@@ -865,11 +863,11 @@ def home():
             </style>
         </head>
         <body>
-            <h1>🎮 LINE Bot Game Server</h1>
+            <h1>LINE Bot Game Server</h1>
             <div class="status">
-                <h2>✅ الخادم يعمل بنجاح</h2>
+                <h2>الخادم يعمل بنجاح</h2>
                 <p>البوت جاهز لاستقبال الرسائل</p>
-                <p><strong>الألعاب المتاحة:</strong> 15 لعبة</p>
+                <p><strong>الألعاب المتاحة:</strong> 14 لعبة</p>
                 <p><strong>اللاعبون المسجلون:</strong> {len(registered_players)}</p>
                 <p><strong>الألعاب النشطة:</strong> {len(active_games)}</p>
             </div>
@@ -903,7 +901,7 @@ def handle_message(event):
         if not check_rate_limit(user_id):
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="⚠️ عدد كبير من الرسائل! انتظر دقيقة.")
+                TextSendMessage(text="عدد كبير من الرسائل! انتظر دقيقة.")
             )
             return
         
@@ -1063,7 +1061,7 @@ def handle_message(event):
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "15 لعبة متاحة",
+                                    "text": "14 لعبة متاحة",
                                     "size": "xs",
                                     "color": "#9a9a9a",
                                     "align": "center"
@@ -1099,7 +1097,7 @@ def handle_message(event):
                                     "type": "button",
                                     "action": {
                                         "type": "message",
-                                        "label": "▫️انضم",
+                                        "label": "انضم",
                                         "text": "انضم"
                                     },
                                     "style": "primary",
@@ -1110,7 +1108,7 @@ def handle_message(event):
                                     "type": "button",
                                     "action": {
                                         "type": "message",
-                                        "label": "▫️مساعدة",
+                                        "label": "مساعدة",
                                         "text": "مساعدة"
                                     },
                                     "style": "secondary",
@@ -1363,7 +1361,7 @@ def handle_message(event):
                                 "type": "button",
                                 "action": {
                                     "type": "message",
-                                    "label": "▫️الصدارة",
+                                    "label": "الصدارة",
                                     "text": "الصدارة"
                                 },
                                 "style": "secondary",
@@ -1436,7 +1434,7 @@ def handle_message(event):
                         "layout": "vertical",
                         "contents": [
                             {"type": "separator", "color": "#e8e8e8"},
-                            {"type": "button", "action": {"type": "message", "label": "▫️نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "margin": "md"}
+                            {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "margin": "md"}
                         ],
                         "backgroundColor": "#f8f8f8",
                         "paddingAll": "16px"
@@ -1565,12 +1563,12 @@ def handle_message(event):
             'لعبة': (HumanAnimalPlantGame, 'لعبة'),
             'خمن': (GuessGame, 'خمن'),
             'توافق': (CompatibilityGame, 'توافق'),
-            'رياضيات': (MathGame, 'رياضيات'),
             'ذاكرة': (MemoryGame, 'ذاكرة'),
             'لغز': (RiddleGame, 'لغز'),
             'ضد': (OppositeGame, 'ضد'),
-            'إيموجي': (EmojiGame, 'إيموجي'),
-            'أغنية': (SongGame, 'أغنية')
+            'أغنية': (SongGame, 'أغنية'),
+            'فروقات': (DifferencesGame, 'فروقات'),
+            'فرق': (DifferencesGame, 'فروقات')
         }
         
         if text in games_map:
@@ -1595,7 +1593,7 @@ def handle_message(event):
                 
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="🖤 لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير", quick_reply=get_quick_reply())
+                    TextSendMessage(text="لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: ميش عبير", quick_reply=get_quick_reply())
                 )
                 return
             
@@ -1652,7 +1650,7 @@ def handle_message(event):
                             line_bot_api.reply_message(
                                 event.reply_token,
                                 FlexSendMessage(
-                                    alt_text=f"🏆 {winner_name} فاز في لعبة {game_type}!",
+                                    alt_text=f"{winner_name} فاز في لعبة {game_type}!",
                                     contents=winner_flex,
                                     quick_reply=get_quick_reply()
                                 )
@@ -1688,7 +1686,7 @@ def handle_message(event):
                             # إضافة عداد الأسئلة إلى الرسالة
                             remaining = game_data['max_questions'] - game_data['question_count']
                             if hasattr(response, 'text'):
-                                response.text += f"\n\n⏯️ السؤال {game_data['question_count']}/{game_data['max_questions']}"
+                                response.text += f"\n\nالسؤال {game_data['question_count']}/{game_data['max_questions']}"
                             response.quick_reply = get_quick_reply()
                     
                     line_bot_api.reply_message(event.reply_token, response)
@@ -1697,7 +1695,7 @@ def handle_message(event):
                 logger.error(f"خطأ في معالجة إجابة اللعبة: {e}")
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ حدث خطأ. حاول مرة أخرى.", quick_reply=get_quick_reply())
+                    TextSendMessage(text="حدث خطأ. حاول مرة أخرى.", quick_reply=get_quick_reply())
                 )
                 return
     
@@ -1712,7 +1710,7 @@ def handle_error(error):
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    logger.info(f"🚀 بدء الخادم على المنفذ {port}")
-    logger.info(f"📊 اللاعبون المسجلون: {len(registered_players)}")
-    logger.info(f"🎮 الألعاب النشطة: {len(active_games)}")
+    logger.info(f"بدء الخادم على المنفذ {port}")
+    logger.info(f"اللاعبون المسجلون: {len(registered_players)}")
+    logger.info(f"الألعاب النشطة: {len(active_games)}")
     app.run(host='0.0.0.0', port=port, debug=False)
