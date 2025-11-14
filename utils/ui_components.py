@@ -203,7 +203,7 @@ def get_help_message():
                 },
                 {
                     "type": "text",
-                    "text": "© بوت الحُوت",
+                    "text": "©تم إنشاء هذا البوت بواسطة عبير الدوسر",
                     "size": "xxs",
                     "color": "#9a9a9a",
                     "align": "center",
