@@ -1,7 +1,6 @@
 import os
 
-# 📂 مجلد الألعاب
-GAMES_FOLDER = "games"
+GAMES_FOLDER = "games"  # مجلد الألعاب
 
 def clean_file(file_path):
     """إزالة أي حرف خفي U+200F من الملف"""
