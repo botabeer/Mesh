@@ -1,54 +1,49 @@
-‏import random
+import random
 from linebot.models import TextSendMessage
+from utils.helpers import normalize_text
 
 class MathGame:
-    def __init__(self, line_bot_api):
-        self.line_bot_api = line_bot_api
+    def __init__(self):
+        self.current_question = None
         self.answer = None
-        self.question = None
+        self.scores = {}
+        self.hint_used = False
 
     def start_game(self):
         a = random.randint(1, 20)
         b = random.randint(1, 20)
-        op = random.choice(['+', '-', '*'])
-
-        if op == '+':
-            self.answer = a + b
-        elif op == '-':
-            self.answer = a - b
-        else:
-            self.answer = a * b
-
-        self.question = f"{a} {op} {b}"
-        text = f"🔢 حل المسألة\n\n{self.question} = ؟\n\n━━━━━━━━━━━━━━\nما الناتج؟"
+        self.answer = a + b
+        self.hint_used = False
+        text = f"➕ احسب: {a} + {b} = ?"
         return TextSendMessage(text=text)
 
     def check_answer(self, answer, user_id, display_name):
-        if self.answer is None:
+        if not self.answer:
             return None
-
         try:
-            user_ans = int(answer.strip())
-        except:
+            guess = int(answer)
+        except ValueError:
             return None
-
-        if user_ans == self.answer:
+        if guess == self.answer:
+            points = 10 if not self.hint_used else 5
+            self.scores[user_id] = self.scores.get(user_id, 0) + points
             new_q = self.start_game()
-            msg = f"✓ صحيح يا {display_name}!\n\n{self.question} = {self.answer}\n+10 نقطة\n\n{new_q.text}"
-            return {
-                'points': 10,
-                'won': True,
-                'message': msg,
-                'response': TextSendMessage(text=msg),
-                'game_over': False
-            }
-
+            msg = (
+                f"✔️ أحسنت يا {display_name}! الإجابة الصحيحة: {self.answer}\n"
+                f"+{points} نقاط (النقاط الحالية: {self.scores[user_id]})\n\n"
+                f"{new_q.text}"
+            )
+            return {"points": points, "won": True, "message": msg, "response": new_q, "game_over": False}
         return None
 
     def get_hint(self):
-        return f"💡 فكر جيداً في العملية"
+        self.hint_used = True
+        return f"💡 تلميح: الإجابة قريبة من {self.answer - 1} أو {self.answer + 1}"
 
     def reveal_answer(self):
         ans = self.answer
         self.answer = None
-        return f"الناتج: {ans}"
+        return f"🔍 الإجابة الصحيحة: {ans}"
+
+    def get_score(self, user_id):
+        return self.scores.get(user_id, 0)
