@@ -1,127 +1,198 @@
 from linebot.models import TextSendMessage
 import random
-import re
+import logging
+from utils.helpers import normalize_text
+
+logger = logging.getLogger(__name__)
 
 class SongGame:
-    def __init__(self, line_bot_api):
+    def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
         self.line_bot_api = line_bot_api
+        self.use_ai = use_ai
+        self.get_api_key = get_api_key
+        self.switch_key = switch_key
+        
         self.current_song = None
-        self.correct_answer = None
-        self.current_question = 0
-        self.max_questions = 5
-        self.hint_used = False
-
-        # كل الأغاني مدموجة في قائمة واحدة
-        self.songs = [
-            {"lyrics": "احبك ليه؟ انا مدري ليه اهواك؟\nانا مدري لو مرت علي ذكراك\nيفز النبض في صدري", "answer": "عبدالمجيد عبدالله", "song_name": "احبك ليه"},
-            {"lyrics": "سود العيون كبار والشامه حلوه\nشايل جمال الكون وباليني بلوه", "answer": "راشد الماجد", "song_name": "العيون السود"},
-            {"lyrics": "لا تخاف من الزمان\nالزمان ماله امان\nخف من اللي كل املك\nفي يديه وتامنه", "answer": "اصالة نصري", "song_name": "لا تخاف"},
-            {"lyrics": "وين انت ماهي مثلي\nوين انت دايم\nوين انت هالمرة على الفين\nوين انت", "answer": "رابح صقر", "song_name": "وين انت"},
-            {"lyrics": "جننت قلبي بحب يلوي ذراعي\nلاهو بتايب ولا عبر تجاريبه\nامر الله اقوى احبك والعقل واعي", "answer": "ماجد المهندس", "song_name": "جننت قلبي"},
-            {"lyrics": "سألوني الليل ليش ساهر\nقلت لهم القمر ساهر", "answer": "حسين الجسمي", "song_name": "سألوني الليل"},
-            {"lyrics": "يا طير يا طاير يا رايح بلاد الخير\nسلم على الغالي وقل له انا كثير", "answer": "عبدالمجيد عبدالله", "song_name": "يا طير"},
-            {"lyrics": "تعبت وانا انادي على النوم\nوالنوم ماله خبر يجيني", "answer": "راشد الماجد", "song_name": "تعبت"},
-            {"lyrics": "قولي وداعا للجميع وتعالي\nقولي وداعا واتركي اللي راح", "answer": "عبدالمجيد عبدالله", "song_name": "قولي وداعا"},
-            {"lyrics": "اه يا دنيا اه يا ناس\nجاني الحب يسأل عنك", "answer": "محمد عبده", "song_name": "اه يا دنيا"},
-            {"lyrics": "حبيبي يا نور العين\nيا ساكن خيالي", "answer": "عمرو دياب", "song_name": "نور العين"},
-            {"lyrics": "انا عايش يا ناس معاه في الجنة\nوحياتي كلها فرحة وسعادة", "answer": "محمد منير", "song_name": "انا عايش"},
-            {"lyrics": "بكيت يوم فارقتني وبكيت\nدموعي سالت على خدي", "answer": "كاظم الساهر", "song_name": "بكيت"},
-            {"lyrics": "احبك موت موت\nواموت فيك حبيبي", "answer": "ماجد المهندس", "song_name": "احبك موت"},
-            {"lyrics": "على مودك انا جيت\nوعلى غلاك انا جيت", "answer": "طلال مداح", "song_name": "على مودك"},
-            {"lyrics": "سلملي عليها لو تشوفها يا ريح\nقلها حبيبها دايم يذكرها", "answer": "ماجد المهندس", "song_name": "سلملي عليها"},
-            {"lyrics": "عيونه سود وحواجبه سود\nوشعره اسود اسود", "answer": "اصالة نصري", "song_name": "عيونه سود"},
-            {"lyrics": "يا غالي على قلبي\nيا اغلى من روحي", "answer": "عبدالمجيد عبدالله", "song_name": "يا غالي"},
-            {"lyrics": "تملي معاك يا جميل\nوالله تملي معاك", "answer": "عمرو دياب", "song_name": "تملي معاك"},
-            {"lyrics": "بحبك يا صاحبي يا اللي معايا\nيا سندي في الدنيا", "answer": "تامر حسني", "song_name": "بحبك يا صاحبي"},
-            {"lyrics": "رجعت لي أيام الماضي معاك", "answer": "أم كلثوم", "song_name": "إنت عمري"},
-            {"lyrics": "جلست والخوف بعينيها تتأمل فنجاني", "answer": "عبد الحليم حافظ", "song_name": "قارئة الفنجان"},
-            {"lyrics": "أنا لحبيبي وحبيبي إلي", "answer": "فيروز", "song_name": "أنا لحبيبي"},
-            {"lyrics": "عندك بحرية يا ريس", "answer": "وديع الصافي", "song_name": "عندك بحرية"},
-            {"lyrics": "تملي معاك ولو حتى بعيد عني", "answer": "عمرو دياب", "song_name": "تملي معاك"},
-            {"lyrics": "حبيبي يا كل الحياة اوعدني تبقى معايا", "answer": "تامر حسني", "song_name": "حبيبي يا كل الحياة"},
-            {"lyrics": "مشاعر.. مشاعر جوايا من زمان", "answer": "شيرين عبد الوهاب", "song_name": "مشاعر"},
-            {"lyrics": "قلبي بيسألني عنك دخلك طمني وينك", "answer": "وائل كفوري", "song_name": "البنت القوية"},
-            {"lyrics": "يا بنات يا بنات", "answer": "نانسي عجرم", "song_name": "يا بنات"},
-            {"lyrics": "قولي أحبك كي تزيد وسامتي", "answer": "كاظم الساهر", "song_name": "قولي أحبك"},
-            {"lyrics": "قول عني ما تقول", "answer": "أحلام", "song_name": "قول عني ما تقول"},
-            {"lyrics": "خذني إليك", "answer": "فضل شاكر", "song_name": "إليّ"},
-            {"lyrics": "أنا قلبي عليك مش منك خايف أنا خوفي عليك", "answer": "زياد برجي", "song_name": "أنا قلبي عليك"},
-            {"lyrics": "كيف أبيّن لك شعوري دون ما أحكي\nخابرك لمّاح لكن مالمحته\nلاتغرّك كثرة مزوحي وضحكي\nوالله إن قلبي لغيرك ما فتحته", "answer": "عايض", "song_name": "لماح"},
-            {"lyrics": "اسخر لك غلا وتشوفني مقصر\nمعاك الحق ..\nوش الي يملي عيونك\nأنا ما عيش من دونك\nأحد ربي يجيبه لك حبيب\nويقدر يخونك", "answer": "عايض", "song_name": "إجرح"}
+        self.current_artist = None
+        self.hint_count = 0
+        
+        # قاعدة بيانات الأغاني (مقطع + المغني)
+        self.songs_database = [
+            {
+                "lyrics": "يا ليل يا عين\nيا ليلي يا ليلي يا عيني\nيا ليلي يا ليلي يا عيني",
+                "artist": "ام كلثوم",
+                "song_name": "يا ليل يا عين"
+            },
+            {
+                "lyrics": "على بالي\nوالله على بالي\nمن يوم فراقك يا عمري على بالي",
+                "artist": "عبد الحليم حافظ",
+                "song_name": "على بالي"
+            },
+            {
+                "lyrics": "اه يا اسمراني اللون\nيا واخد العقل والجنون\nانت اللي فؤادي باعته",
+                "artist": "محمد عبده",
+                "song_name": "اه يا اسمراني"
+            },
+            {
+                "lyrics": "تعالى اقولك\nاللي بقالي سنين عايز اقولك\nبحبك وعمري ما قولت قبل كده لحد",
+                "artist": "عمرو دياب",
+                "song_name": "تعالى اقولك"
+            },
+            {
+                "lyrics": "حبيبي يا نور العين\nيا ساكن خيالي\nحبيتك من سنين وانا في دنيا الاطفال",
+                "artist": "عمرو دياب",
+                "song_name": "نور العين"
+            },
+            {
+                "lyrics": "قولي وانا اسمع\nانا كل اللي تأمره باسمع\nانتي اللي بتملي حياتي",
+                "artist": "محمد عبده",
+                "song_name": "قولي وانا اسمع"
+            },
+            {
+                "lyrics": "انت عمري\nاللي ابتدا بنورك صباحه\nد كان زماني راح ومش حسابه",
+                "artist": "ام كلثوم",
+                "song_name": "انت عمري"
+            },
+            {
+                "lyrics": "وياك\nكل الدنيا معاك\nانا ارتاحلك انا وياك",
+                "artist": "راشد الماجد",
+                "song_name": "وياك"
+            },
+            {
+                "lyrics": "بتونس بيك\nكل يوم بتونس بيك\nقلبي اللي كان ميال بيك اتعدل",
+                "artist": "تامر حسني",
+                "song_name": "بتونس بيك"
+            },
+            {
+                "lyrics": "ادلعك\nاه لو ادلعك\nياما احكي عيوني ليك",
+                "artist": "حسين الجسمي",
+                "song_name": "ادلعك"
+            },
+            {
+                "lyrics": "ست الحبايب\nيا ام الضفاير السودا\nالحلوة اللي ما لاقيت زيها ابدا",
+                "artist": "عبد الحليم حافظ",
+                "song_name": "ست الحبايب"
+            },
+            {
+                "lyrics": "كده كده\nانا معاك كده كده\nمش فارقه معايا الدنيا",
+                "artist": "حسام حبيب",
+                "song_name": "كده كده"
+            }
         ]
-
-    def normalize_text(self, text):
-        if not text:
-            return ""
-        text = text.strip().lower()
-        text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
-        text = text.replace('ة', 'ه').replace('ى', 'ي')
-        text = re.sub(r'[\u064B-\u065F]', '', text)
-        text = re.sub(r'[^\w\s\u0600-\u06FF]', '', text)
-        text = re.sub(r'\bال', '', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
-
+    
     def start_game(self):
-        self.current_question = 0
-        self.hint_used = False
-        take = min(self.max_questions, len(self.songs))
-        self.remaining_songs = random.sample(self.songs, take)
-        return self.next_question()
+        """بدء اللعبة"""
+        try:
+            if self.use_ai:
+                # استخدام AI لتوليد سؤال
+                return self._generate_ai_question()
+            else:
+                # اختيار أغنية عشوائية
+                song = random.choice(self.songs_database)
+                self.current_song = song["song_name"]
+                self.current_artist = normalize_text(song["artist"])
+                self.hint_count = 0
+                
+                message = f"🎵 خمّن المغني:\n\n{song['lyrics']}\n\n▪️ من هو المغني؟"
+                
+                return TextSendMessage(text=message)
+                
+        except Exception as e:
+            logger.error(f"❌ خطأ في بدء لعبة الأغاني: {e}", exc_info=True)
+            return TextSendMessage(text="❌ حدث خطأ في بدء اللعبة")
+    
+    def _generate_ai_question(self):
+        """توليد سؤال باستخدام AI"""
+        try:
+            import google.generativeai as genai
+            
+            api_key = self.get_api_key()
+            if not api_key:
+                logger.warning("⚠️ لا يوجد مفتاح API متاح، التحويل للوضع اليدوي")
+                return self.start_game()  # العودة للوضع اليدوي
+            
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-pro')
+            
+            prompt = """أنت مولد أسئلة أغاني عربية.
 
-    def next_question(self):
-        if not self.remaining_songs:
-            self.current_song = None
-            return TextSendMessage(text="انتهت الاسئلة 🎵")
-        song_data = self.remaining_songs.pop(0)
-        self.current_song = song_data
-        self.correct_answer = song_data["answer"]
-        self.hint_used = False
-        self.current_question += 1
-        return TextSendMessage(
-            text=f"🎶 السؤال {self.current_question}/{self.max_questions}\n\n"
-                 f"{song_data['lyrics']}\n\n"
-                 f"خمن اسم الفنان 🎤\n"
-                 f"▫️ اكتب 'لمح' أو 'تلميح' للتلميح 🔍\n"
-                 f"▫️ اكتب 'جاوب' لعرض الإجابة 🎵"
-        )
+اختر أغنية عربية مشهورة وأعطني:
+1. مقطع من كلمات الأغنية (3-4 أسطر)
+2. اسم المغني
 
-    def _make_hint(self):
-        name = self.correct_answer.strip()
-        if not name:
-            return "🎵 تلميح: الاسم غير متاح حالياً."
-        length_no_spaces = len(name.replace(" ", ""))
-        first_letter = name.replace(" ", "")[0]
-        word_count = len(name.split())
-        if word_count == 1:
-            words_text = "مكون من كلمة واحدة"
-        elif word_count == 2:
-            words_text = "مكون من كلمتين"
+الإجابة يجب أن تكون بالشكل التالي فقط:
+LYRICS: [كلمات الأغنية]
+ARTIST: [اسم المغني]
+
+مثال:
+LYRICS: على بالي\\nوالله على بالي\\nمن يوم فراقك يا عمري على بالي
+ARTIST: عبد الحليم حافظ"""
+
+            response = model.generate_content(prompt)
+            result_text = response.text.strip()
+            
+            # استخراج البيانات
+            lyrics = ""
+            artist = ""
+            
+            for line in result_text.split('\n'):
+                if line.startswith('LYRICS:'):
+                    lyrics = line.replace('LYRICS:', '').strip()
+                elif line.startswith('ARTIST:'):
+                    artist = line.replace('ARTIST:', '').strip()
+            
+            if lyrics and artist:
+                self.current_artist = normalize_text(artist)
+                self.hint_count = 0
+                
+                message = f"🎵 خمّن المغني:\n\n{lyrics}\n\n▪️ من هو المغني؟"
+                return TextSendMessage(text=message)
+            else:
+                raise Exception("فشل استخراج البيانات من AI")
+                
+        except Exception as e:
+            logger.error(f"❌ خطأ في AI: {e}")
+            if self.switch_key:
+                self.switch_key()
+                return self._generate_ai_question()
+            else:
+                # العودة للوضع اليدوي
+                return self.start_game()
+    
+    def check_answer(self, answer, user_id, display_name):
+        """فحص الإجابة"""
+        answer_normalized = normalize_text(answer)
+        
+        if answer_normalized == self.current_artist:
+            points = max(10 - (self.hint_count * 3), 1)
+            
+            return {
+                'points': points,
+                'won': True,
+                'response': TextSendMessage(
+                    text=f"✅ إجابة صحيحة يا {display_name}!\n\n▪️ المغني: {self.current_artist}\n▪️ نقاطك: {points}"
+                )
+            }
+        
+        return None
+    
+    def get_hint(self):
+        """الحصول على تلميح"""
+        self.hint_count += 1
+        
+        artist_letters = list(self.current_artist)
+        word_count = len(self.current_artist.split())
+        letter_count = len(self.current_artist.replace(' ', ''))
+        
+        if self.hint_count == 1:
+            return f"💡 تلميح 1:\n\n▪️ الحرف الأول: {artist_letters[0]}\n▪️ عدد الحروف: {letter_count}"
+        elif self.hint_count == 2:
+            return f"💡 تلميح 2:\n\n▪️ عدد الكلمات: {word_count}\n▪️ الأحرف الأولى: {' '.join([word[0] for word in self.current_artist.split()])}"
         else:
-            words_text = f"مكون من {word_count} كلمات"
-        return f"🎵 تلميح:\nيبدأ بحرف: {first_letter}\nعدد الحروف: {length_no_spaces}\n{words_text}"
-
-    def check_answer(self, answer, user_id=None, display_name="لاعب"):
-        if not self.current_song:
-            return {'points': 0, 'won': False, 'response': TextSendMessage(text="🎮 لا يوجد سؤال حالياً")}
-
-        ans = answer.strip().lower()
-        if ans in ['لمح', 'تلميح']:
-            if self.hint_used:
-                return {'points': 0, 'won': False, 'response': TextSendMessage(text="🔍 تم استخدام التلميح مسبقاً")}
-            self.hint_used = True
-            return {'points': 0, 'won': False, 'response': TextSendMessage(text=self._make_hint())}
-
-        if ans == 'جاوب':
-            msg = f"🎤 الإجابة الصحيحة: {self.correct_answer}\n🎵 الأغنية: {self.current_song['song_name']}"
-            next_q = self.next_question()
-            return {'points': 0, 'won': False, 'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")}
-
-        user_ans = self.normalize_text(answer)
-        correct = self.normalize_text(self.correct_answer)
-        if user_ans in correct or correct in user_ans:
-            points = 10 if not self.hint_used else 5
-            msg = f"👏 ممتاز {display_name}!\n+{points} نقاط 🎉"
-            next_q = self.next_question()
-            return {'points': points, 'won': True, 'response': TextSendMessage(text=f"{msg}\n\n{next_q.text}")}
-        return {'points': 0, 'won': False, 'response': TextSendMessage(text="❌ خطأ! حاول مرة أخرى 🎶")}
+            half = len(self.current_artist) // 2
+            revealed = self.current_artist[:half] + ('_' * (len(self.current_artist) - half))
+            return f"💡 تلميح 3:\n\n▪️ نصف الاسم: {revealed}"
+    
+    def reveal_answer(self):
+        """الكشف عن الإجابة"""
+        return f"▫️ الإجابة الصحيحة:\n\nالمغني: {self.current_artist}"
