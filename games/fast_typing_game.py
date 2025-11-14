@@ -9,7 +9,7 @@ class FastTypingGame:
         self.current_text = None
         self.start_time = None
         
-        # جمل للكتابة السريعة
+        # جمل لعبة الكتابة السريعة
         self.texts = [
             "الحياة جميلة",
             "النجاح يحتاج إلى صبر",
@@ -24,26 +24,32 @@ class FastTypingGame:
         ]
     
     def start_game(self):
-        """بدء لعبة جديدة"""
+        """بدء اللعبة"""
         self.current_text = random.choice(self.texts)
         self.start_time = time.time()
         
-        text = f"⚡ اكتب الجملة التالية بسرعة\n\n{self.current_text}\n\n━━━━━━━━━━━━━━\nابدأ الكتابة الآن!"
+        text = (
+            "⚡ اكتب الجملة التالية بسرعة\n\n"
+            f"{self.current_text}\n\n"
+            "━━━━━━━━━━━━━━\n"
+            "ابدأ الكتابة الآن!"
+        )
+        
         return TextSendMessage(text=text)
     
     def check_answer(self, answer, user_id, display_name):
-        """فحص الإجابة"""
+        """التحقق من إجابة اللاعب"""
         if not self.current_text or not self.start_time:
             return None
         
         normalized_answer = normalize_text(answer)
-        normalized_text = normalize_text(self.current_text)
+        normalized_correct = normalize_text(self.current_text)
         
-        # التحقق من التطابق
-        if normalized_answer == normalized_text:
+        # تطابق كامل للجملة
+        if normalized_answer == normalized_correct:
             elapsed_time = time.time() - self.start_time
             
-            # حساب النقاط بناءً على السرعة
+            # تقييم السرعة
             if elapsed_time < 3:
                 points = 15
                 speed_msg = "سريع جداً!"
@@ -60,30 +66,37 @@ class FastTypingGame:
                 points = 5
                 speed_msg = "بطيء"
             
-            new_question = self.start_game()
-            message = f"✓ إجابة صحيحة يا {display_name}\n\n⏱️ الوقت: {elapsed_time:.2f} ثانية\n🏃 {speed_msg}\n+{points} نقطة\n\n{new_question.text}"
+            # سؤال جديد
+            new_q = self.start_game()
+            
+            message = (
+                f"✓ إجابة صحيحة يا {display_name}\n\n"
+                f"⏱️ الوقت: {elapsed_time:.2f} ثانية\n"
+                f"🏃 {speed_msg}\n"
+                f"+{points} نقطة\n\n"
+                f"{new_q.text}"
+            )
             
             return {
-                'points': points,
-                'won': True,
-                'message': message,
-                'response': TextSendMessage(text=message),
-                'game_over': False
+                "points": points,
+                "won": True,
+                "message": message,
+                "response": TextSendMessage(text=message),
+                "game_over": False
             }
         
         return None
     
     def get_hint(self):
-        """تلميح"""
+        """عرض أول 3 أحرف كتلميح"""
         if not self.current_text:
             return "لا يوجد سؤال حالي"
         
-        # عرض أول 3 أحرف
         hint_text = self.current_text[:3] + "..."
         return f"💡 التلميح\n\n{hint_text}"
     
     def reveal_answer(self):
-        """كشف الإجابة"""
+        """عرض الجملة الأصلية"""
         if not self.current_text:
             return "لا يوجد سؤال حالي"
         
