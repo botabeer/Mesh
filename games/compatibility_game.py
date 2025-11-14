@@ -1,6 +1,6 @@
-from linebot.models import TextSendMessage
 import random
 import logging
+from linebot.models import TextSendMessage
 from utils.helpers import normalize_text
 
 logger = logging.getLogger(__name__)
@@ -11,15 +11,13 @@ class CompatibilityGame:
         self.name1 = None
         self.name2 = None
         self.compatibility_score = None
-        self.hint_count = 0
     
     def start_game(self):
         """بدء اللعبة"""
         try:
-            message = "🖤 لعبة التوافق\n\n▪️ اكتب اسمين مفصولين بمسافة\n\n(مثال: محمد فاطمة)"
-            
-            return TextSendMessage(text=message)
-            
+            return TextSendMessage(
+                text="🖤 لعبة التوافق\n\n▪️ اكتب اسمين مفصولين بمسافة\n\n(مثال: محمد فاطمة)"
+            )
         except Exception as e:
             logger.error(f"❌ خطأ في بدء لعبة التوافق: {e}", exc_info=True)
             return TextSendMessage(text="❌ حدث خطأ في بدء اللعبة")
@@ -38,75 +36,59 @@ class CompatibilityGame:
                     )
                 }
             
-            self.name1 = names[0]
-            self.name2 = names[1]
-            
-            # حساب نسبة التوافق (خوارزمية بسيطة)
+            self.name1, self.name2 = names[0], names[1]
             self.compatibility_score = self._calculate_compatibility(self.name1, self.name2)
-            
-            # رسالة التوافق
-            if self.compatibility_score >= 90:
-                emoji = "🖤"
-                status = "توافق مثالي"
-            elif self.compatibility_score >= 75:
-                emoji = "🖤"
-                status = "توافق ممتاز"
-            elif self.compatibility_score >= 60:
-                emoji = "🖤"
-                status = "توافق جيد"
-            elif self.compatibility_score >= 45:
-                emoji = "🖤"
-                status = "توافق متوسط"
-            elif self.compatibility_score >= 30:
-                emoji = "🖤"
-                status = "توافق ضعيف"
+
+            # تحديد الحالة حسب النسبة
+            score = self.compatibility_score
+            if score >= 90:
+                status = "توافق مثالي 🖤"
+            elif score >= 75:
+                status = "توافق ممتاز 🖤"
+            elif score >= 60:
+                status = "توافق جيد 🖤"
+            elif score >= 45:
+                status = "توافق متوسط 🖤"
+            elif score >= 30:
+                status = "توافق ضعيف 🖤"
             else:
-                emoji = "🖤"
-                status = "لا يوجد توافق"
+                status = "لا يوجد توافق 🖤"
             
-            message = f"{emoji} نتيجة التوافق:\n\n▪️ {self.name1} ✨ {self.name2}\n▪️ النسبة: {self.compatibility_score}%\n▪️ الحالة: {status}"
-            
-            # منح نقاط بناءً على استخدام اللعبة
-            points = 5
-            
+            msg = (
+                f"🖤 نتيجة التوافق:\n\n"
+                f"▪️ {self.name1} ✨ {self.name2}\n"
+                f"▪️ النسبة: {score}%\n"
+                f"▪️ الحالة: {status}"
+            )
+
             return {
-                'points': points,
-                'won': True,
-                'response': TextSendMessage(text=message)
+                "points": 5,
+                "won": True,
+                "response": TextSendMessage(text=msg),
             }
-            
+
         except Exception as e:
             logger.error(f"❌ خطأ في معالجة التوافق: {e}", exc_info=True)
             return None
     
     def _calculate_compatibility(self, name1, name2):
         """خوارزمية حساب التوافق"""
-        # استخدام طريقة FLAMES المعدلة
-        name1_clean = normalize_text(name1)
-        name2_clean = normalize_text(name2)
-        
-        # حساب الأحرف المشتركة
-        common_letters = set(name1_clean) & set(name2_clean)
-        total_letters = len(set(name1_clean + name2_clean))
-        
-        if total_letters == 0:
+        n1 = normalize_text(name1)
+        n2 = normalize_text(name2)
+
+        common = set(n1) & set(n2)
+        total = len(set(n1 + n2))
+
+        if total == 0:
             return random.randint(40, 60)
-        
-        # نسبة التوافق الأولية
-        base_score = (len(common_letters) / total_letters) * 100
-        
-        # إضافة عامل عشوائي للتنويع
+
+        base = (len(common) / total) * 100
         random_factor = random.randint(-15, 15)
-        
-        # النتيجة النهائية
-        final_score = int(max(0, min(100, base_score + random_factor)))
-        
-        return final_score
+
+        return int(max(0, min(100, base + random_factor)))
     
     def get_hint(self):
-        """تلميح غير متوفر في هذه اللعبة"""
         return "💡 لا توجد تلميحات في لعبة التوافق\n\nفقط اكتب اسمين!"
     
     def reveal_answer(self):
-        """لا يوجد جواب محدد في هذه اللعبة"""
         return "▫️ لعبة التوافق تعتمد على الأسماء التي تدخلها"
