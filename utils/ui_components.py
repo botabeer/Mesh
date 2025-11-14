@@ -1,39 +1,25 @@
 from linebot.models import QuickReply, QuickReplyButton, MessageAction
-from utils.helpers import get_emoji_for_rank, format_number, get_win_rate
 
-def get_quick_reply():
-    """الأزرار الثابتة (13 زر)"""
+def get_games_quick_reply():
+    """الأزرار الثابتة - الألعاب فقط بأسلوب iOS"""
     return QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label="🎯 ذكاء", text="ذكاء")),
-        QuickReplyButton(action=MessageAction(label="🎨 لون", text="لون")),
-        QuickReplyButton(action=MessageAction(label="🔗 سلسلة", text="سلسلة")),
-        QuickReplyButton(action=MessageAction(label="⚡ أسرع", text="أسرع")),
-        QuickReplyButton(action=MessageAction(label="🔄 ضد", text="ضد")),
-        QuickReplyButton(action=MessageAction(label="📝 تكوين", text="تكوين")),
-        QuickReplyButton(action=MessageAction(label="🎮 لعبة", text="لعبة")),
-        QuickReplyButton(action=MessageAction(label="🎵 أغنية", text="أغنية")),
-        QuickReplyButton(action=MessageAction(label="📊 نقاطي", text="نقاطي")),
-        QuickReplyButton(action=MessageAction(label="🏆 الصدارة", text="الصدارة")),
-        QuickReplyButton(action=MessageAction(label="✨ المزيد", text="المزيد")),
-        QuickReplyButton(action=MessageAction(label="⏹️ إيقاف", text="إيقاف")),
-        QuickReplyButton(action=MessageAction(label="❓ مساعدة", text="مساعدة"))
-    ])
-
-def get_more_quick_reply():
-    """الأزرار الإضافية"""
-    return QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label="🔀 ترتيب", text="ترتيب")),
-        QuickReplyButton(action=MessageAction(label="🎲 خمن", text="خمن")),
-        QuickReplyButton(action=MessageAction(label="💕 توافق", text="توافق")),
-        QuickReplyButton(action=MessageAction(label="🔢 رياضيات", text="رياضيات")),
-        QuickReplyButton(action=MessageAction(label="🧠 ذاكرة", text="ذاكرة")),
-        QuickReplyButton(action=MessageAction(label="🎯 لغز", text="لغز")),
-        QuickReplyButton(action=MessageAction(label="😊 إيموجي", text="إيموجي")),
-        QuickReplyButton(action=MessageAction(label="🔙 رجوع", text="البداية"))
+        QuickReplyButton(action=MessageAction(label="ذكاء", text="ذكاء")),
+        QuickReplyButton(action=MessageAction(label="لون", text="لون")),
+        QuickReplyButton(action=MessageAction(label="سلسلة", text="سلسلة")),
+        QuickReplyButton(action=MessageAction(label="ترتيب", text="ترتيب")),
+        QuickReplyButton(action=MessageAction(label="تكوين", text="تكوين")),
+        QuickReplyButton(action=MessageAction(label="أسرع", text="أسرع")),
+        QuickReplyButton(action=MessageAction(label="لعبة", text="لعبة")),
+        QuickReplyButton(action=MessageAction(label="خمن", text="خمن")),
+        QuickReplyButton(action=MessageAction(label="توافق", text="توافق")),
+        QuickReplyButton(action=MessageAction(label="رياضيات", text="رياضيات")),
+        QuickReplyButton(action=MessageAction(label="ذاكرة", text="ذاكرة")),
+        QuickReplyButton(action=MessageAction(label="لغز", text="لغز")),
+        QuickReplyButton(action=MessageAction(label="ضد", text="ضد"))
     ])
 
 def get_welcome_message(display_name):
-    """رسالة الترحيب الأنيقة"""
+    """رسالة الترحيب بأسلوب iOS"""
     return {
         "type": "bubble",
         "body": {
@@ -42,59 +28,11 @@ def get_welcome_message(display_name):
             "contents": [
                 {
                     "type": "text",
-                    "text": "Bot Mesh",
+                    "text": f"مرحباً {display_name}",
                     "weight": "bold",
                     "size": "xxl",
                     "color": "#1a1a1a",
                     "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": f"مرحباً {display_name}",
-                    "size": "md",
-                    "color": "#6a6a6a",
-                    "align": "center",
-                    "margin": "md"
-                },
-                {
-                    "type": "separator",
-                    "margin": "xl",
-                    "color": "#e8e8e8"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "▪️ 15 لعبة تفاعلية",
-                            "size": "sm",
-                            "color": "#4a4a4a",
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "text",
-                            "text": "▪️ نظام نقاط متطور",
-                            "size": "sm",
-                            "color": "#4a4a4a",
-                            "margin": "md"
-                        },
-                        {
-                            "type": "text",
-                            "text": "▪️ لوحة صدارة",
-                            "size": "sm",
-                            "color": "#4a4a4a",
-                            "margin": "md"
-                        },
-                        {
-                            "type": "text",
-                            "text": "▪️ ذكاء اصطناعي",
-                            "size": "sm",
-                            "color": "#4a4a4a",
-                            "margin": "md"
-                        }
-                    ],
-                    "margin": "xl"
                 },
                 {
                     "type": "separator",
@@ -105,13 +43,22 @@ def get_welcome_message(display_name):
                     "type": "text",
                     "text": "اختر لعبة من الأزرار أدناه",
                     "size": "sm",
-                    "color": "#6a6a6a",
+                    "color": "#666666",
                     "align": "center",
-                    "margin": "xl"
+                    "margin": "xl",
+                    "wrap": True
+                },
+                {
+                    "type": "text",
+                    "text": "أو اكتب 'مساعدة' لعرض الأوامر",
+                    "size": "xs",
+                    "color": "#999999",
+                    "align": "center",
+                    "margin": "sm"
                 }
             ],
-            "backgroundColor": "#ffffff",
-            "paddingAll": "24px"
+            "paddingAll": "24px",
+            "backgroundColor": "#ffffff"
         },
         "styles": {
             "body": {
@@ -121,7 +68,7 @@ def get_welcome_message(display_name):
     }
 
 def get_help_message():
-    """رسالة المساعدة مع حقوق الملكية"""
+    """رسالة المساعدة الكاملة بأسلوب iOS"""
     return {
         "type": "bubble",
         "body": {
@@ -147,88 +94,144 @@ def get_help_message():
                     "contents": [
                         {
                             "type": "text",
-                            "text": "الأوامر الأساسية:",
+                            "text": "الأوامر الأساسية",
                             "weight": "bold",
-                            "size": "sm",
+                            "size": "md",
                             "color": "#1a1a1a",
                             "margin": "lg"
                         },
                         {
                             "type": "text",
-                            "text": "▪️ انضم - التسجيل في البوت\n▪️ نقاطي - عرض إحصائياتك\n▪️ الصدارة - أفضل اللاعبين\n▪️ إيقاف - إنهاء اللعبة الحالية",
-                            "size": "xs",
-                            "color": "#4a4a4a",
+                            "text": "انضم • للتسجيل وجمع النقاط",
+                            "size": "sm",
+                            "color": "#666666",
                             "margin": "md",
                             "wrap": True
                         },
                         {
                             "type": "text",
-                            "text": "أوامر أثناء اللعب:",
-                            "weight": "bold",
+                            "text": "نقاطي • عرض إحصائياتك",
                             "size": "sm",
-                            "color": "#1a1a1a",
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "text",
-                            "text": "▪️ لمح - الحصول على تلميح\n▪️ جاوب - عرض الإجابة والانتقال",
-                            "size": "xs",
-                            "color": "#4a4a4a",
-                            "margin": "md",
+                            "color": "#666666",
+                            "margin": "sm",
                             "wrap": True
                         },
                         {
                             "type": "text",
-                            "text": "الألعاب المتوفرة:",
-                            "weight": "bold",
+                            "text": "الصدارة • أفضل اللاعبين",
                             "size": "sm",
-                            "color": "#1a1a1a",
-                            "margin": "lg"
+                            "color": "#666666",
+                            "margin": "sm",
+                            "wrap": True
                         },
                         {
                             "type": "text",
-                            "text": "ذكاء • لون • سلسلة • ترتيب\nتكوين • أسرع • لعبة • خمن\nتوافق • رياضيات • ذاكرة • لغز\nضد • إيموجي • أغنية",
-                            "size": "xs",
-                            "color": "#4a4a4a",
-                            "margin": "md",
-                            "wrap": True,
-                            "align": "center"
+                            "text": "إيقاف • إنهاء اللعبة الحالية",
+                            "size": "sm",
+                            "color": "#666666",
+                            "margin": "sm",
+                            "wrap": True
+                        },
+                        {
+                            "type": "text",
+                            "text": "انسحب • إلغاء التسجيل",
+                            "size": "sm",
+                            "color": "#666666",
+                            "margin": "sm",
+                            "wrap": True
                         }
-                    ]
+                    ],
+                    "backgroundColor": "#f9f9f9",
+                    "paddingAll": "16px",
+                    "cornerRadius": "12px",
+                    "margin": "lg"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "أثناء اللعب",
+                            "weight": "bold",
+                            "size": "md",
+                            "color": "#1a1a1a"
+                        },
+                        {
+                            "type": "text",
+                            "text": "لمح • تلميح للإجابة",
+                            "size": "sm",
+                            "color": "#666666",
+                            "margin": "md",
+                            "wrap": True
+                        },
+                        {
+                            "type": "text",
+                            "text": "جاوب • كشف الإجابة والانتقال",
+                            "size": "sm",
+                            "color": "#666666",
+                            "margin": "sm",
+                            "wrap": True
+                        }
+                    ],
+                    "backgroundColor": "#f9f9f9",
+                    "paddingAll": "16px",
+                    "cornerRadius": "12px",
+                    "margin": "md"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "الألعاب المتاحة",
+                            "weight": "bold",
+                            "size": "md",
+                            "color": "#1a1a1a"
+                        },
+                        {
+                            "type": "text",
+                            "text": "ذكاء • لون • سلسلة • ترتيب • تكوين • أسرع • لعبة • خمن • توافق • رياضيات • ذاكرة • لغز • ضد • إيموجي • أغنية",
+                            "size": "xs",
+                            "color": "#666666",
+                            "margin": "md",
+                            "wrap": True
+                        }
+                    ],
+                    "backgroundColor": "#f9f9f9",
+                    "paddingAll": "16px",
+                    "cornerRadius": "12px",
+                    "margin": "md"
                 },
                 {
                     "type": "separator",
-                    "margin": "xl",
+                    "margin": "lg",
                     "color": "#e8e8e8"
                 },
                 {
                     "type": "text",
-                    "text": "©تم إنشاء هذا البوت بواسطة عبير الدوسر",
+                    "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري",
                     "size": "xxs",
-                    "color": "#9a9a9a",
+                    "color": "#999999",
                     "align": "center",
                     "margin": "lg"
                 }
             ],
-            "backgroundColor": "#ffffff",
-            "paddingAll": "24px"
-        },
-        "styles": {
-            "body": {
-                "separator": True
-            }
+            "paddingAll": "24px",
+            "backgroundColor": "#ffffff"
         }
     }
 
 def get_stats_message(display_name, stats, is_registered):
-    """رسالة الإحصائيات"""
-    total_points = stats['total_points']
-    games_played = stats['games_played']
-    wins = stats['wins']
-    win_rate = get_win_rate(games_played, wins)
+    """رسالة الإحصائيات بأسلوب iOS"""
+    total_points = stats.get('total_points', 0)
+    games_played = stats.get('games_played', 0)
+    wins = stats.get('wins', 0)
+    win_rate = (wins / games_played * 100) if games_played > 0 else 0
     
-    status_text = "✅ مسجل" if is_registered else "⚠️ غير مسجل"
-    status_color = "#4caf50" if is_registered else "#ff9800"
+    status_text = "مسجل" if is_registered else "غير مسجل"
+    status_color = "#34c759" if is_registered else "#999999"
     
     return {
         "type": "bubble",
@@ -238,11 +241,19 @@ def get_stats_message(display_name, stats, is_registered):
             "contents": [
                 {
                     "type": "text",
-                    "text": f"📊 إحصائيات {display_name}",
+                    "text": display_name,
                     "weight": "bold",
                     "size": "xl",
                     "color": "#1a1a1a",
                     "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": status_text,
+                    "size": "xs",
+                    "color": status_color,
+                    "align": "center",
+                    "margin": "sm"
                 },
                 {
                     "type": "separator",
@@ -259,43 +270,21 @@ def get_stats_message(display_name, stats, is_registered):
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "الحالة",
+                                    "text": "إجمالي النقاط",
                                     "size": "sm",
-                                    "color": "#6a6a6a",
-                                    "flex": 1
+                                    "color": "#666666",
+                                    "flex": 0
                                 },
                                 {
                                     "type": "text",
-                                    "text": status_text,
-                                    "size": "sm",
-                                    "color": status_color,
-                                    "align": "end",
-                                    "weight": "bold"
-                                }
-                            ],
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "▪️ إجمالي النقاط",
-                                    "size": "sm",
-                                    "color": "#4a4a4a",
-                                    "flex": 1
-                                },
-                                {
-                                    "type": "text",
-                                    "text": format_number(total_points),
+                                    "text": str(total_points),
                                     "size": "sm",
                                     "color": "#1a1a1a",
-                                    "align": "end",
-                                    "weight": "bold"
+                                    "weight": "bold",
+                                    "align": "end"
                                 }
                             ],
-                            "margin": "md"
+                            "spacing": "md"
                         },
                         {
                             "type": "box",
@@ -303,20 +292,21 @@ def get_stats_message(display_name, stats, is_registered):
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "▪️ عدد الألعاب",
+                                    "text": "عدد الألعاب",
                                     "size": "sm",
-                                    "color": "#4a4a4a",
-                                    "flex": 1
+                                    "color": "#666666",
+                                    "flex": 0
                                 },
                                 {
                                     "type": "text",
                                     "text": str(games_played),
                                     "size": "sm",
                                     "color": "#1a1a1a",
-                                    "align": "end",
-                                    "weight": "bold"
+                                    "weight": "bold",
+                                    "align": "end"
                                 }
                             ],
+                            "spacing": "md",
                             "margin": "md"
                         },
                         {
@@ -325,20 +315,21 @@ def get_stats_message(display_name, stats, is_registered):
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "▪️ الانتصارات",
+                                    "text": "الانتصارات",
                                     "size": "sm",
-                                    "color": "#4a4a4a",
-                                    "flex": 1
+                                    "color": "#666666",
+                                    "flex": 0
                                 },
                                 {
                                     "type": "text",
                                     "text": str(wins),
                                     "size": "sm",
                                     "color": "#1a1a1a",
-                                    "align": "end",
-                                    "weight": "bold"
+                                    "weight": "bold",
+                                    "align": "end"
                                 }
                             ],
+                            "spacing": "md",
                             "margin": "md"
                         },
                         {
@@ -347,122 +338,129 @@ def get_stats_message(display_name, stats, is_registered):
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "▪️ معدل الفوز",
+                                    "text": "معدل الفوز",
                                     "size": "sm",
-                                    "color": "#4a4a4a",
-                                    "flex": 1
+                                    "color": "#666666",
+                                    "flex": 0
                                 },
                                 {
                                     "type": "text",
-                                    "text": win_rate,
+                                    "text": f"{win_rate:.1f}%",
                                     "size": "sm",
-                                    "color": "#4caf50",
-                                    "align": "end",
-                                    "weight": "bold"
+                                    "color": "#1a1a1a",
+                                    "weight": "bold",
+                                    "align": "end"
                                 }
                             ],
+                            "spacing": "md",
                             "margin": "md"
                         }
-                    ]
+                    ],
+                    "backgroundColor": "#f9f9f9",
+                    "paddingAll": "16px",
+                    "cornerRadius": "12px",
+                    "margin": "lg"
                 }
             ],
-            "backgroundColor": "#ffffff",
-            "paddingAll": "24px"
-        },
-        "styles": {
-            "body": {
-                "separator": True
-            }
+            "paddingAll": "24px",
+            "backgroundColor": "#ffffff"
         }
     }
 
 def get_leaderboard_message(leaders):
-    """رسالة لوحة الصدارة"""
-    leader_boxes = []
+    """رسالة لوحة الصدارة بأسلوب iOS"""
+    contents = [
+        {
+            "type": "text",
+            "text": "لوحة الصدارة",
+            "weight": "bold",
+            "size": "xl",
+            "color": "#1a1a1a",
+            "align": "center"
+        },
+        {
+            "type": "separator",
+            "margin": "lg",
+            "color": "#e8e8e8"
+        }
+    ]
     
-    for rank, leader in enumerate(leaders[:10], 1):
-        emoji = get_emoji_for_rank(rank)
+    medal_colors = {
+        0: "#FFD700",  # ذهبي
+        1: "#C0C0C0",  # فضي
+        2: "#CD7F32"   # برونزي
+    }
+    
+    for idx, leader in enumerate(leaders[:10]):
+        rank = idx + 1
+        name = leader.get('display_name', 'لاعب')
+        points = leader.get('total_points', 0)
         
-        # ألوان متدرجة للمراكز الثلاثة الأولى
+        medal = ""
+        rank_color = "#666666"
+        
         if rank == 1:
-            name_color = "#FFD700"  # ذهبي
+            medal = "🥇 "
+            rank_color = medal_colors[0]
         elif rank == 2:
-            name_color = "#C0C0C0"  # فضي
+            medal = "🥈 "
+            rank_color = medal_colors[1]
         elif rank == 3:
-            name_color = "#CD7F32"  # برونزي
-        else:
-            name_color = "#4a4a4a"
+            medal = "🥉 "
+            rank_color = medal_colors[2]
         
-        leader_box = {
+        box_bg = "#f9f9f9" if idx % 2 == 0 else "#ffffff"
+        
+        contents.append({
             "type": "box",
             "layout": "horizontal",
             "contents": [
                 {
                     "type": "text",
-                    "text": f"{emoji} {rank}",
+                    "text": f"{medal}{rank}",
                     "size": "sm",
-                    "color": name_color,
+                    "color": rank_color,
                     "weight": "bold",
-                    "flex": 0
+                    "flex": 0,
+                    "align": "center"
                 },
                 {
                     "type": "text",
-                    "text": leader['display_name'],
+                    "text": name,
                     "size": "sm",
                     "color": "#1a1a1a",
-                    "flex": 2,
+                    "flex": 3,
                     "margin": "md"
                 },
                 {
                     "type": "text",
-                    "text": format_number(leader['total_points']),
+                    "text": str(points),
                     "size": "sm",
-                    "color": "#6a6a6a",
-                    "align": "end"
+                    "color": "#1a1a1a",
+                    "weight": "bold",
+                    "align": "end",
+                    "flex": 0
                 }
             ],
-            "margin": "md" if rank > 1 else "lg"
-        }
-        
-        leader_boxes.append(leader_box)
+            "backgroundColor": box_bg,
+            "paddingAll": "12px",
+            "cornerRadius": "8px",
+            "margin": "sm"
+        })
     
     return {
         "type": "bubble",
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "🏆 لوحة الصدارة",
-                    "weight": "bold",
-                    "size": "xl",
-                    "color": "#1a1a1a",
-                    "align": "center"
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg",
-                    "color": "#e8e8e8"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": leader_boxes
-                }
-            ],
-            "backgroundColor": "#ffffff",
-            "paddingAll": "24px"
-        },
-        "styles": {
-            "body": {
-                "separator": True
-            }
+            "contents": contents,
+            "paddingAll": "24px",
+            "backgroundColor": "#ffffff"
         }
     }
 
 def get_join_message(display_name):
-    """رسالة الانضمام"""
+    """رسالة الانضمام بأسلوب iOS"""
     return {
         "type": "bubble",
         "body": {
@@ -471,33 +469,20 @@ def get_join_message(display_name):
             "contents": [
                 {
                     "type": "text",
-                    "text": "✅ تم التسجيل بنجاح",
+                    "text": "✓",
+                    "size": "xxl",
+                    "color": "#34c759",
+                    "align": "center",
+                    "weight": "bold"
+                },
+                {
+                    "type": "text",
+                    "text": f"مرحباً {display_name}",
                     "weight": "bold",
                     "size": "xl",
-                    "color": "#4caf50",
-                    "align": "center"
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg",
-                    "color": "#e8e8e8"
-                },
-                {
-                    "type": "text",
-                    "text": f"مرحباً {display_name}!",
-                    "size": "md",
                     "color": "#1a1a1a",
                     "align": "center",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "▪️ يمكنك الآن اللعب في جميع الألعاب\n▪️ جمع النقاط والمنافسة\n▪️ الظهور في لوحة الصدارة",
-                    "size": "sm",
-                    "color": "#4a4a4a",
-                    "align": "center",
-                    "margin": "lg",
-                    "wrap": True
+                    "margin": "md"
                 },
                 {
                     "type": "separator",
@@ -506,25 +491,28 @@ def get_join_message(display_name):
                 },
                 {
                     "type": "text",
-                    "text": "اختر لعبة للبدء!",
+                    "text": "تم تسجيلك بنجاح",
                     "size": "sm",
-                    "color": "#6a6a6a",
+                    "color": "#666666",
                     "align": "center",
                     "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": "يمكنك الآن اللعب وجمع النقاط",
+                    "size": "xs",
+                    "color": "#999999",
+                    "align": "center",
+                    "margin": "sm"
                 }
             ],
-            "backgroundColor": "#ffffff",
-            "paddingAll": "24px"
-        },
-        "styles": {
-            "body": {
-                "separator": True
-            }
+            "paddingAll": "24px",
+            "backgroundColor": "#ffffff"
         }
     }
 
 def get_winner_announcement(winner_name, winner_points, game_type, total_questions):
-    """إعلان الفائز"""
+    """إعلان الفائز بأسلوب iOS"""
     return {
         "type": "bubble",
         "body": {
@@ -534,12 +522,12 @@ def get_winner_announcement(winner_name, winner_points, game_type, total_questio
                 {
                     "type": "text",
                     "text": "🏆",
-                    "size": "4xl",
+                    "size": "xxl",
                     "align": "center"
                 },
                 {
                     "type": "text",
-                    "text": "انتهت اللعبة!",
+                    "text": "انتهت اللعبة",
                     "weight": "bold",
                     "size": "xl",
                     "color": "#1a1a1a",
@@ -557,59 +545,45 @@ def get_winner_announcement(winner_name, winner_points, game_type, total_questio
                     "contents": [
                         {
                             "type": "text",
-                            "text": f"لعبة {game_type}",
+                            "text": "الفائز",
                             "size": "sm",
-                            "color": "#6a6a6a",
-                            "align": "center",
-                            "margin": "lg"
+                            "color": "#666666",
+                            "align": "center"
                         },
                         {
                             "type": "text",
-                            "text": f"الفائز: {winner_name}",
+                            "text": winner_name,
                             "weight": "bold",
                             "size": "lg",
-                            "color": "#FFD700",
-                            "align": "center",
-                            "margin": "md"
-                        },
-                        {
-                            "type": "text",
-                            "text": f"▪️ النقاط: {winner_points}",
-                            "size": "md",
-                            "color": "#4a4a4a",
-                            "align": "center",
-                            "margin": "md"
-                        },
-                        {
-                            "type": "text",
-                            "text": f"▪️ عدد الأسئلة: {total_questions}",
-                            "size": "sm",
-                            "color": "#6a6a6a",
+                            "color": "#1a1a1a",
                             "align": "center",
                             "margin": "sm"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"{winner_points} نقطة",
+                            "size": "md",
+                            "color": "#34c759",
+                            "align": "center",
+                            "margin": "sm",
+                            "weight": "bold"
                         }
-                    ]
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg",
-                    "color": "#e8e8e8"
+                    ],
+                    "backgroundColor": "#f9f9f9",
+                    "paddingAll": "16px",
+                    "cornerRadius": "12px",
+                    "margin": "lg"
                 },
                 {
                     "type": "text",
-                    "text": "أحسنت! 🎉",
-                    "size": "md",
-                    "color": "#4caf50",
+                    "text": f"لعبة {game_type} • {total_questions} أسئلة",
+                    "size": "xs",
+                    "color": "#999999",
                     "align": "center",
                     "margin": "lg"
                 }
             ],
-            "backgroundColor": "#ffffff",
-            "paddingAll": "24px"
-        },
-        "styles": {
-            "body": {
-                "separator": True
-            }
+            "paddingAll": "24px",
+            "backgroundColor": "#ffffff"
         }
     }
