@@ -1,4 +1,4 @@
-‏import random
+import random
 from linebot.models import TextSendMessage
 from utils.helpers import normalize_text
 
@@ -7,6 +7,7 @@ class EmojiGame:
         self.line_bot_api = line_bot_api
         self.current_answer = None
         
+        # قائمة الإيموجي والكلمات
         self.emoji_words = [
             {"emoji": "🚗💨", "word": "سيارة سريعة"},
             {"emoji": "🌙✨", "word": "ليل جميل"},
@@ -19,6 +20,7 @@ class EmojiGame:
         ]
     
     def start_game(self):
+        """بدء اللعبة"""
         item = random.choice(self.emoji_words)
         self.current_answer = item["word"]
 
@@ -32,14 +34,17 @@ class EmojiGame:
         return TextSendMessage(text=text)
     
     def check_answer(self, answer, user_id, display_name):
+        """فحص إجابة اللاعب"""
         if not self.current_answer:
             return None
         
         normalized_answer = normalize_text(answer)
         normalized_correct = normalize_text(self.current_answer)
 
+        # تطابق الإجابة
         if normalized_answer in normalized_correct or normalized_correct in normalized_answer:
             new_q = self.start_game()
+
             msg = (
                 f"✓ صحيح يا {display_name}!\n\n"
                 f"الكلمة: {self.current_answer}\n"
@@ -58,9 +63,17 @@ class EmojiGame:
         return None
     
     def get_hint(self):
+        """إعطاء تلميح بسيط عن عدد كلمات الجواب"""
+        if not self.current_answer:
+            return "لا يوجد سؤال حالي"
+        
         return f"💡 عدد الكلمات: {len(self.current_answer.split())}"
     
     def reveal_answer(self):
+        """كشف الإجابة"""
+        if not self.current_answer:
+            return "لا يوجد سؤال حالي"
+
         ans = self.current_answer
         self.current_answer = None
         return f"الكلمة: {ans}"
