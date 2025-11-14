@@ -1,41 +1,139 @@
 ‏import random
-‏from linebot.models import TextSendMessage
+from linebot.models import TextSendMessage
+from utils.helpers import normalize_text
 
-‏class GuessGame:
-‏    def __init__(self, line_bot_api):
-‏        self.line_bot_api = line_bot_api
-‏        self.number = None
-    
-‏    def start_game(self):
-‏        self.number = random.randint(1, 50)
-‏        text = f"🎲 خمن الرقم\n\n━━━━━━━━━━━━━━\nخمن رقم بين 1 و 50"
-‏        return TextSendMessage(text=text)
-    
-‏    def check_answer(self, answer, user_id, display_name):
-‏        if not self.number:
-‏            return None
+class SongGame:
+    def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
+        self.line_bot_api = line_bot_api
+        self.use_ai = use_ai
+        self.get_api_key = get_api_key
+        self.switch_key = switch_key
+        self.current_song = None
+        self.current_artist = None
+        self.hint_used = False
         
-‏        try:
-‏            guess = int(answer.strip())
-‏        except:
-‏            return None
+        # مجموعة أغاني عربية مشهورة
+        self.songs_db = [
+            {"lyrics": "آه من الهوى ما أقساه\nآه من زمان اللي كان", "artist": "عبد الحليم حافظ"},
+            {"lyrics": "على بالي حبيبي وأنا ماشي في الشوارع\nمشتاق لعنيه", "artist": "فيروز"},
+            {"lyrics": "تعالى أسألك أنا يا هوى\nمين اللي باعني", "artist": "أم كلثوم"},
+            {"lyrics": "بحبك وحشتيني\nمن زمان والله ما شفتك", "artist": "عمرو دياب"},
+            {"lyrics": "كل يوم من ده\nوالله العظيم خلاص سئمت", "artist": "محمد عبده"},
+            {"lyrics": "يا طير يا طاير فوق\nودي سلامي للحبايب", "artist": "طلال مداح"},
+            {"lyrics": "أنا قلبي دليلي\nوأنا قلبي عليل", "artist": "وردة الجزائرية"},
+            {"lyrics": "من أول ما شفتك\nوأنا حاسس بحاجة", "artist": "تامر حسني"},
+            {"lyrics": "قولي يا عيني\nليه البعد يا عيني", "artist": "راشد الماجد"},
+            {"lyrics": "كل ده كان ليه\nكل الحب ده كان ليه", "artist": "شيرين عبد الوهاب"}
+        ]
+    
+    def start_game(self):
+        """بدء لعبة جديدة"""
+        if self.use_ai and self.get_api_key:
+            return self._generate_ai_song()
+        else:
+            return self._generate_manual_song()
+    
+    def _generate_manual_song(self):
+        """توليد سؤال يدوي"""
+        song = random.choice(self.songs_db)
+        self.current_song = song['lyrics']
+        self.current_artist = song['artist']
+        self.hint_used = False
         
-‏        if guess == self.number:
-‏            new_q = self.start_game()
-‏            msg = f"✓ صحيح يا {display_name}!\n\nالرقم: {self.number}\n+10 نقطة\n\n{new_q.text}"
-‏            return {'points': 10, 'won': True, 'message': msg, 'response': TextSendMessage(text=msg), 'game_over': False}
-‏        elif guess < self.number:
-‏            return {'points': 0, 'won': False, 'message': "⬆️ أكبر", 'response': TextSendMessage(text="⬆️ أكبر"), 'game_over': False}
-‏        else:
-‏            return {'points': 0, 'won': False, 'message': "⬇️ أصغر", 'response': TextSendMessage(text="⬇️ أصغر"), 'game_over': False}
+        text = f"🎵 خمن المغني\n\n{self.current_song}\n\n━━━━━━━━━━━━━━\nمن المغني؟"
+        return TextSendMessage(text=text)
     
-‏    def get_hint(self):
-‏        if self.number <= 25:
-‏            return "💡 الرقم بين 1 و 25"
-‏        else:
-‏            return "💡 الرقم بين 26 و 50"
+    def _generate_ai_song(self):
+        """توليد سؤال بالذكاء الاصطناعي"""
+        try:
+            import google.generativeai as genai
+            
+            api_key = self.get_api_key()
+            if not api_key:
+                return self._generate_manual_song()
+            
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-pro')
+            
+            prompt = """أعطني مقطع من أغنية عربية مشهورة (سطرين فقط) مع اسم المغني.
+            
+الصيغة المطلوبة بالضبط:
+LYRICS: [مقطع الأغنية]
+ARTIST: [اسم المغني]
+
+مثال:
+LYRICS: آه من الهوى ما أقساه\nآه من زمان اللي كان
+ARTIST: عبد الحليم حافظ"""
+            
+            response = model.generate_content(prompt)
+            result = response.text.strip()
+            
+            # استخراج البيانات
+            lyrics_line = [l for l in result.split('\n') if 'LYRICS:' in l]
+            artist_line = [l for l in result.split('\n') if 'ARTIST:' in l]
+            
+            if lyrics_line and artist_line:
+                self.current_song = lyrics_line[0].replace('LYRICS:', '').strip()
+                self.current_artist = artist_line[0].replace('ARTIST:', '').strip()
+                self.hint_used = False
+                
+                text = f"🎵 خمن المغني\n\n{self.current_song}\n\n━━━━━━━━━━━━━━\nمن المغني؟"
+                return TextSendMessage(text=text)
+            else:
+                return self._generate_manual_song()
+                
+        except Exception as e:
+            print(f"خطأ في AI: {e}")
+            if self.switch_key:
+                self.switch_key()
+            return self._generate_manual_song()
     
-‏    def reveal_answer(self):
-‏        ans = self.number
-‏        self.number = None
-‏        return f"الرقم: {ans}"
+    def check_answer(self, answer, user_id, display_name):
+        """فحص الإجابة"""
+        if not self.current_artist:
+            return None
+        
+        normalized_answer = normalize_text(answer)
+        normalized_artist = normalize_text(self.current_artist)
+        
+        # التحقق من الإجابة
+        if normalized_answer in normalized_artist or normalized_artist in normalized_answer:
+            points = 10
+            if self.hint_used:
+                points = 5
+            
+            new_question = self.start_game()
+            message = f"✓ إجابة صحيحة يا {display_name}\n\nالمغني: {self.current_artist}\n+{points} نقطة\n\n{new_question.text}"
+            
+            return {
+                'points': points,
+                'won': True,
+                'message': message,
+                'response': TextSendMessage(text=message),
+                'game_over': False
+            }
+        
+        return None
+    
+    def get_hint(self):
+        """تلميح"""
+        if not self.current_artist:
+            return "لا يوجد سؤال حالي"
+        
+        self.hint_used = True
+        first_letter = self.current_artist[0]
+        word_count = len(self.current_artist.split())
+        letter_count = len(self.current_artist.replace(' ', ''))
+        
+        return f"💡 التلميح\n\nأول حرف: {first_letter}\nعدد الكلمات: {word_count}\nعدد الحروف: {letter_count}\n\n⚠️ سيتم خصم 5 نقاط"
+    
+    def reveal_answer(self):
+        """كشف الإجابة"""
+        if not self.current_artist:
+            return "لا يوجد سؤال حالي"
+        
+        answer = self.current_artist
+        self.current_artist = None
+        self.current_song = None
+        
+        return f"الإجابة الصحيحة:\n{answer}"
