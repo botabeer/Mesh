@@ -1,75 +1,52 @@
-# games/guess_game.py
 import random
 from linebot.models import TextSendMessage
 from utils.helpers import normalize_text
 
 class GuessGame:
     def __init__(self):
-        self.current_number = None
-        self.min_number = 1
-        self.max_number = 100
-        self.hint_used = False
+        self.number = None
         self.scores = {}
-
-    # ---------------------------- بدء اللعبة ---------------------------- #
-    def start_game(self):
-        self.current_number = random.randint(self.min_number, self.max_number)
         self.hint_used = False
-        text = (
-            f"🎯 لعبة التخمين\n\n"
-            f"اختر رقماً بين {self.min_number} و {self.max_number}\n"
-            f"حاول أن تخمن الرقم الصحيح!"
-        )
+
+    def start_game(self):
+        self.number = random.randint(1, 50)
+        self.hint_used = False
+        text = "🎯 خمن الرقم بين 1 و 50!"
         return TextSendMessage(text=text)
 
-    # ---------------------------- فحص الإجابة ---------------------------- #
     def check_answer(self, answer, user_id, display_name):
-        if self.current_number is None:
+        if self.number is None:
             return None
-
         try:
             guess = int(answer)
         except ValueError:
             return None
 
-        if guess == self.current_number:
+        if guess == self.number:
             points = 10 if not self.hint_used else 5
             self.scores[user_id] = self.scores.get(user_id, 0) + points
-            new_game = self.start_game()
+            new_q = self.start_game()
             msg = (
-                f"✔️ أحسنت يا {display_name}! الرقم الصحيح كان: {self.current_number}\n"
+                f"✔️ أحسنت يا {display_name}! الرقم الصحيح كان: {self.number}\n"
                 f"+{points} نقاط (النقاط الحالية: {self.scores[user_id]})\n\n"
-                f"🎮 جولة جديدة:\n{new_game.text}"
+                f"{new_q.text}"
             )
-            return {
-                "points": points,
-                "won": True,
-                "message": msg,
-                "response": new_game,
-                "game_over": False
-            }
-        elif guess < self.current_number:
-            return TextSendMessage(text="🔼 الرقم أكبر من تخمينك")
-        else:
-            return TextSendMessage(text="🔽 الرقم أصغر من تخمينك")
+            return {"points": points, "won": True, "message": msg, "response": new_q, "game_over": False}
 
-    # ---------------------------- التلميح ---------------------------- #
+        return None
+
     def get_hint(self):
-        if self.current_number is None:
-            return "لا توجد لعبة حالياً"
         self.hint_used = True
-        mid = (self.min_number + self.max_number) // 2
-        hint_text = "الرقم أعلى من منتصف المدى" if self.current_number > mid else "الرقم أقل من منتصف المدى"
-        return f"💡 تلميح: {hint_text} (خصم 5 نقاط إذا نجحت)"
-
-    # ---------------------------- كشف الرقم ---------------------------- #
-    def reveal_answer(self):
-        if self.current_number is None:
+        if self.number is None:
             return "لا توجد لعبة حالياً"
-        answer = self.current_number
-        self.current_number = None
-        return f"🔍 الرقم الصحيح كان: {answer}"
+        hint = "أكبر من " if random.choice([True, False]) else "أصغر من "
+        hint += str(self.number + random.randint(-5, 5))
+        return f"💡 تلميح: الرقم {hint}"
 
-    # ---------------------------- النقاط ---------------------------- #
+    def reveal_answer(self):
+        ans = self.number
+        self.number = None
+        return f"🔍 الرقم الصحيح هو: {ans}"
+
     def get_score(self, user_id):
         return self.scores.get(user_id, 0)
