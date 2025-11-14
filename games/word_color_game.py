@@ -1,82 +1,36 @@
-"""
-لعبة كلمة ولون
-اللاعب يقول لون الكلمة وليس الكلمة نفسها
-"""
+‏import random
+‏from linebot.models import TextSendMessage
+‏from utils.helpers import normalize_text
 
-from linebot.models import TextSendMessage
-import random
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-class WordColorGame:
-    """لعبة الكلمة واللون"""
+‏class WordColorGame:
+‏    def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
+‏        self.line_bot_api = line_bot_api
+‏        self.current_color = None
+‏        self.current_word_color = None
+        
+‏        self.colors = ["أحمر", "أزرق", "أخضر", "أصفر", "برتقالي", "بنفسجي", "أسود", "أبيض"]
     
-    def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
-        self.line_bot_api = line_bot_api
-        self.current_word = None
-        self.current_color = None
+‏    def start_game(self):
+‏        self.current_color = random.choice(self.colors)
+‏        self.current_word_color = random.choice(self.colors)
         
-        # الكلمات والألوان
-        self.words = ['احمر', 'ازرق', 'اخضر', 'اصفر', 'برتقالي', 'بنفسجي', 'اسود', 'ابيض']
-        self.colors_emoji = {
-            'احمر': '🔴',
-            'ازرق': '🔵',
-            'اخضر': '🟢',
-            'اصفر': '🟡',
-            'برتقالي': '🟠',
-            'بنفسجي': '🟣',
-            'اسود': '⚫',
-            'ابيض': '⚪'
-        }
+‏        text = f"🎨 ما هو لون الكلمة؟\n\n{self.current_word_color}\n\n━━━━━━━━━━━━━━\nما لون الكلمة المكتوبة (وليس معنى الكلمة)؟"
+‏        return TextSendMessage(text=text)
     
-    def start_game(self):
-        """بدء سؤال جديد"""
-        self.current_word = random.choice(self.words)
-        self.current_color = random.choice(self.words)
+‏    def check_answer(self, answer, user_id, display_name):
+‏        if not self.current_color:
+‏            return None
         
-        # التأكد من أن اللون يختلف عن الكلمة لزيادة الصعوبة
-        while self.current_color == self.current_word:
-            self.current_color = random.choice(self.words)
-        
-        emoji = self.colors_emoji[self.current_color]
-        
-        return TextSendMessage(
-            text=f"ما هو لون الكلمة؟\n\n"
-                 f"{emoji} {self.current_word}\n\n"
-                 f"جاوب - لعرض الاجابة"
-        )
+‏        if normalize_text(answer) == normalize_text(self.current_color):
+‏            new_q = self.start_game()
+‏            msg = f"✓ صحيح يا {display_name}\n\n+10 نقطة\n\n{new_q.text}"
+‏            return {'points': 10, 'won': True, 'message': msg, 'response': TextSendMessage(text=msg), 'game_over': False}
+‏        return None
     
-    def check_answer(self, answer, user_id, display_name):
-        """فحص الإجابة"""
-        if not self.current_color:
-            return None
-        
-        answer_normalized = answer.strip().lower()
-        
-        if answer_normalized in ['جاوب', 'استسلم']:
-            return {
-                'points': 0,
-                'won': False,
-                'game_over': False,
-                'response': TextSendMessage(
-                    text=f"الاجابة الصحيحة: {self.current_color}"
-                )
-            }
-        
-        if answer_normalized == self.current_color.lower():
-            return {
-                'points': 5,
-                'won': True,
-                'game_over': False,
-                'response': TextSendMessage(
-                    text=f"ممتاز {display_name}!\n\nالنقاط: +5"
-                )
-            }
-        else:
-            return {
-                'points': 0,
-                'won': False,
-                'response': TextSendMessage(text="خطأ! حاول مرة اخرى")
-            }
+‏    def get_hint(self):
+‏        return f"💡 ركز على لون الكلمة نفسها"
+    
+‏    def reveal_answer(self):
+‏        ans = self.current_color
+‏        self.current_color = None
+‏        return f"اللون الصحيح: {ans}"
