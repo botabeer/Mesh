@@ -1,47 +1,48 @@
 import random
 from linebot.models import TextSendMessage
-from utils.helpers import normalize_text
 
 class WordColorGame:
-    def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
-        self.line_bot_api = line_bot_api
+    def __init__(self):
+        self.words = ["أحمر", "أزرق", "أخضر", "أصفر", "وردي", "برتقالي"]
+        self.current_word = None
         self.current_color = None
-        self.current_word_color = None
-        
-        self.colors = ["أحمر", "أزرق", "أخضر", "أصفر", "برتقالي", "بنفسجي", "أسود", "أبيض"]
-    
+        self.scores = {}
+        self.hint_used = False
+
     def start_game(self):
-        self.current_color = random.choice(self.colors)
-        self.current_word_color = random.choice(self.colors)
-        
-        text = (
-            "🎨 ما هو لون الكلمة؟\n\n"
-            f"{self.current_word_color}\n\n"
-            "━━━━━━━━━━━━━━\n"
-            "ما لون الكلمة المكتوبة (وليس معنى الكلمة)؟"
-        )
+        self.current_word = random.choice(self.words)
+        self.current_color = random.choice(self.words)
+        self.hint_used = False
+        text = f"🎨 كلمة اللون: **{self.current_word}** مكتوبة بلون **{self.current_color}**، ما هو اللون الصحيح؟"
         return TextSendMessage(text=text)
-    
+
     def check_answer(self, answer, user_id, display_name):
         if not self.current_color:
             return None
-        
-        if normalize_text(answer) == normalize_text(self.current_color):
+        if answer.strip() == self.current_color:
+            points = 10 if not self.hint_used else 5
+            self.scores[user_id] = self.scores.get(user_id, 0) + points
             new_q = self.start_game()
-            msg = f"✓ صحيح يا {display_name}\n\n+10 نقطة\n\n{new_q.text}"
-            return {
-                'points': 10,
-                'won': True,
-                'message': msg,
-                'response': TextSendMessage(text=msg),
-                'game_over': False
-            }
+            msg = (
+                f"✔️ إجابة صحيحة يا {display_name}!\n"
+                f"اللون الصحيح: {self.current_color}\n"
+                f"+{points} نقاط (النقاط الحالية: {self.scores[user_id]})\n\n"
+                f"{new_q.text}"
+            )
+            return {"points": points, "won": True, "message": msg, "response": new_q, "game_over": False}
         return None
-    
+
     def get_hint(self):
-        return "💡 ركز على لون الكلمة نفسها"
-    
+        self.hint_used = True
+        if not self.current_color:
+            return "لا توجد لعبة حالياً"
+        return f"💡 التلميح: أول حرف من اللون هو '{self.current_color[0]}'"
+
     def reveal_answer(self):
         ans = self.current_color
         self.current_color = None
-        return f"اللون الصحيح: {ans}"
+        self.current_word = None
+        return f"🔍 الإجابة الصحيحة: {ans}"
+
+    def get_score(self, user_id):
+        return self.scores.get(user_id, 0)
