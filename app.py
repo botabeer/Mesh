@@ -12,13 +12,13 @@ import logging
 from utils.helpers import get_user_profile_safe, normalize_text, check_rate_limit, cleanup_old_games
 from utils.database import init_db, update_user_points, get_user_stats, get_leaderboard
 from utils.ui_components import (
-    get_quick_reply, get_more_quick_reply, get_winner_announcement,
+    get_games_quick_reply, get_winner_announcement,
     get_help_message, get_welcome_message, get_stats_message,
     get_leaderboard_message, get_join_message
 )
 from utils.gemini_config import get_gemini_api_key, switch_gemini_key, USE_AI
 
-# استيراد جميع الألعاب (15 لعبة)
+# استيراد جميع الألعاب
 from games.iq_game import IQGame
 from games.word_color_game import WordColorGame
 from games.chain_words_game import ChainWordsGame
@@ -117,7 +117,7 @@ def start_game(game_id, game_class, game_type, user_id, event):
                 'question_count': 0,
                 'max_questions': 5,
                 'player_scores': defaultdict(int),
-                'answered_users': set()  # لتتبع من أجاب على السؤال الحالي
+                'answered_users': set()
             }
         
         response = game.start_game()
@@ -131,26 +131,26 @@ def start_game(game_id, game_class, game_type, user_id, event):
             event.reply_token,
             TextSendMessage(
                 text=f"❌ حدث خطأ في بدء لعبة {game_type}",
-                quick_reply=get_quick_reply()
+                quick_reply=get_games_quick_reply()
             )
         )
         return False
 
 @app.route("/", methods=['GET'])
 def home():
-    """الصفحة الرئيسية الأنيقة"""
+    """الصفحة الرئيسية"""
     return f"""
     <!DOCTYPE html>
     <html lang="ar" dir="rtl">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>تم إنشاء هذا البوت بواسطة عبير الدوسري- LINE Game Bot</title>
+        <title>Mesh - LINE Game Bot</title>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                background: #f5f5f7;
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
@@ -159,14 +159,14 @@ def home():
             }}
             .container {{
                 background: white;
-                border-radius: 20px;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                border-radius: 18px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
                 max-width: 600px;
                 width: 100%;
                 overflow: hidden;
             }}
             .header {{
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
                 color: white;
                 padding: 40px 30px;
                 text-align: center;
@@ -174,72 +174,77 @@ def home():
             .header h1 {{
                 font-size: 2.5em;
                 margin-bottom: 10px;
+                font-weight: 600;
             }}
             .header p {{
                 font-size: 1.1em;
-                opacity: 0.9;
+                opacity: 0.85;
+                font-weight: 400;
             }}
             .content {{
-                padding: 40px 30px;
+                padding: 30px;
             }}
             .status-card {{
-                background: #f8f9fa;
+                background: #f9f9f9;
                 border-radius: 12px;
                 padding: 20px;
-                margin-bottom: 20px;
-                border-left: 4px solid #667eea;
+                margin-bottom: 16px;
+                border: 1px solid #e8e8e8;
             }}
             .status-card h3 {{
-                color: #333;
-                margin-bottom: 15px;
-                font-size: 1.2em;
+                color: #1a1a1a;
+                margin-bottom: 16px;
+                font-size: 1.1em;
+                font-weight: 600;
             }}
             .stat {{
                 display: flex;
                 justify-content: space-between;
-                padding: 10px 0;
-                border-bottom: 1px solid #e0e0e0;
+                padding: 12px 0;
+                border-bottom: 1px solid #e8e8e8;
             }}
             .stat:last-child {{
                 border-bottom: none;
             }}
             .stat-label {{
                 color: #666;
+                font-size: 0.95em;
             }}
             .stat-value {{
-                color: #667eea;
-                font-weight: bold;
+                color: #1a1a1a;
+                font-weight: 600;
             }}
             .games-grid {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-                gap: 10px;
-                margin-top: 20px;
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 8px;
+                margin-top: 16px;
             }}
             .game-chip {{
                 background: white;
-                border: 2px solid #667eea;
-                color: #667eea;
-                padding: 8px 12px;
-                border-radius: 20px;
+                border: 1.5px solid #d1d1d6;
+                color: #1a1a1a;
+                padding: 10px;
+                border-radius: 10px;
                 text-align: center;
-                font-size: 0.9em;
+                font-size: 0.85em;
                 font-weight: 500;
             }}
             .footer {{
-                background: #f8f9fa;
+                background: #f9f9f9;
                 padding: 20px;
                 text-align: center;
                 color: #666;
-                font-size: 0.9em;
+                font-size: 0.85em;
+                border-top: 1px solid #e8e8e8;
             }}
             .status-indicator {{
                 display: inline-block;
-                width: 10px;
-                height: 10px;
-                background: #4caf50;
+                width: 8px;
+                height: 8px;
+                background: #34c759;
                 border-radius: 50%;
-                margin-left: 10px;
+                margin-left: 8px;
                 animation: pulse 2s infinite;
             }}
             @keyframes pulse {{
@@ -251,8 +256,8 @@ def home():
     <body>
         <div class="container">
             <div class="header">
-                <h1>Mesh</h1>
-                <p>نظام ألعاب LINE Bot تفاعلي</p>
+                <h1>Mesh Bot</h1>
+                <p>بوت ألعاب LINE تفاعلي</p>
             </div>
             
             <div class="content">
@@ -262,28 +267,28 @@ def home():
                         حالة الخادم
                     </h3>
                     <div class="stat">
-                        <span class="stat-label">▪️ الحالة</span>
-                        <span class="stat-value">✅ يعمل بنجاح</span>
+                        <span class="stat-label">الحالة</span>
+                        <span class="stat-value">نشط</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">▪️ اللاعبون المسجلون</span>
+                        <span class="stat-label">اللاعبون المسجلون</span>
                         <span class="stat-value">{len(registered_players)}</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">▪️ الألعاب النشطة</span>
+                        <span class="stat-label">الألعاب النشطة</span>
                         <span class="stat-value">{len(active_games)}</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">▪️ عدد الألعاب المتاحة</span>
+                        <span class="stat-label">عدد الألعاب المتاحة</span>
                         <span class="stat-value">15 لعبة</span>
                     </div>
                 </div>
 
                 <div class="status-card">
-                    <h3>🎮 الألعاب المتاحة</h3>
+                    <h3>الألعاب المتاحة</h3>
                     <div class="games-grid">
                         <div class="game-chip">ذكاء</div>
-                        <div class="game-chip">كلمة ولون</div>
+                        <div class="game-chip">لون</div>
                         <div class="game-chip">سلسلة</div>
                         <div class="game-chip">ترتيب</div>
                         <div class="game-chip">تكوين</div>
@@ -302,8 +307,7 @@ def home():
             </div>
 
             <div class="footer">
-                <p>⚡ Powered by Flask & LINE Messaging API</p>
-                <p style="margin-top: 10px; font-size: 0.8em;">© Bot Mesh </p>
+                <p>تم إنشاء هذا البوت بواسطة عبير الدوسري</p>
             </div>
         </div>
     </body>
@@ -349,89 +353,25 @@ def handle_message(event):
         if not check_rate_limit(user_id, user_message_count):
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(
-                    text="⚠️ عدد كبير من الرسائل! انتظر دقيقة.",
-                    quick_reply=get_quick_reply()
-                )
+                TextSendMessage(text="⚠️ عدد كبير من الرسائل! انتظر دقيقة.")
             )
             return
         
-        # === أوامر البداية والترحيب ===
-        if text in ['البداية', 'ابدأ', 'start', 'قائمة', 'البوت']:
-            flex_message = get_welcome_message(display_name)
+        # === أوامر البداية والمساعدة ===
+        if text in ['البداية', 'ابدأ', 'start', 'قائمة', 'البوت', 'مساعدة', 'help']:
+            flex_message = get_help_message() if text in ['مساعدة', 'help'] else get_welcome_message(display_name)
             line_bot_api.reply_message(
                 event.reply_token,
                 FlexSendMessage(
-                    alt_text="مرحباً بك",
+                    alt_text="مرحباً بك في Mesh Bot",
                     contents=flex_message,
-                    quick_reply=get_quick_reply()
-                )
-            )
-            return
-        
-        # === المزيد من الألعاب ===
-        elif text in ['أكثر', 'المزيد', 'more']:
-            more_message = {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "ألعاب إضافية",
-                            "weight": "bold",
-                            "size": "xl",
-                            "color": "#1a1a1a",
-                            "align": "center"
-                        },
-                        {
-                            "type": "separator",
-                            "margin": "lg",
-                            "color": "#e8e8e8"
-                        },
-                        {
-                            "type": "text",
-                            "text": "اختر من الأزرار أدناه",
-                            "size": "sm",
-                            "color": "#6a6a6a",
-                            "align": "center",
-                            "margin": "lg"
-                        }
-                    ],
-                    "backgroundColor": "#ffffff",
-                    "paddingAll": "24px"
-                },
-                "styles": {
-                    "body": {
-                        "separator": True
-                    }
-                }
-            }
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(
-                    alt_text="ألعاب إضافية",
-                    contents=more_message,
-                    quick_reply=get_more_quick_reply()
-                )
-            )
-            return
-        
-        # === المساعدة ===
-        elif text == 'مساعدة':
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(
-                    alt_text="مساعدة",
-                    contents=get_help_message(),
-                    quick_reply=get_quick_reply()
+                    quick_reply=get_games_quick_reply()
                 )
             )
             return
         
         # === نقاطي ===
-        elif text == 'نقاطي':
+        elif text in ['نقاطي', 'احصائياتي', 'stats']:
             stats = get_user_stats(user_id)
             if stats:
                 is_registered = user_id in registered_players
@@ -441,21 +381,21 @@ def handle_message(event):
                     FlexSendMessage(
                         alt_text="إحصائياتك",
                         contents=flex_stats,
-                        quick_reply=get_quick_reply()
+                        quick_reply=get_games_quick_reply()
                     )
                 )
             else:
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(
-                        text="▫️ لم تلعب أي لعبة بعد\n\nاكتب 'انضم' للتسجيل والبدء",
-                        quick_reply=get_quick_reply()
+                        text="لم تلعب أي لعبة بعد\n\nاكتب 'انضم' للتسجيل والبدء",
+                        quick_reply=get_games_quick_reply()
                     )
                 )
             return
         
         # === الصدارة ===
-        elif text == 'الصدارة':
+        elif text in ['الصدارة', 'leaderboard', 'top']:
             leaders = get_leaderboard()
             if leaders:
                 flex_leaderboard = get_leaderboard_message(leaders)
@@ -464,21 +404,21 @@ def handle_message(event):
                     FlexSendMessage(
                         alt_text="لوحة الصدارة",
                         contents=flex_leaderboard,
-                        quick_reply=get_quick_reply()
+                        quick_reply=get_games_quick_reply()
                     )
                 )
             else:
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(
-                        text="▫️ لا توجد بيانات بعد",
-                        quick_reply=get_quick_reply()
+                        text="لا توجد بيانات بعد",
+                        quick_reply=get_games_quick_reply()
                     )
                 )
             return
         
         # === إيقاف اللعبة ===
-        elif text in ['إيقاف', 'ايقاف', 'stop']:
+        elif text in ['إيقاف', 'ايقاف', 'stop', 'انهاء']:
             with games_lock:
                 if game_id in active_games:
                     game_type = active_games[game_id]['type']
@@ -486,29 +426,29 @@ def handle_message(event):
                     line_bot_api.reply_message(
                         event.reply_token,
                         TextSendMessage(
-                            text=f"⏹️ تم إيقاف لعبة {game_type}",
-                            quick_reply=get_quick_reply()
+                            text=f"تم إيقاف لعبة {game_type}",
+                            quick_reply=get_games_quick_reply()
                         )
                     )
                 else:
                     line_bot_api.reply_message(
                         event.reply_token,
                         TextSendMessage(
-                            text="▫️ لا توجد لعبة نشطة",
-                            quick_reply=get_quick_reply()
+                            text="لا توجد لعبة نشطة",
+                            quick_reply=get_games_quick_reply()
                         )
                     )
             return
         
         # === الانضمام ===
-        elif text in ['انضم', 'تسجيل', 'join']:
+        elif text in ['انضم', 'تسجيل', 'join', 'register']:
             with players_lock:
                 if user_id in registered_players:
                     line_bot_api.reply_message(
                         event.reply_token,
                         TextSendMessage(
-                            text=f"▪️ أنت مسجل بالفعل يا {display_name}\n\nيمكنك اللعب في جميع الألعاب",
-                            quick_reply=get_quick_reply()
+                            text=f"أنت مسجل بالفعل يا {display_name}\n\nيمكنك اللعب في جميع الألعاب",
+                            quick_reply=get_games_quick_reply()
                         )
                     )
                 else:
@@ -525,7 +465,7 @@ def handle_message(event):
                         FlexSendMessage(
                             alt_text="تم التسجيل",
                             contents=join_message,
-                            quick_reply=get_quick_reply()
+                            quick_reply=get_games_quick_reply()
                         )
                     )
                     logger.info(f"✅ انضم لاعب جديد: {display_name}")
@@ -544,8 +484,8 @@ def handle_message(event):
                     line_bot_api.reply_message(
                         event.reply_token,
                         TextSendMessage(
-                            text=f"▫️ تم انسحابك يا {display_name}\n\nيمكنك الانضمام مرة أخرى بكتابة 'انضم'",
-                            quick_reply=get_quick_reply()
+                            text=f"تم انسحابك يا {display_name}\n\nيمكنك الانضمام مرة أخرى بكتابة 'انضم'",
+                            quick_reply=get_games_quick_reply()
                         )
                     )
                     logger.info(f"❌ انسحب لاعب: {display_name}")
@@ -553,8 +493,8 @@ def handle_message(event):
                     line_bot_api.reply_message(
                         event.reply_token,
                         TextSendMessage(
-                            text="▫️ أنت غير مسجل\n\nاكتب 'انضم' للتسجيل",
-                            quick_reply=get_quick_reply()
+                            text="أنت غير مسجل\n\nاكتب 'انضم' للتسجيل",
+                            quick_reply=get_games_quick_reply()
                         )
                     )
             return
@@ -578,7 +518,7 @@ def handle_message(event):
             
             # التحقق من أن اللاعب لم يجب على السؤال الحالي
             if user_id in game_data.get('answered_users', set()):
-                return  # تجاهل الإجابات المتكررة من نفس اللاعب
+                return
             
             game = game_data['game']
             game_type = game_data['type']
@@ -592,7 +532,7 @@ def handle_message(event):
                             event.reply_token,
                             TextSendMessage(
                                 text=hint_result,
-                                quick_reply=get_quick_reply()
+                                quick_reply=get_games_quick_reply()
                             )
                         )
                     return
@@ -604,7 +544,7 @@ def handle_message(event):
                         
                         # الانتقال للسؤال التالي
                         game_data['question_count'] += 1
-                        game_data['answered_users'] = set()  # إعادة تعيين
+                        game_data['answered_users'] = set()
                         
                         if game_data['question_count'] >= game_data['max_questions']:
                             # انتهت اللعبة
@@ -629,7 +569,7 @@ def handle_message(event):
                                     FlexSendMessage(
                                         alt_text=f"🏆 {winner_name} فاز!",
                                         contents=winner_flex,
-                                        quick_reply=get_quick_reply()
+                                        quick_reply=get_games_quick_reply()
                                     )
                                 )
                             else:
@@ -640,8 +580,8 @@ def handle_message(event):
                                 line_bot_api.reply_message(
                                     event.reply_token,
                                     TextSendMessage(
-                                        text=f"⏹️ انتهت لعبة {game_type}\n\nجرب لعبة أخرى!",
-                                        quick_reply=get_quick_reply()
+                                        text=f"انتهت لعبة {game_type}\n\nجرب لعبة أخرى!",
+                                        quick_reply=get_games_quick_reply()
                                     )
                                 )
                             return
@@ -649,8 +589,8 @@ def handle_message(event):
                             # سؤال جديد
                             next_question = game.start_game()
                             if isinstance(next_question, TextSendMessage):
-                                next_question.text = f"{answer_result}\n\n{next_question.text}\n\n📊 السؤال {game_data['question_count']}/{game_data['max_questions']}"
-                                next_question.quick_reply = get_quick_reply()
+                                next_question.text = f"{answer_result}\n\n{next_question.text}\n\nالسؤال {game_data['question_count']}/{game_data['max_questions']}"
+                                next_question.quick_reply = get_games_quick_reply()
                             
                             line_bot_api.reply_message(event.reply_token, next_question)
                             return
@@ -669,7 +609,7 @@ def handle_message(event):
                     if points > 0:
                         game_data['player_scores'][user_id] += points
                         game_data['question_count'] += 1
-                        game_data['answered_users'] = set()  # إعادة تعيين للسؤال التالي
+                        game_data['answered_users'] = set()
                         
                         update_user_points(
                             user_id,
@@ -703,7 +643,7 @@ def handle_message(event):
                                 FlexSendMessage(
                                     alt_text=f"🏆 {winner_name} فاز!",
                                     contents=winner_flex,
-                                    quick_reply=get_quick_reply()
+                                    quick_reply=get_games_quick_reply()
                                 )
                             )
                         else:
@@ -714,8 +654,8 @@ def handle_message(event):
                             line_bot_api.reply_message(
                                 event.reply_token,
                                 TextSendMessage(
-                                    text=f"⏹️ انتهت لعبة {game_type}\n\nجرب لعبة أخرى!",
-                                    quick_reply=get_quick_reply()
+                                    text=f"انتهت لعبة {game_type}\n\nجرب لعبة أخرى!",
+                                    quick_reply=get_games_quick_reply()
                                 )
                             )
                         return
@@ -727,15 +667,15 @@ def handle_message(event):
                                 del active_games[game_id]
                         response = TextSendMessage(
                             text=result.get('message', 'انتهت اللعبة'),
-                            quick_reply=get_quick_reply()
+                            quick_reply=get_games_quick_reply()
                         )
                     else:
                         response = result.get('response', TextSendMessage(text=result.get('message', '')))
                         
                         if isinstance(response, TextSendMessage):
                             if hasattr(response, 'text'):
-                                response.text += f"\n\n📊 السؤال {game_data['question_count']}/{game_data['max_questions']}"
-                            response.quick_reply = get_quick_reply()
+                                response.text += f"\n\nالسؤال {game_data['question_count']}/{game_data['max_questions']}"
+                            response.quick_reply = get_games_quick_reply()
                     
                     line_bot_api.reply_message(event.reply_token, response)
                 return
@@ -745,20 +685,20 @@ def handle_message(event):
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(
-                        text="❌ حدث خطأ. حاول مرة أخرى.",
-                        quick_reply=get_quick_reply()
+                        text="حدث خطأ، حاول مرة أخرى",
+                        quick_reply=get_games_quick_reply()
                     )
                 )
                 return
         
-        # === رسالة افتراضية للرسائل غير المعروفة ===
+        # === رسالة افتراضية ===
         else:
             logger.info(f"❓ رسالة غير معروفة من {display_name}: {text}")
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
-                    text="❓ أمر غير معروف\n\n▪️ اكتب 'مساعدة' لعرض الأوامر\n▪️ أو 'البداية' للقائمة الرئيسية",
-                    quick_reply=get_quick_reply()
+                    text="أمر غير معروف\n\nاكتب 'مساعدة' لعرض الأوامر",
+                    quick_reply=get_games_quick_reply()
                 )
             )
     
@@ -768,7 +708,7 @@ def handle_message(event):
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
-                    text="❌ حدث خطأ غير متوقع\n\nحاول مرة أخرى أو اكتب 'مساعدة'"
+                    text="حدث خطأ غير متوقع\n\nحاول مرة أخرى أو اكتب 'مساعدة'"
                 )
             )
         except:
