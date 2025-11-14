@@ -1,106 +1,94 @@
 import random
-from datetime import datetime
+import time
 from linebot.models import TextSendMessage
+from utils.helpers import normalize_text
 
 class FastTypingGame:
     def __init__(self, line_bot_api):
         self.line_bot_api = line_bot_api
-        self.target_text = None
+        self.current_text = None
         self.start_time = None
-        self.finished = False
         
-        # كلمات قصيرة
-        self.words = [
-            "برمجة", "حاسوب", "إنترنت", "تطبيق", "موقع", "بيانات",
-            "تكنولوجيا", "ذكاء", "مستخدم", "تطوير", "تصميم", "خوارزمية",
-            "تعلم", "ابتكار", "إبداع", "إدارة", "تحليل", "خدمة", "مشروع",
-            "معرفة", "تخزين", "تحديث", "أمان", "تشفير", "خادم", "واجهة",
-            "تعليم", "أمن", "كتابة", "قراءة", "بحث", "مكتبة", "شبكة", "ذاكرة"
-        ]
-        
-        # جمل قصيرة
-        self.sentences = [
-            "التدريب يصنع الإتقان", "الوقت من ذهب", "العلم نور والجهل ظلام",
-            "الصبر مفتاح الفرج", "من جد وجد ومن زرع حصد", "الصديق وقت الضيق",
-            "في التأني السلامة وفي العجلة الندامة", "العقل السليم في الجسم السليم",
-            "لكل مجتهد نصيب", "القناعة كنز لا يفنى", "النظافة من الإيمان",
-            "الأمانة غالية", "الصدق منجاة", "الحكمة ضالة المؤمن", "اطلبوا العلم من المهد إلى اللحد",
-            "خير الأمور أوسطها", "رب ضارة نافعة", "الحاجة أم الاختراع", "الاتحاد قوة",
-            "الصحة تاج على رؤوس الأصحاء", "العمل عبادة", "الوفاء من شيم الكرام",
-            "الأخلاق الحسنة زينة الإنسان", "التواضع من صفات العظماء", "الأمل يصنع المستحيل",
-            "النجاح رحلة وليس وجهة", "الإبداع يصنع الفرق", "التفاؤل سر السعادة",
-            "المثابرة تصنع الفارق", "التعلم المستمر مفتاح التقدم"
+        # جمل للكتابة السريعة
+        self.texts = [
+            "الحياة جميلة",
+            "النجاح يحتاج إلى صبر",
+            "العلم نور",
+            "الوقت كالذهب",
+            "الصديق وقت الضيق",
+            "الصحة تاج على رؤوس الأصحاء",
+            "من جد وجد ومن زرع حصد",
+            "العقل السليم في الجسم السليم",
+            "اطلبوا العلم من المهد إلى اللحد",
+            "الصبر مفتاح الفرج"
         ]
     
     def start_game(self):
-        """اختيار كلمة أو جملة عشوائياً"""
-        choice = random.choice(["word", "sentence"])
-        self.target_text = random.choice(self.words) if choice == "word" else random.choice(self.sentences)
-        self.start_time = datetime.now()
-        self.finished = False
+        """بدء لعبة جديدة"""
+        self.current_text = random.choice(self.texts)
+        self.start_time = time.time()
         
-        return TextSendMessage(
-            text=f"اكتب التالي بسرعة ودقة:\n\n{self.target_text}\n\nمن يكتبه أولاً يفوز"
-        )
-    
-    def get_hint(self):
-        """تلميح أول كلمة أو كلمتين من النص مع أمثلة متنوعة"""
-        if not self.target_text:
-            return TextSendMessage(text="لا يوجد نص حالي")
-        
-        words = self.target_text.split()
-        
-        # إظهار أول كلمة أو كلمتين كأمثلة
-        hint_options = []
-        for i in range(min(2, len(words))):
-            hint_options.append(words[i])
-        
-        # إضافة أمثلة إضافية عشوائية من الكلمات
-        if len(hint_options) == 1:
-            extra = random.sample([w for w in self.words if w != words[0]], k=3)
-            hint_options.extend(extra)
-        else:
-            extra = random.sample([w for w in self.words if w not in hint_options], k=2)
-            hint_options.extend(extra)
-        
-        random.shuffle(hint_options)
-        hint_text = ', '.join(hint_options[:5])  # عرض حتى 5 أمثلة
-        
-        return TextSendMessage(text=f"تلميح: {hint_text} ...")
-    
-    def get_answer(self):
-        if not self.target_text:
-            return "لا يوجد نص حالي"
-        return self.target_text
+        text = f"⚡ اكتب الجملة التالية بسرعة\n\n{self.current_text}\n\n━━━━━━━━━━━━━━\nابدأ الكتابة الآن!"
+        return TextSendMessage(text=text)
     
     def check_answer(self, answer, user_id, display_name):
-        if not self.target_text or self.finished:
+        """فحص الإجابة"""
+        if not self.current_text or not self.start_time:
             return None
         
-        user_answer = answer.strip()
-        if user_answer == self.target_text:
-            elapsed = (datetime.now() - self.start_time).total_seconds()
-            self.finished = True
+        normalized_answer = normalize_text(answer)
+        normalized_text = normalize_text(self.current_text)
+        
+        # التحقق من التطابق
+        if normalized_answer == normalized_text:
+            elapsed_time = time.time() - self.start_time
             
-            # نقاط حسب السرعة
-            if elapsed <= 3:
-                points = 20
-                speed = "سريع جداً"
-            elif elapsed <= 6:
+            # حساب النقاط بناءً على السرعة
+            if elapsed_time < 3:
                 points = 15
-                speed = "جيد"
-            else:
+                speed_msg = "سريع جداً!"
+            elif elapsed_time < 5:
+                points = 12
+                speed_msg = "سريع"
+            elif elapsed_time < 8:
                 points = 10
-                speed = "بطيء"
+                speed_msg = "جيد"
+            elif elapsed_time < 12:
+                points = 7
+                speed_msg = "متوسط"
+            else:
+                points = 5
+                speed_msg = "بطيء"
             
-            msg = f"فاز {display_name}!\n{speed}\n⏱️ الوقت: {elapsed:.2f} ثانية\n+{points} ☑️نقطة"
+            new_question = self.start_game()
+            message = f"✓ إجابة صحيحة يا {display_name}\n\n⏱️ الوقت: {elapsed_time:.2f} ثانية\n🏃 {speed_msg}\n+{points} نقطة\n\n{new_question.text}"
             
             return {
-                'message': msg,
                 'points': points,
                 'won': True,
-                'game_over': True,
-                'response': TextSendMessage(text=msg)
+                'message': message,
+                'response': TextSendMessage(text=message),
+                'game_over': False
             }
         
         return None
+    
+    def get_hint(self):
+        """تلميح"""
+        if not self.current_text:
+            return "لا يوجد سؤال حالي"
+        
+        # عرض أول 3 أحرف
+        hint_text = self.current_text[:3] + "..."
+        return f"💡 التلميح\n\n{hint_text}"
+    
+    def reveal_answer(self):
+        """كشف الإجابة"""
+        if not self.current_text:
+            return "لا يوجد سؤال حالي"
+        
+        answer = self.current_text
+        self.current_text = None
+        self.start_time = None
+        
+        return f"الإجابة الصحيحة:\n{answer}"
