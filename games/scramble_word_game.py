@@ -15,14 +15,12 @@ class ScrambleWordGame:
         self.current_word = random.choice(self.words)
         scrambled = ''.join(random.sample(self.current_word, len(self.current_word)))
         self.hint_used = False
-
         quick_reply = QuickReply(items=[
             QuickReplyButton(action=MessageAction(label="تلميح", text="تلميح")),
             QuickReplyButton(action=MessageAction(label="كشف الإجابة", text="كشف الإجابة")),
             QuickReplyButton(action=MessageAction(label="كلمة جديدة", text="كلمة جديدة"))
         ])
-
-        text = f"🔤 **لعبة ترتيب الحروف**\n\nالكلمة المبعثرة: **{scrambled}**\n\nأعد ترتيبها للحصول على الكلمة الصحيحة!"
+        text = f"🔤 لعبة ترتيب الحروف:\nالكلمة المبعثرة: **{scrambled}**\nأعد ترتيبها للحصول على الكلمة الصحيحة!"
         return TextSendMessage(text=text, quick_reply=quick_reply)
 
     def check_answer(self, answer, user_id, display_name):
@@ -32,11 +30,8 @@ class ScrambleWordGame:
             points = 10 if not self.hint_used else 5
             self.scores[user_id] = self.scores.get(user_id, 0) + points
             new_game = self.start_game()
-            msg = (
-                f"✔️ ممتاز يا {display_name}! الكلمة الصحيحة كانت: {self.current_word}\n"
-                f"+{points} نقاط (النقاط الحالية: {self.scores[user_id]})\n\n"
-                f"{new_game.text}"
-            )
+            msg = (f"✔️ ممتاز يا {display_name}! الكلمة الصحيحة كانت: {self.current_word}\n"
+                   f"+{points} نقاط (النقاط الحالية: {self.scores[user_id]})\n{new_game.text}")
             return {"points": points, "won": True, "message": msg, "response": new_game, "game_over": False}
         return None
 
