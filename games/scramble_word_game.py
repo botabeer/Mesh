@@ -1,8 +1,16 @@
+# games/scramble_word_game.py
 import random
 from linebot.models import TextSendMessage, QuickReply, QuickReplyButton, MessageAction
 from utils.helpers import normalize_text
 
 class ScrambleWordGameAdvanced:
+    """
+    لعبة ترتيب الحروف (Scramble Word) مع دعم:
+    - نقاط لكل لاعب
+    - تلميحات
+    - كشف الإجابة
+    - أزرار سريعة للتفاعل
+    """
     def __init__(self):
         self.current_word = None
         self.words = [
@@ -14,6 +22,7 @@ class ScrambleWordGameAdvanced:
         self.hint_used = False
 
     def start_game(self):
+        """بدء كلمة جديدة"""
         self.current_word = random.choice(self.words)
         scrambled = ''.join(random.sample(self.current_word, len(self.current_word)))
         self.hint_used = False
@@ -28,6 +37,7 @@ class ScrambleWordGameAdvanced:
         return TextSendMessage(text=text, quick_reply=quick_reply)
 
     def check_answer(self, answer, user_id, display_name):
+        """فحص الإجابة وتحديث النقاط"""
         if not self.current_word:
             return None
 
@@ -54,15 +64,18 @@ class ScrambleWordGameAdvanced:
         return None
 
     def get_hint(self):
+        """إعطاء تلميح"""
         if not self.current_word:
             return "لا توجد كلمة حالياً"
         self.hint_used = True
         return f"💡 التلميح: أول حرف من الكلمة هو '{self.current_word[0]}'"
 
     def reveal_answer(self):
+        """كشف الإجابة الصحيحة"""
         ans = self.current_word
         self.current_word = None
         return f"🔍 الإجابة الصحيحة: {ans}"
 
     def get_score(self, user_id):
+        """إرجاع نقاط اللاعب"""
         return self.scores.get(user_id, 0)
