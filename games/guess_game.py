@@ -12,7 +12,7 @@ class SongGame:
         self.current_artist = None
         self.hint_used = False
         
-        # مجموعة أغاني عربية مشهورة
+        # قائمة الأغاني
         self.songs_db = [
             {"lyrics": "آه من الهوى ما أقساه\nآه من زمان اللي كان", "artist": "عبد الحليم حافظ"},
             {"lyrics": "على بالي حبيبي وأنا ماشي في الشوارع\nمشتاق لعنيه", "artist": "فيروز"},
@@ -26,25 +26,30 @@ class SongGame:
             {"lyrics": "كل ده كان ليه\nكل الحب ده كان ليه", "artist": "شيرين عبد الوهاب"}
         ]
     
+    # ---------------------------- بدء اللعبة ---------------------------- #
     def start_game(self):
-        """بدء لعبة جديدة"""
         if self.use_ai and self.get_api_key:
             return self._generate_ai_song()
-        else:
-            return self._generate_manual_song()
+        return self._generate_manual_song()
     
+    # ---------------------------- توليد سؤال يدوي ---------------------------- #
     def _generate_manual_song(self):
-        """توليد سؤال يدوي"""
         song = random.choice(self.songs_db)
-        self.current_song = song['lyrics']
-        self.current_artist = song['artist']
+        self.current_song = song["lyrics"]
+        self.current_artist = song["artist"]
         self.hint_used = False
         
-        text = f"🎵 خمن المغني\n\n{self.current_song}\n\n━━━━━━━━━━━━━━\nمن المغني؟"
+        text = (
+            "🎵 خمن المغني\n\n"
+            f"{self.current_song}\n\n"
+            "━━━━━━━━━━━━━━\n"
+            "من المغني؟"
+        )
+        
         return TextSendMessage(text=text)
     
+    # ---------------------------- توليد سؤال باستخدام AI ---------------------------- #
     def _generate_ai_song(self):
-        """توليد سؤال بالذكاء الاصطناعي"""
         try:
             import google.generativeai as genai
             
@@ -53,82 +58,92 @@ class SongGame:
                 return self._generate_manual_song()
             
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel("gemini-pro")
             
-            prompt = """أعطني مقطع من أغنية عربية مشهورة (سطرين فقط) مع اسم المغني.
-            
-الصيغة المطلوبة بالضبط:
-LYRICS: [مقطع الأغنية]
-ARTIST: [اسم المغني]
-
-مثال:
-LYRICS: آه من الهوى ما أقساه\nآه من زمان اللي كان
-ARTIST: عبد الحليم حافظ"""
+            prompt = (
+                "أعطني مقطع من أغنية عربية مشهورة (سطرين فقط) مع اسم المغني.\n\n"
+                "الصيغة:\n"
+                "LYRICS: [مقطع الأغنية]\n"
+                "ARTIST: [اسم المغني]"
+            )
             
             response = model.generate_content(prompt)
             result = response.text.strip()
             
-            # استخراج البيانات
-            lyrics_line = [l for l in result.split('\n') if 'LYRICS:' in l]
-            artist_line = [l for l in result.split('\n') if 'ARTIST:' in l]
+            lyrics_line = [l for l in result.split("\n") if "LYRICS:" in l]
+            artist_line = [l for l in result.split("\n") if "ARTIST:" in l]
             
             if lyrics_line and artist_line:
-                self.current_song = lyrics_line[0].replace('LYRICS:', '').strip()
-                self.current_artist = artist_line[0].replace('ARTIST:', '').strip()
+                self.current_song = lyrics_line[0].replace("LYRICS:", "").strip()
+                self.current_artist = artist_line[0].replace("ARTIST:", "").strip()
                 self.hint_used = False
                 
-                text = f"🎵 خمن المغني\n\n{self.current_song}\n\n━━━━━━━━━━━━━━\nمن المغني؟"
+                text = (
+                    "🎵 خمن المغني\n\n"
+                    f"{self.current_song}\n\n"
+                    "━━━━━━━━━━━━━━\n"
+                    "من المغني؟"
+                )
                 return TextSendMessage(text=text)
-            else:
-                return self._generate_manual_song()
-                
+            
+            return self._generate_manual_song()
+        
         except Exception as e:
-            print(f"خطأ في AI: {e}")
+            print(f"AI Error: {e}")
             if self.switch_key:
                 self.switch_key()
             return self._generate_manual_song()
     
+    # ---------------------------- فحص الإجابة ---------------------------- #
     def check_answer(self, answer, user_id, display_name):
-        """فحص الإجابة"""
         if not self.current_artist:
             return None
         
         normalized_answer = normalize_text(answer)
         normalized_artist = normalize_text(self.current_artist)
         
-        # التحقق من الإجابة
         if normalized_answer in normalized_artist or normalized_artist in normalized_answer:
-            points = 10
-            if self.hint_used:
-                points = 5
+            points = 5 if self.hint_used else 10
             
-            new_question = self.start_game()
-            message = f"✓ إجابة صحيحة يا {display_name}\n\nالمغني: {self.current_artist}\n+{points} نقطة\n\n{new_question.text}"
+            new_q = self.start_game()
+            message = (
+                f"✓ إجابة صحيحة يا {display_name}\n\n"
+                f"المغني: {self.current_artist}\n"
+                f"+{points} نقطة\n\n"
+                f"{new_q.text}"
+            )
             
             return {
-                'points': points,
-                'won': True,
-                'message': message,
-                'response': TextSendMessage(text=message),
-                'game_over': False
+                "points": points,
+                "won": True,
+                "message": message,
+                "response": TextSendMessage(text=message),
+                "game_over": False
             }
         
         return None
     
+    # ---------------------------- التلميح ---------------------------- #
     def get_hint(self):
-        """تلميح"""
         if not self.current_artist:
             return "لا يوجد سؤال حالي"
         
         self.hint_used = True
-        first_letter = self.current_artist[0]
-        word_count = len(self.current_artist.split())
-        letter_count = len(self.current_artist.replace(' ', ''))
         
-        return f"💡 التلميح\n\nأول حرف: {first_letter}\nعدد الكلمات: {word_count}\nعدد الحروف: {letter_count}\n\n⚠️ سيتم خصم 5 نقاط"
+        first_letter = self.current_artist[0]
+        words = len(self.current_artist.split())
+        letters = len(self.current_artist.replace(" ", ""))
+        
+        return (
+            "💡 التلميح\n\n"
+            f"أول حرف: {first_letter}\n"
+            f"عدد الكلمات: {words}\n"
+            f"عدد الحروف: {letters}\n\n"
+            "⚠️ سيتم خصم 5 نقاط"
+        )
     
+    # ---------------------------- كشف الإجابة ---------------------------- #
     def reveal_answer(self):
-        """كشف الإجابة"""
         if not self.current_artist:
             return "لا يوجد سؤال حالي"
         
