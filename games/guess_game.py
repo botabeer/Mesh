@@ -1,4 +1,4 @@
-‏import random
+import random
 from linebot.models import TextSendMessage
 from utils.helpers import normalize_text
 
