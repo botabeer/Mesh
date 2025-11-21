@@ -1,55 +1,67 @@
+"""
+games/base_game.py - القاعدة الأساسية لجميع الألعاب
+"""
+
 from abc import ABC, abstractmethod
-from linebot.models import TextSendMessage, FlexSendMessage
-from ui_components import create_game_card, COLORS
-from config import POINTS
+from config import Config
+from flex_messages import FlexDesign
 
 class BaseGame(ABC):
-    """الكلاس الأساسي لجميع الألعاب"""
+    """القاعدة الأساسية لجميع الألعاب"""
     
-    def __init__(self, line_bot_api):
-        self.line_bot_api = line_bot_api
+    def __init__(self):
+        self.name = "لعبة"
+        self.description = ""
+        self.current_round = 1
+        self.max_rounds = Config.DEFAULT_ROUNDS
+        self.points_per_answer = Config.POINTS_CORRECT
+        self.hint_used = False
         self.current_question = None
-        self.correct_answer = None
-        self.attempts = 0
-        self.max_attempts = 3
-        
+        self.current_answer = None
+    
     @abstractmethod
-    def generate_question(self):
-        """توليد سؤال جديد"""
+    def start(self):
+        """بدء اللعبة - يجب تنفيذه في كل لعبة"""
         pass
     
     @abstractmethod
-    def check_answer(self, answer, user_id, display_name):
-        """فحص الإجابة"""
+    def check_answer(self, answer: str) -> tuple:
+        """التحقق من الإجابة - يرجع (صحيح/خطأ, النقاط)"""
         pass
     
-    def start_game(self):
-        """بدء اللعبة"""
-        self.generate_question()
-        return FlexSendMessage(
-            alt_text=self.get_game_name(),
-            contents=create_game_card(
-                self.get_game_name(),
-                self.current_question,
-                self.get_options() if hasattr(self, 'get_options') else None
-            )
+    @abstractmethod
+    def get_hint(self) -> str:
+        """الحصول على تلميح"""
+        pass
+    
+    @abstractmethod
+    def get_solution(self) -> str:
+        """الحصول على الحل"""
+        pass
+    
+    def next_round(self):
+        """الانتقال للجولة التالية"""
+        self.current_round += 1
+        self.hint_used = False
+    
+    def is_finished(self) -> bool:
+        """هل انتهت اللعبة؟"""
+        return self.current_round >= self.max_rounds
+    
+    def calculate_points(self, base_points: int = None) -> int:
+        """حساب النقاط مع خصم التلميح"""
+        points = base_points or self.points_per_answer
+        if self.hint_used:
+            points -= Config.HINT_PENALTY
+        return max(points, 1)
+    
+    def get_progress(self) -> str:
+        """الحصول على التقدم"""
+        return f"الجولة {self.current_round} من {self.max_rounds}"
+    
+    def create_game_screen(self, question: str, letters: list = None) -> dict:
+        """إنشاء شاشة اللعبة"""
+        return FlexDesign.game_screen(
+            self.name, question, letters,
+            self.current_round, self.max_rounds
         )
-    
-    @abstractmethod
-    def get_game_name(self):
-        """اسم اللعبة"""
-        pass
-    
-    def calculate_points(self, is_correct, time_taken=None):
-        """حساب النقاط"""
-        if not is_correct:
-            return 0
-        
-        points = POINTS['correct_answer']
-        
-        if self.attempts == 1:
-            points = POINTS['perfect_answer']
-        elif time_taken and time_taken < 5:
-            points = POINTS['fast_answer']
-        
-        return points
