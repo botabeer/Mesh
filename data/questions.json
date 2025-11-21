@@ -1,0 +1,206 @@
+{
+  "iq_questions": [
+    {
+      "question": "ما الذي له رأس ولا عين له؟",
+      "answers": ["دبوس", "مسمار", "ابرة"],
+      "hint": "أداة حادة",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "ما الذي يمشي بلا أرجل؟",
+      "answers": ["الماء", "الهواء", "الوقت", "الساعة"],
+      "hint": "يتحرك باستمرار",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "كلما أخذت منه كبر؟",
+      "answers": ["الحفرة", "حفرة"],
+      "hint": "في الأرض",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "question": "ما الذي يرتفع ولا ينزل؟",
+      "answers": ["العمر", "السن"],
+      "hint": "يزداد مع الزمن",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "له أسنان ولا يعض؟",
+      "answers": ["المشط", "مشط"],
+      "hint": "للشعر",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "ما الذي إذا دخل الماء لا يبتل؟",
+      "answers": ["الضوء", "النور"],
+      "hint": "يضيء",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "question": "شيء يوجد في السماء وإذا أضفت إليه حرفاً أصبح في الأرض؟",
+      "answers": ["نجم", "منجم"],
+      "hint": "يلمع ليلاً",
+      "difficulty": "hard",
+      "points": 20
+    },
+    {
+      "question": "ما هو الشيء الذي لا يمشي إلا بالضرب؟",
+      "answers": ["المسمار", "مسمار"],
+      "hint": "أداة بناء",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "question": "أخت خالك وليست خالتك؟",
+      "answers": ["أمك", "امك", "الأم", "الام"],
+      "hint": "أقرب الناس",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "question": "ما هو الشيء الذي يسمع بلا أذن ويتكلم بلا لسان؟",
+      "answers": ["الهاتف", "التلفون", "الجوال"],
+      "hint": "جهاز اتصال",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "2 + 2 × 2 = ؟",
+      "answers": ["6", "٦"],
+      "hint": "تذكر ترتيب العمليات",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "ما نصف نصف المئة؟",
+      "answers": ["25", "٢٥", "خمسة وعشرون"],
+      "hint": "نصف 50",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "إذا كان اليوم الخميس، ما هو اليوم بعد 3 أيام؟",
+      "answers": ["الأحد", "احد", "الاحد"],
+      "hint": "بداية الأسبوع",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "كم عدد أحرف كلمة خمسة؟",
+      "answers": ["4", "٤", "أربعة", "اربعة"],
+      "hint": "عد الحروف",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "ما هو الحيوان الذي يحمل بيته على ظهره؟",
+      "answers": ["السلحفاة", "سلحفاة", "الحلزون", "حلزون"],
+      "hint": "بطيء الحركة",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "ما هو أكبر كوكب في المجموعة الشمسية؟",
+      "answers": ["المشتري", "مشتري", "جوبيتر"],
+      "hint": "كوكب غازي عملاق",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "question": "كم عدد أيام السنة الكبيسة؟",
+      "answers": ["366", "٣٦٦"],
+      "hint": "أكثر من 365",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "question": "ما العنصر الأكثر وفرة في الكون؟",
+      "answers": ["الهيدروجين", "هيدروجين"],
+      "hint": "أخف العناصر",
+      "difficulty": "hard",
+      "points": 20
+    },
+    {
+      "question": "ما هو الشيء الذي له عين واحدة ولا يرى؟",
+      "answers": ["الإبرة", "ابرة", "الابرة"],
+      "hint": "أداة خياطة",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "question": "أنا ابن الماء فإن تركوني في الماء أموت، فمن أنا؟",
+      "answers": ["الثلج", "ثلج", "الجليد"],
+      "hint": "بارد جداً",
+      "difficulty": "hard",
+      "points": 20
+    }
+  ],
+  "fast_questions": [
+    {
+      "question": "اكتب كلمة تبدأ بحرف 'ع'",
+      "type": "starts_with",
+      "value": "ع",
+      "examples": ["عمر", "علي", "عائشة", "عبد", "عين", "عسل", "عقل"]
+    },
+    {
+      "question": "اكتب كلمة تبدأ بحرف 'س'",
+      "type": "starts_with",
+      "value": "س",
+      "examples": ["سماء", "سعيد", "سمك", "سيارة", "سوق"]
+    },
+    {
+      "question": "اكتب كلمة تبدأ بحرف 'م'",
+      "type": "starts_with",
+      "value": "م",
+      "examples": ["محمد", "مدرسة", "ماء", "مسجد", "موز"]
+    },
+    {
+      "question": "اكتب كلمة تبدأ بحرف 'ب'",
+      "type": "starts_with",
+      "value": "ب",
+      "examples": ["بيت", "باب", "برتقال", "بحر", "بنت"]
+    },
+    {
+      "question": "اكتب كلمة تبدأ بحرف 'ك'",
+      "type": "starts_with",
+      "value": "ك",
+      "examples": ["كتاب", "كرسي", "كلب", "كبير", "كريم"]
+    },
+    {
+      "question": "اكتب اسم فاكهة",
+      "type": "category",
+      "value": "fruits",
+      "examples": ["تفاح", "موز", "برتقال", "عنب", "مانجو", "فراولة"]
+    },
+    {
+      "question": "اكتب اسم حيوان",
+      "type": "category",
+      "value": "animals",
+      "examples": ["أسد", "قط", "كلب", "فيل", "نمر", "غزال"]
+    },
+    {
+      "question": "اكتب اسم بلد عربي",
+      "type": "category",
+      "value": "countries",
+      "examples": ["مصر", "السعودية", "الإمارات", "الأردن", "لبنان"]
+    },
+    {
+      "question": "اكتب اسم لون",
+      "type": "category",
+      "value": "colors",
+      "examples": ["أحمر", "أزرق", "أخضر", "أصفر", "أبيض", "أسود"]
+    },
+    {
+      "question": "اكتب رقم بين 1 و 100",
+      "type": "number",
+      "min": 1,
+      "max": 100
+    }
+  ]
+}
