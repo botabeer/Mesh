@@ -1,35 +1,30 @@
-import os
+‏import os
+‏from dotenv import load_dotenv
 
-# LINE Bot Configuration
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
-LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET', '')
+‏load_dotenv()
 
-# Gemini AI Configuration
-GEMINI_API_KEYS = [
-    os.getenv('GEMINI_API_KEY_1', ''),
-    os.getenv('GEMINI_API_KEY_2', ''),
-    os.getenv('GEMINI_API_KEY_3', '')
-]
-GEMINI_API_KEYS = [k for k in GEMINI_API_KEYS if k]
-
-# Bot Configuration
-BOT_NAME = "Bot Mesh"
-BOT_CREATOR = "عبير الدوسري"
-BOT_YEAR = "2025"
-VERSION = "1.0.0"
-
-# Game Settings
-MAX_MESSAGES_PER_MINUTE = 20
-GAME_TIMEOUT_MINUTES = 10
-CLEANUP_INTERVAL_SECONDS = 300
-
-# Points System
-POINTS = {
-    'correct_answer': 10,
-    'fast_answer': 15,
-    'perfect_answer': 20,
-    'win_game': 50
-}
-
-# Database
-DB_NAME = 'bot_mesh.db'
+‏class Config:
+    """إعدادات التطبيق"""
+    
+‏    # LINE Bot
+‏    LINE_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
+‏    LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET', '')
+    
+    # قاعدة البيانات
+‏    DB_NAME = 'game_scores.db'
+    
+    # إعدادات اللعبة
+‏    ROUNDS_PER_GAME = 5
+‏    POINTS_PER_CORRECT = 10
+‏    POINTS_BONUS = 20
+    
+    # الألوان (Neumorphism)
+‏    COLORS = {
+‏        'background': '#E0E5EC',
+‏        'shadow_dark': 'rgba(163, 177, 198, 0.6)',
+‏        'shadow_light': 'rgba(255, 255, 255, 0.7)',
+‏        'gradient_start': '#667eea',
+‏        'gradient_end': '#764ba2',
+‏        'text_primary': '#4A5568',
+‏        'text_secondary': '#A3B1C6'
+    }
