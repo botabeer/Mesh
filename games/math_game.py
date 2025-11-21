@@ -12,8 +12,7 @@ class MathGame(BaseGame):
         return "الرياضيات السريعة"
     
     def generate_question(self):
-        operations = ['+',
-                     operations = ['+', '-', '*']
+        operations = ['+', '-', '*']
         op = random.choice(operations)
         
         if op == '*':
@@ -61,4 +60,4 @@ class MathGame(BaseGame):
             'points': 0,
             'won': False,
             'game_over': False
-        } 
+        }
