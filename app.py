@@ -16,25 +16,83 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # استيراد الألعاب
+GAMES_LOADED = {}
 try:
     from games.iq_game import IQGame
+    GAMES_LOADED['IQGame'] = IQGame
+except: logger.warning("⚠️ IQGame غير متاح")
+
+try:
     from games.word_color_game import WordColorGame
+    GAMES_LOADED['WordColorGame'] = WordColorGame
+except: logger.warning("⚠️ WordColorGame غير متاح")
+
+try:
     from games.chain_words_game import ChainWordsGame
+    GAMES_LOADED['ChainWordsGame'] = ChainWordsGame
+except: logger.warning("⚠️ ChainWordsGame غير متاح")
+
+try:
     from games.scramble_word_game import ScrambleWordGame
+    GAMES_LOADED['ScrambleWordGame'] = ScrambleWordGame
+except: logger.warning("⚠️ ScrambleWordGame غير متاح")
+
+try:
     from games.letters_words_game import LettersWordsGame
+    GAMES_LOADED['LettersWordsGame'] = LettersWordsGame
+except: logger.warning("⚠️ LettersWordsGame غير متاح")
+
+try:
     from games.fast_typing_game import FastTypingGame
+    GAMES_LOADED['FastTypingGame'] = FastTypingGame
+except: logger.warning("⚠️ FastTypingGame غير متاح")
+
+try:
     from games.human_animal_plant_game import HumanAnimalPlantGame
+    GAMES_LOADED['HumanAnimalPlantGame'] = HumanAnimalPlantGame
+except: logger.warning("⚠️ HumanAnimalPlantGame غير متاح")
+
+try:
     from games.guess_game import GuessGame
+    GAMES_LOADED['GuessGame'] = GuessGame
+except: logger.warning("⚠️ GuessGame غير متاح")
+
+try:
     from games.compatibility_game import CompatibilityGame
+    GAMES_LOADED['CompatibilityGame'] = CompatibilityGame
+except: logger.warning("⚠️ CompatibilityGame غير متاح")
+
+try:
     from games.math_game import MathGame
+    GAMES_LOADED['MathGame'] = MathGame
+except: logger.warning("⚠️ MathGame غير متاح")
+
+try:
     from games.memory_game import MemoryGame
+    GAMES_LOADED['MemoryGame'] = MemoryGame
+except: logger.warning("⚠️ MemoryGame غير متاح")
+
+try:
     from games.riddle_game import RiddleGame
+    GAMES_LOADED['RiddleGame'] = RiddleGame
+except: logger.warning("⚠️ RiddleGame غير متاح")
+
+try:
     from games.opposite_game import OppositeGame
+    GAMES_LOADED['OppositeGame'] = OppositeGame
+except: logger.warning("⚠️ OppositeGame غير متاح")
+
+try:
     from games.emoji_game import EmojiGame
+    GAMES_LOADED['EmojiGame'] = EmojiGame
+except: logger.warning("⚠️ EmojiGame غير متاح")
+
+try:
     from games.song_game import SongGame
-    logger.info("✅ تم تحميل جميع الألعاب")
-except Exception as e:
-    logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
+    GAMES_LOADED['SongGame'] = SongGame
+except: logger.warning("⚠️ SongGame غير متاح")
+
+logger.info(f"✅ تم تحميل {len(GAMES_LOADED)} لعبة")
 
 app = Flask(__name__)
 
