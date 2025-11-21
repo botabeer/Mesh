@@ -1,11 +1,19 @@
-from .word_formation import WordFormationGame
-from .fast_typing import FastTypingGame
-from .math_game import MathGame
-from .scramble import ScrambleGame
+"""
+games/__init__.py - تصدير الألعاب
+"""
+
+from .base_game import BaseGame
+from .letters_game import LettersGame
+from .fast_game import FastGame
+from .scramble_game import ScrambleGame
+from .chain_game import ChainGame
+from .iq_game import IQGame
 
 __all__ = [
-    'WordFormationGame',
-    'FastTypingGame',
-    'MathGame',
-    'ScrambleGame'
+    'BaseGame',
+    'LettersGame',
+    'FastGame',
+    'ScrambleGame',
+    'ChainGame',
+    'IQGame'
 ]
