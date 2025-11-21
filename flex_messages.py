@@ -22,7 +22,7 @@ class FlexDesign:
                 "contents": [
                     {"type": "text", "text": "🎮 Neumorphism Soft", "weight": "bold", "size": "xl", "align": "center", "color": FlexDesign.TEXT_PRIMARY},
                     {"type": "text", "text": "تأثير 3D - عمق ناعم", "size": "sm", "align": "center", "color": FlexDesign.TEXT_SECONDARY, "margin": "sm"},
-                    {"type": "separator", "margin": "xl", "color": "#ddd"},
+                    {"type": "separator", "margin": "xl"},
                     {"type": "box", "layout": "vertical", "contents": [
                         FlexDesign._game_button("🔤", "تكوين الكلمات", "letters"),
                         FlexDesign._game_button("⚡", "أسرع إجابة", "fast"),
@@ -30,7 +30,7 @@ class FlexDesign:
                         FlexDesign._game_button("🔗", "سلسلة الكلمات", "chain"),
                         FlexDesign._game_button("🧠", "أسئلة ذكاء", "iq")
                     ], "spacing": "md", "margin": "xl"},
-                    {"type": "separator", "margin": "xl", "color": "#ddd"},
+                    {"type": "separator", "margin": "xl"},
                     {"type": "box", "layout": "horizontal", "contents": [
                         {"type": "button", "action": {"type": "message", "label": "🏆 الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm"},
                         {"type": "button", "action": {"type": "message", "label": "👥 انضم", "text": "انضم"}, "style": "primary", "height": "sm", "color": FlexDesign.ACCENT}
@@ -59,7 +59,7 @@ class FlexDesign:
                 {"type": "text", "text": f"■ {game_name}", "weight": "bold", "size": "lg", "color": FlexDesign.TEXT_PRIMARY, "flex": 1},
                 {"type": "text", "text": f"سؤال {round_num}/{total_rounds}", "size": "sm", "color": FlexDesign.TEXT_SECONDARY, "align": "end"}
             ]},
-            {"type": "separator", "margin": "lg", "color": "#ddd"}
+            {"type": "separator", "margin": "lg"}
         ]
         
         if letters:
@@ -91,7 +91,7 @@ class FlexDesign:
                 ], "width": "80px", "height": "80px", "backgroundColor": FlexDesign.BG, "cornerRadius": "full", "justifyContent": "center", "offsetStart": "50%", "position": "relative"},
                 {"type": "text", "text": "إجابة صحيحة!", "weight": "bold", "size": "xl", "color": FlexDesign.TEXT_PRIMARY, "align": "center", "margin": "xl"},
                 {"type": "text", "text": player_name, "size": "md", "color": FlexDesign.TEXT_SECONDARY, "align": "center", "margin": "sm"},
-                {"type": "separator", "margin": "xl", "color": "#ddd"},
+                {"type": "separator", "margin": "xl"},
                 {"type": "box", "layout": "horizontal", "contents": [
                     {"type": "text", "text": "النقاط", "size": "sm", "color": FlexDesign.TEXT_SECONDARY, "flex": 1},
                     {"type": "text", "text": f"+{points}", "size": "xxl", "color": FlexDesign.ACCENT, "flex": 1, "align": "end", "weight": "bold"}
@@ -113,7 +113,7 @@ class FlexDesign:
         
         return {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": [
             {"type": "text", "text": "🏆 لوحة الصدارة", "weight": "bold", "size": "xl", "color": FlexDesign.TEXT_PRIMARY, "align": "center"},
-            {"type": "separator", "margin": "lg", "color": "#ddd"},
+            {"type": "separator", "margin": "lg"},
             {"type": "box", "layout": "vertical", "contents": players, "margin": "lg"}
         ], "backgroundColor": FlexDesign.BG, "paddingAll": "24px"}}
     
