@@ -3,7 +3,6 @@ Bot Mesh - Enhanced Flex Messages System
 Created by: Abeer Aldosari © 2025
 
 نظام نوافذ Flex احترافي مع دعم 7 ثيمات جميلة
-مع دعم المنشن التلقائي ونوافذ مساعدة ذكية
 """
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
@@ -121,7 +120,7 @@ class FlexMessageBuilder:
     # =============================================
     
     def _text(self, text: str, size: str = "md", weight: str = "regular",
-              color: str = None, align: str = "center", wrap: bool = True,
+              color: str = None, wrap: bool = True,
               margin: str = "none") -> Dict:
         """إنشاء نص"""
         return {
@@ -130,7 +129,6 @@ class FlexMessageBuilder:
             "size": size,
             "weight": weight,
             "color": color or self.theme.text_primary,
-            "align": align,
             "wrap": wrap,
             "margin": margin
         }
@@ -191,7 +189,6 @@ class FlexMessageBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    # الشعار والعنوان
                     self._box([
                         self._text("🎮", "xxl", margin="md"),
                         self._text("Bot Mesh", "xxl", "bold", margin="sm"),
@@ -199,7 +196,6 @@ class FlexMessageBuilder:
                                   color=self.theme.text_secondary, margin="xs")
                     ], bg=self.theme.card, corner="25px", padding="xl"),
                     
-                    # قسم البداية
                     self._box([
                         {
                             "type": "box",
@@ -212,11 +208,9 @@ class FlexMessageBuilder:
                                     "type": "box",
                                     "layout": "vertical",
                                     "contents": [
-                                        self._text("ابدأ الآن!", "lg", "bold",
-                                                  align="right"),
+                                        self._text("ابدأ الآن!", "lg", "bold"),
                                         self._text("سجل واستمتع بـ 11 لعبة ممتعة",
-                                                  "xs", color=self.theme.text_secondary,
-                                                  align="right")
+                                                  "xs", color=self.theme.text_secondary)
                                     ],
                                     "flex": 1,
                                     "margin": "md",
@@ -227,10 +221,8 @@ class FlexMessageBuilder:
                         }
                     ], bg=self.theme.surface, corner="20px", margin="lg", padding="lg"),
                     
-                    # خطوات البداية
                     self._box([
-                        self._text("📋 كيف تبدأ؟", "md", "bold",
-                                  align="right", margin="md"),
+                        self._text("📋 كيف تبدأ؟", "md", "bold", margin="md"),
                         
                         self._box([
                             {
@@ -238,8 +230,7 @@ class FlexMessageBuilder:
                                 "layout": "horizontal",
                                 "contents": [
                                     self._text("1️⃣", "lg"),
-                                    self._text("اضغط على زر 'انضم' للتسجيل",
-                                              "sm", align="right")
+                                    self._text("اضغط على زر 'انضم' للتسجيل", "sm")
                                 ],
                                 "justifyContent": "space-between"
                             }
@@ -251,8 +242,7 @@ class FlexMessageBuilder:
                                 "layout": "horizontal",
                                 "contents": [
                                     self._text("2️⃣", "lg"),
-                                    self._text("اختر لعبة من الأزرار الثابتة أسفل الشاشة",
-                                              "sm", align="right")
+                                    self._text("اختر لعبة من الأزرار الثابتة أسفل الشاشة", "sm")
                                 ],
                                 "justifyContent": "space-between"
                             }
@@ -264,47 +254,34 @@ class FlexMessageBuilder:
                                 "layout": "horizontal",
                                 "contents": [
                                     self._text("3️⃣", "lg"),
-                                    self._text("العب واجمع النقاط وكن في الصدارة!",
-                                              "sm", align="right")
+                                    self._text("العب واجمع النقاط وكن في الصدارة!", "sm")
                                 ],
                                 "justifyContent": "space-between"
                             }
                         ], margin="sm")
                     ], bg=self.theme.card, corner="20px", margin="lg", padding="lg"),
                     
-                    # المميزات
                     self._box([
-                        self._text("⚡ المميزات", "md", "bold", align="right"),
-                        self._text("• 11 لعبة متنوعة", "sm",
-                                  color=self.theme.text_secondary, align="right",
-                                  margin="sm"),
-                        self._text("• 7 ثيمات جميلة", "sm",
-                                  color=self.theme.text_secondary, align="right",
-                                  margin="xs"),
-                        self._text("• نظام نقاط وترتيب", "sm",
-                                  color=self.theme.text_secondary, align="right",
-                                  margin="xs"),
-                        self._text("• لوحة صدارة عالمية", "sm",
-                                  color=self.theme.text_secondary, align="right",
-                                  margin="xs")
+                        self._text("⚡ المميزات", "md", "bold"),
+                        self._text("• 11 لعبة متنوعة", "sm", color=self.theme.text_secondary, margin="sm"),
+                        self._text("• 7 ثيمات جميلة", "sm", color=self.theme.text_secondary, margin="xs"),
+                        self._text("• نظام نقاط وترتيب", "sm", color=self.theme.text_secondary, margin="xs"),
+                        self._text("• لوحة صدارة عالمية", "sm", color=self.theme.text_secondary, margin="xs")
                     ], bg=self.theme.surface, corner="20px", margin="lg", padding="lg"),
                     
-                    # نصيحة
                     self._box([
                         {
                             "type": "box",
                             "layout": "horizontal",
                             "contents": [
                                 self._text("💡", "md"),
-                                self._text("استخدم الأزرار الثابتة أسفل الشاشة للوصول السريع!",
-                                          "xs", color=self.theme.text_secondary,
-                                          align="right")
+                                self._text("استخدم الأزرار الثابتة أسفل الشاشة للوصول السريع!", "xs",
+                                          color=self.theme.text_secondary)
                             ],
                             "justifyContent": "space-between"
                         }
                     ], bg=self.theme.card, corner="15px", margin="lg", padding="md"),
                     
-                    # الحقوق
                     self._text("Created by Abeer Aldosari © 2025", "xxs",
                               color=self.theme.text_secondary, margin="lg")
                 ],
@@ -338,9 +315,7 @@ class FlexMessageBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    # الأوامر الأساسية
-                    self._text("🎯 الأوامر الأساسية", "lg", "bold",
-                              align="right", margin="md"),
+                    self._text("🎯 الأوامر الأساسية", "lg", "bold", margin="md"),
                     
                     self._command_row("انضم", "التسجيل في البوت"),
                     self._command_row("انسحب", "إلغاء التسجيل"),
@@ -350,16 +325,13 @@ class FlexMessageBuilder:
                     
                     self._separator(margin="xl"),
                     
-                    # أثناء اللعب
-                    self._text("🎮 أثناء اللعب", "lg", "bold",
-                              align="right", margin="lg"),
+                    self._text("🎮 أثناء اللعب", "lg", "bold", margin="lg"),
                     
                     self._command_row("لمح", "الحصول على تلميح"),
                     self._command_row("جاوب", "عرض الإجابة الصحيحة"),
                     
                     self._separator(margin="xl"),
                     
-                    # الأزرار
                     {
                         "type": "box",
                         "layout": "horizontal",
@@ -367,7 +339,7 @@ class FlexMessageBuilder:
                             self._button("انضم", "انضم", color=self.theme.accent),
                             self._button("نقاطي", "نقاطي", color=self.theme.accent_dark),
                             self._button("الصدارة", "الصدارة",
-                                       color=self.theme.text_secondary)
+                                         color=self.theme.text_secondary)
                         ],
                         "spacing": "sm",
                         "margin": "xl"
@@ -386,11 +358,10 @@ class FlexMessageBuilder:
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    self._text(description, "sm",
-                              color=self.theme.text_secondary, align="right"),
+                    self._text(description, "sm", color=self.theme.text_secondary),
                     self._box([self._text(command, "sm", "bold")],
-                            bg=self.theme.accent + "20",
-                            corner="8px", padding="sm")
+                              bg=self.theme.accent + "20",
+                              corner="8px", padding="sm")
                 ],
                 "justifyContent": "space-between"
             }
@@ -411,7 +382,6 @@ class FlexMessageBuilder:
         win_rate = (wins / games * 100) if games > 0 else 0
         is_registered = user_data.get('is_registered', False)
         
-        # تحديد المستوى
         level_data = self._get_level(points)
         
         return {
@@ -421,7 +391,6 @@ class FlexMessageBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    # الرأس
                     self._box([
                         {
                             "type": "box",
@@ -432,11 +401,9 @@ class FlexMessageBuilder:
                                     "type": "box",
                                     "layout": "vertical",
                                     "contents": [
-                                        self._text(level_data['name'], "xl", "bold",
-                                                  align="right"),
+                                        self._text(level_data['name'], "xl", "bold"),
                                         self._text(f"المركز #{rank}" if rank else "غير مصنف",
-                                                  "sm", color=self.theme.text_secondary,
-                                                  align="right")
+                                                  "sm", color=self.theme.text_secondary)
                                     ],
                                     "flex": 1,
                                     "justifyContent": "center"
@@ -445,7 +412,6 @@ class FlexMessageBuilder:
                             "justifyContent": "space-between"
                         },
                         
-                        # حالة التسجيل
                         self._box([
                             {
                                 "type": "box",
@@ -461,7 +427,6 @@ class FlexMessageBuilder:
                         ], margin="sm")
                     ], bg=level_data['color'], corner="25px", padding="xl"),
                     
-                    # الإحصائيات
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -489,7 +454,6 @@ class FlexMessageBuilder:
                         "margin": "xl"
                     },
                     
-                    # رسالة حالة التسجيل
                     self._box([
                         self._text(
                             "✅ يمكنك اللعب الآن!" if is_registered else "⚠️ سجل أولاً لتلعب",
@@ -498,7 +462,6 @@ class FlexMessageBuilder:
                         )
                     ], bg=self.theme.card, corner="15px", margin="lg", padding="md"),
                     
-                    # الأزرار
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -508,7 +471,7 @@ class FlexMessageBuilder:
                             self._button("🔑 انضم الآن", "انضم", color=self.theme.accent),
                             
                             self._button("🏆 الصدارة", "الصدارة",
-                                       color=self.theme.text_secondary)
+                                         color=self.theme.text_secondary)
                         ],
                         "spacing": "sm",
                         "margin": "lg"
@@ -565,10 +528,9 @@ class FlexMessageBuilder:
                         "layout": "horizontal",
                         "contents": [
                             self._box([self._text(theme_data.emoji, "xl")],
-                                    bg=theme_data.accent, corner="12px",
-                                    padding="sm"),
-                            self._text(theme_data.name_ar, "md", "bold",
-                                      align="right")
+                                      bg=theme_data.accent, corner="12px",
+                                      padding="sm"),
+                            self._text(theme_data.name_ar, "md", "bold")
                         ],
                         "justifyContent": "space-between",
                         "alignItems": "center"
@@ -625,16 +587,15 @@ class FlexMessageBuilder:
                         "layout": "horizontal",
                         "contents": [
                             self._box([self._text(medal, "xl" if is_top else "lg")],
-                                    bg=medal_colors[i] + "30" if is_top else "transparent",
-                                    corner="12px", padding="sm"),
+                                      bg=medal_colors[i] + "30" if is_top else "transparent",
+                                      corner="12px", padding="sm"),
                             
                             self._text(leader.get('display_name', 'لاعب'),
-                                      "md", "bold" if is_top else "regular",
-                                      align="right"),
+                                       "md", "bold" if is_top else "regular"),
                             
                             self._text(f"{leader.get('total_points', 0)} ⭐",
-                                      "md", "bold",
-                                      color=self.theme.accent if is_top else self.theme.text_secondary)
+                                       "md", "bold",
+                                       color=self.theme.accent if is_top else self.theme.text_secondary)
                         ],
                         "justifyContent": "space-between",
                         "alignItems": "center"
