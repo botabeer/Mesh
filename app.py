@@ -6,7 +6,7 @@ from flask import Flask, request, abort, jsonify
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage, QuickReply, QuickReplyButton, MessageAction
-import os, sqlite3, threading, time, logging, signal
+import os, sqlite3, threading, time, logging, signal, importlib
 from datetime import datetime, timedelta
 from functools import wraps
 from contextlib import contextmanager
@@ -27,28 +27,103 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================
-# 🎮 Games Loading
+# 🎮 Dynamic Games Loading System
 # ============================================
+GAMES_FOLDER = "games"
 GAMES_LOADED = {}
-GAME_IMPORTS = [
-    ('games.iq_game', 'IQGame'), ('games.word_color_game', 'WordColorGame'),
-    ('games.chain_words_game', 'ChainWordsGame'), ('games.scramble_word_game', 'ScrambleWordGame'),
-    ('games.letters_words_game', 'LettersWordsGame'), ('games.fast_typing_game', 'FastTypingGame'),
-    ('games.human_animal_plant_game', 'HumanAnimalPlantGame'), ('games.guess_game', 'GuessGame'),
-    ('games.compatibility_game', 'CompatibilityGame'), ('games.math_game', 'MathGame'),
-    ('games.memory_game', 'MemoryGame'), ('games.riddle_game', 'RiddleGame'),
-    ('games.opposite_game', 'OppositeGame'), ('games.emoji_game', 'EmojiGame'),
-    ('games.song_game', 'SongGame')
+
+def snake_to_camel(name):
+    """تحويل snake_case إلى CamelCase"""
+    return "".join(word.capitalize() for word in name.split("_"))
+
+def load_games_dynamically():
+    """تحميل جميع الألعاب من مجلد games تلقائياً"""
+    games_loaded = {}
+    
+    # التحقق من وجود المجلد
+    if not os.path.exists(GAMES_FOLDER):
+        logger.warning(f"⚠️ Games folder '{GAMES_FOLDER}' not found")
+        return games_loaded
+    
+    logger.info(f"🔍 Scanning games folder: {GAMES_FOLDER}")
+    
+    # قراءة كل ملفات Python في مجلد الألعاب
+    try:
+        for filename in os.listdir(GAMES_FOLDER):
+            if filename.endswith(".py") and filename != "__init__.py":
+                module_name = filename[:-3]  # إزالة .py
+                class_name = snake_to_camel(module_name)
+                
+                try:
+                    module_path = f"{GAMES_FOLDER}.{module_name}"
+                    module = importlib.import_module(module_path)
+                    
+                    # محاولة الحصول على الكلاس من الموديل
+                    game_class = getattr(module, class_name, None)
+                    
+                    if game_class:
+                        games_loaded[class_name] = game_class
+                        logger.info(f"✅ {class_name} loaded successfully")
+                    else:
+                        logger.warning(f"⚠️ {class_name} not found in {filename}")
+                        
+                except ImportError as e:
+                    logger.warning(f"⚠️ Import error for {class_name}: {e}")
+                except Exception as e:
+                    logger.error(f"❌ Error loading {class_name}: {e}")
+    
+    except Exception as e:
+        logger.error(f"❌ Error reading games folder: {e}")
+    
+    logger.info(f"📊 Total games loaded: {len(games_loaded)}")
+    return games_loaded
+
+# تحميل الألعاب تلقائياً
+GAMES_LOADED = load_games_dynamically()
+
+# ============================================
+# 🎯 Game Name Mapping (for Arabic commands)
+# ============================================
+GAME_NAME_MAP = {
+    'ذكاء': 'IQGame',
+    'لون': 'WordColorGame',
+    'سلسلة': 'ChainWordsGame',
+    'ترتيب': 'ScrambleWordGame',
+    'تكوين': 'LettersWordsGame',
+    'أسرع': 'FastTypingGame',
+    'لعبة': 'HumanAnimalPlantGame',
+    'خمن': 'GuessGame',
+    'توافق': 'CompatibilityGame',
+    'رياضيات': 'MathGame',
+    'ذاكرة': 'MemoryGame',
+    'لغز': 'RiddleGame',
+    'ضد': 'OppositeGame',
+    'إيموجي': 'EmojiGame',
+    'أغنية': 'SongGame'
+}
+
+# خريطة الألعاب مع بياناتها الجمالية
+GAMES_UI_DATA = [
+    {"arabic": "ذكاء", "class": "IQGame", "emoji": "🧠", "desc": "اختبر ذكاءك", "color": "#8b5cf6"},
+    {"arabic": "لون", "class": "WordColorGame", "emoji": "🎨", "desc": "كلمة ولون", "color": "#ec4899"},
+    {"arabic": "سلسلة", "class": "ChainWordsGame", "emoji": "⛓️", "desc": "سلسلة الكلمات", "color": "#3b82f6"},
+    {"arabic": "ترتيب", "class": "ScrambleWordGame", "emoji": "🔤", "desc": "رتب الحروف", "color": "#10b981"},
+    {"arabic": "تكوين", "class": "LettersWordsGame", "emoji": "✍️", "desc": "كون كلمات", "color": "#f59e0b"},
+    {"arabic": "أسرع", "class": "FastTypingGame", "emoji": "⚡", "desc": "اكتب بسرعة", "color": "#ef4444"},
+    {"arabic": "لعبة", "class": "HumanAnimalPlantGame", "emoji": "🎯", "desc": "إنسان حيوان نبات", "color": "#06b6d4"},
+    {"arabic": "خمن", "class": "GuessGame", "emoji": "🤔", "desc": "خمن الرقم", "color": "#6366f1"},
+    {"arabic": "توافق", "class": "CompatibilityGame", "emoji": "💖", "desc": "نسبة التوافق", "color": "#f472b6"},
+    {"arabic": "رياضيات", "class": "MathGame", "emoji": "🔢", "desc": "حل المسائل", "color": "#8b5cf6"},
+    {"arabic": "ذاكرة", "class": "MemoryGame", "emoji": "🧩", "desc": "اختبر ذاكرتك", "color": "#14b8a6"},
+    {"arabic": "لغز", "class": "RiddleGame", "emoji": "🎭", "desc": "حل الألغاز", "color": "#f97316"},
+    {"arabic": "ضد", "class": "OppositeGame", "emoji": "↔️", "desc": "الأضداد", "color": "#a855f7"},
+    {"arabic": "إيموجي", "class": "EmojiGame", "emoji": "😀", "desc": "خمن الإيموجي", "color": "#fbbf24"},
+    {"arabic": "أغنية", "class": "SongGame", "emoji": "🎵", "desc": "خمن الأغنية", "color": "#ec4899"}
 ]
 
-for module_name, class_name in GAME_IMPORTS:
-    try:
-        module = __import__(module_name, fromlist=[class_name])
-        GAMES_LOADED[class_name] = getattr(module, class_name)
-    except ImportError:
-        logger.warning(f"⚠️ {class_name} not available")
-
-logger.info(f"✅ {len(GAMES_LOADED)} games loaded")
+# تصفية الألعاب المتاحة فقط
+AVAILABLE_GAMES_UI = [game for game in GAMES_UI_DATA if game["class"] in GAMES_LOADED]
+logger.info(f"🎮 Available games for UI: {len(AVAILABLE_GAMES_UI)}")
 
 # ============================================
 # ⚙️ Configuration
@@ -538,25 +613,23 @@ def create_main_menu():
     }
 
 def create_games_carousel():
-    """قائمة ألعاب محسّنة مع أيقونات جميلة"""
-    games_data = [
-        {"name": "ذكاء", "emoji": "🧠", "desc": "اختبر ذكاءك", "color": "#8b5cf6"},
-        {"name": "لون", "emoji": "🎨", "desc": "كلمة ولون", "color": "#ec4899"},
-        {"name": "سلسلة", "emoji": "⛓️", "desc": "سلسلة الكلمات", "color": "#3b82f6"},
-        {"name": "ترتيب", "emoji": "🔤", "desc": "رتب الحروف", "color": "#10b981"},
-        {"name": "تكوين", "emoji": "✍️", "desc": "كون كلمات", "color": "#f59e0b"},
-        {"name": "أسرع", "emoji": "⚡", "desc": "اكتب بسرعة", "color": "#ef4444"},
-        {"name": "لعبة", "emoji": "🎯", "desc": "إنسان حيوان نبات", "color": "#06b6d4"},
-        {"name": "خمن", "emoji": "🤔", "desc": "خمن الرقم", "color": "#6366f1"},
-        {"name": "رياضيات", "emoji": "🔢", "desc": "حل المسائل", "color": "#8b5cf6"},
-        {"name": "ذاكرة", "emoji": "🧩", "desc": "اختبر ذاكرتك", "color": "#14b8a6"},
-        {"name": "لغز", "emoji": "🎭", "desc": "حل الألغاز", "color": "#f97316"},
-        {"name": "ضد", "emoji": "↔️", "desc": "الأضداد", "color": "#a855f7"},
-        {"name": "أغنية", "emoji": "🎵", "desc": "خمن الأغنية", "color": "#ec4899"}
-    ]
+    """قائمة ألعاب محسّنة مع الألعاب المتاحة فقط"""
+    if not AVAILABLE_GAMES_UI:
+        # إذا لم تكن هناك ألعاب متاحة
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "⚠️ لا توجد ألعاب متاحة حالياً", 
+                     "weight": "bold", "size": "lg", "color": "#ef4444", "wrap": True, "align": "center"}
+                ],
+                "paddingAll": "30px"
+            }
+        }
     
     bubbles = []
-    for game in games_data:
+    for game in AVAILABLE_GAMES_UI:
         bubbles.append({
             "type": "bubble", "size": "micro",
             "hero": {
@@ -571,7 +644,7 @@ def create_games_carousel():
             "body": {
                 "type": "box", "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": f"لعبة {game['name']}", 
+                    {"type": "text", "text": f"لعبة {game['arabic']}", 
                      "weight": "bold", "size": "md", "align": "center", "color": "#1f2937"},
                     {"type": "text", "text": game["desc"], 
                      "size": "xs", "align": "center", "color": "#6b7280", "margin": "sm", "wrap": True}
@@ -582,7 +655,7 @@ def create_games_carousel():
                 "type": "box", "layout": "vertical",
                 "contents": [
                     {"type": "button",
-                     "action": {"type": "message", "label": "▶️ العب", "text": game["name"]},
+                     "action": {"type": "message", "label": "▶️ العب", "text": game["arabic"]},
                      "style": "primary", "color": game["color"], "height": "sm"}
                 ],
                 "paddingAll": "12px"
@@ -1219,20 +1292,8 @@ def handle_message(event):
         if command_handler.handle(event, user_id, text, game_id, display_name):
             return
         
-        # خريطة الألعاب
-        games_map = {
-            'ذكاء': ('IQGame', 'ذكاء'), 'لون': ('WordColorGame', 'لون'),
-            'سلسلة': ('ChainWordsGame', 'سلسلة'), 'ترتيب': ('ScrambleWordGame', 'ترتيب'),
-            'تكوين': ('LettersWordsGame', 'تكوين'), 'أسرع': ('FastTypingGame', 'أسرع'),
-            'لعبة': ('HumanAnimalPlantGame', 'لعبة'), 'خمن': ('GuessGame', 'خمن'),
-            'توافق': ('CompatibilityGame', 'توافق'), 'رياضيات': ('MathGame', 'رياضيات'),
-            'ذاكرة': ('MemoryGame', 'ذاكرة'), 'لغز': ('RiddleGame', 'لغز'),
-            'ضد': ('OppositeGame', 'ضد'), 'إيموجي': ('EmojiGame', 'إيموجي'),
-            'أغنية': ('SongGame', 'أغنية')
-        }
-        
-        # بدء الألعاب
-        if text in games_map:
+        # بدء الألعاب (باستخدام الخريطة الديناميكية)
+        if text in GAME_NAME_MAP:
             if not game_manager.is_registered(user_id):
                 quick_reply = QuickReply(items=[
                     QuickReplyButton(action=MessageAction(label="📝 انضم الآن", text="انضم"))
@@ -1244,23 +1305,23 @@ def handle_message(event):
                     ))
                 return
             
-            class_name, game_type = games_map[text]
+            class_name = GAME_NAME_MAP[text]
             game_class = GAMES_LOADED.get(class_name)
             
             if not game_class:
                 line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text=f"❌ لعبة {game_type} غير متاحة حالياً\n\nجرب لعبة أخرى"))
+                    TextSendMessage(text=f"❌ لعبة {text} غير متاحة حالياً\n\nجرب لعبة أخرى"))
                 return
             
             # لعبة التوافق - حالة خاصة
             if text == 'توافق':
                 game = game_class(line_bot_api)
-                game_manager.create_game(game_id, game, 'توافق')
+                game_manager.create_game(game_id, game, text)
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="💖 لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة"))
                 return
             
-            start_game(game_id, game_class, game_type, user_id, event)
+            start_game(game_id, game_class, text, user_id, event)
             return
         
         # معالجة إجابات الألعاب النشطة
