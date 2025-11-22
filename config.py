@@ -1,5 +1,5 @@
 """
-Bot Mesh - Configuration File (Updated with 5 Themes)
+Bot Mesh - Configuration File
 Created by: Abeer Aldosari © 2025
 """
 import os
@@ -9,17 +9,17 @@ from typing import List, Dict
 
 
 class Theme(Enum):
-    """الثيمات المتاحة"""
-    WHITE = "white"    # أبيض
-    BLACK = "black"    # أسود
-    GRAY = "gray"      # رمادي
-    PURPLE = "purple"  # بنفسجي
-    BLUE = "blue"      # أزرق
+    WHITE = "white"
+    BLACK = "black"
+    GRAY = "gray"
+    PURPLE = "purple"
+    BLUE = "blue"
+    PINK = "pink"
+    MINT = "mint"
 
 
 @dataclass
 class ThemeColors:
-    """ألوان الثيم"""
     name: str
     name_ar: str
     emoji: str
@@ -37,85 +37,39 @@ class ThemeColors:
     warning: str = "#F6AD55"
 
 
-# =============================================
-# 🎨 الثيمات الخمسة
-# =============================================
 THEMES: Dict[Theme, ThemeColors] = {
-    # ⚪ أبيض - Neumorphism Light
     Theme.WHITE: ThemeColors(
-        name="white", name_ar="أبيض", emoji="⚪",
-        background="#E0E5EC",
-        surface="#E0E5EC", 
-        card="#D1D9E6",
-        text_primary="#2C3E50",
-        text_secondary="#7F8C8D",
-        accent="#667EEA",
-        button_primary="#667EEA",
-        button_secondary="#A0AEC0",
-        border="#C8D0E7"
+        "white", "أبيض", "⚪", "#E0E5EC", "#E0E5EC", "#D1D9E6",
+        "#2C3E50", "#7F8C8D", "#667EEA", "#667EEA", "#A0AEC0", "#C8D0E7"
     ),
-    
-    # ⚫ أسود - Dark Neon
     Theme.BLACK: ThemeColors(
-        name="black", name_ar="أسود", emoji="⚫",
-        background="#0F0F1A",
-        surface="#1A1A2E",
-        card="#16213E",
-        text_primary="#FFFFFF",
-        text_secondary="#A0AEC0",
-        accent="#00D9FF",
-        button_primary="#00D9FF",
-        button_secondary="#4A5568",
-        border="#2D3748"
+        "black", "أسود", "⚫", "#0F0F1A", "#1A1A2E", "#16213E",
+        "#FFFFFF", "#A0AEC0", "#00D9FF", "#00D9FF", "#4A5568", "#2D3748"
     ),
-    
-    # 🔘 رمادي - Slate Gray
     Theme.GRAY: ThemeColors(
-        name="gray", name_ar="رمادي", emoji="🔘",
-        background="#1A202C",
-        surface="#2D3748",
-        card="#4A5568",
-        text_primary="#F7FAFC",
-        text_secondary="#CBD5E0",
-        accent="#68D391",
-        button_primary="#48BB78",
-        button_secondary="#718096",
-        border="#4A5568"
+        "gray", "رمادي", "🔘", "#1A202C", "#2D3748", "#4A5568",
+        "#F7FAFC", "#CBD5E0", "#68D391", "#48BB78", "#718096", "#4A5568"
     ),
-    
-    # 💜 بنفسجي - Purple Night
     Theme.PURPLE: ThemeColors(
-        name="purple", name_ar="بنفسجي", emoji="💜",
-        background="#1E1B4B",
-        surface="#312E81",
-        card="#3730A3",
-        text_primary="#F5F3FF",
-        text_secondary="#C4B5FD",
-        accent="#A855F7",
-        button_primary="#9333EA",
-        button_secondary="#6B21A8",
-        border="#4C1D95"
+        "purple", "بنفسجي", "💜", "#1E1B4B", "#312E81", "#3730A3",
+        "#F5F3FF", "#C4B5FD", "#A855F7", "#9333EA", "#6B21A8", "#4C1D95"
     ),
-    
-    # 💙 أزرق - Ocean Blue
     Theme.BLUE: ThemeColors(
-        name="blue", name_ar="أزرق", emoji="💙",
-        background="#0C1929",
-        surface="#1E3A5F",
-        card="#0F2744",
-        text_primary="#E0F2FE",
-        text_secondary="#7DD3FC",
-        accent="#00D9FF",
-        button_primary="#0EA5E9",
-        button_secondary="#0369A1",
-        border="#0369A1"
-    )
+        "blue", "أزرق", "💙", "#0C1929", "#1E3A5F", "#0F2744",
+        "#E0F2FE", "#7DD3FC", "#00D9FF", "#0EA5E9", "#0369A1", "#0369A1"
+    ),
+    Theme.PINK: ThemeColors(
+        "pink", "وردي", "🌸", "#FFF1F2", "#FFE4E6", "#FFFFFF",
+        "#881337", "#BE123C", "#F43F5E", "#E11D48", "#F43F5E", "#FFC9D0"
+    ),
+    Theme.MINT: ThemeColors(
+        "mint", "نعناعي", "🍃", "#ECFDF5", "#D1FAE5", "#FFFFFF",
+        "#065F46", "#059669", "#10B981", "#059669", "#10B981", "#9EF3CA"
+    ),
 }
 
 
 class Config:
-    """إعدادات البوت"""
-    
     # LINE Bot
     LINE_CHANNEL_ACCESS_TOKEN: str = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
     LINE_CHANNEL_SECRET: str = os.getenv('LINE_CHANNEL_SECRET', '')
@@ -161,12 +115,11 @@ class Config:
         'خمن': {'class': 'GuessGame', 'emoji': '🤔', 'name': 'خمن الكلمة', 'color': '#B794F4'},
         'توافق': {'class': 'CompatibilityGame', 'emoji': '💖', 'name': 'نسبة التوافق', 'color': '#FEB2B2'},
         'ضد': {'class': 'OppositeGame', 'emoji': '↔️', 'name': 'الأضداد', 'color': '#9AE6B4'},
-        'أغنية': {'class': 'SongGame', 'emoji': '🎵', 'name': 'خمن الأغنية', 'color': '#E9D8FD'}
+        'أغنية': {'class': 'SongGame', 'emoji': '🎵', 'name': 'خمن الأغنية', 'color': '#E9D8FD'},
     }
     
     @classmethod
     def get_theme(cls, theme_name: str = None) -> ThemeColors:
-        """الحصول على ثيم"""
         if theme_name:
             for theme_enum, theme_data in THEMES.items():
                 if theme_data.name == theme_name or theme_data.name_ar == theme_name:
@@ -175,12 +128,10 @@ class Config:
     
     @classmethod
     def get_db_path(cls) -> str:
-        """مسار قاعدة البيانات"""
         return os.path.join(cls.DB_PATH, cls.DB_NAME)
     
     @classmethod
     def validate(cls) -> bool:
-        """التحقق من الإعدادات"""
         errors = []
         if not cls.LINE_CHANNEL_ACCESS_TOKEN:
             errors.append("LINE_CHANNEL_ACCESS_TOKEN missing")
