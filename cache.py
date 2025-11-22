@@ -1,195 +1,309 @@
 """
-Bot Mesh - Configuration File (Updated with 5 Themes)
+Bot Mesh - Cache Manager (Real Implementation)
 Created by: Abeer Aldosari © 2025
 """
 import os
-from enum import Enum
-from dataclasses import dataclass
-from typing import List, Dict
+import json
+import time
+import logging
+from typing import Any, Optional
+from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 
-class Theme(Enum):
-    """الثيمات المتاحة"""
-    WHITE = "white"    # أبيض
-    BLACK = "black"    # أسود
-    GRAY = "gray"      # رمادي
-    PURPLE = "purple"  # بنفسجي
-    BLUE = "blue"      # أزرق
+class CacheManager:
+    """مدير الكاش البسيط (In-Memory)"""
+    
+    def __init__(self, default_ttl: int = 3600):
+        """
+        Args:
+            default_ttl: مدة صلاحية الكاش بالثواني (افتراضي: ساعة واحدة)
+        """
+        self._cache = {}
+        self.default_ttl = default_ttl
+        self.hits = 0
+        self.misses = 0
+        logger.info(f"✅ Cache initialized (TTL: {default_ttl}s)")
+    
+    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        """
+        حفظ قيمة في الكاش
+        
+        Args:
+            key: المفتاح
+            value: القيمة
+            ttl: مدة الصلاحية (ثواني) أو None للاستخدام الافتراضي
+        
+        Returns:
+            True إذا نجحت العملية
+        """
+        try:
+            expiry = time.time() + (ttl or self.default_ttl)
+            self._cache[key] = {
+                'value': value,
+                'expiry': expiry,
+                'created': datetime.now().isoformat()
+            }
+            logger.debug(f"📝 Cache SET: {key} (TTL: {ttl or self.default_ttl}s)")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Cache SET error: {e}")
+            return False
+    
+    def get(self, key: str) -> Optional[Any]:
+        """
+        استرجاع قيمة من الكاش
+        
+        Args:
+            key: المفتاح
+        
+        Returns:
+            القيمة إذا وُجدت ولم تنتهي صلاحيتها، وإلا None
+        """
+        if key not in self._cache:
+            self.misses += 1
+            logger.debug(f"❌ Cache MISS: {key}")
+            return None
+        
+        item = self._cache[key]
+        
+        # التحقق من انتهاء الصلاحية
+        if time.time() > item['expiry']:
+            self.delete(key)
+            self.misses += 1
+            logger.debug(f"⏰ Cache EXPIRED: {key}")
+            return None
+        
+        self.hits += 1
+        logger.debug(f"✅ Cache HIT: {key}")
+        return item['value']
+    
+    def delete(self, key: str) -> bool:
+        """
+        حذف قيمة من الكاش
+        
+        Args:
+            key: المفتاح
+        
+        Returns:
+            True إذا تم الحذف بنجاح
+        """
+        if key in self._cache:
+            del self._cache[key]
+            logger.debug(f"🗑️ Cache DELETE: {key}")
+            return True
+        return False
+    
+    def clear(self) -> int:
+        """
+        مسح كل الكاش
+        
+        Returns:
+            عدد العناصر التي تم حذفها
+        """
+        count = len(self._cache)
+        self._cache.clear()
+        logger.info(f"🧹 Cache CLEARED: {count} items")
+        return count
+    
+    def cleanup(self) -> int:
+        """
+        تنظيف العناصر منتهية الصلاحية
+        
+        Returns:
+            عدد العناصر التي تم حذفها
+        """
+        now = time.time()
+        expired = [k for k, v in self._cache.items() if now > v['expiry']]
+        
+        for key in expired:
+            del self._cache[key]
+        
+        if expired:
+            logger.info(f"🧹 Cache CLEANUP: {len(expired)} expired items removed")
+        
+        return len(expired)
+    
+    def get_stats(self) -> dict:
+        """
+        إحصائيات الكاش
+        
+        Returns:
+            قاموس بالإحصائيات
+        """
+        total_requests = self.hits + self.misses
+        hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0
+        
+        return {
+            'total_items': len(self._cache),
+            'hits': self.hits,
+            'misses': self.misses,
+            'hit_rate': f"{hit_rate:.2f}%",
+            'total_requests': total_requests
+        }
+    
+    def exists(self, key: str) -> bool:
+        """
+        التحقق من وجود مفتاح
+        
+        Args:
+            key: المفتاح
+        
+        Returns:
+            True إذا كان موجوداً وصالحاً
+        """
+        return self.get(key) is not None
 
 
-@dataclass
-class ThemeColors:
-    """ألوان الثيم"""
-    name: str
-    name_ar: str
-    emoji: str
-    background: str
-    surface: str
-    card: str
-    text_primary: str
-    text_secondary: str
-    accent: str
-    button_primary: str
-    button_secondary: str
-    border: str
-    success: str = "#48BB78"
-    error: str = "#FC8181"
-    warning: str = "#F6AD55"
+class RedisCache:
+    """
+    واجهة Redis الكاش (اختياري)
+    يُستخدم فقط إذا كان Redis متاحاً
+    """
+    
+    def __init__(self, redis_url: str, default_ttl: int = 3600):
+        """
+        Args:
+            redis_url: عنوان Redis
+            default_ttl: مدة الصلاحية الافتراضية
+        """
+        self.redis_url = redis_url
+        self.default_ttl = default_ttl
+        self._redis = None
+        self._connect()
+    
+    def _connect(self):
+        """الاتصال بـ Redis"""
+        try:
+            import redis
+            self._redis = redis.from_url(self.redis_url, decode_responses=True)
+            self._redis.ping()
+            logger.info(f"✅ Redis connected: {self.redis_url}")
+        except ImportError:
+            logger.warning("⚠️ redis package not installed. Use: pip install redis")
+        except Exception as e:
+            logger.error(f"❌ Redis connection failed: {e}")
+            self._redis = None
+    
+    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        """حفظ في Redis"""
+        if not self._redis:
+            return False
+        
+        try:
+            serialized = json.dumps(value)
+            return self._redis.setex(
+                key,
+                ttl or self.default_ttl,
+                serialized
+            )
+        except Exception as e:
+            logger.error(f"❌ Redis SET error: {e}")
+            return False
+    
+    def get(self, key: str) -> Optional[Any]:
+        """استرجاع من Redis"""
+        if not self._redis:
+            return None
+        
+        try:
+            value = self._redis.get(key)
+            if value:
+                return json.loads(value)
+            return None
+        except Exception as e:
+            logger.error(f"❌ Redis GET error: {e}")
+            return None
+    
+    def delete(self, key: str) -> bool:
+        """حذف من Redis"""
+        if not self._redis:
+            return False
+        
+        try:
+            return bool(self._redis.delete(key))
+        except Exception as e:
+            logger.error(f"❌ Redis DELETE error: {e}")
+            return False
+    
+    def clear(self) -> bool:
+        """مسح كل قاعدة البيانات (خطير!)"""
+        if not self._redis:
+            return False
+        
+        try:
+            self._redis.flushdb()
+            return True
+        except Exception as e:
+            logger.error(f"❌ Redis CLEAR error: {e}")
+            return False
 
 
 # =============================================
-# 🎨 الثيمات الخمسة
+# 🏭 Factory Function
 # =============================================
-THEMES: Dict[Theme, ThemeColors] = {
-    # ⚪ أبيض - Neumorphism Light
-    Theme.WHITE: ThemeColors(
-        name="white", name_ar="أبيض", emoji="⚪",
-        background="#E0E5EC",
-        surface="#E0E5EC", 
-        card="#D1D9E6",
-        text_primary="#2C3E50",
-        text_secondary="#7F8C8D",
-        accent="#667EEA",
-        button_primary="#667EEA",
-        button_secondary="#A0AEC0",
-        border="#C8D0E7"
-    ),
+def create_cache(use_redis: bool = False, redis_url: str = None, ttl: int = 3600):
+    """
+    إنشاء نظام الكاش المناسب
     
-    # ⚫ أسود - Dark Neon
-    Theme.BLACK: ThemeColors(
-        name="black", name_ar="أسود", emoji="⚫",
-        background="#0F0F1A",
-        surface="#1A1A2E",
-        card="#16213E",
-        text_primary="#FFFFFF",
-        text_secondary="#A0AEC0",
-        accent="#00D9FF",
-        button_primary="#00D9FF",
-        button_secondary="#4A5568",
-        border="#2D3748"
-    ),
+    Args:
+        use_redis: استخدام Redis أو In-Memory
+        redis_url: عنوان Redis
+        ttl: مدة الصلاحية الافتراضية
     
-    # 🔘 رمادي - Slate Gray
-    Theme.GRAY: ThemeColors(
-        name="gray", name_ar="رمادي", emoji="🔘",
-        background="#1A202C",
-        surface="#2D3748",
-        card="#4A5568",
-        text_primary="#F7FAFC",
-        text_secondary="#CBD5E0",
-        accent="#68D391",
-        button_primary="#48BB78",
-        button_secondary="#718096",
-        border="#4A5568"
-    ),
+    Returns:
+        CacheManager أو RedisCache
+    """
+    if use_redis and redis_url:
+        cache = RedisCache(redis_url, ttl)
+        if cache._redis:
+            return cache
+        logger.warning("⚠️ Redis failed, falling back to in-memory cache")
     
-    # 💜 بنفسجي - Purple Night
-    Theme.PURPLE: ThemeColors(
-        name="purple", name_ar="بنفسجي", emoji="💜",
-        background="#1E1B4B",
-        surface="#312E81",
-        card="#3730A3",
-        text_primary="#F5F3FF",
-        text_secondary="#C4B5FD",
-        accent="#A855F7",
-        button_primary="#9333EA",
-        button_secondary="#6B21A8",
-        border="#4C1D95"
-    ),
-    
-    # 💙 أزرق - Ocean Blue
-    Theme.BLUE: ThemeColors(
-        name="blue", name_ar="أزرق", emoji="💙",
-        background="#0C1929",
-        surface="#1E3A5F",
-        card="#0F2744",
-        text_primary="#E0F2FE",
-        text_secondary="#7DD3FC",
-        accent="#00D9FF",
-        button_primary="#0EA5E9",
-        button_secondary="#0369A1",
-        border="#0369A1"
-    )
-}
+    return CacheManager(ttl)
 
 
-class Config:
-    """إعدادات البوت"""
+# =============================================
+# 🌐 Singleton Instance
+# =============================================
+# يتم إنشاء instance واحد فقط في التطبيق
+_cache_instance = None
+
+def get_cache():
+    """الحصول على instance الكاش"""
+    global _cache_instance
+    if _cache_instance is None:
+        redis_enabled = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'
+        redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        ttl = int(os.getenv('CACHE_TTL', '3600'))
+        
+        _cache_instance = create_cache(redis_enabled, redis_url, ttl)
     
-    # LINE Bot
-    LINE_CHANNEL_ACCESS_TOKEN: str = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
-    LINE_CHANNEL_SECRET: str = os.getenv('LINE_CHANNEL_SECRET', '')
+    return _cache_instance
+
+
+# =============================================
+# 📝 مثال على الاستخدام
+# =============================================
+if __name__ == "__main__":
+    # إنشاء كاش
+    cache = CacheManager(ttl=10)  # 10 ثواني للاختبار
     
-    # Gemini AI
-    GEMINI_API_KEYS: List[str] = [
-        k for k in [
-            os.getenv('GEMINI_API_KEY_1', ''),
-            os.getenv('GEMINI_API_KEY_2', ''),
-            os.getenv('GEMINI_API_KEY_3', '')
-        ] if k
-    ]
+    # حفظ
+    cache.set("user:123", {"name": "أحمد", "points": 100})
     
-    # Redis
-    REDIS_URL: str = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-    REDIS_ENABLED: bool = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'
+    # استرجاع
+    user = cache.get("user:123")
+    print(f"User: {user}")
     
-    # Database
-    DB_PATH: str = os.getenv('DB_PATH', 'data')
-    DB_NAME: str = os.getenv('DB_NAME', 'game_scores.db')
+    # إحصائيات
+    print(f"Stats: {cache.get_stats()}")
     
-    # Bot
-    BOT_NAME: str = 'Bot Mesh'
-    BOT_VERSION: str = '2.0.0'
-    DEBUG: bool = os.getenv('DEBUG', 'false').lower() == 'true'
+    # انتظار انتهاء الصلاحية
+    import time
+    time.sleep(11)
     
-    # Game
-    POINTS_PER_WIN: int = 10
-    DEFAULT_QUESTIONS: int = 10
-    
-    # Theme
-    DEFAULT_THEME: Theme = Theme.WHITE
-    
-    # خريطة الألعاب
-    GAME_MAP = {
-        'ذكاء': {'class': 'IqGame', 'emoji': '🧠', 'name': 'اختبار الذكاء', 'color': '#667EEA'},
-        'لون': {'class': 'WordColorGame', 'emoji': '🎨', 'name': 'لعبة الألوان', 'color': '#9F7AEA'},
-        'سلسلة': {'class': 'ChainWordsGame', 'emoji': '⛓️', 'name': 'سلسلة الكلمات', 'color': '#4FD1C5'},
-        'ترتيب': {'class': 'ScrambleWordGame', 'emoji': '🔤', 'name': 'ترتيب الحروف', 'color': '#68D391'},
-        'تكوين': {'class': 'LettersWordsGame', 'emoji': '✏️', 'name': 'تكوين الكلمات', 'color': '#FC8181'},
-        'أسرع': {'class': 'FastTypingGame', 'emoji': '⚡', 'name': 'الكتابة السريعة', 'color': '#F687B3'},
-        'لعبة': {'class': 'HumanAnimalPlantGame', 'emoji': '🎯', 'name': 'إنسان حيوان نبات', 'color': '#63B3ED'},
-        'خمن': {'class': 'GuessGame', 'emoji': '🤔', 'name': 'خمن الكلمة', 'color': '#B794F4'},
-        'توافق': {'class': 'CompatibilityGame', 'emoji': '💖', 'name': 'نسبة التوافق', 'color': '#FEB2B2'},
-        'رياضيات': {'class': 'MathGame', 'emoji': '🔢', 'name': 'الرياضيات', 'color': '#667EEA'},
-        'ذاكرة': {'class': 'MemoryGame', 'emoji': '🧩', 'name': 'اختبار الذاكرة', 'color': '#90CDF4'},
-        'لغز': {'class': 'RiddleGame', 'emoji': '🎭', 'name': 'حل الألغاز', 'color': '#FBD38D'},
-        'ضد': {'class': 'OppositeGame', 'emoji': '↔️', 'name': 'الأضداد', 'color': '#9AE6B4'},
-        'إيموجي': {'class': 'EmojiGame', 'emoji': '😀', 'name': 'خمن الإيموجي', 'color': '#FEEBC8'},
-        'أغنية': {'class': 'SongGame', 'emoji': '🎵', 'name': 'خمن الأغنية', 'color': '#E9D8FD'}
-    }
-    
-    @classmethod
-    def get_theme(cls, theme_name: str = None) -> ThemeColors:
-        """الحصول على ثيم"""
-        if theme_name:
-            for theme_enum, theme_data in THEMES.items():
-                if theme_data.name == theme_name or theme_data.name_ar == theme_name:
-                    return theme_data
-        return THEMES[cls.DEFAULT_THEME]
-    
-    @classmethod
-    def get_db_path(cls) -> str:
-        """مسار قاعدة البيانات"""
-        return os.path.join(cls.DB_PATH, cls.DB_NAME)
-    
-    @classmethod
-    def validate(cls) -> bool:
-        """التحقق من الإعدادات"""
-        errors = []
-        if not cls.LINE_CHANNEL_ACCESS_TOKEN:
-            errors.append("LINE_CHANNEL_ACCESS_TOKEN missing")
-        if not cls.LINE_CHANNEL_SECRET:
-            errors.append("LINE_CHANNEL_SECRET missing")
-        if errors:
-            raise ValueError(f"Config errors: {', '.join(errors)}")
-        return True
+    # محاولة الاسترجاع بعد انتهاء الصلاحية
+    user = cache.get("user:123")  # None
+    print(f"After expiry: {user}")
