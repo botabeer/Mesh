@@ -1,19 +1,10 @@
 """
-games/__init__.py - تصدير الألعاب
+Bot Mesh - Games Package
+Created by: Abeer Aldosari © 2025
+
+هذا الملف يجعل مجلد games حزمة Python
 """
 
-from .base_game import BaseGame
-from .letters_game import LettersGame
-from .fast_game import FastGame
-from .scramble_game import ScrambleGame
-from .chain_game import ChainGame
-from .iq_game import IQGame
-
-__all__ = [
-    'BaseGame',
-    'LettersGame',
-    'FastGame',
-    'ScrambleGame',
-    'ChainGame',
-    'IQGame'
-]
+__version__ = '1.0.0'
+__author__ = 'Abeer Aldosari'
+__all__ = []  # سيتم ملؤها تلقائياً
