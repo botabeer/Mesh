@@ -1,222 +1,195 @@
 """
-Bot Mesh - Redis Cache Manager
+Bot Mesh - Configuration File (Updated with 5 Themes)
 Created by: Abeer Aldosari © 2025
 """
-import json
-import logging
-from typing import Any, Optional, Dict
-from datetime import timedelta
-from functools import wraps
-import asyncio
-
-logger = logging.getLogger(__name__)
-
-try:
-    import redis.asyncio as aioredis
-    import redis
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
-    logger.warning("Redis not installed. Using in-memory cache.")
+import os
+from enum import Enum
+from dataclasses import dataclass
+from typing import List, Dict
 
 
-class InMemoryCache:
-    """كاش في الذاكرة كبديل لـ Redis"""
+class Theme(Enum):
+    """الثيمات المتاحة"""
+    WHITE = "white"    # أبيض
+    BLACK = "black"    # أسود
+    GRAY = "gray"      # رمادي
+    PURPLE = "purple"  # بنفسجي
+    BLUE = "blue"      # أزرق
+
+
+@dataclass
+class ThemeColors:
+    """ألوان الثيم"""
+    name: str
+    name_ar: str
+    emoji: str
+    background: str
+    surface: str
+    card: str
+    text_primary: str
+    text_secondary: str
+    accent: str
+    button_primary: str
+    button_secondary: str
+    border: str
+    success: str = "#48BB78"
+    error: str = "#FC8181"
+    warning: str = "#F6AD55"
+
+
+# =============================================
+# 🎨 الثيمات الخمسة
+# =============================================
+THEMES: Dict[Theme, ThemeColors] = {
+    # ⚪ أبيض - Neumorphism Light
+    Theme.WHITE: ThemeColors(
+        name="white", name_ar="أبيض", emoji="⚪",
+        background="#E0E5EC",
+        surface="#E0E5EC", 
+        card="#D1D9E6",
+        text_primary="#2C3E50",
+        text_secondary="#7F8C8D",
+        accent="#667EEA",
+        button_primary="#667EEA",
+        button_secondary="#A0AEC0",
+        border="#C8D0E7"
+    ),
     
-    def __init__(self):
-        self._cache: Dict[str, Any] = {}
-        self._expiry: Dict[str, float] = {}
+    # ⚫ أسود - Dark Neon
+    Theme.BLACK: ThemeColors(
+        name="black", name_ar="أسود", emoji="⚫",
+        background="#0F0F1A",
+        surface="#1A1A2E",
+        card="#16213E",
+        text_primary="#FFFFFF",
+        text_secondary="#A0AEC0",
+        accent="#00D9FF",
+        button_primary="#00D9FF",
+        button_secondary="#4A5568",
+        border="#2D3748"
+    ),
     
-    async def get(self, key: str) -> Optional[str]:
-        import time
-        if key in self._expiry and time.time() > self._expiry[key]:
-            del self._cache[key]
-            del self._expiry[key]
-            return None
-        return self._cache.get(key)
+    # 🔘 رمادي - Slate Gray
+    Theme.GRAY: ThemeColors(
+        name="gray", name_ar="رمادي", emoji="🔘",
+        background="#1A202C",
+        surface="#2D3748",
+        card="#4A5568",
+        text_primary="#F7FAFC",
+        text_secondary="#CBD5E0",
+        accent="#68D391",
+        button_primary="#48BB78",
+        button_secondary="#718096",
+        border="#4A5568"
+    ),
     
-    async def set(self, key: str, value: str, ex: int = None) -> bool:
-        import time
-        self._cache[key] = value
-        if ex:
-            self._expiry[key] = time.time() + ex
+    # 💜 بنفسجي - Purple Night
+    Theme.PURPLE: ThemeColors(
+        name="purple", name_ar="بنفسجي", emoji="💜",
+        background="#1E1B4B",
+        surface="#312E81",
+        card="#3730A3",
+        text_primary="#F5F3FF",
+        text_secondary="#C4B5FD",
+        accent="#A855F7",
+        button_primary="#9333EA",
+        button_secondary="#6B21A8",
+        border="#4C1D95"
+    ),
+    
+    # 💙 أزرق - Ocean Blue
+    Theme.BLUE: ThemeColors(
+        name="blue", name_ar="أزرق", emoji="💙",
+        background="#0C1929",
+        surface="#1E3A5F",
+        card="#0F2744",
+        text_primary="#E0F2FE",
+        text_secondary="#7DD3FC",
+        accent="#00D9FF",
+        button_primary="#0EA5E9",
+        button_secondary="#0369A1",
+        border="#0369A1"
+    )
+}
+
+
+class Config:
+    """إعدادات البوت"""
+    
+    # LINE Bot
+    LINE_CHANNEL_ACCESS_TOKEN: str = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
+    LINE_CHANNEL_SECRET: str = os.getenv('LINE_CHANNEL_SECRET', '')
+    
+    # Gemini AI
+    GEMINI_API_KEYS: List[str] = [
+        k for k in [
+            os.getenv('GEMINI_API_KEY_1', ''),
+            os.getenv('GEMINI_API_KEY_2', ''),
+            os.getenv('GEMINI_API_KEY_3', '')
+        ] if k
+    ]
+    
+    # Redis
+    REDIS_URL: str = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    REDIS_ENABLED: bool = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'
+    
+    # Database
+    DB_PATH: str = os.getenv('DB_PATH', 'data')
+    DB_NAME: str = os.getenv('DB_NAME', 'game_scores.db')
+    
+    # Bot
+    BOT_NAME: str = 'Bot Mesh'
+    BOT_VERSION: str = '2.0.0'
+    DEBUG: bool = os.getenv('DEBUG', 'false').lower() == 'true'
+    
+    # Game
+    POINTS_PER_WIN: int = 10
+    DEFAULT_QUESTIONS: int = 10
+    
+    # Theme
+    DEFAULT_THEME: Theme = Theme.WHITE
+    
+    # خريطة الألعاب
+    GAME_MAP = {
+        'ذكاء': {'class': 'IqGame', 'emoji': '🧠', 'name': 'اختبار الذكاء', 'color': '#667EEA'},
+        'لون': {'class': 'WordColorGame', 'emoji': '🎨', 'name': 'لعبة الألوان', 'color': '#9F7AEA'},
+        'سلسلة': {'class': 'ChainWordsGame', 'emoji': '⛓️', 'name': 'سلسلة الكلمات', 'color': '#4FD1C5'},
+        'ترتيب': {'class': 'ScrambleWordGame', 'emoji': '🔤', 'name': 'ترتيب الحروف', 'color': '#68D391'},
+        'تكوين': {'class': 'LettersWordsGame', 'emoji': '✏️', 'name': 'تكوين الكلمات', 'color': '#FC8181'},
+        'أسرع': {'class': 'FastTypingGame', 'emoji': '⚡', 'name': 'الكتابة السريعة', 'color': '#F687B3'},
+        'لعبة': {'class': 'HumanAnimalPlantGame', 'emoji': '🎯', 'name': 'إنسان حيوان نبات', 'color': '#63B3ED'},
+        'خمن': {'class': 'GuessGame', 'emoji': '🤔', 'name': 'خمن الكلمة', 'color': '#B794F4'},
+        'توافق': {'class': 'CompatibilityGame', 'emoji': '💖', 'name': 'نسبة التوافق', 'color': '#FEB2B2'},
+        'رياضيات': {'class': 'MathGame', 'emoji': '🔢', 'name': 'الرياضيات', 'color': '#667EEA'},
+        'ذاكرة': {'class': 'MemoryGame', 'emoji': '🧩', 'name': 'اختبار الذاكرة', 'color': '#90CDF4'},
+        'لغز': {'class': 'RiddleGame', 'emoji': '🎭', 'name': 'حل الألغاز', 'color': '#FBD38D'},
+        'ضد': {'class': 'OppositeGame', 'emoji': '↔️', 'name': 'الأضداد', 'color': '#9AE6B4'},
+        'إيموجي': {'class': 'EmojiGame', 'emoji': '😀', 'name': 'خمن الإيموجي', 'color': '#FEEBC8'},
+        'أغنية': {'class': 'SongGame', 'emoji': '🎵', 'name': 'خمن الأغنية', 'color': '#E9D8FD'}
+    }
+    
+    @classmethod
+    def get_theme(cls, theme_name: str = None) -> ThemeColors:
+        """الحصول على ثيم"""
+        if theme_name:
+            for theme_enum, theme_data in THEMES.items():
+                if theme_data.name == theme_name or theme_data.name_ar == theme_name:
+                    return theme_data
+        return THEMES[cls.DEFAULT_THEME]
+    
+    @classmethod
+    def get_db_path(cls) -> str:
+        """مسار قاعدة البيانات"""
+        return os.path.join(cls.DB_PATH, cls.DB_NAME)
+    
+    @classmethod
+    def validate(cls) -> bool:
+        """التحقق من الإعدادات"""
+        errors = []
+        if not cls.LINE_CHANNEL_ACCESS_TOKEN:
+            errors.append("LINE_CHANNEL_ACCESS_TOKEN missing")
+        if not cls.LINE_CHANNEL_SECRET:
+            errors.append("LINE_CHANNEL_SECRET missing")
+        if errors:
+            raise ValueError(f"Config errors: {', '.join(errors)}")
         return True
-    
-    async def delete(self, key: str) -> bool:
-        self._cache.pop(key, None)
-        self._expiry.pop(key, None)
-        return True
-    
-    async def exists(self, key: str) -> bool:
-        return key in self._cache
-    
-    async def incr(self, key: str) -> int:
-        val = int(self._cache.get(key, 0)) + 1
-        self._cache[key] = str(val)
-        return val
-    
-    async def expire(self, key: str, seconds: int) -> bool:
-        import time
-        if key in self._cache:
-            self._expiry[key] = time.time() + seconds
-            return True
-        return False
-    
-    async def keys(self, pattern: str = "*") -> list:
-        import fnmatch
-        return [k for k in self._cache.keys() if fnmatch.fnmatch(k, pattern)]
-    
-    async def flushdb(self) -> bool:
-        self._cache.clear()
-        self._expiry.clear()
-        return True
-
-
-class CacheManager:
-    """مدير الكاش الموحد"""
-    
-    def __init__(self, redis_url: str = None, enabled: bool = True, ttl: int = 3600):
-        self.ttl = ttl
-        self.enabled = enabled
-        self._client = None
-        self._redis_url = redis_url
-        self._connected = False
-    
-    async def connect(self) -> bool:
-        """الاتصال بـ Redis"""
-        if not self.enabled:
-            self._client = InMemoryCache()
-            self._connected = True
-            return True
-        
-        if REDIS_AVAILABLE and self._redis_url:
-            try:
-                self._client = aioredis.from_url(
-                    self._redis_url,
-                    encoding="utf-8",
-                    decode_responses=True
-                )
-                await self._client.ping()
-                self._connected = True
-                logger.info("✅ Connected to Redis")
-                return True
-            except Exception as e:
-                logger.warning(f"⚠️ Redis connection failed: {e}")
-        
-        # Fallback to in-memory cache
-        self._client = InMemoryCache()
-        self._connected = True
-        logger.info("📦 Using in-memory cache")
-        return True
-    
-    async def disconnect(self):
-        """قطع الاتصال"""
-        if self._client and REDIS_AVAILABLE and not isinstance(self._client, InMemoryCache):
-            await self._client.close()
-        self._connected = False
-    
-    async def get(self, key: str) -> Optional[Any]:
-        """جلب قيمة"""
-        if not self._connected:
-            await self.connect()
-        
-        try:
-            value = await self._client.get(key)
-            if value:
-                try:
-                    return json.loads(value)
-                except json.JSONDecodeError:
-                    return value
-        except Exception as e:
-            logger.error(f"Cache get error: {e}")
-        return None
-    
-    async def set(self, key: str, value: Any, ttl: int = None) -> bool:
-        """تخزين قيمة"""
-        if not self._connected:
-            await self.connect()
-        
-        try:
-            if isinstance(value, (dict, list)):
-                value = json.dumps(value, ensure_ascii=False)
-            return await self._client.set(key, value, ex=ttl or self.ttl)
-        except Exception as e:
-            logger.error(f"Cache set error: {e}")
-            return False
-    
-    async def delete(self, key: str) -> bool:
-        """حذف قيمة"""
-        if not self._connected:
-            return False
-        
-        try:
-            return await self._client.delete(key)
-        except Exception as e:
-            logger.error(f"Cache delete error: {e}")
-            return False
-    
-    async def get_user_theme(self, user_id: str) -> str:
-        """جلب ثيم المستخدم"""
-        return await self.get(f"theme:{user_id}") or "light"
-    
-    async def set_user_theme(self, user_id: str, theme: str) -> bool:
-        """تخزين ثيم المستخدم"""
-        return await self.set(f"theme:{user_id}", theme, ttl=86400 * 30)
-    
-    async def get_leaderboard(self) -> Optional[list]:
-        """جلب لوحة الصدارة من الكاش"""
-        return await self.get("leaderboard:top10")
-    
-    async def set_leaderboard(self, data: list) -> bool:
-        """تخزين لوحة الصدارة"""
-        return await self.set("leaderboard:top10", data, ttl=300)
-    
-    async def increment_counter(self, key: str) -> int:
-        """زيادة عداد"""
-        if not self._connected:
-            await self.connect()
-        
-        try:
-            return await self._client.incr(key)
-        except Exception as e:
-            logger.error(f"Cache incr error: {e}")
-            return 0
-    
-    async def rate_limit_check(self, user_id: str, limit: int = 100, window: int = 60) -> bool:
-        """فحص Rate Limiting"""
-        key = f"rate:{user_id}"
-        count = await self.increment_counter(key)
-        
-        if count == 1:
-            await self._client.expire(key, window)
-        
-        return count <= limit
-
-
-def cached(ttl: int = 3600, key_prefix: str = ""):
-    """Decorator للكاش"""
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            cache = kwargs.get('cache')
-            if not cache:
-                return await func(*args, **kwargs)
-            
-            cache_key = f"{key_prefix}:{func.__name__}:{hash(str(args) + str(kwargs))}"
-            
-            # Try to get from cache
-            result = await cache.get(cache_key)
-            if result is not None:
-                return result
-            
-            # Execute function and cache result
-            result = await func(*args, **kwargs)
-            await cache.set(cache_key, result, ttl=ttl)
-            
-            return result
-        return wrapper
-    return decorator
-
-
-# Singleton instance
-cache_manager = CacheManager()
