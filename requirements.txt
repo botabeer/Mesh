@@ -1,4 +1,4 @@
-# Bot Mesh - Requirements (Merged)
+# Bot Mesh - Requirements for Render (Python 3.11)
 # Created by: Abeer Aldosari © 2025
 
 # Flask Framework
@@ -13,6 +13,7 @@ python-dotenv
 
 # HTTP Client (for API calls)
 requests
+python-multipart
 
 # Gemini AI (Optional)
 google-generativeai
@@ -30,6 +31,13 @@ pillow
 # Data & Visualization
 pandas
 matplotlib
+numpy
+scipy
 
 # Utilities
 python-dateutil
+python-slugify
+json5
+beautifulsoup4
+lxml
+markdown
