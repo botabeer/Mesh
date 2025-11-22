@@ -1,9 +1,17 @@
-"""Bot Mesh - Flex Builder Fixed | Abeer Aldosari © 2025"""
+"""
+Bot Mesh - Enhanced Flex Messages System
+Created by: Abeer Aldosari © 2025
+
+نظام نوافذ Flex احترافي مع دعم 7 ثيمات جميلة
+مع دعم المنشن التلقائي ونوافذ مساعدة ذكية
+"""
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 
+
 class Theme(Enum):
+    """الثيمات المتاحة - 7 ثيمات احترافية"""
     WHITE = "white"
     BLACK = "black"
     GRAY = "gray"
@@ -12,8 +20,10 @@ class Theme(Enum):
     PINK = "pink"
     MINT = "mint"
 
+
 @dataclass
 class ThemeColors:
+    """ألوان الثيم"""
     name: str
     name_ar: str
     emoji: str
@@ -24,100 +34,292 @@ class ThemeColors:
     text_secondary: str
     accent: str
     accent_dark: str
+    button_bg: str
     shadow_light: str
     shadow_dark: str
+    success: str = "#48BB78"
+    error: str = "#FC8181"
+    warning: str = "#F6AD55"
 
+
+# =============================================
+# 🎨 الثيمات السبعة
+# =============================================
 THEMES: Dict[Theme, ThemeColors] = {
     Theme.WHITE: ThemeColors(
         name="white", name_ar="⚪ أبيض", emoji="⚪",
-        background="#E0E5EC", surface="#E0E5EC", card="#D1D9E6",
-        text_primary="#2C3E50", text_secondary="#7F8C8D",
-        accent="#667EEA", accent_dark="#5A67D8",
-        shadow_light="#FFFFFF", shadow_dark="#A3B1C6"
+        background="#E8EBF5", surface="#E8EBF5", card="#FFFFFF",
+        text_primary="#2C3E50", text_secondary="#95A5A6",
+        accent="#667EEA", accent_dark="#5A67D8", button_bg="#667EEA",
+        shadow_light="#FFFFFF", shadow_dark="#B8C1E0"
     ),
+    
     Theme.BLACK: ThemeColors(
         name="black", name_ar="⚫ أسود", emoji="⚫",
-        background="#1A1A2E", surface="#16213E", card="#0F3460",
+        background="#0F0F1A", surface="#1A1A2E", card="#252538",
         text_primary="#FFFFFF", text_secondary="#A0AEC0",
-        accent="#00D9FF", accent_dark="#00B8D4",
-        shadow_light="#2A2A4A", shadow_dark="#0D0D1A"
+        accent="#00D9FF", accent_dark="#00B8D4", button_bg="#00D9FF",
+        shadow_light="#2A2A4A", shadow_dark="#000000"
     ),
+    
     Theme.GRAY: ThemeColors(
         name="gray", name_ar="🔘 رمادي", emoji="🔘",
-        background="#2D3748", surface="#4A5568", card="#1A202C",
+        background="#1A202C", surface="#2D3748", card="#4A5568",
         text_primary="#F7FAFC", text_secondary="#CBD5E0",
-        accent="#68D391", accent_dark="#48BB78",
-        shadow_light="#4A5568", shadow_dark="#1A202C"
+        accent="#68D391", accent_dark="#48BB78", button_bg="#48BB78",
+        shadow_light="#4A5568", shadow_dark="#0D0D0D"
     ),
+    
     Theme.BLUE: ThemeColors(
         name="blue", name_ar="💙 أزرق", emoji="💙",
-        background="#0C1929", surface="#1E3A5F", card="#0F2744",
+        background="#0A1628", surface="#1E3A5F", card="#0F2744",
         text_primary="#E0F2FE", text_secondary="#7DD3FC",
-        accent="#0EA5E9", accent_dark="#0284C7",
-        shadow_light="#1E4976", shadow_dark="#061224"
+        accent="#0EA5E9", accent_dark="#0284C7", button_bg="#0EA5E9",
+        shadow_light="#1E4976", shadow_dark="#000000"
     ),
+    
     Theme.PURPLE: ThemeColors(
         name="purple", name_ar="💜 بنفسجي", emoji="💜",
-        background="#1E1B4B", surface="#312E81", card="#3730A3",
+        background="#1A0F3E", surface="#312E81", card="#3730A3",
         text_primary="#F5F3FF", text_secondary="#C4B5FD",
-        accent="#A855F7", accent_dark="#9333EA",
-        shadow_light="#4338CA", shadow_dark="#0F0A2E"
+        accent="#A855F7", accent_dark="#9333EA", button_bg="#9333EA",
+        shadow_light="#4338CA", shadow_dark="#000000"
     ),
+    
     Theme.PINK: ThemeColors(
         name="pink", name_ar="🌸 وردي", emoji="🌸",
-        background="#FFF1F2", surface="#FFE4E6", card="#FECDD3",
+        background="#FFF1F2", surface="#FFE4E6", card="#FFFFFF",
         text_primary="#881337", text_secondary="#BE123C",
-        accent="#F43F5E", accent_dark="#E11D48",
-        shadow_light="#FFFFFF", shadow_dark="#FBBBC9"
+        accent="#F43F5E", accent_dark="#E11D48", button_bg="#F43F5E",
+        shadow_light="#FFFFFF", shadow_dark="#FFC9D0"
     ),
+    
     Theme.MINT: ThemeColors(
         name="mint", name_ar="🍃 نعناعي", emoji="🍃",
-        background="#ECFDF5", surface="#D1FAE5", card="#A7F3D0",
+        background="#ECFDF5", surface="#D1FAE5", card="#FFFFFF",
         text_primary="#065F46", text_secondary="#059669",
-        accent="#10B981", accent_dark="#059669",
-        shadow_light="#FFFFFF", shadow_dark="#6EE7B7"
+        accent="#10B981", accent_dark="#059669", button_bg="#10B981",
+        shadow_light="#FFFFFF", shadow_dark="#9EF3CA"
     )
 }
 
-class FlexBuilder:
+
+class FlexMessageBuilder:
+    """منشئ رسائل Flex احترافي"""
+    
     def __init__(self, theme: Theme = Theme.WHITE):
         self.theme = THEMES.get(theme, THEMES[Theme.WHITE])
     
     def set_theme(self, theme_name: str):
-        theme_map = {
-            'white': Theme.WHITE, 'أبيض': Theme.WHITE,
-            'black': Theme.BLACK, 'أسود': Theme.BLACK,
-            'gray': Theme.GRAY, 'رمادي': Theme.GRAY,
-            'blue': Theme.BLUE, 'أزرق': Theme.BLUE,
-            'purple': Theme.PURPLE, 'بنفسجي': Theme.PURPLE,
-            'pink': Theme.PINK, 'وردي': Theme.PINK,
-            'mint': Theme.MINT, 'نعناعي': Theme.MINT
-        }
+        """تغيير الثيم"""
+        theme_map = {t.value: t for t in Theme}
         theme = theme_map.get(theme_name.lower(), Theme.WHITE)
         self.theme = THEMES[theme]
     
-    def _btn(self, text: str, action: str, color: str = None, style: str = "primary") -> Dict:
-        return {
-            "type": "button",
-            "action": {"type": "message", "label": text, "text": action},
-            "style": style,
-            "color": color or self.theme.accent,
-            "height": "sm"
-        }
+    # =============================================
+    # 🎨 مكونات أساسية
+    # =============================================
     
-    def _text(self, text: str, size: str = "md", weight: str = "regular", 
-              color: str = None, wrap: bool = True) -> Dict:
+    def _text(self, text: str, size: str = "md", weight: str = "regular",
+              color: str = None, align: str = "center", wrap: bool = True,
+              margin: str = "none") -> Dict:
+        """إنشاء نص"""
         return {
             "type": "text",
             "text": text,
             "size": size,
             "weight": weight,
             "color": color or self.theme.text_primary,
-            "wrap": wrap
+            "align": align,
+            "wrap": wrap,
+            "margin": margin
         }
-
-    def create_help_menu(self) -> Dict:
-        """نافذة المساعدة - مُصلحة"""
+    
+    def _box(self, contents: List, layout: str = "vertical",
+             bg: str = None, padding: str = "lg", margin: str = "none",
+             corner: str = "20px", spacing: str = "md",
+             border_width: str = None, border_color: str = None,
+             action: Dict = None) -> Dict:
+        """إنشاء صندوق"""
+        box = {
+            "type": "box",
+            "layout": layout,
+            "contents": contents,
+            "backgroundColor": bg or "transparent",
+            "paddingAll": padding,
+            "margin": margin,
+            "cornerRadius": corner,
+            "spacing": spacing
+        }
+        if border_width:
+            box["borderWidth"] = border_width
+            box["borderColor"] = border_color or self.theme.accent
+        if action:
+            box["action"] = action
+        return box
+    
+    def _button(self, label: str, text: str, style: str = "primary",
+                color: str = None, height: str = "sm") -> Dict:
+        """إنشاء زر"""
+        return {
+            "type": "button",
+            "action": {"type": "message", "label": label, "text": text},
+            "style": style,
+            "color": color or self.theme.button_bg,
+            "height": height,
+            "margin": "sm"
+        }
+    
+    def _separator(self, margin: str = "lg", color: str = None) -> Dict:
+        """فاصل"""
+        return {
+            "type": "separator",
+            "margin": margin,
+            "color": color or self.theme.text_secondary + "30"
+        }
+    
+    # =============================================
+    # 🏠 نافذة الترحيب والمساعدة الرئيسية
+    # =============================================
+    
+    def create_welcome_screen(self) -> Dict:
+        """نافذة الترحيب الأولى عند ذكر البوت أو كتابة 'مساعدة'"""
+        return {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    # الشعار والعنوان
+                    self._box([
+                        self._text("🎮", "xxl", margin="md"),
+                        self._text("Bot Mesh", "xxl", "bold", margin="sm"),
+                        self._text("بوت الألعاب الترفيهية", "sm",
+                                  color=self.theme.text_secondary, margin="xs")
+                    ], bg=self.theme.card, corner="25px", padding="xl"),
+                    
+                    # قسم البداية
+                    self._box([
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                self._box([self._text("✨", "xxl")],
+                                         bg=self.theme.accent, corner="15px",
+                                         padding="md"),
+                                {
+                                    "type": "box",
+                                    "layout": "vertical",
+                                    "contents": [
+                                        self._text("ابدأ الآن!", "lg", "bold",
+                                                  align="right"),
+                                        self._text("سجل واستمتع بـ 11 لعبة ممتعة",
+                                                  "xs", color=self.theme.text_secondary,
+                                                  align="right")
+                                    ],
+                                    "flex": 1,
+                                    "margin": "md",
+                                    "justifyContent": "center"
+                                }
+                            ],
+                            "spacing": "md"
+                        }
+                    ], bg=self.theme.surface, corner="20px", margin="lg", padding="lg"),
+                    
+                    # خطوات البداية
+                    self._box([
+                        self._text("📋 كيف تبدأ؟", "md", "bold",
+                                  align="right", margin="md"),
+                        
+                        self._box([
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    self._text("1️⃣", "lg"),
+                                    self._text("اضغط على زر 'انضم' للتسجيل",
+                                              "sm", align="right")
+                                ],
+                                "justifyContent": "space-between"
+                            }
+                        ], margin="sm"),
+                        
+                        self._box([
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    self._text("2️⃣", "lg"),
+                                    self._text("اختر لعبة من الأزرار الثابتة أسفل الشاشة",
+                                              "sm", align="right")
+                                ],
+                                "justifyContent": "space-between"
+                            }
+                        ], margin="sm"),
+                        
+                        self._box([
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    self._text("3️⃣", "lg"),
+                                    self._text("العب واجمع النقاط وكن في الصدارة!",
+                                              "sm", align="right")
+                                ],
+                                "justifyContent": "space-between"
+                            }
+                        ], margin="sm")
+                    ], bg=self.theme.card, corner="20px", margin="lg", padding="lg"),
+                    
+                    # المميزات
+                    self._box([
+                        self._text("⚡ المميزات", "md", "bold", align="right"),
+                        self._text("• 11 لعبة متنوعة", "sm",
+                                  color=self.theme.text_secondary, align="right",
+                                  margin="sm"),
+                        self._text("• 7 ثيمات جميلة", "sm",
+                                  color=self.theme.text_secondary, align="right",
+                                  margin="xs"),
+                        self._text("• نظام نقاط وترتيب", "sm",
+                                  color=self.theme.text_secondary, align="right",
+                                  margin="xs"),
+                        self._text("• لوحة صدارة عالمية", "sm",
+                                  color=self.theme.text_secondary, align="right",
+                                  margin="xs")
+                    ], bg=self.theme.surface, corner="20px", margin="lg", padding="lg"),
+                    
+                    # نصيحة
+                    self._box([
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                self._text("💡", "md"),
+                                self._text("استخدم الأزرار الثابتة أسفل الشاشة للوصول السريع!",
+                                          "xs", color=self.theme.text_secondary,
+                                          align="right")
+                            ],
+                            "justifyContent": "space-between"
+                        }
+                    ], bg=self.theme.card, corner="15px", margin="lg", padding="md"),
+                    
+                    # الحقوق
+                    self._text("Created by Abeer Aldosari © 2025", "xxs",
+                              color=self.theme.text_secondary, margin="lg")
+                ],
+                "backgroundColor": self.theme.background,
+                "paddingAll": "20px",
+                "spacing": "none"
+            }
+        }
+    
+    # =============================================
+    # 📋 دليل الاستخدام
+    # =============================================
+    
+    def create_help_guide(self) -> Dict:
+        """دليل الاستخدام الكامل"""
         return {
             "type": "bubble",
             "size": "mega",
@@ -125,8 +327,9 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "🎮 Bot Mesh", "size": "xl", "weight": "bold", "color": "#FFFFFF"},
-                    {"type": "text", "text": "بوت الألعاب الترفيهية", "size": "xs", "color": "#E0E0E0"}
+                    self._text("📖 دليل الاستخدام", "xl", "bold"),
+                    self._text("كل ما تحتاج معرفته", "xs",
+                              color=self.theme.text_primary + "CC")
                 ],
                 "backgroundColor": self.theme.accent,
                 "paddingAll": "20px"
@@ -135,147 +338,255 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    # العنوان
-                    {
-                        "type": "text",
-                        "text": "🚀 كيف تبدأ؟",
-                        "size": "lg",
-                        "weight": "bold",
-                        "color": self.theme.text_primary,
-                        "margin": "md"
-                    },
-                    {
-                        "type": "text",
-                        "text": "1. اضغط 'انضم' للتسجيل\n2. اختر لعبة من الأزرار الثابتة",
-                        "size": "sm",
-                        "color": self.theme.text_secondary,
-                        "wrap": True,
-                        "margin": "sm"
-                    },
+                    # الأوامر الأساسية
+                    self._text("🎯 الأوامر الأساسية", "lg", "bold",
+                              align="right", margin="md"),
                     
-                    # الأوامر السريعة
-                    {
-                        "type": "text",
-                        "text": "⚡ الأوامر السريعة",
-                        "size": "md",
-                        "weight": "bold",
-                        "color": self.theme.text_primary,
-                        "margin": "xl"
-                    },
+                    self._command_row("انضم", "التسجيل في البوت"),
+                    self._command_row("انسحب", "إلغاء التسجيل"),
+                    self._command_row("نقاطي", "عرض إحصائياتك"),
+                    self._command_row("الصدارة", "أفضل اللاعبين"),
+                    self._command_row("إيقاف", "إنهاء اللعبة الحالية"),
+                    
+                    self._separator(margin="xl"),
+                    
+                    # أثناء اللعب
+                    self._text("🎮 أثناء اللعب", "lg", "bold",
+                              align="right", margin="lg"),
+                    
+                    self._command_row("لمح", "الحصول على تلميح"),
+                    self._command_row("جاوب", "عرض الإجابة الصحيحة"),
+                    
+                    self._separator(margin="xl"),
+                    
+                    # الأزرار
                     {
                         "type": "box",
-                        "layout": "vertical",
+                        "layout": "horizontal",
                         "contents": [
-                            self._btn("📊 نقاطي", "نقاطي", self.theme.accent),
-                            self._btn("🏆 الصدارة", "الصدارة", self.theme.accent_dark),
-                            self._btn("🎨 الثيمات", "ثيم", self.theme.text_secondary),
+                            self._button("انضم", "انضم", color=self.theme.accent),
+                            self._button("نقاطي", "نقاطي", color=self.theme.accent_dark),
+                            self._button("الصدارة", "الصدارة",
+                                       color=self.theme.text_secondary)
                         ],
                         "spacing": "sm",
-                        "margin": "md"
-                    },
+                        "margin": "xl"
+                    }
+                ],
+                "backgroundColor": self.theme.background,
+                "paddingAll": "20px",
+                "spacing": "none"
+            }
+        }
+    
+    def _command_row(self, command: str, description: str) -> Dict:
+        """صف أمر في دليل الاستخدام"""
+        return self._box([
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    self._text(description, "sm",
+                              color=self.theme.text_secondary, align="right"),
+                    self._box([self._text(command, "sm", "bold")],
+                            bg=self.theme.accent + "20",
+                            corner="8px", padding="sm")
+                ],
+                "justifyContent": "space-between"
+            }
+        ], margin="sm")
+    
+    # =============================================
+    # 📊 بطاقة الإحصائيات
+    # =============================================
+    
+    def create_stats_card(self, user_data: Dict, rank: int = 0) -> Dict:
+        """بطاقة الإحصائيات مع حالة التسجيل"""
+        if not user_data:
+            return self._create_error("لم تلعب بعد! اكتب 'انضم' ثم ابدأ اللعب")
+        
+        points = user_data.get('total_points', 0)
+        games = user_data.get('games_played', 0)
+        wins = user_data.get('wins', 0)
+        win_rate = (wins / games * 100) if games > 0 else 0
+        is_registered = user_data.get('is_registered', False)
+        
+        # تحديد المستوى
+        level_data = self._get_level(points)
+        
+        return {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    # الرأس
+                    self._box([
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                self._text(level_data['emoji'], "xxl"),
+                                {
+                                    "type": "box",
+                                    "layout": "vertical",
+                                    "contents": [
+                                        self._text(level_data['name'], "xl", "bold",
+                                                  align="right"),
+                                        self._text(f"المركز #{rank}" if rank else "غير مصنف",
+                                                  "sm", color=self.theme.text_secondary,
+                                                  align="right")
+                                    ],
+                                    "flex": 1,
+                                    "justifyContent": "center"
+                                }
+                            ],
+                            "justifyContent": "space-between"
+                        },
+                        
+                        # حالة التسجيل
+                        self._box([
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    self._text("●", "xs",
+                                              color=self.theme.success if is_registered else self.theme.error),
+                                    self._text("مسجل" if is_registered else "غير مسجل",
+                                              "xs", color=self.theme.text_secondary)
+                                ],
+                                "spacing": "xs"
+                            }
+                        ], margin="sm")
+                    ], bg=level_data['color'], corner="25px", padding="xl"),
                     
-                    # المميزات
+                    # الإحصائيات
                     {
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": "✨ ماذا ستحصل؟", "size": "sm", "weight": "bold", "color": self.theme.text_primary},
-                            {"type": "text", "text": "• 13 لعبة متنوعة\n• 7 ثيمات جميلة\n• نظام نقاط وترتيب\n• لوحة صدارة عالمية", 
-                             "size": "xs", "color": self.theme.text_secondary, "wrap": True, "margin": "sm"}
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    self._stat_box("💰", str(points), "نقطة"),
+                                    self._stat_box("🎮", str(games), "لعبة")
+                                ],
+                                "spacing": "md"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    self._stat_box("🏆", str(wins), "فوز"),
+                                    self._stat_box("📈", f"{win_rate:.0f}%", "نسبة")
+                                ],
+                                "spacing": "md",
+                                "margin": "md"
+                            }
                         ],
-                        "backgroundColor": self.theme.card,
-                        "cornerRadius": "15px",
-                        "paddingAll": "15px",
+                        "margin": "xl"
+                    },
+                    
+                    # رسالة حالة التسجيل
+                    self._box([
+                        self._text(
+                            "✅ يمكنك اللعب الآن!" if is_registered else "⚠️ سجل أولاً لتلعب",
+                            "sm", "bold",
+                            color=self.theme.success if is_registered else self.theme.warning
+                        )
+                    ], bg=self.theme.card, corner="15px", margin="lg", padding="md"),
+                    
+                    # الأزرار
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            self._button("🎮 ابدأ لعبة", "ابدأ", color=self.theme.accent)
+                            if is_registered else
+                            self._button("🔑 انضم الآن", "انضم", color=self.theme.accent),
+                            
+                            self._button("🏆 الصدارة", "الصدارة",
+                                       color=self.theme.text_secondary)
+                        ],
+                        "spacing": "sm",
                         "margin": "lg"
                     }
                 ],
                 "backgroundColor": self.theme.background,
-                "paddingAll": "20px"
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "Created by Abeer Aldosari © 2025", "size": "xxs", "color": self.theme.text_secondary}
-                ],
-                "backgroundColor": self.theme.background,
-                "paddingAll": "10px"
+                "paddingAll": "20px",
+                "spacing": "none"
             }
         }
-
-    def create_games_menu(self) -> Dict:
-        """قائمة الألعاب"""
-        games = [
-            {'key': 'ذكاء', 'emoji': '🧠', 'name': 'اختبار الذكاء'},
-            {'key': 'لون', 'emoji': '🎨', 'name': 'لعبة الألوان'},
-            {'key': 'سلسلة', 'emoji': '⛓️', 'name': 'سلسلة الكلمات'},
-            {'key': 'ترتيب', 'emoji': '🔤', 'name': 'ترتيب الحروف'},
-            {'key': 'تكوين', 'emoji': '✏️', 'name': 'تكوين الكلمات'},
-            {'key': 'أسرع', 'emoji': '⚡', 'name': 'الكتابة السريعة'},
-            {'key': 'لعبة', 'emoji': '🎯', 'name': 'إنسان حيوان نبات'},
-            {'key': 'خمن', 'emoji': '🤔', 'name': 'خمن الكلمة'},
-            {'key': 'توافق', 'emoji': '💖', 'name': 'نسبة التوافق'},
-            {'key': 'ضد', 'emoji': '↔️', 'name': 'الأضداد'},
-            {'key': 'أغنية', 'emoji': '🎵', 'name': 'خمن الأغنية'},
-        ]
-        
-        game_buttons = []
-        for g in games:
-            game_buttons.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {"type": "text", "text": g['emoji'], "size": "xl", "flex": 0},
-                    {"type": "text", "text": g['name'], "size": "sm", "weight": "bold", "flex": 1, "margin": "md"},
-                    {"type": "text", "text": "▶", "size": "md", "color": self.theme.accent, "flex": 0}
-                ],
-                "action": {"type": "message", "text": g['key']},
-                "backgroundColor": self.theme.card,
-                "cornerRadius": "12px",
-                "paddingAll": "md",
-                "spacing": "sm",
-                "margin": "sm" if game_buttons else "none"
-            })
-        
+    
+    def _get_level(self, points: int) -> Dict:
+        """تحديد المستوى بناءً على النقاط"""
+        if points < 100:
+            return {'name': '🌱 مبتدئ', 'emoji': '🌱', 'color': '#68D391'}
+        elif points < 500:
+            return {'name': '⭐ متوسط', 'emoji': '⭐', 'color': '#F6AD55'}
+        elif points < 1000:
+            return {'name': '🔥 محترف', 'emoji': '🔥', 'color': '#FC8181'}
+        elif points < 5000:
+            return {'name': '👑 أسطوري', 'emoji': '👑', 'color': '#A855F7'}
+        else:
+            return {'name': '💎 خارق', 'emoji': '💎', 'color': '#00D9FF'}
+    
+    def _stat_box(self, emoji: str, value: str, label: str) -> Dict:
+        """صندوق إحصائية"""
         return {
-            "type": "bubble",
-            "size": "mega",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "🎮 اختر اللعبة", "size": "xl", "weight": "bold", "color": "#FFFFFF"},
-                    {"type": "text", "text": "11 لعبة ممتعة", "size": "xs", "color": "#E0E0E0"}
-                ],
-                "backgroundColor": self.theme.accent,
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": game_buttons,
-                "backgroundColor": self.theme.background,
-                "paddingAll": "15px"
-            }
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                self._text(emoji, "xxl"),
+                self._text(value, "xl", "bold", margin="xs"),
+                self._text(label, "xs", color=self.theme.text_secondary, margin="xs")
+            ],
+            "backgroundColor": self.theme.card,
+            "cornerRadius": "20px",
+            "paddingAll": "lg",
+            "flex": 1,
+            "spacing": "none"
         }
-
+    
+    # =============================================
+    # 🎨 اختيار الثيم
+    # =============================================
+    
     def create_theme_selector(self) -> Dict:
         """نافذة اختيار الثيمات"""
         theme_buttons = []
         for theme_enum, theme_data in THEMES.items():
             theme_buttons.append(
-                self._btn(theme_data.name_ar, f"ثيم:{theme_data.name}", theme_data.accent)
+                self._box([
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            self._box([self._text(theme_data.emoji, "xl")],
+                                    bg=theme_data.accent, corner="12px",
+                                    padding="sm"),
+                            self._text(theme_data.name_ar, "md", "bold",
+                                      align="right")
+                        ],
+                        "justifyContent": "space-between",
+                        "alignItems": "center"
+                    }
+                ], bg=self.theme.card, corner="15px", padding="md", margin="sm",
+                action={"type": "message", "text": f"ثيم:{theme_data.name}"})
             )
         
         return {
             "type": "bubble",
-            "size": "kilo",
+            "size": "mega",
             "header": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "🎨 اختر الثيم المفضل", "size": "xl", "weight": "bold", "color": "#FFFFFF"},
-                    {"type": "text", "text": "7 ثيمات مميزة", "size": "xs", "color": "#E0E0E0"}
+                    self._text("🎨 اختر الثيم المفضل", "xl", "bold"),
+                    self._text("7 ثيمات مميزة", "xs",
+                              color=self.theme.text_primary + "CC")
                 ],
                 "backgroundColor": self.theme.accent,
                 "paddingAll": "20px"
@@ -285,106 +596,52 @@ class FlexBuilder:
                 "layout": "vertical",
                 "contents": theme_buttons,
                 "backgroundColor": self.theme.background,
-                "paddingAll": "15px",
-                "spacing": "sm"
+                "paddingAll": "20px",
+                "spacing": "none"
             }
         }
-
-    def create_stats_card(self, user_data: Dict, rank: int = 0) -> Dict:
-        """بطاقة الإحصائيات"""
-        if not user_data:
-            return {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "⚠️", "size": "xxl", "color": self.theme.accent},
-                        {"type": "text", "text": "لم تلعب بعد!", "size": "lg", "weight": "bold", "margin": "md"},
-                        {"type": "text", "text": "اكتب 'انضم' ثم ابدأ اللعب", "size": "sm", "color": self.theme.text_secondary, "wrap": True, "margin": "sm"}
-                    ],
-                    "backgroundColor": self.theme.background,
-                    "paddingAll": "30px"
-                }
-            }
-        
-        points = user_data.get('total_points', 0)
-        games = user_data.get('games_played', 0)
-        wins = user_data.get('wins', 0)
-        win_rate = (wins / games * 100) if games > 0 else 0
-        is_registered = user_data.get('is_registered', False)
-        
-        return {
-            "type": "bubble",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": f"المركز #{rank}" if rank else "غير مصنف", "size": "lg", "weight": "bold", "color": "#FFFFFF"},
-                    {"type": "text", "text": "مسجل ✅" if is_registered else "غير مسجل ❌", "size": "sm", "color": "#E0E0E0"}
-                ],
-                "backgroundColor": self.theme.accent,
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": f"💰 {points} نقطة", "size": "md", "weight": "bold"},
-                    {"type": "text", "text": f"🎮 {games} لعبة", "size": "sm", "margin": "sm"},
-                    {"type": "text", "text": f"🏆 {wins} فوز", "size": "sm", "margin": "sm"},
-                    {"type": "text", "text": f"📈 {win_rate:.0f}% نسبة الفوز", "size": "sm", "margin": "sm"},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            self._btn("🎮 ابدأ لعبة" if is_registered else "🔑 انضم الآن", "ابدأ" if is_registered else "انضم", self.theme.accent),
-                            self._btn("🏆 الصدارة", "الصدارة", self.theme.text_secondary)
-                        ],
-                        "spacing": "sm",
-                        "margin": "lg"
-                    }
-                ],
-                "backgroundColor": self.theme.background,
-                "paddingAll": "20px"
-            }
-        }
-
+    
+    # =============================================
+    # 🏆 لوحة الصدارة
+    # =============================================
+    
     def create_leaderboard(self, leaders: List[Dict]) -> Dict:
-        """لوحة الصدارة"""
+        """لوحة الصدارة المحسّنة"""
         if not leaders:
-            return {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "⚠️ لا توجد بيانات", "size": "lg", "weight": "bold", "color": self.theme.text_primary}
-                    ],
-                    "backgroundColor": self.theme.background,
-                    "paddingAll": "30px"
-                }
-            }
+            return self._create_error("لا توجد بيانات")
         
         leader_items = []
         medals = ["🥇", "🥈", "🥉"]
+        medal_colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
         
         for i, leader in enumerate(leaders[:10]):
             medal = medals[i] if i < 3 else f"#{i+1}"
+            is_top = i < 3
             
-            leader_items.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {"type": "text", "text": medal, "size": "xl" if i < 3 else "md", "flex": 0},
-                    {"type": "text", "text": leader.get('display_name', 'لاعب'), "size": "md", "weight": "bold" if i < 3 else "regular", "flex": 1, "margin": "md"},
-                    {"type": "text", "text": f"{leader.get('total_points', 0)} ⭐", "size": "md", "weight": "bold", "color": self.theme.accent if i < 3 else self.theme.text_secondary, "flex": 0}
-                ],
-                "backgroundColor": self.theme.card if i < 3 else "transparent",
-                "cornerRadius": "12px",
-                "paddingAll": "md",
-                "margin": "sm" if i > 0 else "none"
-            })
+            leader_items.append(
+                self._box([
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            self._box([self._text(medal, "xl" if is_top else "lg")],
+                                    bg=medal_colors[i] + "30" if is_top else "transparent",
+                                    corner="12px", padding="sm"),
+                            
+                            self._text(leader.get('display_name', 'لاعب'),
+                                      "md", "bold" if is_top else "regular",
+                                      align="right"),
+                            
+                            self._text(f"{leader.get('total_points', 0)} ⭐",
+                                      "md", "bold",
+                                      color=self.theme.accent if is_top else self.theme.text_secondary)
+                        ],
+                        "justifyContent": "space-between",
+                        "alignItems": "center"
+                    }
+                ], bg=self.theme.card if is_top else "transparent",
+                corner="15px", padding="md", margin="sm" if i > 0 else "none")
+            )
         
         return {
             "type": "bubble",
@@ -393,8 +650,9 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "🏆 لوحة الصدارة", "size": "xl", "weight": "bold", "color": "#FFFFFF"},
-                    {"type": "text", "text": f"أفضل {len(leaders)} لاعبين", "size": "xs", "color": "#E0E0E0"}
+                    self._text("🏆 لوحة الصدارة", "xl", "bold"),
+                    self._text(f"أفضل {len(leaders)} لاعبين", "xs",
+                              color=self.theme.text_primary + "CC")
                 ],
                 "backgroundColor": self.theme.accent,
                 "paddingAll": "20px"
@@ -404,8 +662,31 @@ class FlexBuilder:
                 "layout": "vertical",
                 "contents": leader_items,
                 "backgroundColor": self.theme.background,
-                "paddingAll": "15px"
+                "paddingAll": "20px"
+            }
+        }
+    
+    # =============================================
+    # ❌ رسالة خطأ
+    # =============================================
+    
+    def _create_error(self, message: str) -> Dict:
+        """رسالة خطأ"""
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    self._text("⚠️", "xxl"),
+                    self._text(message, "md", margin="md")
+                ],
+                "backgroundColor": self.theme.background,
+                "paddingAll": "40px",
+                "spacing": "md"
             }
         }
 
-flex_builder = FlexBuilder()
+
+# Singleton
+flex_builder = FlexMessageBuilder()
