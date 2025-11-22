@@ -63,20 +63,62 @@ def load_games_dynamically():
                     
                     if game_class:
                         games_loaded[class_name] = game_class
-                        logger.info(f"✅ {class_name} loaded successfully")
+                        logger.info(f"✅ {class_name} loaded successfully from {filename}")
                     else:
-                        logger.warning(f"⚠️ {class_name} not found in {filename}")
+                        logger.warning(f"⚠️ {class_name} class not found in {filename}")
                         
                 except ImportError as e:
-                    logger.warning(f"⚠️ Import error for {class_name}: {e}")
+                    logger.debug(f"⚠️ Could not import {module_name}: {e}")
+                except AttributeError as e:
+                    logger.debug(f"⚠️ Attribute error for {class_name}: {e}")
                 except Exception as e:
-                    logger.error(f"❌ Error loading {class_name}: {e}")
+                    logger.warning(f"⚠️ Unexpected error loading {class_name}: {e}")
     
     except Exception as e:
         logger.error(f"❌ Error reading games folder: {e}")
     
+    # إذا لم يتم تحميل أي لعبة، نحاول الطريقة القديمة (Fallback)
+    if len(games_loaded) == 0:
+        logger.warning("⚠️ Dynamic loading failed, trying fallback method...")
+        fallback_games = load_games_fallback()
+        games_loaded.update(fallback_games)
+    
     logger.info(f"📊 Total games loaded: {len(games_loaded)}")
     return games_loaded
+
+def load_games_fallback():
+    """طريقة بديلة لتحميل الألعاب (Fallback)"""
+    games = {}
+    
+    # قائمة الألعاب الأساسية التي نعرفها
+    known_games = [
+        ('games.iq_game', 'IQGame'),
+        ('games.word_color_game', 'WordColorGame'),
+        ('games.chain_words_game', 'ChainWordsGame'),
+        ('games.scramble_word_game', 'ScrambleWordGame'),
+        ('games.letters_words_game', 'LettersWordsGame'),
+        ('games.fast_typing_game', 'FastTypingGame'),
+        ('games.human_animal_plant_game', 'HumanAnimalPlantGame'),
+        ('games.guess_game', 'GuessGame'),
+        ('games.compatibility_game', 'CompatibilityGame'),
+        ('games.math_game', 'MathGame'),
+        ('games.memory_game', 'MemoryGame'),
+        ('games.riddle_game', 'RiddleGame'),
+        ('games.opposite_game', 'OppositeGame'),
+        ('games.emoji_game', 'EmojiGame'),
+        ('games.song_game', 'SongGame')
+    ]
+    
+    for module_path, class_name in known_games:
+        try:
+            module = importlib.import_module(module_path)
+            game_class = getattr(module, class_name)
+            games[class_name] = game_class
+            logger.info(f"✅ {class_name} loaded via fallback")
+        except Exception as e:
+            logger.debug(f"⚠️ Could not load {class_name} via fallback: {e}")
+    
+    return games
 
 # تحميل الألعاب تلقائياً
 GAMES_LOADED = load_games_dynamically()
@@ -494,6 +536,10 @@ def get_random_gradient():
 def create_welcome_bubble(display_name):
     """رسالة ترحيب جميلة بـ Animations"""
     colors = get_random_gradient()
+    
+    # التحقق من وجود ألعاب
+    games_status = f"+{len(GAMES_LOADED)} لعبة متنوعة" if len(GAMES_LOADED) > 0 else "⚠️ النظام قيد الصيانة"
+    
     return {
         "type": "bubble", "size": "mega",
         "hero": {
@@ -525,7 +571,7 @@ def create_welcome_bubble(display_name):
                     {"type": "box", "layout": "horizontal", "spacing": "sm",
                      "contents": [
                         {"type": "text", "text": "🎯", "flex": 0},
-                        {"type": "text", "text": "+15 لعبة متنوعة", "size": "sm", "color": "#4b5563", "flex": 5}
+                        {"type": "text", "text": games_status, "size": "sm", "color": "#4b5563", "flex": 5}
                      ]},
                     {"type": "box", "layout": "horizontal", "spacing": "sm",
                      "contents": [
@@ -540,10 +586,11 @@ def create_welcome_bubble(display_name):
                     {"type": "box", "layout": "horizontal", "spacing": "sm",
                      "contents": [
                         {"type": "text", "text": "🤖", "flex": 0},
-                        {"type": "text", "text": "ذكاء اصطناعي متقدم", "size": "sm", "color": "#4b5563", "flex": 5}
+                        {"type": "text", "text": "ذكاء اصطناعي متقدم" if USE_AI else "نظام ألعاب ذكي", 
+                         "size": "sm", "color": "#4b5563", "flex": 5}
                      ]}
                  ]},
-                {"type": "text", "text": "جاهز للبدء؟ 🚀", 
+                {"type": "text", "text": "جاهز للبدء؟ 🚀" if len(GAMES_LOADED) > 0 else "قريباً... 🔧", 
                  "weight": "bold", "size": "lg", "color": colors[0], 
                  "align": "center", "margin": "xl"}
             ],
@@ -553,12 +600,13 @@ def create_welcome_bubble(display_name):
             "type": "box", "layout": "vertical", "spacing": "sm",
             "contents": [
                 {"type": "button",
-                 "action": {"type": "message", "label": "🎮 ابدأ اللعب", "text": "ابدأ"},
+                 "action": {"type": "message", "label": "🎮 ابدأ اللعب" if len(GAMES_LOADED) > 0 else "📊 نقاطي", 
+                           "text": "ابدأ" if len(GAMES_LOADED) > 0 else "نقاطي"},
                  "style": "primary",
                  "color": colors[0],
                  "height": "md"},
                 {"type": "button",
-                 "action": {"type": "message", "label": "📊 نقاطي", "text": "نقاطي"},
+                 "action": {"type": "message", "label": "❓ المساعدة", "text": "مساعدة"},
                  "style": "link",
                  "height": "sm"}
             ],
@@ -972,9 +1020,30 @@ class CommandHandler:
         return False
     
     def show_help(self, event, *args):
-        help_bubble = create_help_bubble()
-        self.line_bot_api.reply_message(event.reply_token, 
-            FlexSendMessage(alt_text="كيف ألعب؟", contents=help_bubble))
+        # إذا لم تكن هناك ألعاب متاحة
+        if len(GAMES_LOADED) == 0:
+            error_bubble = {
+                "type": "bubble",
+                "body": {
+                    "type": "box", "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": "⚠️ خطأ في النظام", 
+                         "weight": "bold", "size": "xl", "color": "#ef4444", "align": "center"},
+                        {"type": "separator", "margin": "md", "color": "#e5e7eb"},
+                        {"type": "text", "text": "لا توجد ألعاب متاحة حالياً", 
+                         "size": "md", "color": "#6b7280", "align": "center", "margin": "lg", "wrap": True},
+                        {"type": "text", "text": "يرجى التواصل مع المطور", 
+                         "size": "sm", "color": "#9ca3af", "align": "center", "margin": "md", "wrap": True}
+                    ],
+                    "paddingAll": "25px"
+                }
+            }
+            self.line_bot_api.reply_message(event.reply_token,
+                FlexSendMessage(alt_text="خطأ في النظام", contents=error_bubble))
+        else:
+            help_bubble = create_help_bubble()
+            self.line_bot_api.reply_message(event.reply_token,
+                FlexSendMessage(alt_text="كيف ألعب؟", contents=help_bubble))
         return True
     
     def join_game(self, event, user_id, game_id, display_name):
@@ -1013,9 +1082,19 @@ class CommandHandler:
         return True
     
     def start_menu(self, event, *args):
-        games_carousel = create_games_carousel()
-        self.line_bot_api.reply_message(event.reply_token,
-            FlexSendMessage(alt_text="اختر لعبتك المفضلة", contents=games_carousel))
+        if len(GAMES_LOADED) == 0:
+            quick_reply = QuickReply(items=[
+                QuickReplyButton(action=MessageAction(label="❓ المساعدة", text="مساعدة"))
+            ])
+            self.line_bot_api.reply_message(event.reply_token,
+                TextSendMessage(
+                    text="⚠️ عذراً! لا توجد ألعاب متاحة حالياً\n\nالنظام قيد الصيانة",
+                    quick_reply=quick_reply
+                ))
+        else:
+            games_carousel = create_games_carousel()
+            self.line_bot_api.reply_message(event.reply_token,
+                FlexSendMessage(alt_text="اختر لعبتك المفضلة", contents=games_carousel))
         return True
     
     def show_stats(self, event, user_id, *args):
@@ -1282,17 +1361,41 @@ def handle_message(event):
         game_id = getattr(event.source, 'group_id', user_id)
         display_name = get_user_profile_safe(user_id)
         
-        logger.info(f"📨 {display_name}: {text}")
+        logger.info(f"📨 Message from {display_name} ({user_id}): {text}")
         
         # فحص المنشن
         if f'@{BOT_NAME}' in text:
             text = text.replace(f'@{BOT_NAME}', '').strip() or 'مساعدة'
         
-        # معالجة الأوامر
+        # معالجة الأوامر (تعمل حتى بدون ألعاب)
         if command_handler.handle(event, user_id, text, game_id, display_name):
+            logger.info(f"✅ Command handled: {text}")
             return
         
-        # بدء الألعاب (باستخدام الخريطة الديناميكية)
+        # رسالة ترحيب للمستخدمين الجدد (تعمل حتى بدون ألعاب)
+        if text.lower() in ['hi', 'hello', 'مرحبا', 'السلام عليكم', 'هاي', 'هلا', 'أهلا']:
+            welcome = create_welcome_bubble(display_name)
+            line_bot_api.reply_message(event.reply_token,
+                FlexSendMessage(alt_text="مرحباً بك!", contents=welcome))
+            logger.info(f"✅ Welcome message sent to {display_name}")
+            return
+        
+        # إذا لم تكن هناك ألعاب، نرد برسالة ودية
+        if len(GAMES_LOADED) == 0:
+            quick_reply = QuickReply(items=[
+                QuickReplyButton(action=MessageAction(label="📊 نقاطي", text="نقاطي")),
+                QuickReplyButton(action=MessageAction(label="🏆 الصدارة", text="الصدارة")),
+                QuickReplyButton(action=MessageAction(label="❓ المساعدة", text="مساعدة"))
+            ])
+            line_bot_api.reply_message(event.reply_token,
+                TextSendMessage(
+                    text=f"مرحباً {display_name}! 👋\n\n⚠️ النظام قيد الصيانة حالياً\n\nيمكنك مشاهدة إحصائياتك أو لوحة الصدارة",
+                    quick_reply=quick_reply
+                ))
+            logger.info(f"✅ Maintenance message sent")
+            return
+        
+        # بدء الألعاب (فقط إذا كانت متاحة)
         if text in GAME_NAME_MAP:
             if not game_manager.is_registered(user_id):
                 quick_reply = QuickReply(items=[
@@ -1319,6 +1422,7 @@ def handle_message(event):
                 game_manager.create_game(game_id, game, text)
                 line_bot_api.reply_message(event.reply_token,
                     TextSendMessage(text="💖 لعبة التوافق!\n\nاكتب اسمين مفصولين بمسافة\nمثال: أحمد فاطمة"))
+                logger.info(f"✅ Compatibility game started")
                 return
             
             start_game(game_id, game_class, text, user_id, event)
@@ -1327,20 +1431,23 @@ def handle_message(event):
         # معالجة إجابات الألعاب النشطة
         if game_manager.is_game_active(game_id):
             if not game_manager.is_registered(user_id):
-                logger.debug(f"🔇 Unregistered: {user_id}")
+                logger.debug(f"🔇 Unregistered user answer ignored: {user_id}")
                 return
             
             handle_game_answer(event, user_id, text, game_id, display_name)
             return
         
-        # رسالة ترحيب للمستخدمين الجدد
-        if text.lower() in ['hi', 'hello', 'مرحبا', 'السلام عليكم', 'هاي']:
-            welcome = create_welcome_bubble(display_name)
-            line_bot_api.reply_message(event.reply_token,
-                FlexSendMessage(alt_text="مرحباً بك!", contents=welcome))
-            return
-        
-        logger.debug(f"🔇 Ignored: {text}")
+        # رسالة افتراضية لأي نص آخر
+        quick_reply = QuickReply(items=[
+            QuickReplyButton(action=MessageAction(label="🎮 ابدأ لعبة", text="ابدأ")),
+            QuickReplyButton(action=MessageAction(label="❓ المساعدة", text="مساعدة"))
+        ])
+        line_bot_api.reply_message(event.reply_token,
+            TextSendMessage(
+                text=f"مرحباً {display_name}! 👋\n\nاكتب 'مساعدة' لمعرفة كيفية اللعب",
+                quick_reply=quick_reply
+            ))
+        logger.info(f"✅ Default response sent")
         
     except Exception as e:
         logger.error(f"❌ Handler error: {e}", exc_info=True)
@@ -1351,11 +1458,12 @@ def handle_message(event):
             ])
             line_bot_api.reply_message(event.reply_token,
                 TextSendMessage(
-                    text="❌ حدث خطأ غير متوقع\n\nحاول مرة أخرى أو اتصل بالدعم",
+                    text="❌ حدث خطأ غير متوقع\n\nحاول مرة أخرى",
                     quick_reply=quick_reply
                 ))
-        except:
-            pass
+            logger.info(f"✅ Error message sent")
+        except Exception as reply_error:
+            logger.error(f"❌ Could not send error message: {reply_error}")
 
 # ============================================
 # 🚨 Error Handlers
@@ -1410,22 +1518,34 @@ if __name__ == "__main__":
     logger.info("🎮 LINE GAMING BOT - ENHANCED & BEAUTIFUL VERSION")
     logger.info("=" * 70)
     logger.info(f"🌐 Port: {port}")
-    logger.info(f"🎯 Games: {len(GAMES_LOADED)}")
+    logger.info(f"🎯 Games Loaded: {len(GAMES_LOADED)}")
+    
+    if len(GAMES_LOADED) > 0:
+        logger.info(f"✅ Available games: {', '.join(GAMES_LOADED.keys())}")
+    else:
+        logger.error("❌ NO GAMES LOADED - Bot will have limited functionality!")
+        logger.error("❌ Please check game files and Config import")
+    
     logger.info(f"📊 Players: {len(game_manager.registered_players)}")
     logger.info(f"🎮 Active: {len(game_manager.active_games)}")
-    logger.info(f"🤖 AI: {'✅' if USE_AI else '❌'}")
-    logger.info(f"🔧 Debug: {'✅' if debug else '❌'}")
+    logger.info(f"🤖 AI: {'✅ Enabled' if USE_AI else '❌ Disabled'}")
+    logger.info(f"🔧 Debug: {'✅ On' if debug else '❌ Off'}")
     logger.info("=" * 70)
-    logger.info("✨ Features:")
-    logger.info("  • Beautiful Neumorphism UI with Gradients")
-    logger.info("  • Quick Reply Buttons for Easy Navigation")
-    logger.info("  • Animated Flex Messages")
-    logger.info("  • Smart Welcome Messages")
-    logger.info("  • Level System (مبتدئ → أسطوري)")
-    logger.info("  • Enhanced Leaderboard with Medals")
-    logger.info("  • Comprehensive Help System")
-    logger.info("  • Connection Pool & Caching")
-    logger.info("  • Rate Limiting & Security")
+    
+    if len(GAMES_LOADED) > 0:
+        logger.info("✨ Features:")
+        logger.info("  • Beautiful Neumorphism UI with Gradients")
+        logger.info("  • Quick Reply Buttons for Easy Navigation")
+        logger.info("  • Animated Flex Messages")
+        logger.info("  • Smart Welcome Messages")
+        logger.info("  • Level System (مبتدئ → أسطوري)")
+        logger.info("  • Enhanced Leaderboard with Medals")
+        logger.info("  • Comprehensive Help System")
+        logger.info("  • Connection Pool & Caching")
+        logger.info("  • Rate Limiting & Security")
+    else:
+        logger.warning("⚠️ Running in LIMITED MODE - Statistics and Help only")
+    
     logger.info("=" * 70)
     
     app.run(host='0.0.0.0', port=port, debug=debug, threaded=True)
