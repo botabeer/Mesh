@@ -1,10 +1,35 @@
+# Bot Mesh - Requirements (Merged)
+# Created by: Abeer Aldosari © 2025
+
+# Flask Framework
 Flask
+Werkzeug
+
+# LINE Bot SDK
 line-bot-sdk
+
+# Environment Variables
 python-dotenv
+
+# HTTP Client (for API calls)
+requests
+
+# Gemini AI (Optional)
 google-generativeai
+
+# Production Server
 gunicorn
+
+# Scheduling & Caching
 APScheduler
 redis
+
+# Image Processing
 pillow
+
+# Data & Visualization
 pandas
 matplotlib
+
+# Utilities
+python-dateutil
