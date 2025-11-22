@@ -1,5 +1,5 @@
 """
-Bot Mesh - Flex Message Builder (Enhanced Neumorphic Design)
+Bot Mesh - Flex Message Builder (Fixed Version)
 Created by: Abeer Aldosari © 2025
 """
 from typing import Dict, List, Any, Optional
@@ -72,7 +72,7 @@ THEMES: Dict[Theme, ThemeColors] = {
 
 
 class FlexBuilder:
-    """منشئ رسائل Flex المحسن"""
+    """منشئ رسائل Flex المحسّن"""
     
     def __init__(self, theme: Theme = Theme.WHITE):
         self.theme = THEMES.get(theme, THEMES[Theme.WHITE])
@@ -101,15 +101,14 @@ class FlexBuilder:
         }
     
     def _text(self, text: str, size: str = "md", weight: str = "regular", 
-              color: str = None, align: str = "center") -> Dict:
-        """إنشاء نص"""
+              color: str = None) -> Dict:
+        """إنشاء نص - بدون align و margin"""
         return {
             "type": "text",
             "text": text,
             "size": size,
             "weight": weight,
             "color": color or self.theme.text_primary,
-            "align": align,
             "wrap": True
         }
     
@@ -140,8 +139,19 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    self._text("🎮 Bot Mesh", "xxl", "bold"),
-                    self._text("مرحباً بك في بوت الألعاب", "sm", color=self.theme.text_secondary)
+                    {
+                        "type": "text",
+                        "text": "🎮 Bot Mesh",
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": self.theme.text_primary
+                    },
+                    {
+                        "type": "text",
+                        "text": "مرحباً بك في بوت الألعاب",
+                        "size": "sm",
+                        "color": self.theme.text_secondary
+                    }
                 ],
                 "backgroundColor": self.theme.background,
                 "paddingAll": "20px"
@@ -152,7 +162,13 @@ class FlexBuilder:
                 "contents": [
                     # قسم التسجيل
                     self._box([
-                        self._text("📝 التسجيل", "lg", "bold", align="right"),
+                        {
+                            "type": "text",
+                            "text": "🔐 التسجيل",
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": self.theme.text_primary
+                        },
                         {
                             "type": "box",
                             "layout": "horizontal",
@@ -167,7 +183,13 @@ class FlexBuilder:
                     
                     # قسم اللعب
                     self._box([
-                        self._text("🎯 اللعب", "lg", "bold", align="right"),
+                        {
+                            "type": "text",
+                            "text": "🎯 اللعب",
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": self.theme.text_primary
+                        },
                         {
                             "type": "box",
                             "layout": "horizontal",
@@ -182,7 +204,13 @@ class FlexBuilder:
                     
                     # قسم الإحصائيات
                     self._box([
-                        self._text("📊 الإحصائيات", "lg", "bold", align="right"),
+                        {
+                            "type": "text",
+                            "text": "📊 الإحصائيات",
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": self.theme.text_primary
+                        },
                         {
                             "type": "box",
                             "layout": "horizontal",
@@ -197,15 +225,32 @@ class FlexBuilder:
                     
                     # قسم الإعدادات
                     self._box([
-                        self._text("⚙️ الإعدادات", "lg", "bold", align="right"),
+                        {
+                            "type": "text",
+                            "text": "⚙️ الإعدادات",
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": self.theme.text_primary
+                        },
                         self._btn("🎨 تغيير الثيم", "ثيم", self.theme.accent)
                     ], bg=self.theme.card, margin="md"),
                     
                     # الألعاب المتاحة
                     self._box([
-                        self._text("🎲 الألعاب المتاحة", "lg", "bold", align="right"),
-                        self._text("ذكاء • لون • سلسلة • ترتيب • تكوين • أسرع • لعبة • خمن • توافق • رياضيات • ذاكرة • لغز • ضد • إيموجي • أغنية", 
-                                  "xs", color=self.theme.text_secondary, align="right")
+                        {
+                            "type": "text",
+                            "text": "🎲 الألعاب المتاحة",
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": self.theme.text_primary
+                        },
+                        {
+                            "type": "text",
+                            "text": "ذكاء • لون • سلسلة • ترتيب • تكوين • أسرع • لعبة • خمن • توافق • رياضيات • ذاكرة • لغز • ضد • إيموجي • أغنية",
+                            "size": "xs",
+                            "color": self.theme.text_secondary,
+                            "wrap": True
+                        }
                     ], bg=self.theme.card, margin="md")
                 ],
                 "backgroundColor": self.theme.background,
@@ -216,7 +261,12 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    self._text("Created by Abeer Aldosari © 2025", "xxs", color=self.theme.text_secondary)
+                    {
+                        "type": "text",
+                        "text": "Created by Abeer Aldosari © 2025",
+                        "size": "xxs",
+                        "color": self.theme.text_secondary
+                    }
                 ],
                 "backgroundColor": self.theme.background,
                 "paddingAll": "10px"
@@ -241,9 +291,15 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    self._text("🎨 اختر الثيم", "xl", "bold")
+                    {
+                        "type": "text",
+                        "text": "🎨 اختر الثيم",
+                        "size": "xl",
+                        "weight": "bold",
+                        "color": "#FFFFFF"
+                    }
                 ],
-                "backgroundColor": self.theme.background,
+                "backgroundColor": self.theme.accent,
                 "paddingAll": "20px"
             },
             "body": {
@@ -257,12 +313,12 @@ class FlexBuilder:
         }
 
     # =============================================
-    # 🎮 قائمة الألعاب المحسنة
+    # 🎮 قائمة الألعاب المحسّنة
     # =============================================
     def create_games_carousel(self, games: Dict[str, Dict]) -> Dict:
         """إنشاء قائمة الألعاب"""
         if not games:
-            return self._create_error("⚠️ لا توجد ألعاب متاحة")
+            return self._create_error("⚠️ لا توجدألعاب متاحة")
         
         bubbles = []
         for arabic_name, data in games.items():
@@ -278,14 +334,25 @@ class FlexBuilder:
                             "type": "box",
                             "layout": "vertical",
                             "contents": [
-                                self._text(data['emoji'], "4xl")
+                                {
+                                    "type": "text",
+                                    "text": data['emoji'],
+                                    "size": "4xl"
+                                }
                             ],
                             "backgroundColor": self.theme.card,
                             "cornerRadius": "20px",
                             "paddingAll": "25px"
                         },
                         # اسم اللعبة
-                        self._text(data['name'], "sm", "bold", margin="md"),
+                        {
+                            "type": "text",
+                            "text": data['name'],
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": self.theme.text_primary,
+                            "margin": "md"
+                        },
                         # زر اللعب
                         self._btn("▶️ العب", arabic_name, data.get('color', self.theme.accent))
                     ],
@@ -297,207 +364,6 @@ class FlexBuilder:
             bubbles.append(bubble)
         
         return {"type": "carousel", "contents": bubbles}
-
-    # =============================================
-    # 🎵 نافذة لعبة الأغنية (مثل الصورة 4)
-    # =============================================
-    def create_song_game_card(self, lyrics: str, question_num: int, total: int) -> Dict:
-        """إنشاء بطاقة لعبة الأغنية"""
-        return {
-            "type": "bubble",
-            "size": "kilo",
-            "header": {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            self._text("🎵", "xxl")
-                        ],
-                        "backgroundColor": self.theme.text_primary,
-                        "cornerRadius": "50px",
-                        "width": "50px",
-                        "height": "50px",
-                        "justifyContent": "center",
-                        "alignItems": "center"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            self._text("لعبة الأغنية", "xl", "bold", align="right"),
-                            self._text(f"السؤال {question_num}/{total}", "sm", 
-                                      color=self.theme.text_secondary, align="right")
-                        ],
-                        "flex": 1,
-                        "margin": "lg"
-                    }
-                ],
-                "backgroundColor": self.theme.accent,
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    # كلمات الأغنية
-                    self._box([
-                        self._text(lyrics, "lg", "bold")
-                    ], bg=self.theme.card, padding="xl", corner="lg"),
-                    
-                    # سؤال
-                    self._text("من المغني؟", "md", color=self.theme.accent, margin="lg"),
-                    
-                    # شريط التقدم
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [],
-                                "backgroundColor": self.theme.accent,
-                                "height": "6px",
-                                "flex": question_num
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical", 
-                                "contents": [],
-                                "backgroundColor": self.theme.card,
-                                "height": "6px",
-                                "flex": total - question_num
-                            }
-                        ],
-                        "cornerRadius": "3px",
-                        "margin": "md"
-                    },
-                    
-                    # الأزرار
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            self._btn("💡 لمح", "لمح", self.theme.button_secondary),
-                            self._btn("جاوب", "جاوب", self.theme.accent)
-                        ],
-                        "spacing": "md",
-                        "margin": "xl"
-                    }
-                ],
-                "backgroundColor": self.theme.background,
-                "paddingAll": "20px"
-            }
-        }
-
-    # =============================================
-    # ✏️ نافذة لعبة تكوين الكلمات (مثل الصورة 1 و 2)
-    # =============================================
-    def create_letters_game_card(self, letters: List[str], question_num: int, 
-                                  total: int, required: int = 3) -> Dict:
-        """إنشاء بطاقة لعبة تكوين الكلمات"""
-        # ترتيب الحروف في صفوف
-        letter_boxes = []
-        row = []
-        for i, letter in enumerate(letters):
-            row.append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    self._text(letter, "xxl", "bold", self.theme.accent)
-                ],
-                "backgroundColor": self.theme.card,
-                "cornerRadius": "15px",
-                "paddingAll": "15px",
-                "width": "60px",
-                "height": "60px",
-                "justifyContent": "center",
-                "alignItems": "center"
-            })
-            
-            if len(row) == 3 or i == len(letters) - 1:
-                letter_boxes.append({
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": row,
-                    "spacing": "md",
-                    "justifyContent": "center",
-                    "margin": "sm" if letter_boxes else "none"
-                })
-                row = []
-        
-        return {
-            "type": "bubble",
-            "size": "kilo",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    self._text("🎮 Neumorphism Soft", "xl", "bold"),
-                    self._text("تأثير 3D - عمق ناعم", "sm", color=self.theme.text_secondary)
-                ],
-                "backgroundColor": self.theme.accent,
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    # عنوان اللعبة
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "🔄", "text": "ابدأ"},
-                                "style": "secondary",
-                                "height": "sm",
-                                "flex": 0
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    self._text("■ لعبة تكوين الكلمات", "lg", "bold", align="right"),
-                                    self._text(f"سؤال {question_num} من {total}", "xs", 
-                                              color=self.theme.text_secondary, align="right")
-                                ],
-                                "flex": 1
-                            }
-                        ],
-                        "spacing": "md"
-                    },
-                    
-                    # الحروف
-                    self._box(letter_boxes, bg=self.theme.card, margin="lg", padding="xl"),
-                    
-                    # التعليمات
-                    self._box([
-                        self._text(f"كوّن {required} كلمات من هذه الحروف", "sm"),
-                        self._text("اكتب كلمة واحدة في كل رسالة", "xs", color=self.theme.text_secondary)
-                    ], bg=self.theme.card, margin="lg"),
-                    
-                    # الأزرار
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            self._btn("💡 تلميح", "لمح", self.theme.accent),
-                            self._btn("الحل", "جاوب", self.theme.button_secondary)
-                        ],
-                        "spacing": "md",
-                        "margin": "xl"
-                    }
-                ],
-                "backgroundColor": self.theme.background,
-                "paddingAll": "20px",
-                "spacing": "sm"
-            }
-        }
 
     # =============================================
     # 📊 بطاقة الإحصائيات
@@ -529,8 +395,19 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    self._text(level, "xxl", "bold"),
-                    self._text(f"المركز #{rank}" if rank else "", "sm", color=self.theme.text_secondary)
+                    {
+                        "type": "text",
+                        "text": level,
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": "#FFFFFF"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"المركز #{rank}" if rank else "",
+                        "size": "sm",
+                        "color": "#E0E0E0"
+                    }
                 ],
                 "backgroundColor": self.theme.accent,
                 "paddingAll": "20px"
@@ -572,9 +449,24 @@ class FlexBuilder:
             "type": "box",
             "layout": "vertical",
             "contents": [
-                self._text(emoji, "xxl"),
-                self._text(value, "xl", "bold"),
-                self._text(label, "xs", color=self.theme.text_secondary)
+                {
+                    "type": "text",
+                    "text": emoji,
+                    "size": "xxl"
+                },
+                {
+                    "type": "text",
+                    "text": value,
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": self.theme.text_primary
+                },
+                {
+                    "type": "text",
+                    "text": label,
+                    "size": "xs",
+                    "color": self.theme.text_secondary
+                }
             ],
             "backgroundColor": self.theme.card,
             "cornerRadius": "15px",
@@ -599,10 +491,26 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    self._text(medal, "xl" if i < 3 else "md", align="center"),
-                    self._text(leader.get('display_name', 'لاعب'), "md", align="right"),
-                    self._text(f"{leader.get('total_points', 0)}⭐", "md", "bold", 
-                              self.theme.accent, align="left")
+                    {
+                        "type": "text",
+                        "text": medal,
+                        "size": "xl" if i < 3 else "md",
+                        "color": self.theme.text_primary
+                    },
+                    {
+                        "type": "text",
+                        "text": leader.get('display_name', 'لاعب'),
+                        "size": "md",
+                        "color": self.theme.text_primary,
+                        "flex": 1
+                    },
+                    {
+                        "type": "text",
+                        "text": f"{leader.get('total_points', 0)}⭐",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": self.theme.accent
+                    }
                 ],
                 "backgroundColor": self.theme.card if i < 3 else "transparent",
                 "cornerRadius": "10px",
@@ -617,7 +525,13 @@ class FlexBuilder:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    self._text("🏆 لوحة الصدارة", "xl", "bold")
+                    {
+                        "type": "text",
+                        "text": "🏆 لوحة الصدارة",
+                        "size": "xl",
+                        "weight": "bold",
+                        "color": "#FFFFFF"
+                    }
                 ],
                 "backgroundColor": self.theme.accent,
                 "paddingAll": "20px"
@@ -638,32 +552,18 @@ class FlexBuilder:
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "contents": [self._text(message, "md")],
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": message,
+                        "size": "md",
+                        "color": self.theme.text_primary
+                    }
+                ],
                 "backgroundColor": self.theme.background,
                 "paddingAll": "30px"
             }
         }
-
-
-# =============================================
-# 📋 Rich Menu Configuration
-# =============================================
-RICH_MENU_CONFIG = {
-    "size": {"width": 2500, "height": 843},
-    "selected": True,
-    "name": "Bot Mesh Menu",
-    "chatBarText": "القائمة 🎮",
-    "areas": [
-        {"bounds": {"x": 0, "y": 0, "width": 833, "height": 843}, 
-         "action": {"type": "message", "text": "انضم"}},
-        {"bounds": {"x": 833, "y": 0, "width": 833, "height": 843}, 
-         "action": {"type": "message", "text": "ابدأ"}},
-        {"bounds": {"x": 1666, "y": 0, "width": 834, "height": 421}, 
-         "action": {"type": "message", "text": "نقاطي"}},
-        {"bounds": {"x": 1666, "y": 421, "width": 834, "height": 422}, 
-         "action": {"type": "message", "text": "الصدارة"}},
-    ]
-}
 
 
 # Singleton
