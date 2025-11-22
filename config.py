@@ -1,103 +1,138 @@
 """
-Bot Mesh - Configuration File (Enhanced)
+Bot Mesh - Configuration File (Fixed)
 Created by: Abeer Aldosari © 2025
 """
 import os
 from enum import Enum
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from dataclasses import dataclass
+from typing import List, Dict
+
 
 class Theme(Enum):
-    """ثيمات التطبيق"""
-    LIGHT = "light"
-    DARK = "dark"
-    PURPLE = "purple"
-    OCEAN = "ocean"
-    SUNSET = "sunset"
+    """الثيمات المتاحة - متطابقة مع flex_builder.py"""
+    WHITE = "white"    # أبيض
+    BLACK = "black"    # أسود
+    GRAY = "gray"      # رمادي
+    PURPLE = "purple"  # بنفسجي
+    BLUE = "blue"      # أزرق
+
 
 @dataclass
 class ThemeColors:
     """ألوان الثيم"""
+    name: str
+    name_ar: str
+    emoji: str
     background: str
     surface: str
+    card: str
     text_primary: str
     text_secondary: str
     accent: str
-    shadow_dark: str
-    shadow_light: str
     button_primary: str
     button_secondary: str
-    success: str = "#4CAF50"
-    error: str = "#F44336"
-    warning: str = "#FF9800"
+    border: str
+    shadow_dark: str = ""
+    shadow_light: str = ""
+    success: str = "#48BB78"
+    error: str = "#FC8181"
+    warning: str = "#F6AD55"
 
-# ثيمات محددة مسبقاً
+
+# =============================================
+# 🎨 الثيمات الخمسة (متطابقة مع flex_builder.py)
+# =============================================
 THEMES: Dict[Theme, ThemeColors] = {
-    Theme.LIGHT: ThemeColors(
+    # ⚪ أبيض - Neumorphism Light
+    Theme.WHITE: ThemeColors(
+        name="white", name_ar="أبيض", emoji="⚪",
         background="#E0E5EC",
-        surface="#F0F5FA",
-        text_primary="#2D3748",
-        text_secondary="#718096",
+        surface="#E0E5EC", 
+        card="#D1D9E6",
+        text_primary="#2C3E50",
+        text_secondary="#7F8C8D",
         accent="#667EEA",
-        shadow_dark="#A3B1C6",
-        shadow_light="#FFFFFF",
         button_primary="#667EEA",
-        button_secondary="#A3B1C6"
+        button_secondary="#A0AEC0",
+        border="#C8D0E7",
+        shadow_dark="#A3B1C6",
+        shadow_light="#FFFFFF"
     ),
-    Theme.DARK: ThemeColors(
+    
+    # ⚫ أسود - Dark Neon
+    Theme.BLACK: ThemeColors(
+        name="black", name_ar="أسود", emoji="⚫",
+        background="#0F0F1A",
+        surface="#1A1A2E",
+        card="#16213E",
+        text_primary="#FFFFFF",
+        text_secondary="#A0AEC0",
+        accent="#00D9FF",
+        button_primary="#00D9FF",
+        button_secondary="#4A5568",
+        border="#2D3748",
+        shadow_dark="#0D0D1A",
+        shadow_light="#2A2A4A"
+    ),
+    
+    # 🔘 رمادي - Slate Gray
+    Theme.GRAY: ThemeColors(
+        name="gray", name_ar="رمادي", emoji="🔘",
         background="#1A202C",
         surface="#2D3748",
+        card="#4A5568",
         text_primary="#F7FAFC",
-        text_secondary="#A0AEC0",
-        accent="#63B3ED",
-        shadow_dark="#0D1117",
-        shadow_light="#4A5568",
-        button_primary="#4299E1",
-        button_secondary="#4A5568"
+        text_secondary="#CBD5E0",
+        accent="#68D391",
+        button_primary="#48BB78",
+        button_secondary="#718096",
+        border="#4A5568",
+        shadow_dark="#1A202C",
+        shadow_light="#4A5568"
     ),
+    
+    # 💜 بنفسجي - Purple Night
     Theme.PURPLE: ThemeColors(
-        background="#2D1B69",
-        surface="#3D2B79",
-        text_primary="#F0E6FF",
+        name="purple", name_ar="بنفسجي", emoji="💜",
+        background="#1E1B4B",
+        surface="#312E81",
+        card="#3730A3",
+        text_primary="#F5F3FF",
         text_secondary="#C4B5FD",
         accent="#A855F7",
-        shadow_dark="#1A0F40",
-        shadow_light="#5B4B8A",
         button_primary="#9333EA",
-        button_secondary="#7C3AED"
+        button_secondary="#6B21A8",
+        border="#4C1D95",
+        shadow_dark="#0F0A2E",
+        shadow_light="#4338CA"
     ),
-    Theme.OCEAN: ThemeColors(
-        background="#0F172A",
-        surface="#1E293B",
-        text_primary="#E2E8F0",
-        text_secondary="#94A3B8",
-        accent="#06B6D4",
-        shadow_dark="#020617",
-        shadow_light="#334155",
-        button_primary="#0891B2",
-        button_secondary="#0E7490"
-    ),
-    Theme.SUNSET: ThemeColors(
-        background="#FFF7ED",
-        surface="#FFEDD5",
-        text_primary="#9A3412",
-        text_secondary="#C2410C",
-        accent="#F97316",
-        shadow_dark="#FED7AA",
-        shadow_light="#FFFFFF",
-        button_primary="#EA580C",
-        button_secondary="#FB923C"
+    
+    # 💙 أزرق - Ocean Blue
+    Theme.BLUE: ThemeColors(
+        name="blue", name_ar="أزرق", emoji="💙",
+        background="#0C1929",
+        surface="#1E3A5F",
+        card="#0F2744",
+        text_primary="#E0F2FE",
+        text_secondary="#7DD3FC",
+        accent="#00D9FF",
+        button_primary="#0EA5E9",
+        button_secondary="#0369A1",
+        border="#0369A1",
+        shadow_dark="#061224",
+        shadow_light="#1E4976"
     )
 }
 
+
 class Config:
-    """إعدادات البوت المحسنة"""
+    """إعدادات البوت"""
     
-    # LINE Bot Settings
+    # LINE Bot
     LINE_CHANNEL_ACCESS_TOKEN: str = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
     LINE_CHANNEL_SECRET: str = os.getenv('LINE_CHANNEL_SECRET', '')
     
-    # Gemini AI Settings
+    # Gemini AI
     GEMINI_API_KEYS: List[str] = [
         k for k in [
             os.getenv('GEMINI_API_KEY_1', ''),
@@ -106,12 +141,12 @@ class Config:
         ] if k
     ]
     
-    # Redis Settings
+    # Redis
     REDIS_URL: str = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
     REDIS_ENABLED: bool = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'
     CACHE_TTL: int = int(os.getenv('CACHE_TTL', '3600'))
     
-    # Database Settings
+    # Database
     DB_PATH: str = os.getenv('DB_PATH', 'data')
     DB_NAME: str = os.getenv('DB_NAME', 'game_scores.db')
     DB_MAX_CONNECTIONS: int = int(os.getenv('DB_MAX_CONNECTIONS', '10'))
@@ -131,65 +166,132 @@ class Config:
     RATE_LIMIT_WINDOW: int = 60
     
     # Theme Settings
-    DEFAULT_THEME: Theme = Theme.LIGHT
+    DEFAULT_THEME: Theme = Theme.WHITE
     
     # Monitoring
     ENABLE_METRICS: bool = os.getenv('ENABLE_METRICS', 'true').lower() == 'true'
-    METRICS_PORT: int = int(os.getenv('METRICS_PORT', '9090'))
     
-    # WebSocket
-    WS_ENABLED: bool = os.getenv('WS_ENABLED', 'false').lower() == 'true'
-    WS_PORT: int = int(os.getenv('WS_PORT', '8765'))
-    
-    # Game Colors (Neumorphic Palette)
-    GAME_COLORS: Dict[str, str] = {
-        'iq': '#667EEA',
-        'color': '#9F7AEA',
-        'chain': '#4FD1C5',
-        'scramble': '#68D391',
-        'letters': '#FC8181',
-        'typing': '#F687B3',
-        'human': '#63B3ED',
-        'guess': '#B794F4',
-        'compatibility': '#FEB2B2',
-        'math': '#667EEA',
-        'memory': '#90CDF4',
-        'riddle': '#FBD38D',
-        'opposite': '#9AE6B4',
-        'emoji': '#FEEBC8',
-        'song': '#E9D8FD'
+    # =============================================
+    # 🎮 خريطة الألعاب (GAME_MAP) - FIXED
+    # =============================================
+    GAME_MAP = {
+        # الألعاب الأساسية
+        'ذكاء': {
+            'class': 'IqGame',
+            'emoji': '🧠',
+            'name': 'اختبار الذكاء',
+            'color': '#667EEA'
+        },
+        'لون': {
+            'class': 'WordColorGame',
+            'emoji': '🎨',
+            'name': 'لعبة الألوان',
+            'color': '#9F7AEA'
+        },
+        'سلسلة': {
+            'class': 'ChainWordsGame',
+            'emoji': '⛓️',
+            'name': 'سلسلة الكلمات',
+            'color': '#4FD1C5'
+        },
+        'ترتيب': {
+            'class': 'ScrambleWordGame',
+            'emoji': '🔤',
+            'name': 'ترتيب الحروف',
+            'color': '#68D391'
+        },
+        'تكوين': {
+            'class': 'LettersWordsGame',
+            'emoji': '✏️',
+            'name': 'تكوين الكلمات',
+            'color': '#FC8181'
+        },
+        'أسرع': {
+            'class': 'FastTypingGame',
+            'emoji': '⚡',
+            'name': 'الكتابة السريعة',
+            'color': '#F687B3'
+        },
+        'لعبة': {
+            'class': 'HumanAnimalPlantGame',
+            'emoji': '🎯',
+            'name': 'إنسان حيوان نبات',
+            'color': '#63B3ED'
+        },
+        'خمن': {
+            'class': 'GuessGame',
+            'emoji': '🤔',
+            'name': 'خمن الكلمة',
+            'color': '#B794F4'
+        },
+        'توافق': {
+            'class': 'CompatibilityGame',
+            'emoji': '💖',
+            'name': 'نسبة التوافق',
+            'color': '#FEB2B2'
+        },
+        'رياضيات': {
+            'class': 'MathGame',
+            'emoji': '🔢',
+            'name': 'الرياضيات',
+            'color': '#667EEA'
+        },
+        'ذاكرة': {
+            'class': 'MemoryGame',
+            'emoji': '🧩',
+            'name': 'اختبار الذاكرة',
+            'color': '#90CDF4'
+        },
+        'لغز': {
+            'class': 'RiddleGame',
+            'emoji': '🎭',
+            'name': 'حل الألغاز',
+            'color': '#FBD38D'
+        },
+        'ضد': {
+            'class': 'OppositeGame',
+            'emoji': '↔️',
+            'name': 'الأضداد',
+            'color': '#9AE6B4'
+        },
+        'إيموجي': {
+            'class': 'EmojiGame',
+            'emoji': '😀',
+            'name': 'خمن الإيموجي',
+            'color': '#FEEBC8'
+        },
+        'أغنية': {
+            'class': 'SongGame',
+            'emoji': '🎵',
+            'name': 'خمن الأغنية',
+            'color': '#E9D8FD'
+        }
     }
     
     @classmethod
-    def get_db_path(cls) -> str:
-        """الحصول على مسار قاعدة البيانات الكامل"""
-        return os.path.join(cls.DB_PATH, cls.DB_NAME)
-    
-    @classmethod
     def get_theme(cls, theme_name: str = None) -> ThemeColors:
-        """الحصول على ألوان الثيم"""
+        """الحصول على ثيم"""
         if theme_name:
-            try:
-                theme = Theme(theme_name)
-                return THEMES[theme]
-            except (ValueError, KeyError):
-                pass
+            for theme_enum, theme_data in THEMES.items():
+                if theme_data.name == theme_name or theme_data.name_ar == theme_name:
+                    return theme_data
         return THEMES[cls.DEFAULT_THEME]
     
     @classmethod
+    def get_db_path(cls) -> str:
+        """مسار قاعدة البيانات"""
+        return os.path.join(cls.DB_PATH, cls.DB_NAME)
+    
+    @classmethod
     def validate(cls) -> bool:
-        """التحقق من الإعدادات المطلوبة"""
+        """التحقق من الإعدادات"""
         errors = []
-        
         if not cls.LINE_CHANNEL_ACCESS_TOKEN:
-            errors.append("LINE_CHANNEL_ACCESS_TOKEN is missing")
-        
+            errors.append("LINE_CHANNEL_ACCESS_TOKEN missing")
         if not cls.LINE_CHANNEL_SECRET:
-            errors.append("LINE_CHANNEL_SECRET is missing")
-        
+            errors.append("LINE_CHANNEL_SECRET missing")
         if errors:
-            raise ValueError(f"Configuration errors: {', '.join(errors)}")
-        
+            raise ValueError(f"Config errors: {', '.join(errors)}")
         return True
     
     @classmethod
@@ -200,6 +302,5 @@ class Config:
             'version': cls.BOT_VERSION,
             'debug': cls.DEBUG,
             'redis_enabled': cls.REDIS_ENABLED,
-            'ws_enabled': cls.WS_ENABLED,
-            'metrics_enabled': cls.ENABLE_METRICS
+            'total_games': len(cls.GAME_MAP)
         }
