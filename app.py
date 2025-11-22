@@ -1,579 +1,324 @@
 """
-Bot Mesh - Professional Gaming Bot (Final Enhanced Version)
+Bot Mesh - Professional Gaming Bot
 Created by: Abeer Aldosari © 2025
-
-نظام بوت احترافي مع:
-- نوافذ Flex ذكية
-- دعم المنشن التلقائي
-- Rich Menu مع أزرار الألعاب
-- 7 ثيمات جميلة
 """
 import os
-import sys
 import asyncio
 import logging
 import importlib
 from datetime import datetime
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 
 from flask import Flask, request, abort, jsonify
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, 
-    FlexSendMessage, FollowEvent, JoinEvent
+    MessageEvent, TextMessage, TextSendMessage,
+    FlexSendMessage, FollowEvent, JoinEvent, MentioneeType
 )
 
 from config import Config
 from database import Database
-from flex_messages import FlexMessageBuilder, Theme
+from flex_messages import FlexMessageBuilder, Theme, THEMES
 
 # Logging
 logging.basicConfig(
     level=logging.DEBUG if Config.DEBUG else logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('bot.log'),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler('bot.log', encoding='utf-8'), logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
-# ============================================
-# 🎮 تحميل الألعاب
-# ============================================
-GAMES_FOLDER = "games"
-
-def snake_to_camel(name: str) -> str:
-    """تحويل snake_case إلى CamelCase"""
-    return "".join(word.capitalize() for word in name.split("_"))
-
+# تحميل الألعاب
 def load_games() -> Dict[str, Any]:
-    """تحميل الألعاب ديناميكياً"""
     games = {}
-    if not os.path.exists(GAMES_FOLDER):
-        logger.warning(f"⚠️ {GAMES_FOLDER} folder not found")
+    if not os.path.exists("games"):
         return games
-    
-    for filename in os.listdir(GAMES_FOLDER):
-        if filename.endswith("_game.py") and not filename.startswith("__"):
-            module_name = filename[:-3]
-            class_name = snake_to_camel(module_name)
+    for f in os.listdir("games"):
+        if f.endswith("_game.py") and f != "base_game.py":
+            name = f[:-3]
+            cls = "".join(w.capitalize() for w in name.split("_"))
             try:
-                module = importlib.import_module(f"{GAMES_FOLDER}.{module_name}")
-                game_class = getattr(module, class_name, None)
-                if game_class:
-                    games[class_name] = game_class
-                    logger.info(f"✅ Loaded: {class_name}")
+                mod = importlib.import_module(f"games.{name}")
+                if hasattr(mod, cls):
+                    games[cls] = getattr(mod, cls)
+                    logger.info(f"✅ {cls}")
             except Exception as e:
-                logger.warning(f"⚠️ Failed to load {class_name}: {e}")
-    
-    logger.info(f"📊 {len(games)} games loaded")
+                logger.warning(f"⚠️ {cls}: {e}")
     return games
 
-GAMES_LOADED = load_games()
-AVAILABLE_GAMES = {
-    k: v for k, v in Config.GAME_MAP.items() 
-    if v['class'] in GAMES_LOADED
-}
+GAMES = load_games()
+GAME_MAP = {k: v for k, v in Config.GAME_MAP.items() if v['class'] in GAMES}
 
-# ============================================
-# ⚙️ Flask & LINE
-# ============================================
+# Flask & LINE
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
-
-line_bot_api = LineBotApi(Config.LINE_CHANNEL_ACCESS_TOKEN)
+line_api = LineBotApi(Config.LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(Config.LINE_CHANNEL_SECRET)
-
-# Database
 db = Database(Config.DB_PATH, Config.DB_NAME)
 
-# Gemini AI
-current_key_idx = 0
+# Gemini
+key_idx = 0
 USE_AI = bool(Config.GEMINI_API_KEYS)
-
-def get_gemini_key():
-    return Config.GEMINI_API_KEYS[current_key_idx] if Config.GEMINI_API_KEYS else None
-
+def get_key(): return Config.GEMINI_API_KEYS[key_idx] if Config.GEMINI_API_KEYS else None
 def switch_key():
-    global current_key_idx
+    global key_idx
     if len(Config.GEMINI_API_KEYS) > 1:
-        current_key_idx = (current_key_idx + 1) % len(Config.GEMINI_API_KEYS)
-        return True
-    return False
+        key_idx = (key_idx + 1) % len(Config.GEMINI_API_KEYS)
 
-# ============================================
-# 📊 Metrics
-# ============================================
-class Metrics:
-    """نظام الإحصائيات"""
-    def __init__(self):
-        self.requests = 0
-        self.games = 0
-        self.start = datetime.now()
-    
-    def get(self):
-        uptime = (datetime.now() - self.start).total_seconds()
-        return {
-            'requests': self.requests, 
-            'games': self.games, 
-            'uptime': f"{int(uptime//3600)}h"
-        }
-
-metrics = Metrics()
-
-# ============================================
-# 🎮 Game Manager
-# ============================================
-class GameManager:
-    """مدير الألعاب والمستخدمين"""
+# Game Manager
+class GM:
     def __init__(self):
         self.active: Dict[str, Dict] = {}
         self.users: set = set()
         self.themes: Dict[str, str] = {}
     
-    def is_registered(self, uid: str) -> bool:
-        return uid in self.users
-    
-    def register(self, uid: str):
-        self.users.add(uid)
-        logger.info(f"✅ User registered: {uid}")
-    
-    def unregister(self, uid: str):
-        self.users.discard(uid)
-        logger.info(f"👋 User unregistered: {uid}")
-    
-    def create_game(self, gid: str, game, gtype: str):
-        self.active[gid] = {
-            'game': game, 
-            'type': gtype, 
-            'created': datetime.now()
-        }
-    
-    def get_game(self, gid: str):
-        return self.active.get(gid)
-    
-    def end_game(self, gid: str):
-        return self.active.pop(gid, None)
-    
-    def is_active(self, gid: str) -> bool:
-        return gid in self.active
-    
-    def set_theme(self, uid: str, theme: str):
-        self.themes[uid] = theme
-    
-    def get_theme(self, uid: str) -> str:
-        return self.themes.get(uid, 'white')
+    def registered(self, uid): return uid in self.users
+    def register(self, uid): self.users.add(uid)
+    def unregister(self, uid): self.users.discard(uid)
+    def has_game(self, gid): return gid in self.active
+    def get_game(self, gid): return self.active.get(gid)
+    def start(self, gid, game, gtype): self.active[gid] = {'game': game, 'type': gtype}
+    def end(self, gid): return self.active.pop(gid, None)
+    def set_theme(self, uid, t): self.themes[uid] = t
+    def get_theme(self, uid): return self.themes.get(uid, 'white')
 
-gm = GameManager()
+gm = GM()
 
-# ============================================
-# 🔧 Helpers
-# ============================================
-def get_name(uid: str) -> str:
-    """الحصول على اسم المستخدم"""
+def get_name(uid):
+    try: return line_api.get_profile(uid).display_name
+    except: return "لاعب"
+
+def get_builder(uid):
+    t = gm.get_theme(uid)
+    theme_map = {'white': Theme.WHITE, 'black': Theme.BLACK, 'blue': Theme.BLUE,
+                 'purple': Theme.PURPLE, 'pink': Theme.PINK}
+    return FlexMessageBuilder(theme_map.get(t, Theme.WHITE))
+
+def is_mentioned(event) -> bool:
+    """التحقق من المنشن"""
     try:
-        return line_bot_api.get_profile(uid).display_name
-    except:
-        return "لاعب"
+        if hasattr(event.message, 'mention') and event.message.mention:
+            for m in event.message.mention.mentionees:
+                if m.type == MentioneeType.USER:
+                    return True
+    except: pass
+    
+    # التحقق من كلمات المنشن
+    text = event.message.text.lower()
+    keywords = ['@bot', 'بوت', 'bot mesh', 'botmesh']
+    return any(k in text for k in keywords)
 
-def get_builder(uid: str) -> FlexMessageBuilder:
-    """الحصول على FlexBuilder بثيم المستخدم"""
-    theme_name = gm.get_theme(uid)
-    theme_map = {
-        'white': Theme.WHITE, 'black': Theme.BLACK,
-        'gray': Theme.GRAY, 'blue': Theme.BLUE,
-        'purple': Theme.PURPLE, 'pink': Theme.PINK,
-        'mint': Theme.MINT
+# ==========================================
+# الأوامر
+# ==========================================
+def cmd_start(event, uid, gid, name):
+    """نافذة البداية - قائمة الألعاب"""
+    b = get_builder(uid)
+    line_api.reply_message(event.reply_token,
+        FlexSendMessage(alt_text="Bot Mesh", contents=b.create_start_screen()))
+
+def cmd_help(event, uid, gid, name):
+    """نافذة المساعدة"""
+    b = get_builder(uid)
+    line_api.reply_message(event.reply_token,
+        FlexSendMessage(alt_text="دليل الاستخدام", contents=b.create_help_screen()))
+
+def cmd_join(event, uid, gid, name):
+    """الانضمام"""
+    if gm.registered(uid):
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text=f"✅ أنت مسجل يا {name}!\nاكتب 'بداية' لعرض الألعاب"))
+    else:
+        gm.register(uid)
+        b = get_builder(uid)
+        line_api.reply_message(event.reply_token,
+            FlexSendMessage(alt_text="مرحباً!", contents=b.create_start_screen()))
+
+def cmd_leave(event, uid, gid, name):
+    """الانسحاب"""
+    if gm.registered(uid):
+        gm.unregister(uid)
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text="👋 تم الانسحاب\nاكتب 'انضم' للعودة"))
+    else:
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text="❌ أنت غير مسجل"))
+
+def cmd_stats(event, uid, gid, name):
+    """الإحصائيات"""
+    asyncio.run(db.initialize())
+    user = asyncio.run(db.get_user(uid))
+    rank = asyncio.run(db.get_user_rank(uid)) if user else 0
+    
+    data = {
+        'total_points': user.total_points if user else 0,
+        'games_played': user.games_played if user else 0,
+        'wins': user.wins if user else 0,
+        'is_registered': gm.registered(uid)
     }
-    theme = theme_map.get(theme_name, Theme.WHITE)
-    return FlexMessageBuilder(theme)
+    
+    b = get_builder(uid)
+    line_api.reply_message(event.reply_token,
+        FlexSendMessage(alt_text="إحصائياتي", contents=b.create_stats_card(data, rank)))
 
-# ============================================
-# 🎯 Commands Handler
-# ============================================
-class Commands:
-    """معالج الأوامر"""
-    def __init__(self):
-        self.cmds = {
-            'مساعدة': self.help, 'help': self.help, 'ابدأ': self.help,
-            'انضم': self.join, 'تسجيل': self.join,
-            'انسحب': self.leave, 'خروج': self.leave,
-            'نقاطي': self.stats, 'احصائياتي': self.stats,
-            'الصدارة': self.leaderboard,
-            'إيقاف': self.stop, 'ايقاف': self.stop,
-            'ثيم': self.theme_menu
-        }
+def cmd_leaderboard(event, uid, gid, name):
+    """الصدارة"""
+    asyncio.run(db.initialize())
+    leaders = asyncio.run(db.get_leaderboard())
+    data = [{'display_name': u.display_name, 'total_points': u.total_points} for u in leaders]
     
-    def handle(self, event, uid: str, text: str, gid: str, name: str) -> bool:
-        """معالجة الأوامر"""
-        # تغيير الثيم
-        if text.startswith('ثيم:'):
-            theme = text.split(':')[1]
-            self.set_theme(event, uid, theme)
-            return True
-        
-        # الأوامر العادية
-        cmd = self.cmds.get(text)
-        if cmd:
-            cmd(event, uid, gid, name)
-            return True
-        return False
-    
-    def help(self, event, uid, *args):
-        """نافذة المساعدة الترحيبية"""
-        builder = get_builder(uid)
-        line_bot_api.reply_message(
-            event.reply_token,
-            FlexSendMessage(
-                alt_text="مرحباً بك في Bot Mesh!",
-                contents=builder.create_welcome_screen()
-            )
-        )
-    
-    def join(self, event, uid, gid, name):
-        """انضمام المستخدم"""
-        if gm.is_registered(uid):
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    text=f"✅ أنت مسجل بالفعل يا {name}!\n\n"
-                         "اختر لعبة من الأزرار الثابتة أسفل الشاشة 🎮"
-                )
-            )
-        else:
-            gm.register(uid)
-            builder = get_builder(uid)
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(
-                    alt_text="مرحباً!",
-                    contents=builder.create_welcome_screen()
-                )
-            )
-    
-    def leave(self, event, uid, *args):
-        """انسحاب المستخدم"""
-        if gm.is_registered(uid):
-            gm.unregister(uid)
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    text="👋 تم الانسحاب بنجاح\n\n"
-                         "اكتب 'انضم' للعودة"
-                )
-            )
-        else:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="❌ أنت غير مسجل")
-            )
-    
-    def stats(self, event, uid, *args):
-        """الإحصائيات مع حالة التسجيل"""
-        asyncio.run(db.initialize())
-        user = asyncio.run(db.get_user(uid))
-        rank = asyncio.run(db.get_user_rank(uid)) if user else 0
-        
-        is_registered = gm.is_registered(uid)
-        
-        if user:
-            user_data = {
-                'total_points': user.total_points,
-                'games_played': user.games_played,
-                'wins': user.wins,
-                'is_registered': is_registered
-            }
-        else:
-            user_data = {
-                'total_points': 0,
-                'games_played': 0,
-                'wins': 0,
-                'is_registered': is_registered
-            }
-        
-        builder = get_builder(uid)
-        line_bot_api.reply_message(
-            event.reply_token,
-            FlexSendMessage(
-                alt_text="نقاطي",
-                contents=builder.create_stats_card(user_data, rank)
-            )
-        )
-    
-    def leaderboard(self, event, uid, *args):
-        """لوحة الصدارة"""
-        asyncio.run(db.initialize())
-        leaders = asyncio.run(db.get_leaderboard())
-        
-        leaders_data = [
-            {
-                'display_name': u.display_name,
-                'total_points': u.total_points
-            }
-            for u in leaders
-        ]
-        
-        builder = get_builder(uid)
-        line_bot_api.reply_message(
-            event.reply_token,
-            FlexSendMessage(
-                alt_text="الصدارة",
-                contents=builder.create_leaderboard(leaders_data)
-            )
-        )
-    
-    def stop(self, event, uid, gid, *args):
-        """إيقاف اللعبة"""
-        if gm.is_active(gid):
-            data = gm.end_game(gid)
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    text=f"⏹️ تم إيقاف لعبة {data['type']}"
-                )
-            )
-        else:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="❌ لا توجد لعبة نشطة")
-            )
-    
-    def theme_menu(self, event, uid, *args):
-        """قائمة الثيمات"""
-        builder = get_builder(uid)
-        line_bot_api.reply_message(
-            event.reply_token,
-            FlexSendMessage(
-                alt_text="الثيمات",
-                contents=builder.create_theme_selector()
-            )
-        )
-    
-    def set_theme(self, event, uid, theme_name):
-        """تعيين الثيم"""
-        gm.set_theme(uid, theme_name)
-        
-        theme_names = {
-            'white': '⚪ أبيض', 'black': '⚫ أسود',
-            'gray': '🔘 رمادي', 'purple': '💜 بنفسجي',
-            'blue': '💙 أزرق', 'pink': '🌸 وردي',
-            'mint': '🍃 نعناعي'
-        }
-        
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(
-                text=f"✅ تم تغيير الثيم إلى {theme_names.get(theme_name, theme_name)}"
-            )
-        )
+    b = get_builder(uid)
+    line_api.reply_message(event.reply_token,
+        FlexSendMessage(alt_text="الصدارة", contents=b.create_leaderboard(data)))
 
-cmds = Commands()
+def cmd_stop(event, uid, gid, name):
+    """إيقاف اللعبة"""
+    if gm.has_game(gid):
+        d = gm.end(gid)
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text=f"⏹️ تم إيقاف {d['type']}"))
+    else:
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text="❌ لا توجد لعبة نشطة"))
 
-# ============================================
-# 🎮 Game Functions
-# ============================================
-def start_game(gid, game_class, gtype, uid, event):
-    """بدء لعبة جديدة"""
+def cmd_theme(event, uid, gid, name):
+    """اختيار الثيم"""
+    b = get_builder(uid)
+    line_api.reply_message(event.reply_token,
+        FlexSendMessage(alt_text="الثيمات", contents=b.create_theme_selector()))
+
+def cmd_set_theme(event, uid, theme_name):
+    """تعيين الثيم"""
+    gm.set_theme(uid, theme_name)
+    names = {'white': '⚪ أبيض', 'black': '⚫ أسود', 'blue': '💙 أزرق',
+             'purple': '💜 بنفسجي', 'pink': '🌸 وردي'}
+    line_api.reply_message(event.reply_token,
+        TextSendMessage(text=f"✅ تم تغيير الثيم إلى {names.get(theme_name, theme_name)}"))
+
+COMMANDS = {
+    'بداية': cmd_start, 'ابدأ': cmd_start, 'start': cmd_start, 'قائمة': cmd_start,
+    'مساعدة': cmd_help, 'help': cmd_help,
+    'انضم': cmd_join, 'تسجيل': cmd_join,
+    'انسحب': cmd_leave, 'خروج': cmd_leave,
+    'نقاطي': cmd_stats, 'احصائياتي': cmd_stats,
+    'الصدارة': cmd_leaderboard,
+    'إيقاف': cmd_stop, 'ايقاف': cmd_stop, 'وقف': cmd_stop,
+    'ثيم': cmd_theme,
+}
+
+# ==========================================
+# بدء اللعبة
+# ==========================================
+def start_game(event, uid, gid, name, game_key):
+    if not gm.registered(uid):
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text="❌ اكتب 'انضم' أولاً للتسجيل"))
+        return
+    
+    if gm.has_game(gid):
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text="⚠️ يوجد لعبة نشطة!\nاكتب 'إيقاف' لإنهائها"))
+        return
+    
+    gdata = GAME_MAP.get(game_key)
+    if not gdata:
+        return
+    
+    cls = GAMES.get(gdata['class'])
+    if not cls:
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text="❌ اللعبة غير متاحة"))
+        return
+    
     try:
+        # لعبة التوافق خاصة
+        if game_key == 'توافق':
+            game = cls(line_api)
+            gm.start(gid, game, game_key)
+            line_api.reply_message(event.reply_token,
+                TextSendMessage(text="💖 لعبة التوافق!\n\nاكتب اسمين بمسافة\nمثال: أحمد سارة"))
+            return
+        
+        # الألعاب التي تستخدم AI
         ai_games = ['IqGame', 'WordColorGame', 'LettersWordsGame', 'HumanAnimalPlantGame']
-        
-        if game_class.__name__ in ai_games:
-            game = game_class(
-                line_bot_api, 
-                use_ai=USE_AI,
-                get_api_key=get_gemini_key, 
-                switch_key=switch_key
-            )
+        if gdata['class'] in ai_games:
+            game = cls(line_api, use_ai=USE_AI, get_api_key=get_key, switch_key=switch_key)
         else:
-            game = game_class(line_bot_api)
+            game = cls(line_api)
         
-        gm.create_game(gid, game, gtype)
-        response = game.start_game()
-        line_bot_api.reply_message(event.reply_token, response)
-        metrics.games += 1
-        logger.info(f"🎮 Game started: {gtype}")
-        return True
+        gm.start(gid, game, game_key)
+        resp = game.start_game()
+        line_api.reply_message(event.reply_token, resp)
+        logger.info(f"🎮 Started: {game_key}")
     except Exception as e:
-        logger.error(f"❌ Game start error: {e}", exc_info=True)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="❌ خطأ في بدء اللعبة")
-        )
-        return False
+        logger.error(f"❌ Game error: {e}")
+        line_api.reply_message(event.reply_token,
+            TextSendMessage(text="❌ خطأ في بدء اللعبة"))
 
-def handle_answer(event, uid, text, gid, name):
-    """معالجة إجابة اللاعب"""
+# ==========================================
+# معالجة الإجابة
+# ==========================================
+def handle_answer(event, uid, gid, name, text):
     data = gm.get_game(gid)
     if not data:
         return
     
-    game, gtype = data['game'], data['type']
+    game = data['game']
+    gtype = data['type']
     
     try:
         result = game.check_answer(text, uid, name)
         if result:
-            points = result.get('points', 0)
-            if points > 0:
+            pts = result.get('points', 0)
+            if pts > 0:
                 asyncio.run(db.initialize())
-                asyncio.run(db.update_user_score(
-                    uid, name, points,
-                    result.get('won', False), gtype
-                ))
+                asyncio.run(db.update_user_score(uid, name, pts, result.get('won', False), gtype))
             
             if result.get('game_over'):
-                gm.end_game(gid)
+                gm.end(gid)
             
-            response = result.get(
-                'response',
-                TextSendMessage(text=result.get('message', ''))
-            )
-            line_bot_api.reply_message(event.reply_token, response)
+            resp = result.get('response', TextSendMessage(text=result.get('message', '')))
+            line_api.reply_message(event.reply_token, resp)
     except Exception as e:
-        logger.error(f"❌ Answer error: {e}", exc_info=True)
+        logger.error(f"❌ Answer error: {e}")
 
-# ============================================
-# 🌐 Routes
-# ============================================
+# ==========================================
+# Routes
+# ==========================================
 @app.route("/")
 def home():
-    """الصفحة الرئيسية"""
-    s = metrics.get()
     return f'''<!DOCTYPE html>
-<html dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Mesh</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            padding: 20px;
-        }}
-        .card {{
-            background: white;
-            border-radius: 25px;
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-        }}
-        h1 {{
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }}
-        .status {{
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 15px;
-            margin: 20px 0;
-            font-weight: bold;
-        }}
-        .stats {{
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin: 30px 0;
-        }}
-        .stat {{
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 20px;
-            border-radius: 15px;
-            transition: transform 0.2s;
-        }}
-        .stat:hover {{
-            transform: translateY(-5px);
-        }}
-        .stat-val {{
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 5px;
-        }}
-        .stat-label {{
-            color: #6c757d;
-            font-size: 0.9em;
-        }}
-        .footer {{
-            color: #666;
-            margin-top: 20px;
-            font-size: 0.9em;
-        }}
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1>🎮 Bot Mesh</h1>
-        <div class="status">✅ يعمل بنجاح</div>
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-val">{len(GAMES_LOADED)}</div>
-                <div class="stat-label">ألعاب</div>
-            </div>
-            <div class="stat">
-                <div class="stat-val">{len(gm.users)}</div>
-                <div class="stat-label">لاعبين</div>
-            </div>
-            <div class="stat">
-                <div class="stat-val">{s["requests"]}</div>
-                <div class="stat-label">طلبات</div>
-            </div>
-        </div>
-        <div class="footer">
-            Created by Abeer Aldosari © 2025<br>
-            <small>Version {Config.BOT_VERSION}</small>
-        </div>
-    </div>
-</body>
-</html>'''
+<html dir="rtl"><head><meta charset="UTF-8"><title>Bot Mesh</title>
+<style>body{{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);
+min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0}}
+.c{{background:#fff;border-radius:25px;padding:40px;max-width:400px;text-align:center;
+box-shadow:0 20px 40px rgba(0,0,0,.3)}}h1{{color:#667eea;margin:0}}
+.s{{background:#d4edda;color:#155724;padding:15px;border-radius:15px;margin:20px 0}}</style>
+</head><body><div class="c"><h1>🎮 Bot Mesh</h1><div class="s">✅ يعمل بنجاح</div>
+<p>🎯 {len(GAMES)} لعبة | 👥 {len(gm.users)} لاعب</p>
+<small>Created by Abeer Aldosari © 2025</small></div></body></html>'''
 
 @app.route("/health")
 def health():
-    """فحص صحة التطبيق"""
-    return jsonify({
-        'status': 'healthy',
-        'version': Config.BOT_VERSION,
-        'games': len(GAMES_LOADED),
-        'users': len(gm.users)
-    }), 200
+    return jsonify({'status': 'ok', 'games': len(GAMES), 'users': len(gm.users)})
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    """معالج LINE Webhook"""
     sig = request.headers.get('X-Line-Signature')
-    if not sig:
-        abort(400)
-    
+    if not sig: abort(400)
     body = request.get_data(as_text=True)
-    metrics.requests += 1
-    
     try:
         handler.handle(body, sig)
     except InvalidSignatureError:
-        logger.error("❌ Invalid signature")
         abort(400)
-    except Exception as e:
-        logger.error(f"❌ Callback error: {e}", exc_info=True)
-        abort(500)
-    
     return 'OK'
 
-# ============================================
-# 📨 Event Handlers
-# ============================================
+# ==========================================
+# Event Handlers
+# ==========================================
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    """معالج الرسائل النصية"""
+def on_message(event):
     try:
         uid = event.source.user_id
         text = event.message.text.strip()
@@ -582,103 +327,50 @@ def handle_message(event):
         
         logger.info(f"📨 {name}: {text}")
         
-        # معالجة الأوامر
-        if cmds.handle(event, uid, text, gid, name):
+        # المنشن - إظهار نافذة البداية
+        if is_mentioned(event):
+            cmd_start(event, uid, gid, name)
+            return
+        
+        # تغيير الثيم
+        if text.startswith('ثيم:'):
+            cmd_set_theme(event, uid, text.split(':')[1])
+            return
+        
+        # الأوامر
+        if text in COMMANDS:
+            COMMANDS[text](event, uid, gid, name)
             return
         
         # بدء لعبة
-        if text in AVAILABLE_GAMES:
-            if not gm.is_registered(uid):
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(
-                        text="❌ اكتب 'انضم' أولاً للتسجيل"
-                    )
-                )
-                return
-            
-            game_data = AVAILABLE_GAMES[text]
-            game_class = GAMES_LOADED.get(game_data['class'])
-            
-            if not game_class:
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text="❌ اللعبة غير متاحة")
-                )
-                return
-            
-            # لعبة التوافق (خاصة)
-            if text == 'توافق':
-                game = game_class(line_bot_api)
-                gm.create_game(gid, game, text)
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(
-                        text="💖 لعبة التوافق!\n\n"
-                             "اكتب اسمين بمسافة\n"
-                             "مثال: ميش عبير"
-                    )
-                )
-                return
-            
-            start_game(gid, game_class, text, uid, event)
+        if text in GAME_MAP:
+            start_game(event, uid, gid, name, text)
             return
         
-        # معالجة الإجابة
-        if gm.is_active(gid):
-            if gm.is_registered(uid):
-                handle_answer(event, uid, text, gid, name)
-            return
-        
+        # إجابة في لعبة نشطة
+        if gm.has_game(gid) and gm.registered(uid):
+            handle_answer(event, uid, gid, name, text)
+    
     except Exception as e:
-        logger.error(f"❌ Message handling error: {e}", exc_info=True)
+        logger.error(f"❌ Error: {e}")
 
 @handler.add(FollowEvent)
-def handle_follow(event):
-    """عند إضافة البوت كصديق"""
+def on_follow(event):
     uid = event.source.user_id
-    name = get_name(uid)
-    logger.info(f"👤 New follower: {name}")
-    
-    builder = get_builder(uid)
-    line_bot_api.reply_message(
-        event.reply_token,
-        FlexSendMessage(
-            alt_text="مرحباً بك!",
-            contents=builder.create_welcome_screen()
-        )
-    )
+    b = get_builder(uid)
+    line_api.reply_message(event.reply_token,
+        FlexSendMessage(alt_text="مرحباً!", contents=b.create_start_screen()))
 
 @handler.add(JoinEvent)
-def handle_join(event):
-    """عند إضافة البوت لمجموعة"""
-    gid = event.source.group_id
-    logger.info(f"👥 Joined group: {gid}")
-    
-    builder = FlexMessageBuilder(Theme.WHITE)
-    line_bot_api.reply_message(
-        event.reply_token,
-        FlexSendMessage(
-            alt_text="مرحباً!",
-            contents=builder.create_welcome_screen()
-        )
-    )
+def on_join(event):
+    b = FlexMessageBuilder(Theme.WHITE)
+    line_api.reply_message(event.reply_token,
+        FlexSendMessage(alt_text="مرحباً!", contents=b.create_start_screen()))
 
-# ============================================
-# 🚀 Main
-# ============================================
+# ==========================================
+# Main
+# ==========================================
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    
-    logger.info("=" * 60)
-    logger.info("🎮 BOT MESH v2.0 - Enhanced Edition")
-    logger.info("=" * 60)
-    logger.info(f"🌐 Port: {port}")
-    logger.info(f"🎯 Games: {len(GAMES_LOADED)}")
-    logger.info(f"🎨 Themes: 7")
-    logger.info(f"✨ Features: Rich Menu + Flex Messages + Auto Help")
-    logger.info("=" * 60)
-    logger.info("Created by: Abeer Aldosari © 2025")
-    logger.info("=" * 60)
-    
+    logger.info(f"🎮 Bot Mesh | Port: {port} | Games: {len(GAMES)}")
     app.run(host='0.0.0.0', port=port, debug=Config.DEBUG)
