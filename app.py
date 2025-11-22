@@ -108,7 +108,7 @@ class GameManager:
     def __init__(self):
         self.active: Dict[str, Dict] = {}
         self.users: set = set()
-        self.themes: Dict[str, str] = {}  # user_id -> theme_name
+        self.themes: Dict[str, str] = {}
     
     def is_registered(self, uid: str) -> bool:
         return uid in self.users
@@ -163,7 +163,6 @@ class Commands:
             'مساعدة': self.help, 'help': self.help,
             'انضم': self.join, 'تسجيل': self.join,
             'انسحب': self.leave, 'خروج': self.leave,
-            'ابدأ': self.start, 'start': self.start,
             'نقاطي': self.stats, 'احصائياتي': self.stats,
             'الصدارة': self.leaderboard,
             'إيقاف': self.stop, 'ايقاف': self.stop,
@@ -184,7 +183,7 @@ class Commands:
         return False
     
     def help(self, event, uid, *args):
-        """نافذة المساعدة الشاملة"""
+        """نافذة المساعدة المحسّنة"""
         builder = get_builder(uid)
         line_bot_api.reply_message(
             event.reply_token,
@@ -194,7 +193,7 @@ class Commands:
     def join(self, event, uid, gid, name):
         if gm.is_registered(uid):
             line_bot_api.reply_message(event.reply_token,
-                TextSendMessage(text=f"✅ أنت مسجل يا {name}\n\nاكتب 'ابدأ' للعب"))
+                TextSendMessage(text=f"✅ أنت مسجل يا {name}\n\nاختر لعبة من الأزرار الثابتة أسفل الشاشة"))
         else:
             gm.register(uid)
             builder = get_builder(uid)
@@ -210,27 +209,29 @@ class Commands:
             line_bot_api.reply_message(event.reply_token,
                 TextSendMessage(text="❌ أنت غير مسجل"))
     
-    def start(self, event, uid, *args):
-        if not AVAILABLE_GAMES:
-            line_bot_api.reply_message(event.reply_token,
-                TextSendMessage(text="⚠️ لا توجد ألعاب متاحة"))
-        else:
-            builder = get_builder(uid)
-            line_bot_api.reply_message(event.reply_token,
-                FlexSendMessage(alt_text="الألعاب", 
-                               contents=builder.create_games_carousel(AVAILABLE_GAMES)))
-    
     def stats(self, event, uid, *args):
+        """الإحصائيات مع حالة التسجيل"""
         asyncio.run(db.initialize())
         user = asyncio.run(db.get_user(uid))
         rank = asyncio.run(db.get_user_rank(uid)) if user else 0
+        
+        # حالة التسجيل
+        is_registered = gm.is_registered(uid)
         
         user_data = None
         if user:
             user_data = {
                 'total_points': user.total_points,
                 'games_played': user.games_played,
-                'wins': user.wins
+                'wins': user.wins,
+                'is_registered': is_registered
+            }
+        else:
+            user_data = {
+                'total_points': 0,
+                'games_played': 0,
+                'wins': 0,
+                'is_registered': is_registered
             }
         
         builder = get_builder(uid)
@@ -276,7 +277,8 @@ class Commands:
         
         theme_names = {
             'white': '⚪ أبيض', 'black': '⚫ أسود',
-            'gray': '🔘 رمادي', 'purple': '💜 بنفسجي', 'blue': '💙 أزرق'
+            'gray': '🔘 رمادي', 'purple': '💜 بنفسجي', 
+            'blue': '💙 أزرق', 'pink': '🌸 وردي', 'mint': '🍃 نعناعي'
         }
         
         line_bot_api.reply_message(event.reply_token,
@@ -422,7 +424,7 @@ def handle_message(event):
                 game = game_class(line_bot_api)
                 gm.create_game(gid, game, text)
                 line_bot_api.reply_message(event.reply_token,
-                    TextSendMessage(text="💖 لعبة التوافق!\n\nاكتب اسمين بمسافة\nمثال: أحمد فاطمة"))
+                    TextSendMessage(text="💖 لعبة التوافق!\n\nاكتب اسمين بمسافة\nمثال: ميش عبير"))
                 return
             
             start_game(gid, game_class, text, uid, event)
@@ -448,7 +450,7 @@ if __name__ == "__main__":
     logger.info("=" * 50)
     logger.info(f"🌐 Port: {port}")
     logger.info(f"🎯 Games: {len(GAMES_LOADED)}")
-    logger.info(f"🎨 Themes: 5 (أبيض/أسود/رمادي/بنفسجي/أزرق)")
+    logger.info(f"🎨 Themes: 7")
     logger.info("=" * 50)
     logger.info("Created by: Abeer Aldosari © 2025")
     logger.info("=" * 50)
