@@ -2,18 +2,16 @@ import time
 
 class GameManager:
     def __init__(self):
-        self.active_games = {}  # gid: {'game': obj, 'type': str, 'answered_users': []}
+        self.active_games = {}  # gid: {'game': obj, 'type': str, 'answered_users': set()}
         self.registered_users = {}  # uid: {'name': str, 'joined_at': timestamp}
         self.ignored_users = set()
 
     # -------- تسجيل المستخدم --------
     def register(self, uid, name):
         self.registered_users[uid] = {'name': name, 'joined_at': time.time()}
-        if uid in self.ignored_users:
-            self.ignored_users.remove(uid)
+        self.ignored_users.discard(uid)
 
     def unregister(self, uid):
-        """انسحب المستخدم"""
         if uid in self.registered_users:
             del self.registered_users[uid]
         self.ignored_users.add(uid)
