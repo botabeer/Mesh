@@ -1,340 +1,279 @@
 """
-Bot Mesh - Base Game Enhanced (Silent & Professional)
+Bot Mesh - Enhanced Silent Bot (All-in-One)
 Created by: Abeer Aldosari © 2025
-بدون إيموجي إلا للضرورة + ألوان احترافية
+بوت صامت - يرد فقط على المسجلين والأوامر
 """
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-import re
+import os
 import logging
-from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
+import sqlite3
+from datetime import datetime
+from flask import Flask, request, abort, jsonify
 
-logger = logging.getLogger(__name__)
+# LINE SDK v3
+from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError
+from linebot.v3.messaging import (
+    Configuration, ApiClient, MessagingApi,
+    ReplyMessageRequest, TextMessage, FlexMessage, FlexContainer
+)
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 
-# ==================== THEMES ====================
+# ==================== Configuration ====================
+LINE_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
+LINE_SECRET = os.getenv('LINE_CHANNEL_SECRET', '')
+DB_PATH = os.getenv('DB_PATH', 'data/game.db')
+
+# 9 Themes - Professional 3D Colors
 THEMES = {
-    'white': {'bg': '#E0E5EC', 'card': '#D1D9E6', 'primary': '#667EEA', 'text': '#1A202C', 'text2': '#4A5568'},
-    'black': {'bg': '#0F0F1A', 'card': '#1A1A2E', 'primary': '#00D9FF', 'text': '#F7FAFC', 'text2': '#CBD5E0'},
-    'gray': {'bg': '#2D3748', 'card': '#4A5568', 'primary': '#68D391', 'text': '#F7FAFC', 'text2': '#E2E8F0'},
-    'blue': {'bg': '#1E3A8A', 'card': '#1E40AF', 'primary': '#60A5FA', 'text': '#F0F9FF', 'text2': '#BFDBFE'},
-    'green': {'bg': '#14532D', 'card': '#166534', 'primary': '#4ADE80', 'text': '#F0FDF4', 'text2': '#BBF7D0'},
-    'pink': {'bg': '#FFF1F2', 'card': '#FFE4E6', 'primary': '#EC4899', 'text': '#831843', 'text2': '#9F1239'},
-    'orange': {'bg': '#431407', 'card': '#7C2D12', 'primary': '#FB923C', 'text': '#FFF7ED', 'text2': '#FDBA74'},
-    'purple': {'bg': '#3B0764', 'card': '#581C87', 'primary': '#C084FC', 'text': '#FAF5FF', 'text2': '#E9D5FF'},
-    'brown': {'bg': '#1C0A00', 'card': '#44403C', 'primary': '#A78BFA', 'text': '#FAFAF9', 'text2': '#D6D3D1'}
+    'white': {'bg': '#E0E5EC', 'card': '#D1D9E6', 'primary': '#667EEA', 'text': '#1A202C', 'text2': '#4A5568', 'name': 'أبيض'},
+    'black': {'bg': '#0F0F1A', 'card': '#1A1A2E', 'primary': '#00D9FF', 'text': '#F7FAFC', 'text2': '#CBD5E0', 'name': 'أسود'},
+    'gray': {'bg': '#2D3748', 'card': '#4A5568', 'primary': '#68D391', 'text': '#F7FAFC', 'text2': '#E2E8F0', 'name': 'رمادي'},
+    'blue': {'bg': '#1E3A8A', 'card': '#1E40AF', 'primary': '#60A5FA', 'text': '#F0F9FF', 'text2': '#BFDBFE', 'name': 'أزرق'},
+    'green': {'bg': '#14532D', 'card': '#166534', 'primary': '#4ADE80', 'text': '#F0FDF4', 'text2': '#BBF7D0', 'name': 'أخضر'},
+    'pink': {'bg': '#FFF1F2', 'card': '#FFE4E6', 'primary': '#EC4899', 'text': '#831843', 'text2': '#9F1239', 'name': 'وردي'},
+    'orange': {'bg': '#431407', 'card': '#7C2D12', 'primary': '#FB923C', 'text': '#FFF7ED', 'text2': '#FDBA74', 'name': 'برتقالي'},
+    'purple': {'bg': '#3B0764', 'card': '#581C87', 'primary': '#C084FC', 'text': '#FAF5FF', 'text2': '#E9D5FF', 'name': 'بنفسجي'},
+    'brown': {'bg': '#1C0A00', 'card': '#44403C', 'primary': '#A78BFA', 'text': '#FAFAF9', 'text2': '#D6D3D1', 'name': 'بني'}
 }
 
-class BaseGame(ABC):
-    """
-    لعبة أساسية محسّنة:
-    - 5 جولات
-    - بدون إيموجي إلا للضرورة
-    - ألوان احترافية ثري دي
-    - صامت (لا يرد إلا على المسجلين)
-    """
+# ==================== Logging ====================
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# ==================== Database ====================
+class Database:
+    def __init__(self, path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        self.conn = sqlite3.connect(path, check_same_thread=False)
+        self.cursor = self.conn.cursor()
+        self._create_tables()
+
+    def _create_tables(self):
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            uid TEXT PRIMARY KEY,
+            name TEXT,
+            points INTEGER DEFAULT 0,
+            games INTEGER DEFAULT 0,
+            wins INTEGER DEFAULT 0,
+            theme TEXT DEFAULT 'white',
+            registered BOOLEAN DEFAULT 0,
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        self.conn.commit()
+
+    def get_user(self, uid):
+        self.cursor.execute("SELECT * FROM users WHERE uid=?", (uid,))
+        row = self.cursor.fetchone()
+        if row:
+            return {'uid': row[0], 'name': row[1], 'points': row[2], 'games': row[3], 
+                    'wins': row[4], 'theme': row[5], 'registered': bool(row[6]), 
+                    'joined_at': row[7], 'last_active': row[8]}
+        return None
+
+    def add_or_update_user(self, uid, name, registered=False):
+        self.cursor.execute("""
+        INSERT INTO users(uid, name, registered) VALUES(?, ?, ?)
+        ON CONFLICT(uid) DO UPDATE SET name=excluded.name, last_active=CURRENT_TIMESTAMP
+        """, (uid, name, registered))
+        self.conn.commit()
+
+    def register_user(self, uid):
+        self.cursor.execute("UPDATE users SET registered=1 WHERE uid=?", (uid,))
+        self.conn.commit()
+
+    def unregister_user(self, uid):
+        self.cursor.execute("UPDATE users SET registered=0 WHERE uid=?", (uid,))
+        self.conn.commit()
+
+    def is_registered(self, uid):
+        user = self.get_user(uid)
+        return user and user['registered']
+
+    def update_points(self, uid, points=0, won=False):
+        user = self.get_user(uid)
+        if user:
+            new_points = user['points'] + points
+            new_games = user['games'] + 1
+            new_wins = user['wins'] + (1 if won else 0)
+            self.cursor.execute("""
+            UPDATE users SET points=?, games=?, wins=?, last_active=CURRENT_TIMESTAMP
+            WHERE uid=?
+            """, (new_points, new_games, new_wins, uid))
+            self.conn.commit()
+
+    def update_theme(self, uid, theme):
+        self.cursor.execute("UPDATE users SET theme=?, last_active=CURRENT_TIMESTAMP WHERE uid=?", (theme, uid))
+        self.conn.commit()
+
+    def get_leaderboard(self, limit=10):
+        self.cursor.execute("SELECT name, points, games, wins FROM users WHERE registered=1 ORDER BY points DESC LIMIT ?", (limit,))
+        return [{'name': r[0], 'points': r[1], 'games': r[2], 'wins': r[3]} for r in self.cursor.fetchall()]
+
+# ==================== Game Manager ====================
+class GameManager:
+    def __init__(self):
+        self.active_games = {}
+
+    def start_game(self, gid, game, game_type):
+        self.active_games[gid] = {"game": game, "type": game_type}
+
+    def get_game(self, gid):
+        return self.active_games.get(gid)
+
+    def end_game(self, gid):
+        self.active_games.pop(gid, None)
+
+# ==================== Flask & LINE ====================
+app = Flask(__name__)
+configuration = Configuration(access_token=LINE_TOKEN)
+handler = WebhookHandler(LINE_SECRET)
+db = Database(DB_PATH)
+gm = GameManager()
+
+# Game imports will be added here
+GAMES = {}
+
+# ==================== Helper Functions ====================
+def get_name(uid):
+    try:
+        with ApiClient(configuration) as api_client:
+            line_api = MessagingApi(api_client)
+            profile = line_api.get_profile(uid)
+            return profile.display_name
+    except:
+        return 'لاعب'
+
+def get_theme(uid):
+    user = db.get_user(uid)
+    return user.get('theme', 'white') if user else 'white'
+
+def send_flex(reply_token, content, alt='رسالة'):
+    try:
+        with ApiClient(configuration) as api_client:
+            line_api = MessagingApi(api_client)
+            line_api.reply_message(ReplyMessageRequest(
+                replyToken=reply_token,
+                messages=[FlexMessage(altText=alt, contents=FlexContainer.from_dict(content))]
+            ))
+            return True
+    except Exception as e:
+        logger.error(f'Error: {e}')
+    return False
+
+def send_text(reply_token, text):
+    try:
+        with ApiClient(configuration) as api_client:
+            line_api = MessagingApi(api_client)
+            line_api.reply_message(ReplyMessageRequest(
+                replyToken=reply_token,
+                messages=[TextMessage(text=text)]
+            ))
+            return True
+    except Exception as e:
+        logger.error(f'Error: {e}')
+    return False
+
+# ==================== Routes ====================
+@app.route('/')
+def home():
+    return jsonify({'name': 'Bot Mesh Silent', 'status': 'active', 'version': '4.0.0'})
+
+@app.route('/callback', methods=['POST'])
+def callback():
+    signature = request.headers.get('X-Line-Signature')
+    if not signature:
+        abort(400)
+    body = request.get_data(as_text=True)
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+    return 'OK'
+
+# ==================== Event Handlers ====================
+@handler.add(FollowEvent)
+def on_follow(event):
+    uid = event.source.user_id
+    name = get_name(uid)
+    db.add_or_update_user(uid, name, False)
+    send_flex(event.reply_token, create_main_menu(uid), 'مرحباً')
+
+@handler.add(MessageEvent, message=TextMessageContent)
+def on_message(event):
+    uid = event.source.user_id
+    txt = event.message.text.strip()
+    gid = getattr(event.source, 'group_id', uid)
+    name = get_name(uid)
     
-    def __init__(self, line_api):
-        self.line_api = line_api
-        self.rounds = 5
-        self.current_round = 0
-        self.current_answer = None
-        self.game_active = True
-        self.scores = {}
-        self.answered_users = set()
-        self.theme = 'white'
-        self.supports_hint = True
-        self.supports_reveal = True
+    # تحديث/إضافة المستخدم في قاعدة البيانات
+    if not db.get_user(uid):
+        db.add_or_update_user(uid, name, False)
     
-    @abstractmethod
-    def start_game(self):
-        pass
+    is_registered = db.is_registered(uid)
     
-    @abstractmethod
-    def generate_question(self):
-        pass
+    # التحقق من المنشن باسم البوت @Bot Mesh
+    if '@Bot Mesh' in txt:
+        send_flex(event.reply_token, create_main_menu(uid), 'القائمة')
+        return
     
-    @abstractmethod
-    def check_answer(self, answer: str, uid: str, name: str) -> Optional[Dict[str, Any]]:
-        pass
+    # الأوامر المتاحة للجميع
+    if txt.lower() in ['بداية', 'start', 'مساعدة', 'help']:
+        send_flex(event.reply_token, create_main_menu(uid), 'القائمة')
+        return
     
-    def set_theme(self, theme_name: str):
-        self.theme = theme_name
+    if txt.lower() in ['انضم', 'join']:
+        db.register_user(uid)
+        send_text(event.reply_token, 'تم التسجيل بنجاح')
+        logger.info(f'User registered: {name}')
+        return
     
-    def get_theme_colors(self):
-        return THEMES.get(self.theme, THEMES['white'])
+    if txt == 'ثيم':
+        send_flex(event.reply_token, create_theme_menu(uid), 'الثيمات')
+        return
     
-    def normalize_text(self, text: str) -> str:
-        if not text:
-            return ""
-        t = re.sub(r'[\u0617-\u061A\u064B-\u0652]', '', text)
-        t = re.sub(r'[إأآا]', 'ا', t)
-        t = re.sub(r'[ة]', 'ه', t)
-        t = re.sub(r'[ىئ]', 'ي', t)
-        return ' '.join(t.split()).strip()
+    if txt.startswith('ثيم:'):
+        theme_key = txt.split(':')[1]
+        if theme_key in THEMES:
+            db.update_theme(uid, theme_key)
+            send_text(event.reply_token, f"تم تغيير الثيم إلى {THEMES[theme_key]['name']}")
+        return
     
-    def add_score(self, uid: str, name: str, points: int) -> int:
-        if uid not in self.scores:
-            self.scores[uid] = {'name': name, 'points': 0}
-        self.scores[uid]['points'] += points
-        self.answered_users.add(uid)
-        return points
+    if txt.lower() in ['نقاطي', 'stats']:
+        send_flex(event.reply_token, create_stats_flex(uid), 'إحصائياتك')
+        return
     
-    def get_hint(self) -> str:
-        """تلميح: أول حرف + عدد الحروف"""
-        if not self.current_answer:
-            return "لا يوجد تلميح"
-        answer = str(self.current_answer).strip()
-        first_char = answer[0]
-        length = len(answer)
-        return f"تلميح | أول حرف: {first_char} | عدد الحروف: {length}"
+    if txt.lower() in ['صدارة', 'leaderboard']:
+        send_flex(event.reply_token, create_leaderboard_flex(uid), 'الصدارة')
+        return
     
-    def reveal_answer(self) -> str:
-        return f"الإجابة الصحيحة: {self.current_answer}"
+    # أمر الانسحاب
+    if txt.lower() in ['انسحب', 'leave']:
+        db.unregister_user(uid)
+        send_text(event.reply_token, 'تم الانسحاب')
+        logger.info(f'User unregistered: {name}')
+        return
     
-    def next_round(self):
-        self.current_round += 1
-        self.answered_users.clear()
-        
-        if self.current_round >= self.rounds:
-            return self.end_game()
-        
-        return self.generate_question()
+    # من هنا فصاعداً: فقط المسجلون
+    if not is_registered:
+        return  # صامت تماماً - لا يرد
     
-    def end_game(self) -> Dict[str, Any]:
-        self.game_active = False
-        
-        if not self.scores:
-            return {
-                'game_over': True,
-                'response': self.create_text_message("انتهت اللعبة | لم يشارك أحد"),
-                'points': 0
-            }
-        
-        sorted_players = sorted(self.scores.items(), key=lambda x: x[1]['points'], reverse=True)
-        winner = sorted_players[0]
-        
-        result_flex = self.create_result_flex(sorted_players)
-        
-        return {
-            'game_over': True,
-            'response': result_flex,
-            'winner_uid': winner[0],
-            'winner_name': winner[1]['name'],
-            'winner_points': winner[1]['points'],
-            'points': winner[1]['points']
-        }
+    # إيقاف اللعبة
+    if txt.lower() in ['إيقاف', 'stop']:
+        if gm.get_game(gid):
+            gm.end_game(gid)
+            send_text(event.reply_token, 'تم إيقاف اللعبة')
+        else:
+            send_text(event.reply_token, 'لا توجد لعبة نشطة')
+        return
     
-    def create_text_message(self, text: str):
-        return TextMessage(text=text)
-    
-    def create_flex_message(self, alt_text: str, contents: dict):
-        return FlexMessage(altText=alt_text, contents=FlexContainer.from_dict(contents))
-    
-    def create_question_flex(self, title: str, question: str, extra_info: str = ""):
-        """نافذة سؤال بدون إيموجي"""
-        colors = self.get_theme_colors()
-        
-        contents = [
-            {
-                "type": "text",
-                "text": title,
-                "weight": "bold",
-                "size": "xl",
-                "color": colors['primary'],
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": f"الجولة {self.current_round + 1} من {self.rounds}",
-                "size": "sm",
-                "color": colors['text2'],
-                "align": "center",
-                "margin": "sm"
-            },
-            {
-                "type": "separator",
-                "margin": "md"
-            },
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": question,
-                        "size": "lg",
-                        "color": colors['text'],
-                        "wrap": True,
-                        "weight": "bold",
-                        "align": "center"
-                    }
-                ],
-                "backgroundColor": colors['card'],
-                "cornerRadius": "20px",
-                "paddingAll": "20px",
-                "margin": "md"
-            }
-        ]
-        
-        if extra_info:
-            contents.append({
-                "type": "text",
-                "text": extra_info,
-                "size": "sm",
-                "color": colors['text2'],
-                "align": "center",
-                "margin": "md",
-                "wrap": True
-            })
-        
-        # أزرار لمح/جاوب
-        if self.supports_hint or self.supports_reveal:
-            buttons = []
-            if self.supports_hint:
-                buttons.append({
-                    "type": "button",
-                    "action": {"type": "message", "label": "تلميح", "text": "لمح"},
-                    "style": "secondary",
-                    "color": colors['card'],
-                    "height": "sm",
-                    "flex": 1
-                })
-            if self.supports_reveal:
-                buttons.append({
-                    "type": "button",
-                    "action": {"type": "message", "label": "كشف الإجابة", "text": "جاوب"},
-                    "style": "secondary",
-                    "color": colors['card'],
-                    "height": "sm",
-                    "flex": 1
-                })
-            
-            contents.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": buttons,
-                "spacing": "sm",
-                "margin": "lg"
-            })
-        
-        flex_content = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": contents,
-                "paddingAll": "20px",
-                "backgroundColor": colors['bg']
-            },
-            "styles": {
-                "body": {"backgroundColor": colors['bg']}
-            }
-        }
-        
-        return self.create_flex_message(title, flex_content)
-    
-    def create_result_flex(self, sorted_players):
-        """نافذة النتائج النهائية"""
-        colors = self.get_theme_colors()
-        winner = sorted_players[0]
-        
-        contents = [
-            {
-                "type": "text",
-                "text": "انتهت اللعبة",
-                "weight": "bold",
-                "size": "xxl",
-                "color": colors['primary'],
-                "align": "center"
-            },
-            {
-                "type": "separator",
-                "margin": "lg"
-            },
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "الفائز",
-                        "size": "sm",
-                        "color": colors['text2'],
-                        "align": "center"
-                    },
-                    {
-                        "type": "text",
-                        "text": winner[1]['name'],
-                        "size": "xxl",
-                        "weight": "bold",
-                        "color": colors['primary'],
-                        "align": "center",
-                        "margin": "sm"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"{winner[1]['points']} نقطة",
-                        "size": "lg",
-                        "color": colors['text'],
-                        "align": "center",
-                        "margin": "sm"
-                    }
-                ],
-                "backgroundColor": colors['card'],
-                "cornerRadius": "20px",
-                "paddingAll": "20px",
-                "margin": "lg"
-            },
-            {
-                "type": "separator",
-                "margin": "lg"
-            },
-            {
-                "type": "text",
-                "text": "النتائج النهائية",
-                "size": "md",
-                "weight": "bold",
-                "color": colors['text'],
-                "align": "center",
-                "margin": "md"
-            }
-        ]
-        
-        ranks = ["الأول", "الثاني", "الثالث"]
-        for i, (uid, data) in enumerate(sorted_players[:10]):
-            rank = ranks[i] if i < 3 else f"المركز {i+1}"
-            contents.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {"type": "text", "text": rank, "size": "xs", "color": colors['text2'], "flex": 2},
-                    {"type": "text", "text": data['name'], "size": "sm", "color": colors['text'], "flex": 3},
-                    {"type": "text", "text": str(data['points']), "size": "sm", "color": colors['primary'], "weight": "bold", "align": "end", "flex": 1}
-                ],
-                "margin": "sm"
-            })
-        
-        contents.append({
-            "type": "button",
-            "action": {"type": "message", "label": "القائمة الرئيسية", "text": "مساعدة"},
-            "style": "primary",
-            "color": colors['primary'],
-            "margin": "lg"
-        })
-        
-        flex_content = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": contents,
-                "paddingAll": "20px",
-                "backgroundColor": colors['bg']
-            },
-            "styles": {
-                "body": {"backgroundColor": colors['bg']}
-            }
-        }
-        
-        return self.create_flex_message("النتائج", flex_content)
+    # بدء لعبة (سيتم إضافة منطق الألعاب هنا)
+    # TODO: Add game logic here
+
+# ==================== Run ====================
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    logger.info(f"Bot Mesh Silent v4.0 - Running on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
