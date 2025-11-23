@@ -1,124 +1,55 @@
 """
-لعبة سلسلة الكلمات - Neumorphism Soft Version
+لعبة سلسلة الكلمات - محسنة
 Created by: Abeer Aldosari © 2025
 """
-from linebot.models import FlexSendMessage, TextSendMessage
 from .base_game import BaseGame
 import random
+from config import POINTS_PER_CORRECT, POINTS_PER_WIN
 
 class ChainWordsGame(BaseGame):
-    """لعبة سلسلة الكلمات - نسخة محسّنة Neumorphism Soft"""
-    
-    def __init__(self, line_bot_api):
-        super().__init__(line_bot_api, questions_count=5)
+    def __init__(self, line_api):
+        super().__init__(line_api, rounds=5)
         self.starting_words = [
             "سيارة", "تفاح", "قلم", "نجم", "كتاب", "باب", "رمل", 
-            "لعبة", "حديقة", "ورد", "دفتر", "معلم", "منزل", "شمس",
-            "سفر", "رياضة", "علم", "مدرسة", "طائرة", "عصير"
+            "لعبة", "حديقة", "ورد", "دفتر", "معلم", "منزل", "شمس"
         ]
         self.last_word = None
         self.used_words = set()
-        self.theme = "white"
-
-    def set_theme(self, theme_name: str):
-        self.theme = theme_name
-
-    def _get_theme_colors(self):
-        themes = {
-            "white": {"bg": "#E0E5EC", "card": "#D1D9E6", "accent": "#667EEA", 
-                     "text": "#2C3E50", "text2": "#7F8C8D"},
-            "black": {"bg": "#0F0F1A", "card": "#1A1A2E", "accent": "#00D9FF",
-                     "text": "#FFFFFF", "text2": "#A0AEC0"},
-            "gray": {"bg": "#1A202C", "card": "#2D3748", "accent": "#68D391",
-                    "text": "#F7FAFC", "text2": "#CBD5E0"},
-            "purple": {"bg": "#1E1B4B", "card": "#312E81", "accent": "#A855F7",
-                      "text": "#F5F3FF", "text2": "#C4B5FD"},
-            "blue": {"bg": "#0C1929", "card": "#1E3A5F", "accent": "#00D9FF",
-                    "text": "#E0F2FE", "text2": "#7DD3FC"}
-        }
-        return themes.get(self.theme, themes["white"])
 
     def start_game(self):
-        self.current_question = 0
+        self.current_round = 0
         self.last_word = random.choice(self.starting_words)
         self.used_words.add(self.normalize_text(self.last_word))
-        return self.get_question()
+        return self.generate_question()
 
-    def get_question(self):
-        colors = self._get_theme_colors()
+    def generate_question(self):
         required_letter = self.last_word[-1]
-
-        flex_content = {
-            "type": "bubble",
-            "size": "kilo",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "🔗 سلسلة الكلمات", "size": "lg",
-                     "weight": "bold", "color": "#FFFFFF", "align": "center"},
-                    {"type": "text", "text": "تأثير 3D - عمق ناعم", "size": "xs",
-                     "color": "#E0E0E0", "align": "center"}
-                ],
-                "backgroundColor": colors["accent"],
-                "paddingAll": "15px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", 
-                     "text": f"سؤال {self.current_question + 1} من {self.questions_count}",
-                     "size": "sm", "color": colors["text2"], "align": "center", "margin": "sm"},
-                    {"type": "text", 
-                     "text": f"📝 الكلمة السابقة: {self.last_word}",
-                     "size": "md", "color": colors["text"], "align": "center", "margin": "md"},
-                    {"type": "text", 
-                     "text": f"🔤 اكتب كلمة تبدأ بحرف: {required_letter}",
-                     "size": "md", "color": colors["text"], "align": "center", "margin": "md"},
-                    {"type": "text",
-                     "text": "⚠️ لا تكرر الكلمات المستخدمة\n❌ لا تدعم: جاوب و لمّح",
-                     "size": "xs", "color": colors["text2"], "align": "center", "margin": "md"}
-                ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "20px",
-                "paddingAll": "20px",
-                "margin": "lg"
-            }
-        }
-
-        return FlexSendMessage(alt_text="لعبة سلسلة الكلمات", contents=flex_content)
-
-    def check_answer(self, user_answer, user_id, display_name):
-        if not self.game_active:
-            return None
         
-        if user_id in self.answered_users:
-            return None
+        question = f"الكلمة السابقة: {self.last_word}\n\n اكتب كلمة تبدأ بحرف: {required_letter}"
+        extra_info = "⚠️ لا تكرر الكلمات المستخدمة"
         
-        normalized_answer = self.normalize_text(user_answer)
+        return self.build_question_flex("سلسلة الكلمات 🔗", question, extra_info)
+
+    def check_answer(self, answer, uid, name):
+        normalized_answer = self.normalize_text(answer)
+        
         if normalized_answer in self.used_words:
-            msg = f"❌ الكلمة '{user_answer}' مستخدمة من قبل!"
-            return {'message': msg, 'response': TextSendMessage(text=msg), 'points': 0}
+            hint = f"❌ الكلمة '{answer}' مستخدمة من قبل!"
+            return {'points': 0, 'won': False, 'response': self.build_question_flex("سلسلة الكلمات 🔗", hint, "جرب كلمة أخرى")}
         
         required_letter = self.last_word[-1]
         if normalized_answer and normalized_answer[0] == self.normalize_text(required_letter) and len(normalized_answer) >= 2:
             self.used_words.add(normalized_answer)
-            self.last_word = user_answer.strip()
-            points = self.add_score(user_id, display_name, 10)
+            self.last_word = answer.strip()
+            points = POINTS_PER_CORRECT
+            self.add_player_score(uid, points)
             
-            self.current_question += 1
-            self.answered_users.clear()
+            self.current_round += 1
+            is_final = self.current_round >= self.rounds
             
-            if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result['points'] = points
-                return result
+            if is_final:
+                return {'points': points, 'won': True, 'response': self.build_result_flex(name, f"الكلمة الأخيرة: {self.last_word}", points, True)}
             
-            next_q = self.get_question()
-            message = f"✅ ممتاز يا {display_name}!\n+{points} نقطة\n\n"
-            message += f"السؤال التالي..."
-            
-            return {'message': message, 'response': next_q, 'points': points}
+            return {'points': points, 'won': False, 'response': self.generate_question()}
         
         return None
