@@ -53,7 +53,7 @@ class FlexBuilder:
         }
     
     def welcome(self):
-        """القائمة الرئيسية"""
+        """القائمة الرئيسية - نسخة معدلة"""
         games = [
             ['🧠', 'ذكاء', 'ذكاء'],
             ['🎨', 'لون', 'لون'],
@@ -138,9 +138,10 @@ class FlexBuilder:
                         "spacing": "sm",
                         "margin": "sm",
                         "contents": [
+                            # زر جديد: إيقاف اللعبة
                             {
                                 "type": "button",
-                                "action": {"type": "message", "label": "🎨 ثيم", "text": "ثيم"},
+                                "action": {"type": "message", "label": "🛑 إيقاف", "text": "إيقاف"},
                                 "style": "secondary",
                                 "height": "sm"
                             },
@@ -152,6 +153,15 @@ class FlexBuilder:
                                 "height": "sm"
                             }
                         ]
+                    },
+                    # حقوق أسفل الصفحة
+                    {
+                        "type": "text",
+                        "text": "© 2025 Abeer Aldosari",
+                        "size": "xxs",
+                        "color": self.t['text2'],
+                        "align": "center",
+                        "margin": "md"
                     }
                 ]
             }
