@@ -1,61 +1,70 @@
 """
-Bot Mesh - Database (SQLite)
+Bot Mesh - Database Handler
+Created by: Abeer Aldosari © 2025
 """
 import sqlite3
-import time
+from datetime import datetime, timedelta
+import os
 
 class DB:
     def __init__(self, path):
+        # تأكد أن مجلد الملف موجود
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         self.conn = sqlite3.connect(path, check_same_thread=False)
-        self.create_tables()
+        self.cursor = self.conn.cursor()
+        self._create_tables()
 
-    def create_tables(self):
-        c = self.conn.cursor()
-        c.execute("""CREATE TABLE IF NOT EXISTS users(
+    def _create_tables(self):
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
             uid TEXT PRIMARY KEY,
             name TEXT,
             points INTEGER DEFAULT 0,
             games INTEGER DEFAULT 0,
             wins INTEGER DEFAULT 0,
-            theme TEXT DEFAULT 'white',
-            joined_at REAL DEFAULT ?)
-        """, (time.time(),))
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
         self.conn.commit()
 
     def get_user(self, uid):
-        c = self.conn.cursor()
-        c.execute("SELECT * FROM users WHERE uid=?", (uid,))
-        row = c.fetchone()
+        self.cursor.execute("SELECT * FROM users WHERE uid=?", (uid,))
+        row = self.cursor.fetchone()
         if row:
-            keys = ["uid","name","points","games","wins","theme","joined_at"]
-            return dict(zip(keys,row))
+            return {
+                'uid': row[0],
+                'name': row[1],
+                'points': row[2],
+                'games': row[3],
+                'wins': row[4],
+                'joined_at': row[5],
+                'last_active': row[6]
+            }
         return None
 
-    def update(self, uid, name, points, won, game_type, theme="white"):
+    def add_or_update_user(self, uid, name):
+        self.cursor.execute("""
+        INSERT INTO users(uid, name) VALUES(?, ?)
+        ON CONFLICT(uid) DO UPDATE SET name=excluded.name, last_active=CURRENT_TIMESTAMP
+        """, (uid, name))
+        self.conn.commit()
+
+    def update_points(self, uid, points=0, won=False):
         user = self.get_user(uid)
-        if not user:
-            c = self.conn.cursor()
-            c.execute("INSERT INTO users(uid,name,points,games,wins,theme,joined_at) VALUES(?,?,?,?,?,?,?)",
-                      (uid,name,points,1,1 if won else 0,theme,time.time()))
-        else:
-            c = self.conn.cursor()
-            c.execute("""UPDATE users SET name=?, points=points+?, games=games+1,
-                         wins=wins+? WHERE uid=?""",(name,points,1 if won else 0,uid))
-        self.conn.commit()
+        if user:
+            new_points = user['points'] + points
+            new_games = user['games'] + 1
+            new_wins = user['wins'] + (1 if won else 0)
+            self.cursor.execute("""
+            UPDATE users
+            SET points=?, games=?, wins=?, last_active=CURRENT_TIMESTAMP
+            WHERE uid=?
+            """, (new_points, new_games, new_wins, uid))
+            self.conn.commit()
 
-    def set_theme(self, uid, theme):
-        c = self.conn.cursor()
-        c.execute("UPDATE users SET theme=? WHERE uid=?", (theme, uid))
-        self.conn.commit()
-
-    def rank(self, uid):
-        c = self.conn.cursor()
-        c.execute("SELECT COUNT(*)+1 FROM users WHERE points>=(SELECT points FROM users WHERE uid=?)", (uid,))
-        return c.fetchone()[0]
-
-    def cleanup_old_users(self):
-        """حذف المستخدمين بعد أسبوع"""
-        week_ago = time.time() - 7*24*3600
-        c = self.conn.cursor()
-        c.execute("DELETE FROM users WHERE joined_at<?", (week_ago,))
+    def cleanup_names(self):
+        """حذف المستخدمين الذين مضى على آخر نشاطهم أكثر من أسبوع"""
+        one_week_ago = datetime.now() - timedelta(days=7)
+        self.cursor.execute("DELETE FROM users WHERE last_active < ?", (one_week_ago,))
         self.conn.commit()
