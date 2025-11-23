@@ -1,14 +1,15 @@
 """
-Bot Mesh - Main Application (Silent, Smart, Flex UI)
+Bot Mesh - Main Application (Silent, Smart, Flex UI, v3 SDK)
 Created by: Abeer Aldosari © 2025
 """
 import os
 import logging
 from flask import Flask, request, abort, jsonify
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
+
+# === LINE SDK v3 ===
+from linebot.v3.messaging import MessagingApi, MessagingWebhookHandler
+from linebot.v3.messaging.models import (
+    TextMessageEvent, TextMessage, TextSendMessage,
     FlexSendMessage, FollowEvent, QuickReply, QuickReplyButton,
     MessageAction
 )
@@ -19,7 +20,7 @@ from database import DB
 from flex_builder import FlexBuilder
 from game_manager import GameManager
 
-# استيراد جميع الألعاب تلقائياً من مجلد games
+# استيراد جميع الألعاب تلقائيًا
 from games import *
 
 # ==================== Logging ====================
@@ -31,8 +32,8 @@ logger = logging.getLogger(__name__)
 
 # ==================== Flask & Line ====================
 app = Flask(__name__)
-line_api = LineBotApi(LINE_TOKEN)
-handler = WebhookHandler(LINE_SECRET)
+line_api = MessagingApi(LINE_TOKEN)
+handler = MessagingWebhookHandler(LINE_SECRET)
 db = DB(DB_PATH)
 gm = GameManager()
 
@@ -40,7 +41,7 @@ gm = GameManager()
 GAMES = {
     'ذكاء': IqGame,
     'لون': WordColorGame,
-    'ترتيب': ScrambleWordGame,
+    'ترتيب': ScrambleWordGameAI,
     'رياضيات': MathGame,
     'أسرع': FastTypingGame,
     'ضد': OppositeGame,
@@ -102,7 +103,8 @@ def callback():
         abort(400)
     try:
         handler.handle(request.get_data(as_text=True), signature)
-    except InvalidSignatureError:
+    except Exception as e:
+        logger.error(f'❌ Invalid signature or error: {e}')
         abort(400)
     return 'OK'
 
@@ -115,7 +117,7 @@ def on_follow(event):
     builder = FlexBuilder('white')
     send_flex_reply(event.reply_token, builder.welcome(), uid)
 
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(TextMessageEvent)
 def on_message(event):
     uid = event.source.user_id
     txt = event.message.text.strip()
@@ -181,11 +183,6 @@ def on_message(event):
 
 # ==================== Run ====================
 if __name__ == '__main__':
-    logger.info('='*50)
-    logger.info('🎮 Bot Mesh Started Successfully')
-    logger.info(f'📊 Games Available: {len(GAMES)}')
-    logger.info(f'🎨 Themes Available: {len(THEMES)}')
-    logger.info(f'🗄️  Database: {DB_PATH}')
-    logger.info('='*50)
-    port = int(os.getenv('PORT', 10000))
+    port = int(os.getenv('PORT', 5000))
+    logger.info("Bot Mesh - Running on port %s", port)
     app.run(host='0.0.0.0', port=port, debug=False)
