@@ -1,17 +1,19 @@
 """
-Bot Mesh - Main Application (Enhanced Version)
+Bot Mesh - Main Application (Enhanced Version with Withdraw Button)
 Created by: Abeer Aldosari © 2025
 """
 import os
 import logging
 from flask import Flask, request, abort, jsonify
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import (
+
+# LINE SDK v3 imports
+from linebot.v3.messaging import MessagingApi, WebhookHandler
+from linebot.v3.messaging.models import (
     MessageEvent, TextMessage, TextSendMessage,
     FlexSendMessage, FollowEvent, QuickReply, QuickReplyButton,
     MessageAction
 )
+from linebot.exceptions import InvalidSignatureError
 
 # استيراد المكونات
 from config import LINE_TOKEN, LINE_SECRET, DB_PATH, THEMES
@@ -31,8 +33,8 @@ logger = logging.getLogger(__name__)
 
 # ==================== Flask App ====================
 app = Flask(__name__)
-line_api = LineBotApi(LINE_TOKEN)
-handler = WebhookHandler(LINE_SECRET)
+line_api = MessagingApi(channel_access_token=LINE_TOKEN)
+handler = WebhookHandler(secret=LINE_SECRET)
 db = DB(DB_PATH)
 gm = GameManager()
 
@@ -54,19 +56,17 @@ GAMES = {
 
 # ==================== Helper Functions ====================
 def get_name(uid):
-    """الحصول على اسم المستخدم"""
     try:
         return line_api.get_profile(uid).display_name
     except:
         return 'لاعب'
 
 def get_theme(uid):
-    """الحصول على ثيم المستخدم"""
     user = db.get_user(uid)
     return user['theme'] if user else 'white'
 
 def get_games_quick_reply(uid):
-    """إنشاء أزرار الألعاب الثابتة مع زر إيقاف بدل مساعدة"""
+    """Quick Reply للألعاب الرئيسية مع زر إيقاف"""
     items = []
     game_buttons = [
         {'emoji': '🧠', 'label': 'ذكاء', 'text': 'ذكاء'},
@@ -81,25 +81,32 @@ def get_games_quick_reply(uid):
         {'emoji': '⛓️', 'label': 'سلسلة', 'text': 'سلسلة'},
         {'emoji': '🤔', 'label': 'خمن', 'text': 'خمن'},
         {'emoji': '💖', 'label': 'توافق', 'text': 'توافق'},
-        {'emoji': '⏹️', 'label': 'إيقاف', 'text': 'إيقاف'}  # بدل مساعدة
+        {'emoji': '⏹️', 'label': 'إيقاف', 'text': 'إيقاف'}
     ]
-    
     for btn in game_buttons:
         items.append(QuickReplyButton(
             action=MessageAction(label=f"{btn['emoji']} {btn['label']}", text=btn['text'])
         ))
-    
     return QuickReply(items=items)
 
-def send_with_games_menu(reply_token, message, uid=None):
-    """إرسال رسالة مع قائمة الألعاب الثابتة"""
+def get_help_quick_reply(uid):
+    """Quick Reply لنافذة المساعدة مع زر انسحب"""
+    items = [
+        QuickReplyButton(
+            action=MessageAction(label="⏪ انسحب", text="انسحب")
+        )
+    ]
+    return QuickReply(items=items)
+
+def send_with_games_menu(reply_token, message, uid=None, help_mode=False):
+    """إرسال رسالة مع Quick Reply مناسب"""
     if isinstance(message, TextSendMessage):
-        message.quick_reply = get_games_quick_reply(uid)
+        message.quick_reply = get_help_quick_reply(uid) if help_mode else get_games_quick_reply(uid)
         line_api.reply_message(reply_token, message)
     elif isinstance(message, FlexSendMessage):
         text_msg = TextSendMessage(
             text="اختر لعبة أو أمر:",
-            quick_reply=get_games_quick_reply(uid)
+            quick_reply=get_help_quick_reply(uid) if help_mode else get_games_quick_reply(uid)
         )
         line_api.reply_message(reply_token, [message, text_msg])
     else:
@@ -108,12 +115,10 @@ def send_with_games_menu(reply_token, message, uid=None):
 # ==================== Routes ====================
 @app.route('/')
 def home():
-    """الصفحة الرئيسية"""
-    return f"Bot Mesh - Active"
+    return "Bot Mesh - Active"
 
 @app.route('/health')
 def health():
-    """فحص صحة النظام"""
     return jsonify({
         'status': 'ok',
         'users': gm.get_users_count(),
@@ -124,17 +129,14 @@ def health():
 
 @app.route('/callback', methods=['POST'])
 def callback():
-    """LINE Webhook"""
     signature = request.headers.get('X-Line-Signature')
     if not signature:
         abort(400)
-    
     try:
         handler.handle(request.get_data(as_text=True), signature)
     except InvalidSignatureError:
         logger.error('Invalid signature')
         abort(400)
-    
     return 'OK'
 
 # ==================== LINE Event Handlers ====================
@@ -148,7 +150,7 @@ def on_message(event):
         theme = get_theme(uid)
         builder = FlexBuilder(theme)
         
-        # أوامر البداية و المساعدة
+        # أوامر البداية
         if txt in ['@bot Mesh', 'بداية', 'start', 'قائمة']:
             gm.register(uid)
             send_with_games_menu(
@@ -157,15 +159,25 @@ def on_message(event):
             )
             return
         
+        # نافذة المساعدة
         elif txt == 'مساعدة':
-            # نافذة المساعدة مع زر انسحب بدل إيقاف
             send_with_games_menu(
                 event.reply_token,
-                FlexSendMessage(alt_text='مساعدة', contents=builder.help())
+                FlexSendMessage(alt_text='مساعدة', contents=builder.help()),
+                help_mode=True
             )
             return
         
-        # عرض النقاط
+        # زر انسحب
+        elif txt == 'انسحب':
+            send_with_games_menu(
+                event.reply_token,
+                TextSendMessage(text='↩️ تم الانسحاب من المساعدة'),
+                uid=uid
+            )
+            return
+        
+        # النقاط
         elif txt == 'نقاطي':
             user = db.get_user(uid)
             if user:
@@ -182,7 +194,7 @@ def on_message(event):
                 )
             return
         
-        # عرض الثيمات
+        # الثيمات
         elif txt == 'ثيم':
             send_with_games_menu(
                 event.reply_token,
