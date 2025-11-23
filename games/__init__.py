@@ -1,12 +1,7 @@
 """
-Bot Mesh - Games Module
+Bot Mesh - Games Module (Fixed)
 Created by: Abeer Aldosari © 2025
-
-هذا الملف يقوم بتحميل جميع الألعاب تلقائياً
 """
-import os
-import glob
-import importlib
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,39 +9,108 @@ logger = logging.getLogger(__name__)
 # استيراد BaseGame أولاً
 from .base_game import BaseGame
 
-# الحصول على مسار المجلد الحالي
-current_dir = os.path.dirname(__file__)
+# استيراد جميع الألعاب يدوياً للتأكد من التوافق
+try:
+    from .iq_game import IqGame
+    logger.info("✅ IqGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load IqGame: {e}")
+    IqGame = None
 
-# البحث عن جميع الملفات المنتهية بـ _game.py
-game_files = glob.glob(os.path.join(current_dir, '*_game.py'))
+try:
+    from .math_game import MathGame
+    logger.info("✅ MathGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load MathGame: {e}")
+    MathGame = None
 
-# استيراد جميع الألعاب تلقائياً
-for game_file in game_files:
-    # استخراج اسم الملف بدون المسار والامتداد
-    module_name = os.path.basename(game_file)[:-3]
-    
-    # تجاهل base_game
-    if module_name == 'base_game':
-        continue
-    
-    try:
-        # استيراد الموديول
-        module = importlib.import_module(f'.{module_name}', package='games')
-        
-        # استيراد جميع الكلاسات من الموديول
-        for item_name in dir(module):
-            item = getattr(module, item_name)
-            # التحقق من أنها كلاس وليست BaseGame نفسها
-            if (isinstance(item, type) and 
-                issubclass(item, BaseGame) and 
-                item != BaseGame):
-                # إضافة الكلاس إلى namespace الحالي
-                globals()[item_name] = item
-                logger.info(f"✅ Game class loaded: {item_name}")
-    except Exception as e:
-        logger.error(f"❌ Failed to load game from {module_name}: {e}")
+try:
+    from .word_color_game import WordColorGame
+    logger.info("✅ WordColorGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load WordColorGame: {e}")
+    WordColorGame = None
 
-# تصدير BaseGame والكلاسات المحملة
-__all__ = ['BaseGame'] + [name for name in globals() if name.endswith('Game') and name != 'BaseGame']
+try:
+    from .scramble_word_game import ScrambleWordGame
+    logger.info("✅ ScrambleWordGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load ScrambleWordGame: {e}")
+    ScrambleWordGame = None
 
-logger.info(f"✅ Total game classes available: {len(__all__) - 1}")
+try:
+    from .fast_typing_game import FastTypingGame
+    logger.info("✅ FastTypingGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load FastTypingGame: {e}")
+    FastTypingGame = None
+
+try:
+    from .opposite_game import OppositeGame
+    logger.info("✅ OppositeGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load OppositeGame: {e}")
+    OppositeGame = None
+
+try:
+    from .letters_words_game import LettersWordsGame
+    logger.info("✅ LettersWordsGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load LettersWordsGame: {e}")
+    LettersWordsGame = None
+
+try:
+    from .song_game import SongGame
+    logger.info("✅ SongGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load SongGame: {e}")
+    SongGame = None
+
+try:
+    from .human_animal_plant_game import HumanAnimalPlantGame
+    logger.info("✅ HumanAnimalPlantGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load HumanAnimalPlantGame: {e}")
+    HumanAnimalPlantGame = None
+
+try:
+    from .chain_words_game import ChainWordsGame
+    logger.info("✅ ChainWordsGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load ChainWordsGame: {e}")
+    ChainWordsGame = None
+
+try:
+    from .guess_game import GuessGame
+    logger.info("✅ GuessGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load GuessGame: {e}")
+    GuessGame = None
+
+try:
+    from .compatibility_game import CompatibilityGame
+    logger.info("✅ CompatibilityGame loaded")
+except Exception as e:
+    logger.error(f"❌ Failed to load CompatibilityGame: {e}")
+    CompatibilityGame = None
+
+# Export all games that loaded successfully
+__all__ = [
+    'BaseGame',
+    'IqGame',
+    'MathGame',
+    'WordColorGame',
+    'ScrambleWordGame',
+    'FastTypingGame',
+    'OppositeGame',
+    'LettersWordsGame',
+    'SongGame',
+    'HumanAnimalPlantGame',
+    'ChainWordsGame',
+    'GuessGame',
+    'CompatibilityGame'
+]
+
+# Count successfully loaded games
+loaded_games = sum(1 for game in __all__[1:] if globals().get(game) is not None)
+logger.info(f"📊 Successfully loaded {loaded_games}/{len(__all__)-1} game classes")
