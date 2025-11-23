@@ -1,19 +1,17 @@
 """
-Bot Mesh - Main Application (Enhanced Version with Withdraw Button)
+Bot Mesh - Main Application (Enhanced Version with Themes)
 Created by: Abeer Aldosari © 2025
 """
 import os
 import logging
 from flask import Flask, request, abort, jsonify
-
-# LINE SDK v3 imports
-from linebot.v3.messaging import MessagingApi, WebhookHandler
-from linebot.v3.messaging.models import (
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     FlexSendMessage, FollowEvent, QuickReply, QuickReplyButton,
     MessageAction
 )
-from linebot.exceptions import InvalidSignatureError
 
 # استيراد المكونات
 from config import LINE_TOKEN, LINE_SECRET, DB_PATH, THEMES
@@ -21,7 +19,7 @@ from database import DB
 from flex_builder import FlexBuilder
 from game_manager import GameManager
 
-# استيراد جميع الألعاب تلقائياً من مجلد games
+# استيراد جميع الألعاب
 from games import *
 
 # ==================== الإعدادات ====================
@@ -33,8 +31,8 @@ logger = logging.getLogger(__name__)
 
 # ==================== Flask App ====================
 app = Flask(__name__)
-line_api = MessagingApi(channel_access_token=LINE_TOKEN)
-handler = WebhookHandler(secret=LINE_SECRET)
+line_api = LineBotApi(LINE_TOKEN)
+handler = WebhookHandler(LINE_SECRET)
 db = DB(DB_PATH)
 gm = GameManager()
 
@@ -56,17 +54,19 @@ GAMES = {
 
 # ==================== Helper Functions ====================
 def get_name(uid):
+    """الحصول على اسم المستخدم"""
     try:
         return line_api.get_profile(uid).display_name
     except:
         return 'لاعب'
 
 def get_theme(uid):
+    """الحصول على ثيم المستخدم"""
     user = db.get_user(uid)
     return user['theme'] if user else 'white'
 
 def get_games_quick_reply(uid):
-    """Quick Reply للألعاب الرئيسية مع زر إيقاف"""
+    """أزرار الألعاب + زر إيقاف"""
     items = []
     game_buttons = [
         {'emoji': '🧠', 'label': 'ذكاء', 'text': 'ذكاء'},
@@ -89,33 +89,28 @@ def get_games_quick_reply(uid):
         ))
     return QuickReply(items=items)
 
-def get_help_quick_reply(uid):
-    """Quick Reply لنافذة المساعدة مع زر انسحب"""
-    items = [
-        QuickReplyButton(
-            action=MessageAction(label="⏪ انسحب", text="انسحب")
-        )
-    ]
+def get_themes_quick_reply(uid):
+    """أزرار الثيمات من البداية"""
+    items = []
+    for key, theme in THEMES.items():
+        items.append(QuickReplyButton(
+            action=MessageAction(label=f"{theme['name']}", text=f"ثيم:{key}")
+        ))
     return QuickReply(items=items)
 
-def send_with_games_menu(reply_token, message, uid=None, help_mode=False):
-    """إرسال رسالة مع Quick Reply مناسب"""
-    if isinstance(message, TextSendMessage):
-        message.quick_reply = get_help_quick_reply(uid) if help_mode else get_games_quick_reply(uid)
-        line_api.reply_message(reply_token, message)
-    elif isinstance(message, FlexSendMessage):
-        text_msg = TextSendMessage(
-            text="اختر لعبة أو أمر:",
-            quick_reply=get_help_quick_reply(uid) if help_mode else get_games_quick_reply(uid)
-        )
-        line_api.reply_message(reply_token, [message, text_msg])
-    else:
-        line_api.reply_message(reply_token, message)
+def send_with_quick_reply(reply_token, messages, uid=None):
+    """إرسال رسالة مع قائمة الألعاب والثيمات"""
+    if not isinstance(messages, list):
+        messages = [messages]
+    for msg in messages:
+        if isinstance(msg, TextSendMessage):
+            msg.quick_reply = get_games_quick_reply(uid)
+    line_api.reply_message(reply_token, messages)
 
 # ==================== Routes ====================
 @app.route('/')
 def home():
-    return "Bot Mesh - Active"
+    return f"Bot Mesh - Active"
 
 @app.route('/health')
 def health():
@@ -139,7 +134,7 @@ def callback():
         abort(400)
     return 'OK'
 
-# ==================== LINE Event Handlers ====================
+# ==================== Event Handlers ====================
 @handler.add(MessageEvent, message=TextMessage)
 def on_message(event):
     try:
@@ -149,137 +144,92 @@ def on_message(event):
         name = get_name(uid)
         theme = get_theme(uid)
         builder = FlexBuilder(theme)
-        
-        # أوامر البداية
+
+        # بداية / قائمة
         if txt in ['@bot Mesh', 'بداية', 'start', 'قائمة']:
             gm.register(uid)
-            send_with_games_menu(
+            # إضافة قائمة الألعاب + الثيمات
+            send_with_quick_reply(
                 event.reply_token,
-                FlexSendMessage(alt_text='القائمة', contents=builder.welcome())
+                [
+                    FlexSendMessage(alt_text='القائمة', contents=builder.welcome()),
+                    TextSendMessage(text="🎨 اختر ثيمك:", quick_reply=get_themes_quick_reply(uid))
+                ], uid=uid
             )
             return
-        
-        # نافذة المساعدة
-        elif txt == 'مساعدة':
-            send_with_games_menu(
-                event.reply_token,
-                FlexSendMessage(alt_text='مساعدة', contents=builder.help()),
-                help_mode=True
-            )
-            return
-        
-        # زر انسحب
-        elif txt == 'انسحب':
-            send_with_games_menu(
-                event.reply_token,
-                TextSendMessage(text='↩️ تم الانسحاب من المساعدة'),
-                uid=uid
-            )
-            return
-        
-        # النقاط
-        elif txt == 'نقاطي':
-            user = db.get_user(uid)
-            if user:
-                data = {'points': user['points'], 'games': user['games'], 'wins': user['wins']}
-                rank = db.rank(uid)
-                send_with_games_menu(
-                    event.reply_token,
-                    FlexSendMessage(alt_text='نقاطي', contents=builder.stats(data, rank))
-                )
-            else:
-                send_with_games_menu(
-                    event.reply_token,
-                    TextSendMessage(text='❌ لم تلعب بعد\nاكتب "بداية" للبدء'), uid=uid
-                )
-            return
-        
-        # الثيمات
-        elif txt == 'ثيم':
-            send_with_games_menu(
-                event.reply_token,
-                FlexSendMessage(alt_text='الثيمات', contents=builder.themes()), uid=uid
-            )
-            return
-        
+
         # تغيير الثيم
         elif txt.startswith('ثيم:'):
             theme_name = txt.split(':')[1]
             if theme_name in THEMES:
                 db.set_theme(uid, theme_name)
-                send_with_games_menu(
+                send_with_quick_reply(
                     event.reply_token,
-                    TextSendMessage(text=f'✅ تم التغيير إلى {THEMES[theme_name]["name"]}'), uid=uid
+                    TextSendMessage(text=f'✅ تم تغيير الثيم إلى {THEMES[theme_name]["name"]}'), uid=uid
                 )
             else:
-                send_with_games_menu(
+                send_with_quick_reply(
                     event.reply_token,
                     TextSendMessage(text='❌ ثيم غير موجود'), uid=uid
                 )
             return
-        
+
         # إيقاف اللعبة
         elif txt == 'إيقاف':
             if gm.get_game(gid):
                 gm.end_game(gid)
-                send_with_games_menu(
-                    event.reply_token,
-                    TextSendMessage(text='⏹️ تم إيقاف اللعبة'), uid=uid
-                )
+                send_with_quick_reply(event.reply_token, TextSendMessage(text='⏹️ تم إيقاف اللعبة'), uid=uid)
             else:
-                send_with_games_menu(
-                    event.reply_token,
-                    TextSendMessage(text='⚠️ لا توجد لعبة نشطة'), uid=uid
-                )
+                send_with_quick_reply(event.reply_token, TextSendMessage(text='⚠️ لا توجد لعبة نشطة'), uid=uid)
             return
-        
-        # بدء لعبة جديدة
+
+        # بدء الألعاب
         elif txt in GAMES:
             if not gm.is_registered(uid):
-                send_with_games_menu(
+                send_with_quick_reply(
                     event.reply_token,
                     TextSendMessage(text='❌ اكتب "انضم" أولاً للتسجيل'), uid=uid
                 )
                 return
-            
+
             if gm.get_game(gid):
-                send_with_games_menu(
+                send_with_quick_reply(
                     event.reply_token,
-                    TextSendMessage(text='⚠️ يوجد لعبة نشطة بالفعل\nاكتب "إيقاف" لإنهائها'), uid=uid
+                    TextSendMessage(text='⚠️ توجد لعبة نشطة بالفعل\nاكتب "إيقاف" لإنهائها'), uid=uid
                 )
                 return
-            
+
             game_class = GAMES[txt]
             game = game_class(line_api)
             game.set_theme(theme)
             gm.start_game(gid, game, txt)
             response = game.start_game()
-            send_with_games_menu(event.reply_token, response, uid=uid)
+            send_with_quick_reply(event.reply_token, response, uid=uid)
             logger.info(f'🎮 بدأت لعبة {txt} للمستخدم {name}')
             return
-        
+
         # التعامل مع إجابات اللعبة
         elif gm.get_game(gid) and gm.is_registered(uid):
             game_data = gm.get_game(gid)
             game = game_data['game']
             game_type = game_data['type']
             result = game.check_answer(txt, uid, name)
-            
+
             if result and result.get('game_over'):
                 points = result.get('points', 0)
                 won = result.get('won', False)
                 db.update(uid, name, points, won, game_type)
                 gm.end_game(gid)
-            
+
             response = result.get('response') if result else None
             if response:
-                send_with_games_menu(event.reply_token, response, uid=uid)
+                send_with_quick_reply(event.reply_token, response, uid=uid)
             return
-    
+
     except Exception as e:
         logger.error(f'❌ خطأ في on_message: {e}', exc_info=True)
         try:
-            send_with_games_menu(
+            send_with_quick_reply(
                 event.reply_token,
                 TextSendMessage(text='❌ حدث خطأ، حاول مرة أخرى'), uid=uid
             )
@@ -293,9 +243,12 @@ def on_follow(event):
         name = get_name(uid)
         gm.register(uid)
         builder = FlexBuilder('white')
-        send_with_games_menu(
+        send_with_quick_reply(
             event.reply_token,
-            FlexSendMessage(alt_text='مرحباً', contents=builder.welcome()), uid=uid
+            [
+                FlexSendMessage(alt_text='مرحباً', contents=builder.welcome()),
+                TextSendMessage(text="🎨 اختر ثيمك:", quick_reply=get_themes_quick_reply(uid))
+            ], uid=uid
         )
         logger.info(f'👋 مستخدم جديد: {name}')
     except Exception as e:
@@ -309,6 +262,6 @@ if __name__ == '__main__':
     logger.info(f'🎨 Themes Available: {len(THEMES)}')
     logger.info(f'🗄️  Database: {DB_PATH}')
     logger.info('=' * 50)
-    
+
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
