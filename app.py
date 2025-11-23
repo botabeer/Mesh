@@ -1,12 +1,12 @@
 """
-Bot Mesh - Main Application (Full Version)
+Bot Mesh - Main Application (Fixed Version)
 Created by: Abeer Aldosari © 2025
 """
 import os
 import logging
 from flask import Flask, request, abort, jsonify
 
-# === LINE SDK v3 ===
+# === LINE SDK v3 (FIXED IMPORTS) ===
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
@@ -18,11 +18,10 @@ from linebot.v3.messaging import (
     FlexMessage,
     FlexContainer
 )
-from linebot.v3.models.events import (
+from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent,
-    FollowEvent,
-    MentionEvent
+    FollowEvent
 )
 
 # === Local imports ===
@@ -30,7 +29,6 @@ from config import LINE_TOKEN, LINE_SECRET, DB_PATH, THEMES
 from database import DB
 from game_manager import GameManager
 from rich_menu_manager import RichMenuManager
-from games import *
 
 # ==================== Logging ====================
 logging.basicConfig(
@@ -50,20 +48,42 @@ gm = GameManager()
 rich_menu_mgr = RichMenuManager(LINE_TOKEN)
 
 # ==================== Games dictionary ====================
-GAMES = {
-    'ذكاء': IqGame,
-    'لون': WordColorGame,
-    'ترتيب': ScrambleWordGame,
-    'رياضيات': MathGame,
-    'أسرع': FastTypingGame,
-    'ضد': OppositeGame,
-    'تكوين': LettersWordsGame,
-    'أغنية': SongGame,
-    'لعبة': HumanAnimalPlantGame,
-    'سلسلة': ChainWordsGame,
-    'خمن': GuessGame,
-    'توافق': CompatibilityGame
-}
+# سيتم تحميل الألعاب لاحقاً
+GAMES = {}
+
+# محاولة تحميل الألعاب
+try:
+    from games.iq_game import IqGame
+    from games.word_color_game import WordColorGame
+    from games.scramble_word_game import ScrambleWordGame
+    from games.math_game import MathGame
+    from games.fast_typing_game import FastTypingGame
+    from games.opposite_game import OppositeGame
+    from games.letters_words_game import LettersWordsGame
+    from games.song_game import SongGame
+    from games.human_animal_plant_game import HumanAnimalPlantGame
+    from games.chain_words_game import ChainWordsGame
+    from games.guess_game import GuessGame
+    from games.compatibility_game import CompatibilityGame
+    
+    GAMES = {
+        'ذكاء': IqGame,
+        'لون': WordColorGame,
+        'ترتيب': ScrambleWordGame,
+        'رياضيات': MathGame,
+        'أسرع': FastTypingGame,
+        'ضد': OppositeGame,
+        'تكوين': LettersWordsGame,
+        'أغنية': SongGame,
+        'لعبة': HumanAnimalPlantGame,
+        'سلسلة': ChainWordsGame,
+        'خمن': GuessGame,
+        'توافق': CompatibilityGame
+    }
+    logger.info(f"✅ Loaded {len(GAMES)} games")
+except ImportError as e:
+    logger.warning(f"⚠️ Could not load games: {e}")
+    logger.info("ℹ️ Bot will run without games")
 
 # ==================== Helper functions ====================
 def get_name(uid):
@@ -114,18 +134,151 @@ def send_text_reply(reply_token, text):
         logger.error(f'❌ Error sending text reply: {e}')
     return False
 
-# ==================== Flex Builders (Welcome / Help / Theme) ====================
-# هذه الدوال مثل النسخة السابقة، يمكنك إضافتها هنا بالكامل
-# create_welcome_flex(uid)
-# create_games_list_flex(colors)
-# create_help_flex(uid)
-# create_theme_selector_flex(uid)
-# create_game_card(icon, name, colors)
+# ==================== Flex Message Builders ====================
+def create_welcome_flex(uid):
+    """إنشاء رسالة الترحيب"""
+    theme = THEMES.get(get_theme(uid), THEMES['white'])
+    user = db.get_user(uid)
+    name = user['name'] if user else 'لاعب'
+    
+    return {
+        "type": "bubble",
+        "styles": {
+            "body": {"backgroundColor": theme['bg']}
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎮 Bot Mesh",
+                    "weight": "bold",
+                    "size": "xl",
+                    "color": theme['primary'],
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": f"مرحباً {name}!",
+                    "size": "lg",
+                    "color": theme['text'],
+                    "align": "center",
+                    "margin": "md"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": "اختر لعبة من القائمة السفلية",
+                    "size": "sm",
+                    "color": theme['text2'],
+                    "align": "center",
+                    "margin": "lg",
+                    "wrap": True
+                }
+            ]
+        }
+    }
+
+def create_help_flex(uid):
+    """إنشاء رسالة المساعدة"""
+    theme = THEMES.get(get_theme(uid), THEMES['white'])
+    
+    games_text = "📱 الألعاب المتاحة:\n" + "\n".join([f"• {name}" for name in GAMES.keys()])
+    
+    return {
+        "type": "bubble",
+        "styles": {
+            "body": {"backgroundColor": theme['bg']}
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "📖 المساعدة",
+                    "weight": "bold",
+                    "size": "xl",
+                    "color": theme['primary']
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "text",
+                    "text": games_text,
+                    "size": "sm",
+                    "color": theme['text'],
+                    "margin": "md",
+                    "wrap": True
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "text",
+                    "text": "🎯 الأوامر:\n• انضم - للتسجيل\n• انسحب - للانسحاب\n• إيقاف - إيقاف اللعبة\n• إحصائيات - نقاطك\n• ثيم - تغيير الألوان",
+                    "size": "sm",
+                    "color": theme['text2'],
+                    "margin": "md",
+                    "wrap": True
+                }
+            ]
+        }
+    }
+
+def create_theme_selector_flex(uid):
+    """إنشاء محدد الثيمات"""
+    current_theme = get_theme(uid)
+    
+    return {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎨 اختر الثيم",
+                    "weight": "bold",
+                    "size": "xl",
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                }
+            ] + [
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "message",
+                        "label": f"{theme_data['name']} {'✓' if theme_key == current_theme else ''}",
+                        "text": f"ثيم:{theme_key}"
+                    },
+                    "style": "primary" if theme_key == current_theme else "secondary",
+                    "margin": "sm"
+                }
+                for theme_key, theme_data in THEMES.items()
+            ]
+        }
+    }
 
 # ==================== Routes ====================
 @app.route('/')
 def home():
-    return jsonify({'name': 'Bot Mesh', 'status': 'active', 'version': '3.0.0', 'games': list(GAMES.keys())})
+    return jsonify({
+        'name': 'Bot Mesh',
+        'status': 'active',
+        'version': '3.1.0',
+        'games': list(GAMES.keys())
+    })
 
 @app.route('/health')
 def health():
@@ -162,21 +315,12 @@ def on_follow(event):
     rich_menu_mgr.create_and_link_rich_menu(uid)
     logger.info(f'✅ New follower: {name} ({uid})')
 
-def handle_mention(event):
-    uid = event.source.user_id
-    send_flex_reply(event.reply_token, create_help_flex(uid), 'الألعاب')
-
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event):
     uid = event.source.user_id
     txt = event.message.text.strip()
     gid = getattr(event.source, 'group_id', uid)
     name = get_name(uid)
-
-    # التعامل مع المنشن
-    if hasattr(event.message, 'mention') and event.message.mention:
-        handle_mention(event)
-        return
 
     # تحديث/إضافة المستخدم
     db.add_or_update_user(uid, name)
@@ -307,6 +451,6 @@ def on_message(event):
 # ==================== Run ====================
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
-    logger.info(f"🚀 Bot Mesh v3.0.0 - Running on port {port}")
+    logger.info(f"🚀 Bot Mesh v3.1.0 - Running on port {port}")
     logger.info(f"📊 Loaded {len(GAMES)} games: {', '.join(GAMES.keys())}")
     app.run(host='0.0.0.0', port=port, debug=False)
