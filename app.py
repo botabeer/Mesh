@@ -18,7 +18,7 @@ from linebot.v3.messaging import (
     FlexMessage,
     FlexContainer
 )
-from linebot.v3.webhooks import (
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent (
     MessageEvent,
     TextMessageContent,
     FollowEvent,
