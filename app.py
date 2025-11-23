@@ -6,13 +6,26 @@ import os
 import logging
 from flask import Flask, request, abort, jsonify
 
-# === LINE SDK v3 ===
-from linebot.v3.messaging import MessagingApi, MessagingWebhookHandler
-from linebot.v3.messaging.models import (
-    TextMessageEvent, TextMessage, TextSendMessage,
-    FlexSendMessage, FollowEvent, QuickReply, QuickReplyButton,
+# === LINE SDK v3 - Fixed Imports ===
+from linebot.v3.messaging import (
+    MessagingApi,
+    Configuration,
+    ApiClient,
+    ReplyMessageRequest,
+    TextMessage,
+    FlexMessage,
+    FlexContainer,
+    QuickReply,
+    QuickReplyItem,
     MessageAction
 )
+from linebot.v3.webhooks import (
+    WebhookHandler,
+    MessageEvent,
+    TextMessageContent,
+    FollowEvent
+)
+from linebot.v3.exceptions import InvalidSignatureError
 
 # استيراد المكونات
 from config import LINE_TOKEN, LINE_SECRET, DB_PATH, THEMES
@@ -32,8 +45,13 @@ logger = logging.getLogger(__name__)
 
 # ==================== Flask & Line ====================
 app = Flask(__name__)
-line_api = MessagingApi(LINE_TOKEN)
-handler = MessagingWebhookHandler(LINE_SECRET)
+
+# تكوين LINE API v3 بشكل صحيح
+configuration = Configuration(access_token=LINE_TOKEN)
+api_client = ApiClient(configuration)
+line_api = MessagingApi(api_client)
+handler = WebhookHandler(LINE_SECRET)
+
 db = DB(DB_PATH)
 gm = GameManager()
 
@@ -41,7 +59,7 @@ gm = GameManager()
 GAMES = {
     'ذكاء': IqGame,
     'لون': WordColorGame,
-    'ترتيب': ScrambleWordGameAI,
+    'ترتيب': ScrambleWordGame,
     'رياضيات': MathGame,
     'أسرع': FastTypingGame,
     'ضد': OppositeGame,
@@ -56,7 +74,8 @@ GAMES = {
 # ==================== Helpers ====================
 def get_name(uid):
     try:
-        return line_api.get_profile(uid).display_name
+        profile = line_api.get_profile(uid)
+        return profile.display_name
     except:
         return 'لاعب'
 
@@ -67,20 +86,57 @@ def get_theme(uid):
 def get_games_quick_reply(uid):
     items = []
     for label in GAMES.keys():
-        items.append(QuickReplyButton(
+        items.append(QuickReplyItem(
             action=MessageAction(label=label, text=label)
         ))
-    items.append(QuickReplyButton(action=MessageAction(label='إيقاف', text='إيقاف')))
-    items.append(QuickReplyButton(action=MessageAction(label='انضم', text='انضم')))
-    items.append(QuickReplyButton(action=MessageAction(label='انسحب', text='انسحب')))
+    items.append(QuickReplyItem(action=MessageAction(label='إيقاف', text='إيقاف')))
+    items.append(QuickReplyItem(action=MessageAction(label='انضم', text='انضم')))
+    items.append(QuickReplyItem(action=MessageAction(label='انسحب', text='انسحب')))
     return QuickReply(items=items)
 
 def send_flex_reply(reply_token, flex_content, uid=None):
-    text_msg = TextSendMessage(
-        text="اختر لعبة أو أمر:",
-        quick_reply=get_games_quick_reply(uid)
-    )
-    line_api.reply_message(reply_token, [FlexSendMessage(alt_text='القائمة', contents=flex_content), text_msg])
+    """إرسال رسالة Flex مع Quick Reply باستخدام v3 API"""
+    try:
+        # رسالة نصية مع Quick Reply
+        text_msg = TextMessage(
+            text="اختر لعبة أو أمر:",
+            quickReply=get_games_quick_reply(uid)
+        )
+        
+        # رسالة Flex
+        flex_msg = FlexMessage(
+            altText='القائمة',
+            contents=FlexContainer.from_dict(flex_content)
+        )
+        
+        # إرسال الرسائل
+        line_api.reply_message(
+            ReplyMessageRequest(
+                replyToken=reply_token,
+                messages=[flex_msg, text_msg]
+            )
+        )
+    except Exception as e:
+        logger.error(f'❌ Error sending flex reply: {e}')
+        # إرسال رسالة نصية بديلة
+        line_api.reply_message(
+            ReplyMessageRequest(
+                replyToken=reply_token,
+                messages=[text_msg]
+            )
+        )
+
+def send_text_reply(reply_token, text):
+    """إرسال رسالة نصية باستخدام v3 API"""
+    try:
+        line_api.reply_message(
+            ReplyMessageRequest(
+                replyToken=reply_token,
+                messages=[TextMessage(text=text)]
+            )
+        )
+    except Exception as e:
+        logger.error(f'❌ Error sending text reply: {e}')
 
 # ==================== Routes ====================
 @app.route('/')
@@ -101,11 +157,18 @@ def callback():
     signature = request.headers.get('X-Line-Signature')
     if not signature:
         abort(400)
+    
+    body = request.get_data(as_text=True)
+    
     try:
-        handler.handle(request.get_data(as_text=True), signature)
-    except Exception as e:
-        logger.error(f'❌ Invalid signature or error: {e}')
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        logger.error('❌ Invalid signature')
         abort(400)
+    except Exception as e:
+        logger.error(f'❌ Error handling webhook: {e}')
+        abort(400)
+    
     return 'OK'
 
 # ==================== Event Handlers ====================
@@ -117,7 +180,7 @@ def on_follow(event):
     builder = FlexBuilder('white')
     send_flex_reply(event.reply_token, builder.welcome(), uid)
 
-@handler.add(TextMessageEvent)
+@handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event):
     uid = event.source.user_id
     txt = event.message.text.strip()
@@ -135,26 +198,26 @@ def on_message(event):
     # انسحب
     if txt == 'انسحب':
         gm.unregister(uid)
-        line_api.reply_message(event.reply_token, TextSendMessage(text='تم الانسحاب، لن تُحسب إجاباتك'))
+        send_text_reply(event.reply_token, 'تم الانسحاب، لن تُحسب إجاباتك')
         return
 
     # إيقاف
     if txt == 'إيقاف':
         if gm.get_game(gid):
             gm.end_game(gid)
-            line_api.reply_message(event.reply_token, TextSendMessage(text='تم إيقاف اللعبة'))
+            send_text_reply(event.reply_token, 'تم إيقاف اللعبة')
         else:
-            line_api.reply_message(event.reply_token, TextSendMessage(text='لا توجد لعبة نشطة'))
+            send_text_reply(event.reply_token, 'لا توجد لعبة نشطة')
         return
 
     # بدء لعبة
     if txt in GAMES:
         if not gm.is_registered(uid):
-            line_api.reply_message(event.reply_token, TextSendMessage(text='❌ اكتب "انضم" أولاً للتسجيل'))
+            send_text_reply(event.reply_token, '❌ اكتب "انضم" أولاً للتسجيل')
             return
 
         if gm.get_game(gid):
-            line_api.reply_message(event.reply_token, TextSendMessage(text='⚠️ يوجد لعبة نشطة بالفعل'))
+            send_text_reply(event.reply_token, '⚠️ يوجد لعبة نشطة بالفعل')
             return
 
         game_class = GAMES[txt]
@@ -184,5 +247,5 @@ def on_message(event):
 # ==================== Run ====================
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
-    logger.info("Bot Mesh - Running on port %s", port)
+    logger.info("🚀 Bot Mesh - Running on port %s", port)
     app.run(host='0.0.0.0', port=port, debug=False)
