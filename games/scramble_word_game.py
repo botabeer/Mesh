@@ -7,7 +7,7 @@ import random
 import difflib
 from config import POINTS_PER_CORRECT, POINTS_PER_WIN
 
-class ScrambleWordGameAI(BaseGame):
+class ScrambleWordGame(BaseGame):
     def __init__(self, line_api):
         super().__init__(line_api, rounds=10)
         self.words_list = [
