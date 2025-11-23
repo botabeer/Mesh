@@ -1,16 +1,20 @@
 """
-لعبة تخمين الأغنية - محسنة
+لعبة تخمين الأغنية - Neumorphism Soft with Dynamic Themes
 Created by: Abeer Aldosari © 2025
 """
 from .base_game import BaseGame
 import random
 import difflib
 
+
 class SongGame(BaseGame):
-    """لعبة تخمين المغني من كلمات الأغنية"""
+    """لعبة تخمين المغني مع ثيمات ديناميكية"""
     
-    def __init__(self, line_api):
-        super().__init__(line_api, rounds=5)
+    def __init__(self, line_bot_api):
+        super().__init__(line_bot_api, questions_count=5)
+        self.supports_hint = True
+        self.supports_reveal = True
+        
         self.songs = [
             {'lyrics': 'رجعت لي أيام الماضي معاك', 'artist': 'أم كلثوم'},
             {'lyrics': 'جلست والخوف بعينيها تتأمل فنجاني', 'artist': 'عبد الحليم حافظ'},
@@ -21,120 +25,188 @@ class SongGame(BaseGame):
             {'lyrics': 'حبيبي يا كل الحياة اوعدني تبقى معايا', 'artist': 'تامر حسني'},
             {'lyrics': 'قلبي بيسألني عنك دخلك طمني وينك', 'artist': 'وائل كفوري'},
             {'lyrics': 'كيف أبيّن لك شعوري دون ما أحكي', 'artist': 'عايض'},
-            {'lyrics': 'اسخر لك غلا وتشوفني مقصر', 'artist': 'عايض'},
-            {'lyrics': 'رحت عني ما قويت جيت لك لاتردني', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'خذني من ليلي لليلك', 'artist': 'عبادي الجوهر'},
-            {'lyrics': 'تدري كثر ماني من البعد مخنوق', 'artist': 'راشد الماجد'},
-            {'lyrics': 'انسى هالعالم ولو هم يزعلون', 'artist': 'عباس ابراهيم'},
-            {'lyrics': 'أنا عندي قلب واحد', 'artist': 'حسين الجسمي'},
-            {'lyrics': 'منوتي ليتك معي', 'artist': 'محمد عبده'},
-            {'lyrics': 'خلنا مني طمني عليك', 'artist': 'نوال الكويتية'},
-            {'lyrics': 'أحبك ليه أنا مدري', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'أمر الله أقوى أحبك والعقل واعي', 'artist': 'ماجد المهندس'},
-            {'lyrics': 'الحب يتعب من يدله والله في حبه بلاني', 'artist': 'راشد الماجد'},
             {'lyrics': 'محد غيرك شغل عقلي شغل بالي', 'artist': 'وليد الشامي'},
-            {'lyrics': 'نكتشف مر الحقيقة بعد ما يفوت الأوان', 'artist': 'أصالة'},
-            {'lyrics': 'يا هي توجع كذبة اخباري تمام', 'artist': 'أميمة طالب'},
-            {'lyrics': 'احس اني لقيتك بس عشان تضيع مني', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'بردان أنا تكفى أبي احترق بدفا لعيونك', 'artist': 'محمد عبده'}
         ]
         random.shuffle(self.songs)
 
     def start_game(self):
-        """بدء اللعبة"""
-        self.current_round = 0
-        return self.generate_question()
+        self.current_question = 0
+        self.game_active = True
+        return self.get_question()
+    
+    def get_question(self):
+        """إنشاء سؤال بستايل Neumorphism Soft"""
+        song = self.songs[self.current_question % len(self.songs)]
+        self.current_answer = song["artist"]
+        colors = self.get_theme_colors()
+        progress = self.current_question + 1
 
-    def generate_question(self):
-        """توليد سؤال جديد"""
-        song = self.songs[self.current_round % len(self.songs)]
-        self.current_answer = song['artist']
+        flex_content = {
+            "type": "bubble",
+            "size": "kilo",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "🎵",
+                                        "size": "xl",
+                                        "align": "center"
+                                    }
+                                ],
+                                "backgroundColor": colors["card"],
+                                "cornerRadius": "15px",
+                                "width": "45px",
+                                "height": "45px",
+                                "justifyContent": "center"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "لعبة الأغنية",
+                                        "size": "xl",
+                                        "weight": "bold",
+                                        "color": colors["text"]
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"السؤال {progress}/{self.questions_count}",
+                                        "size": "sm",
+                                        "color": colors["text2"]
+                                    }
+                                ],
+                                "margin": "lg",
+                                "flex": 1
+                            }
+                        ]
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "20px"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": song["lyrics"],
+                                "size": "lg",
+                                "weight": "bold",
+                                "color": colors["text"],
+                                "align": "center",
+                                "wrap": True
+                            }
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "20px",
+                        "paddingAll": "25px",
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "text",
+                        "text": "من المغني؟",
+                        "size": "md",
+                        "color": colors["primary"],
+                        "align": "center",
+                        "margin": "xl",
+                        "weight": "bold"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [],
+                                "backgroundColor": colors["primary"],
+                                "height": "5px",
+                                "flex": progress,
+                                "cornerRadius": "3px"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [],
+                                "backgroundColor": colors["card"],
+                                "height": "5px",
+                                "flex": self.questions_count - progress,
+                                "cornerRadius": "3px"
+                            }
+                        ],
+                        "margin": "md"
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
+            },
+            "styles": {
+                "body": {
+                    "backgroundColor": colors["bg"]
+                }
+            }
+        }
         
-        extra_info = f"💡 اكتب اسم المغني\n• لمح: للحصول على تلميح\n• جاوب: لمعرفة الإجابة"
-        
-        return self.build_question_flex(
-            "لعبة الأغنية 🎵",
-            f"🎤 من المغني؟\n\n« {song['lyrics']} »",
-            extra_info
-        )
+        return self._create_flex_with_buttons("لعبة الأغنية", flex_content)
 
-    def check_answer(self, answer, uid, name):
-        """فحص الإجابة"""
+    def check_answer(self, user_answer, user_id, display_name):
+        if not self.game_active:
+            return None
+        if user_id in self.answered_users:
+            return None
+
+        answer = user_answer.strip()
         normalized = self.normalize_text(answer)
         
         # تلميح
         if normalized == 'لمح':
-            first_char = self.current_answer[0]
-            length = len(self.current_answer)
-            hint = f"💡 تلميح: أول حرف '{first_char}' وعدد الحروف {length}"
-            return {
-                'points': 0,
-                'won': False,
-                'response': self.build_question_flex(
-                    "لعبة الأغنية 🎵",
-                    hint,
-                    "اكتب اسم المغني"
-                )
-            }
+            hint = self.get_hint()
+            return {'message': hint, 'response': self._create_text_message(hint), 'points': 0}
         
-        # عرض الإجابة
+        # كشف الإجابة
         if normalized == 'جاوب':
-            song = self.songs[self.current_round % len(self.songs)]
+            song = self.songs[self.current_question % len(self.songs)]
             reveal = f"🎤 المغني: {song['artist']}"
+            next_q = self.next_question()
+            if isinstance(next_q, dict) and next_q.get('game_over'):
+                next_q['message'] = f"{reveal}\n\n{next_q.get('message','')}"
+                return next_q
+            return {'message': reveal, 'response': next_q, 'points': 0}
+
+        # التحقق من الإجابة
+        correct = self.normalize_text(self.current_answer)
+        if correct in normalized or normalized in correct or \
+           difflib.SequenceMatcher(None, normalized, correct).ratio() > 0.8:
+            points = self.add_score(user_id, display_name, 10)
+            song = self.songs[self.current_question % len(self.songs)]
+            next_q = self.next_question()
             
-            # الانتقال للسؤال التالي
-            self.current_round += 1
-            if self.current_round >= self.rounds:
-                return {
-                    'points': 0,
-                    'won': False,
-                    'response': self.build_result_flex(
-                        "انتهت اللعبة",
-                        reveal,
-                        0,
-                        True
-                    )
-                }
+            if isinstance(next_q, dict) and next_q.get('game_over'):
+                next_q['points'] = points
+                return next_q
             
-            next_q = self.generate_question()
-            return {
-                'points': 0,
-                'won': False,
-                'response': next_q
-            }
-        
-        # التحقق من الإجابة الصحيحة
-        correct_normalized = self.normalize_text(self.current_answer)
-        
-        # مقارنة مع تحمل الأخطاء
-        if (correct_normalized in normalized or 
-            normalized in correct_normalized or 
-            difflib.SequenceMatcher(None, normalized, correct_normalized).ratio() > 0.75):
-            
-            points = POINTS_PER_CORRECT
-            self.add_player_score(uid, points)
-            
-            # الانتقال للسؤال التالي
-            self.current_round += 1
-            is_final = self.current_round >= self.rounds
-            
-            if is_final:
-                return {
-                    'points': points,
-                    'won': True,
-                    'response': self.build_result_flex(
-                        name,
-                        f"المغني: {self.current_answer}",
-                        points,
-                        True
-                    )
-                }
-            
-            next_q = self.generate_question()
-            return {
-                'points': points,
-                'won': False,
-                'response': next_q
-            }
-        
-        return None
+            msg = f"✅ صحيح يا {display_name}!\n🎤 {song['artist']}\n+{points} نقطة"
+            return {'message': msg, 'response': next_q, 'points': points}
+
+        return {
+            'message': "▫️ إجابة غير صحيحة ▪️",
+            'response': self._create_text_message("▫️ إجابة غير صحيحة ▪️"),
+            'points': 0
+        }
