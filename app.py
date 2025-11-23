@@ -46,7 +46,6 @@ logger = logging.getLogger(__name__)
 # ==================== Flask & Line ====================
 app = Flask(__name__)
 
-# تكوين LINE API v3 بالطريقة الصحيحة
 configuration = Configuration(access_token=LINE_TOKEN)
 handler = WebhookHandler(LINE_SECRET)
 
@@ -57,7 +56,7 @@ gm = GameManager()
 GAMES = {
     'ذكاء': IqGame,
     'لون': WordColorGame,
-    'ترتيب': ScrambleWordGameAI,
+    'ترتيب': ScrambleWordGame,
     'رياضيات': MathGame,
     'أسرع': FastTypingGame,
     'ضد': OppositeGame,
@@ -101,19 +100,16 @@ def send_flex_reply(reply_token, flex_content, uid=None):
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
             
-            # رسالة نصية مع Quick Reply
             text_msg = TextMessage(
                 text="اختر لعبة أو أمر:",
                 quickReply=get_games_quick_reply(uid)
             )
             
-            # رسالة Flex
             flex_msg = FlexMessage(
                 altText='القائمة',
                 contents=FlexContainer.from_dict(flex_content)
             )
             
-            # إرسال الرسائل
             line_api.reply_message(
                 ReplyMessageRequest(
                     replyToken=reply_token,
@@ -122,7 +118,6 @@ def send_flex_reply(reply_token, flex_content, uid=None):
             )
     except Exception as e:
         logger.error(f'❌ Error sending flex reply: {e}')
-        # إرسال رسالة نصية بديلة
         try:
             with ApiClient(configuration) as api_client:
                 line_api = MessagingApi(api_client)
@@ -136,7 +131,6 @@ def send_flex_reply(reply_token, flex_content, uid=None):
             logger.error(f'❌ Error sending fallback reply: {e2}')
 
 def send_text_reply(reply_token, text):
-    """إرسال رسالة نصية باستخدام v3 API"""
     try:
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
@@ -245,7 +239,7 @@ def on_message(event):
             send_text_reply(event.reply_token, '❌ حدث خطأ أثناء بدء اللعبة')
         return
 
-    # الرد على اللعبة (أول إجابة صحيحة فقط)
+    # الرد على اللعبة
     game_data = gm.get_game(gid)
     if game_data and gm.is_registered(uid):
         game = game_data['game']
