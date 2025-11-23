@@ -1,5 +1,4 @@
-import time, logging
-logger = logging.getLogger(__name__)
+import time
 
 class CacheManager:
     def __init__(self):
