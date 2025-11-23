@@ -16,58 +16,74 @@ THEMES = {
     'white': {
         'bg': '#FFFFFF',
         'card': '#F5F5F5',
-        'primary': '#667EEA',
+        'primary': '#FFFFFF',   # 🤍
         'text': '#2C3E50',
         'text2': '#718096',
-        'name': '⚪ أبيض'
+        'name': '🤍 أبيض'
     },
     'black': {
         'bg': '#0F0F1A',
         'card': '#1A1A2E',
-        'primary': '#00D9FF',
+        'primary': '#000000',   # 🖤
         'text': '#FFFFFF',
         'text2': '#A0AEC0',
-        'name': '⚫ أسود'
-    },
-    'gray': {
-        'bg': '#1A202C',
-        'card': '#2D3748',
-        'primary': '#68D391',
-        'text': '#F7FAFC',
-        'text2': '#CBD5E0',
-        'name': '⬜ رمادي'
+        'name': '🖤 أسود'
     },
     'blue': {
         'bg': '#0C1929',
         'card': '#1E3A5F',
-        'primary': '#00D9FF',
+        'primary': '#00D9FF',   # 💙
         'text': '#E0F2FE',
         'text2': '#7DD3FC',
-        'name': '🔵 أزرق'
+        'name': '💙 أزرق'
     },
-    'purple': {
-        'bg': '#1E1B4B',
-        'card': '#312E81',
-        'primary': '#A855F7',
-        'text': '#F5F3FF',
-        'text2': '#C4B5FD',
-        'name': '🟣 بنفسجي'
+    'green': {
+        'bg': '#ECFDF5',
+        'card': '#D1FAE5',
+        'primary': '#10B981',   # 💚
+        'text': '#064E3B',
+        'text2': '#047857',
+        'name': '💚 أخضر'
     },
     'pink': {
         'bg': '#FFF1F2',
         'card': '#FFE4E6',
-        'primary': '#EC4899',
+        'primary': '#EC4899',   # 🩷
         'text': '#831843',
         'text2': '#BE185D',
-        'name': '💗 وردي'
+        'name': '🩷 وردي'
     },
-    'mint': {
-        'bg': '#ECFDF5',
-        'card': '#D1FAE5',
-        'primary': '#10B981',
-        'text': '#064E3B',
-        'text2': '#047857',
-        'name': '🍃 نعناعي'
+    'gray': {
+        'bg': '#1A202C',
+        'card': '#2D3748',
+        'primary': '#9CA3AF',   # 🩶
+        'text': '#F7FAFC',
+        'text2': '#CBD5E0',
+        'name': '🩶 رمادي'
+    },
+    'orange': {
+        'bg': '#FFF7ED',
+        'card': '#F97316',
+        'primary': '#F97316',   # 🧡
+        'text': '#FFFFFF',
+        'text2': '#555555',
+        'name': '🧡 برتقالي'
+    },
+    'purple': {
+        'bg': '#F5F3FF',
+        'card': '#8B5CF6',
+        'primary': '#8B5CF6',   # 💜
+        'text': '#FFFFFF',
+        'text2': '#555555',
+        'name': '💜 بنفسجي'
+    },
+    'brown': {
+        'bg': '#FFF8F0',
+        'card': '#A0522D',
+        'primary': '#A0522D',   # 🤎
+        'text': '#FFFFFF',
+        'text2': '#555555',
+        'name': '🤎 بني'
     }
 }
 
