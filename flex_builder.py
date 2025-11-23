@@ -1,5 +1,5 @@
 """
-Bot Mesh - Flex Message Builder
+Bot Mesh - Flex Message Builder (Enhanced)
 Created by: Abeer Aldosari © 2025
 """
 from config import THEMES
@@ -146,8 +146,9 @@ class FlexBuilder:
                             },
                             {
                                 "type": "button",
-                                "action": {"type": "message", "label": "⏹️ إيقاف", "text": "إيقاف"},
-                                "style": "secondary",
+                                "action": {"type": "message", "label": "👥 انضم", "text": "انضم"},
+                                "style": "primary",
+                                "color": self.t['primary'],
                                 "height": "sm"
                             }
                         ]
