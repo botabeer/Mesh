@@ -62,7 +62,7 @@ try:
     GAMES = {
         'ذكاء': IqGame,
         'لون': WordColorGame,
-        'ترتيب': ScrambleWordGameAI,
+        'ترتيب': ScrambleWordGame,
         'رياضيات': MathGame,
         'أسرع': FastTypingGame,
         'ضد': OppositeGame,
