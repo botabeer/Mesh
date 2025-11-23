@@ -1,5 +1,5 @@
 """
-Bot Mesh - Main Application (Fixed with Help Window)
+Bot Mesh - Main Application (Complete with Themes)
 Created by: Abeer Aldosari © 2025
 """
 import os
@@ -133,87 +133,59 @@ def send_text_reply(reply_token, text):
         logger.error(f'❌ Error sending text reply: {e}')
     return False
 
+def create_game_button(icon, name, theme):
+    """إنشاء زر لعبة"""
+    return {
+        "type": "button",
+        "action": {
+            "type": "message",
+            "label": f"{icon} {name}",
+            "text": name
+        },
+        "style": "secondary",
+        "color": theme['card'],
+        "height": "sm"
+    }
+
 # ==================== Flex Message Builders ====================
 def create_welcome_flex(uid):
-    """إنشاء رسالة الترحيب"""
-    theme = THEMES.get(get_theme(uid), THEMES['white'])
+    """نافذة البداية مع الثيمات التسعة"""
+    current_theme_key = get_theme(uid)
+    theme = THEMES.get(current_theme_key, THEMES['white'])
     user = db.get_user(uid)
     name = user['name'] if user else 'لاعب'
     
-    return {
-        "type": "bubble",
-        "size": "kilo",
-        "styles": {
-            "body": {"backgroundColor": theme['bg']}
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "🎮 Bot Mesh",
-                    "weight": "bold",
-                    "size": "xxl",
-                    "color": theme['primary'],
-                    "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": "بوت الألعاب الترفيهية",
-                    "size": "sm",
-                    "color": theme['text2'],
-                    "align": "center",
-                    "margin": "sm"
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": f"مرحباً {name}! 👋",
-                    "size": "xl",
-                    "color": theme['text'],
-                    "align": "center",
-                    "margin": "lg",
-                    "weight": "bold"
-                },
-                {
-                    "type": "text",
-                    "text": "اختر لعبة من القائمة السفلية",
-                    "size": "md",
-                    "color": theme['text2'],
-                    "align": "center",
-                    "margin": "md",
-                    "wrap": True
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "© 2025 Abeer Aldosari",
-                    "size": "xs",
-                    "color": theme['text2'],
-                    "align": "center",
-                    "margin": "lg"
-                }
-            ],
-            "paddingAll": "25px"
-        }
-    }
-
-def create_help_flex(uid):
-    """إنشاء نافذة المساعدة مع الأزرار الثابتة"""
-    theme = THEMES.get(get_theme(uid), THEMES['white'])
-    user = db.get_user(uid)
+    # تقسيم الثيمات إلى 3 صفوف × 3 أعمدة
+    theme_rows = [
+        ['white', 'black', 'gray'],
+        ['blue', 'green', 'pink'],
+        ['orange', 'purple', 'brown']
+    ]
     
-    # معلومات المستخدم
-    stats_text = "انضم أولاً للبدء!"
-    if user:
-        stats_text = f"نقاطك: {user['points']} ⭐\nألعابك: {user['games']} 🎮"
+    theme_buttons = []
+    for row in theme_rows:
+        button_row = {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [],
+            "spacing": "sm",
+            "margin": "sm"
+        }
+        for theme_key in row:
+            t = THEMES[theme_key]
+            is_current = theme_key == current_theme_key
+            button_row["contents"].append({
+                "type": "button",
+                "action": {
+                    "type": "message",
+                    "label": f"{t['name']} {'✓' if is_current else ''}",
+                    "text": f"ثيم:{theme_key}"
+                },
+                "style": "primary" if is_current else "secondary",
+                "height": "sm",
+                "flex": 1
+            })
+        theme_buttons.append(button_row)
     
     return {
         "type": "bubble",
@@ -235,7 +207,7 @@ def create_help_flex(uid):
                             "text": "🎮 Bot Mesh",
                             "weight": "bold",
                             "size": "xxl",
-                            "color": theme['text'],
+                            "color": theme['primary'],
                             "align": "center"
                         },
                         {
@@ -251,144 +223,53 @@ def create_help_flex(uid):
                     "cornerRadius": "15px",
                     "paddingAll": "20px"
                 },
-                
-                # Games Grid (3x4)
                 {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        # Row 1
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                self._create_game_button("🧠", "ذكاء", theme),
-                                self._create_game_button("🎨", "لون", theme),
-                                self._create_game_button("abc", "ترتيب", theme)
-                            ],
-                            "spacing": "sm"
-                        },
-                        # Row 2
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                self._create_game_button("🔢", "رياضيات", theme),
-                                self._create_game_button("⚡", "أسرع", theme),
-                                self._create_game_button("↔️", "ضد", theme)
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
-                        },
-                        # Row 3
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                self._create_game_button("✏️", "تكوين", theme),
-                                self._create_game_button("🎵", "أغنية", theme),
-                                self._create_game_button("🎯", "لعبة", theme)
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
-                        },
-                        # Row 4
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                self._create_game_button("🔗", "سلسلة", theme),
-                                self._create_game_button("🤔", "خمن", theme),
-                                self._create_game_button("💕", "توافق", theme)
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
-                        }
-                    ],
-                    "margin": "lg"
+                    "type": "text",
+                    "text": f"مرحباً {name}! 👋",
+                    "size": "lg",
+                    "color": theme['text'],
+                    "align": "center",
+                    "margin": "lg",
+                    "weight": "bold"
                 },
-                
-                # Separator
                 {
                     "type": "separator",
                     "margin": "lg"
                 },
-                
-                # Action Buttons (2x2)
                 {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        # Row 1
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "نقاطي 📊",
-                                        "text": "نقاطي"
-                                    },
-                                    "style": "secondary",
-                                    "color": theme['card'],
-                                    "height": "sm"
-                                },
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "صدارة 🏆",
-                                        "text": "صدارة"
-                                    },
-                                    "style": "secondary",
-                                    "color": theme['card'],
-                                    "height": "sm"
-                                }
-                            ],
-                            "spacing": "sm"
-                        },
-                        # Row 2
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "انسحب 🚪",
-                                        "text": "انسحب"
-                                    },
-                                    "style": "secondary",
-                                    "color": "#F59E0B",
-                                    "height": "sm"
-                                },
-                                {
-                                    "type": "button",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "انضم 👥",
-                                        "text": "انضم"
-                                    },
-                                    "style": "primary",
-                                    "color": theme['primary'],
-                                    "height": "sm"
-                                }
-                            ],
-                            "spacing": "sm",
-                            "margin": "sm"
-                        }
-                    ],
+                    "type": "text",
+                    "text": "🎨 اختر الثيم المفضل",
+                    "size": "md",
+                    "color": theme['text'],
+                    "align": "center",
+                    "margin": "lg",
+                    "weight": "bold"
+                }
+            ] + theme_buttons + [
+                {
+                    "type": "separator",
                     "margin": "lg"
                 },
-                
-                # Footer
+                {
+                    "type": "text",
+                    "text": "💡 الأوامر المتاحة:",
+                    "size": "sm",
+                    "color": theme['text'],
+                    "weight": "bold",
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": "• مساعدة - عرض الألعاب\n• انضم - للتسجيل\n• نقاطي - إحصائياتك\n• صدارة - أفضل اللاعبين",
+                    "size": "xs",
+                    "color": theme['text2'],
+                    "wrap": True,
+                    "margin": "sm"
+                },
                 {
                     "type": "text",
                     "text": "© 2025 Abeer Aldosari",
-                    "size": "xs",
+                    "size": "xxs",
                     "color": theme['text2'],
                     "align": "center",
                     "margin": "lg"
@@ -398,60 +279,144 @@ def create_help_flex(uid):
         }
     }
 
-def _create_game_button(icon, name, theme):
-    """إنشاء زر لعبة صغير"""
-    return {
-        "type": "button",
-        "action": {
-            "type": "message",
-            "label": f"{icon}\n{name}",
-            "text": name
-        },
-        "style": "secondary",
-        "color": theme['card'],
-        "height": "sm",
-        "flex": 1
-    }
-
-def create_theme_selector_flex(uid):
-    """إنشاء محدد الثيمات"""
-    current_theme = get_theme(uid)
+def create_help_flex(uid):
+    """نافذة المساعدة مع الألعاب والأزرار"""
+    theme = THEMES.get(get_theme(uid), THEMES['white'])
+    
+    # 12 لعبة في 4 صفوف × 3 أعمدة
+    games_grid = [
+        [("🧠", "ذكاء"), ("🎨", "لون"), ("🔤", "ترتيب")],
+        [("🔢", "رياضيات"), ("⚡", "أسرع"), ("↔️", "ضد")],
+        [("✏️", "تكوين"), ("🎵", "أغنية"), ("🎯", "لعبة")],
+        [("🔗", "سلسلة"), ("🤔", "خمن"), ("💕", "توافق")]
+    ]
+    
+    game_buttons = []
+    for row in games_grid:
+        button_row = {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [],
+            "spacing": "sm",
+            "margin": "sm"
+        }
+        for icon, name in row:
+            button_row["contents"].append({
+                "type": "button",
+                "action": {
+                    "type": "message",
+                    "label": f"{icon} {name}",
+                    "text": name
+                },
+                "style": "secondary",
+                "color": theme['card'],
+                "height": "sm",
+                "flex": 1
+            })
+        game_buttons.append(button_row)
     
     return {
         "type": "bubble",
+        "size": "mega",
+        "styles": {
+            "body": {"backgroundColor": theme['bg']}
+        },
         "body": {
             "type": "box",
             "layout": "vertical",
             "contents": [
                 {
                     "type": "text",
-                    "text": "🎨 اختر الثيم",
+                    "text": "🎮 قائمة الألعاب",
                     "weight": "bold",
                     "size": "xl",
+                    "color": theme['primary'],
                     "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "اختر لعبة للبدء",
+                    "size": "sm",
+                    "color": theme['text2'],
+                    "align": "center",
+                    "margin": "sm"
                 },
                 {
                     "type": "separator",
                     "margin": "lg"
                 }
-            ] + [
+            ] + game_buttons + [
                 {
-                    "type": "button",
-                    "action": {
-                        "type": "message",
-                        "label": f"{theme_data['name']} {'✓' if theme_key == current_theme else ''}",
-                        "text": f"ثيم:{theme_key}"
-                    },
-                    "style": "primary" if theme_key == current_theme else "secondary",
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "📊 نقاطي",
+                                "text": "نقاطي"
+                            },
+                            "style": "secondary",
+                            "color": theme['card'],
+                            "height": "sm"
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "🏆 صدارة",
+                                "text": "صدارة"
+                            },
+                            "style": "secondary",
+                            "color": theme['card'],
+                            "height": "sm"
+                        }
+                    ],
+                    "spacing": "sm",
+                    "margin": "md"
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "🚪 انسحب",
+                                "text": "انسحب"
+                            },
+                            "style": "secondary",
+                            "color": "#F59E0B",
+                            "height": "sm"
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "👥 انضم",
+                                "text": "انضم"
+                            },
+                            "style": "primary",
+                            "color": theme['primary'],
+                            "height": "sm"
+                        }
+                    ],
+                    "spacing": "sm",
                     "margin": "sm"
                 }
-                for theme_key, theme_data in THEMES.items()
-            ]
+            ],
+            "paddingAll": "20px"
         }
     }
 
 def create_leaderboard_flex(uid):
-    """إنشاء لوحة الصدارة"""
+    """لوحة الصدارة"""
     theme = THEMES.get(get_theme(uid), THEMES['white'])
     leaders = db.get_leaderboard(10)
     
@@ -525,7 +490,7 @@ def home():
     return jsonify({
         'name': 'Bot Mesh',
         'status': 'active',
-        'version': '3.1.0',
+        'version': '3.2.0',
         'games': list(GAMES.keys())
     })
 
@@ -583,10 +548,6 @@ def on_message(event):
         send_flex_reply(event.reply_token, create_help_flex(uid), 'المساعدة')
         return
 
-    if txt.lower() in ['ثيم', 'theme', 'ألوان', 'الوان']:
-        send_flex_reply(event.reply_token, create_theme_selector_flex(uid), 'الثيمات')
-        return
-
     if txt.startswith('ثيم:'):
         theme_key = txt.split(':')[1]
         if theme_key in THEMES:
@@ -597,7 +558,7 @@ def on_message(event):
     # تسجيل المستخدم
     if txt.lower() in ['انضم', 'join']:
         gm.register(uid)
-        send_flex_reply(event.reply_token, create_welcome_flex(uid), 'مرحباً')
+        send_text_reply(event.reply_token, '✅ تم التسجيل بنجاح! اكتب "مساعدة" لعرض الألعاب')
         logger.info(f'✅ User registered: {name}')
         return
 
@@ -660,7 +621,7 @@ def on_message(event):
                 game.set_theme(get_theme(uid))
                 gm.start_game(gid, game, txt)
                 response = game.start_game()
-                if hasattr(response, 'altText'):
+                if hasattr(response, 'alt_text'):
                     line_api.reply_message(
                         ReplyMessageRequest(replyToken=event.reply_token, messages=[response])
                     )
@@ -687,7 +648,7 @@ def on_message(event):
                 db.update_points(uid, points, won)
                 response = result.get('response')
                 if response:
-                    if hasattr(response, 'altText'):
+                    if hasattr(response, 'alt_text'):
                         with ApiClient(configuration) as api_client:
                             line_api = MessagingApi(api_client)
                             line_api.reply_message(
@@ -705,6 +666,6 @@ def on_message(event):
 # ==================== Run ====================
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
-    logger.info(f"🚀 Bot Mesh v3.1.0 - Running on port {port}")
+    logger.info(f"🚀 Bot Mesh v3.2.0 - Running on port {port}")
     logger.info(f"📊 Loaded {len(GAMES)} games: {', '.join(GAMES.keys())}")
     app.run(host='0.0.0.0', port=port, debug=False)
