@@ -1,117 +1,134 @@
 """
-لعبة الرياضيات - AI Version ▫️▪️
+Bot Mesh - Math Game (Enhanced Example)
 Created by: Abeer Aldosari © 2025
 """
-from linebot.models import TextSendMessage
-from .base_game import BaseGame
 import random
-import math
+from .base_game import BaseGame
 
 class MathGame(BaseGame):
-    """لعبة العمليات الحسابية مع دعم AI"""
-
-    def __init__(self, line_bot_api):
-        super().__init__(line_bot_api, questions_count=10)
-        self.difficulty = 1
-
-    def generate_question(self):
-        """توليد سؤال رياضي ديناميكي"""
-        max_num = 10 + (self.current_question * 5)
-        operations = ['+', '-', '*']
-        if self.current_question >= 5:
-            operations.append('/')
-
-        operation = random.choice(operations)
-
-        if operation == '/':
-            result = random.randint(2, max_num // 2)
-            num2 = random.randint(2, 10)
-            num1 = result * num2
-            answer = result
-        elif operation == '*':
-            num1 = random.randint(1, min(12, max_num))
-            num2 = random.randint(1, min(12, max_num))
-            answer = num1 * num2
-        elif operation == '-':
-            num1 = random.randint(1, max_num)
-            num2 = random.randint(1, num1)
-            answer = num1 - num2
-        else:  # +
-            num1 = random.randint(1, max_num)
-            num2 = random.randint(1, max_num)
-            answer = num1 + num2
-
-        return {
-            "question": f"{num1} {operation} {num2}",
-            "answer": str(answer),
-            "num1": num1,
-            "num2": num2,
-            "operation": operation
-        }
-
+    """لعبة الرياضيات - حل مسائل رياضية بسيطة"""
+    
+    def __init__(self, line_api):
+        super().__init__(line_api)
+        self.max_rounds = 5
+        self.operations = ['+', '-', '×', '÷']
+        self.difficulty = 'easy'  # easy, medium, hard
+    
     def start_game(self):
-        """بدء اللعبة"""
-        self.current_question = 0
-        self.game_active = True
-        return self.get_question()
-
-    def get_question(self):
-        """عرض السؤال الحالي"""
-        q_data = self.generate_question()
-        self.current_answer = q_data["answer"]
-
-        op_symbols = {'+': '➕', '-': '➖', '*': '✖️', '/': '➗'}
-        op_symbol = op_symbols.get(q_data["operation"], q_data["operation"])
-
-        message = f"🔢 رياضيات ({self.current_question + 1}/{self.questions_count})\n\n"
-        message += f"📝 احسب:\n\n"
-        message += f"『 {q_data['num1']} {op_symbol} {q_data['num2']} = ؟ 』\n\n"
-        message += "💡 اكتب الناتج فقط\n"
-        message += "• اكتب 'لمح' لتلميح\n• اكتب 'جاوب' لمعرفة الحل"
-
-        return TextSendMessage(text=message)
-
-    def check_answer(self, user_answer, user_id, display_name):
-        """فحص الإجابة"""
+        self.current_round = 0
+        question_data = self.generate_question()
+        return self.build_flex_question(
+            title="🔢 لعبة الرياضيات",
+            question=f"احسب: {question_data['question']}",
+            options=question_data.get('options')
+        )
+    
+    def generate_question(self):
+        """توليد سؤال رياضي عشوائي"""
+        if self.current_round < 2:
+            self.difficulty = 'easy'
+        elif self.current_round < 4:
+            self.difficulty = 'medium'
+        else:
+            self.difficulty = 'hard'
+        
+        if self.difficulty == 'easy':
+            num1 = random.randint(1, 20)
+            num2 = random.randint(1, 20)
+            operations = ['+', '-']
+        elif self.difficulty == 'medium':
+            num1 = random.randint(10, 50)
+            num2 = random.randint(10, 50)
+            operations = ['+', '-', '×']
+        else:
+            num1 = random.randint(20, 100)
+            num2 = random.randint(2, 20)
+            operations = ['+', '-', '×', '÷']
+        
+        operation = random.choice(operations)
+        
+        # حساب الإجابة
+        if operation == '+':
+            answer = num1 + num2
+        elif operation == '-':
+            if num1 < num2:
+                num1, num2 = num2, num1
+            answer = num1 - num2
+        elif operation == '×':
+            answer = num1 * num2
+        else:
+            num1 = num2 * random.randint(2, 10)
+            answer = num1 // num2
+        
+        # توليد خيارات خاطئة
+        options = [str(answer)]
+        for _ in range(3):
+            wrong = answer + random.randint(-10, 10)
+            if wrong != answer and str(wrong) not in options:
+                options.append(str(wrong))
+        
+        random.shuffle(options)
+        
+        self.current_question = {
+            'question': f"{num1} {operation} {num2} = ؟",
+            'answer': str(answer),
+            'options': options,
+            'difficulty': self.difficulty
+        }
+        self.correct_answer = str(answer)
+        return self.current_question
+    
+    def check_answer(self, answer, uid, name):
+        """التحقق من الإجابة وتحديث النقاط"""
         if not self.game_active:
             return None
+        self.add_player(uid, name)
+        answer = answer.strip()
+        is_correct = answer == self.correct_answer
+        difficulty_bonus = {'easy': 0, 'medium': 5, 'hard': 10}
+        points = self.calculate_points(is_correct, difficulty_bonus.get(self.difficulty, 0))
+        self.update_score(uid, points, is_correct)
+        
+        result_flex = self.build_flex_result(
+            correct=is_correct,
+            answer=f"الإجابة الصحيحة: {self.correct_answer}",
+            player_name=name,
+            points=points
+        )
+        
+        game_continues = self.next_round()
+        
+        response = {
+            'response': result_flex,
+            'points': points,
+            'won': is_correct,
+            'game_over': not game_continues
+        }
+        
+        if game_continues:
+            next_question = self.generate_question()
+            response['next_question'] = self.build_flex_question(
+                title="🔢 لعبة الرياضيات",
+                question=f"احسب: {next_question['question']}",
+                options=next_question.get('options')
+            )
+        else:
+            response['leaderboard'] = self.build_flex_leaderboard()
+        
+        return response
+    
+    def get_game_info(self):
+        """معلومات اللعبة"""
+        return {
+            'name': 'لعبة الرياضيات',
+            'description': 'حل مسائل رياضية بسيطة',
+            'icon': '🔢',
+            'difficulty': self.difficulty,
+            'rounds': self.max_rounds,
+            'players': len(self.players)
+        }
 
-        if user_id in self.answered_users:
-            return None
 
-        answer = user_answer.strip()
-
-        # تلميح
-        if answer == 'لمح':
-            msg = f"💡 تلميح: الناتج تقريبا {self.current_answer}"
-            return {'message': msg, 'response': TextSendMessage(text=msg), 'points': 0}
-
-        # عرض الحل
-        if answer == 'جاوب':
-            reveal = f"📝 الإجابة الصحيحة: {self.current_answer}"
-            next_q = self.next_question()
-            if isinstance(next_q, dict) and next_q.get('game_over'):
-                return {'message': reveal, 'response': TextSendMessage(text=reveal), 'points': 0}
-            message = f"{reveal}\n\n"
-            if hasattr(next_q, 'text'):
-                message += next_q.text
-            return {'message': message, 'response': TextSendMessage(text=message), 'points': 0}
-
-        # التحقق من الإجابة مع تقارب
-        try:
-            user_num = float(answer.replace(',', '.'))
-            correct_num = float(self.current_answer)
-            if math.isclose(user_num, correct_num, rel_tol=0.01):
-                points = self.add_score(user_id, display_name, 10)
-                next_q = self.next_question()
-                if isinstance(next_q, dict) and next_q.get('game_over'):
-                    next_q['points'] = points
-                    return next_q
-                message = f"✅ صحيح يا {display_name}!\n+{points} نقطة\n\n"
-                if hasattr(next_q, 'text'):
-                    message += next_q.text
-                return {'message': message, 'response': TextSendMessage(text=message), 'points': points}
-        except:
-            pass
-
-        return {'message': "▫️ إجابة غير صحيحة ▪️", 'response': TextSendMessage(text="▫️ إجابة غير صحيحة ▪️"), 'points': 0}
+# Alias للـ IqGame
+class IqGame(MathGame):
+    pass
