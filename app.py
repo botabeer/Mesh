@@ -1,5 +1,5 @@
 """
-Bot Mesh - Main Application (Clean & Organized)
+Bot Mesh - Main Application (Enhanced Version)
 Created by: Abeer Aldosari © 2025
 """
 import os
@@ -9,7 +9,8 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
-    FlexSendMessage, FollowEvent
+    FlexSendMessage, FollowEvent, QuickReply, QuickReplyButton,
+    MessageAction
 )
 
 # استيراد المكونات
@@ -64,6 +65,48 @@ def get_theme(uid):
     user = db.get_user(uid)
     return user['theme'] if user else 'white'
 
+def get_games_quick_reply():
+    """إنشاء أزرار الألعاب الثابتة"""
+    items = []
+    
+    game_buttons = [
+        {'emoji': '🧠', 'label': 'ذكاء', 'text': 'ذكاء'},
+        {'emoji': '🎨', 'label': 'لون', 'text': 'لون'},
+        {'emoji': '🔤', 'label': 'ترتيب', 'text': 'ترتيب'},
+        {'emoji': '🔢', 'label': 'رياضيات', 'text': 'رياضيات'},
+        {'emoji': '⚡', 'label': 'أسرع', 'text': 'أسرع'},
+        {'emoji': '↔️', 'label': 'ضد', 'text': 'ضد'},
+        {'emoji': '✏️', 'label': 'تكوين', 'text': 'تكوين'},
+        {'emoji': '🎵', 'label': 'أغنية', 'text': 'أغنية'},
+        {'emoji': '🎯', 'label': 'لعبة', 'text': 'لعبة'},
+        {'emoji': '⛓️', 'label': 'سلسلة', 'text': 'سلسلة'},
+        {'emoji': '🤔', 'label': 'خمن', 'text': 'خمن'},
+        {'emoji': '💖', 'label': 'توافق', 'text': 'توافق'},
+        {'emoji': '📊', 'label': 'نقاطي', 'text': 'نقاطي'}
+    ]
+    
+    for btn in game_buttons:
+        items.append(QuickReplyButton(
+            action=MessageAction(label=f"{btn['emoji']} {btn['label']}", text=btn['text'])
+        ))
+    
+    return QuickReply(items=items)
+
+def send_with_games_menu(reply_token, message):
+    """إرسال رسالة مع قائمة الألعاب الثابتة"""
+    if isinstance(message, TextSendMessage):
+        message.quick_reply = get_games_quick_reply()
+        line_api.reply_message(reply_token, message)
+    elif isinstance(message, FlexSendMessage):
+        # إرسال Flex + رسالة نصية بسيطة مع الأزرار
+        text_msg = TextSendMessage(
+            text="اختر لعبة أو أمر:",
+            quick_reply=get_games_quick_reply()
+        )
+        line_api.reply_message(reply_token, [message, text_msg])
+    else:
+        line_api.reply_message(reply_token, message)
+
 # ==================== Routes ====================
 @app.route('/')
 def home():
@@ -93,6 +136,11 @@ def home():
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             max-width: 500px;
             width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }}
+        @keyframes slideUp {{
+            from {{ transform: translateY(50px); opacity: 0; }}
+            to {{ transform: translateY(0); opacity: 1; }}
         }}
         h1 {{
             color: #667eea;
@@ -118,6 +166,10 @@ def home():
             background: #f8f9fa;
             padding: 20px;
             border-radius: 15px;
+            transition: transform 0.3s;
+        }}
+        .stat:hover {{
+            transform: translateY(-5px);
         }}
         .stat-value {{
             font-size: 2em;
@@ -207,9 +259,9 @@ def on_message(event):
         builder = FlexBuilder(theme)
         
         # الأوامر الأساسية
-        if txt in ['@botmesh', 'بداية', 'مساعدة', 'start']:
+        if txt in ['@botmesh', 'بداية', 'مساعدة', 'start', 'قائمة']:
             gm.register(uid)
-            line_api.reply_message(
+            send_with_games_menu(
                 event.reply_token,
                 FlexSendMessage(alt_text='القائمة', contents=builder.welcome())
             )
@@ -225,12 +277,12 @@ def on_message(event):
                     'wins': user['wins']
                 }
                 rank = db.rank(uid)
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
                     FlexSendMessage(alt_text='نقاطي', contents=builder.stats(data, rank))
                 )
             else:
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
                     TextSendMessage(text='❌ لم تلعب بعد\nاكتب "بداية" للبدء')
                 )
@@ -239,7 +291,7 @@ def on_message(event):
         # عرض الصدارة
         elif txt == 'الصدارة':
             leaders = db.leaderboard()
-            line_api.reply_message(
+            send_with_games_menu(
                 event.reply_token,
                 FlexSendMessage(alt_text='الصدارة', contents=builder.leaderboard(leaders))
             )
@@ -247,7 +299,7 @@ def on_message(event):
         
         # عرض الثيمات
         elif txt == 'ثيم':
-            line_api.reply_message(
+            send_with_games_menu(
                 event.reply_token,
                 FlexSendMessage(alt_text='الثيمات', contents=builder.themes())
             )
@@ -258,14 +310,30 @@ def on_message(event):
             theme_name = txt.split(':')[1]
             if theme_name in THEMES:
                 db.set_theme(uid, theme_name)
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
                     TextSendMessage(text=f'✅ تم التغيير إلى {THEMES[theme_name]["name"]}')
                 )
             else:
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
                     TextSendMessage(text='❌ ثيم غير موجود')
+                )
+            return
+        
+        # أمر الانضمام (للمجموعات)
+        elif txt == 'انضم':
+            if not gm.is_registered(uid):
+                gm.register(uid)
+                db.get_user(uid)  # إنشاء سجل في قاعدة البيانات
+                send_with_games_menu(
+                    event.reply_token,
+                    TextSendMessage(text=f'✅ تم تسجيلك يا {name}!\nيمكنك الآن اللعب 🎮')
+                )
+            else:
+                send_with_games_menu(
+                    event.reply_token,
+                    TextSendMessage(text=f'✅ أنت مسجل بالفعل يا {name}!')
                 )
             return
         
@@ -273,12 +341,12 @@ def on_message(event):
         elif txt == 'إيقاف':
             if gm.get_game(gid):
                 gm.end_game(gid)
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
                     TextSendMessage(text='⏹️ تم إيقاف اللعبة')
                 )
             else:
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
                     TextSendMessage(text='⚠️ لا توجد لعبة نشطة')
                 )
@@ -287,14 +355,14 @@ def on_message(event):
         # بدء لعبة جديدة
         elif txt in GAMES:
             if not gm.is_registered(uid):
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
-                    TextSendMessage(text='❌ اكتب "بداية" أولاً للتسجيل')
+                    TextSendMessage(text='❌ اكتب "انضم" أولاً للتسجيل')
                 )
                 return
             
             if gm.get_game(gid):
-                line_api.reply_message(
+                send_with_games_menu(
                     event.reply_token,
                     TextSendMessage(text='⚠️ يوجد لعبة نشطة بالفعل\nاكتب "إيقاف" لإنهائها')
                 )
@@ -308,7 +376,7 @@ def on_message(event):
             
             # بدء اللعبة
             response = game.start_game()
-            line_api.reply_message(event.reply_token, response)
+            send_with_games_menu(event.reply_token, response)
             logger.info(f'🎮 بدأت لعبة {txt} للمستخدم {name}')
             return
         
@@ -336,13 +404,13 @@ def on_message(event):
             # إرسال الرد
             response = result.get('response') if result else None
             if response:
-                line_api.reply_message(event.reply_token, response)
+                send_with_games_menu(event.reply_token, response)
             return
     
     except Exception as e:
         logger.error(f'❌ خطأ في on_message: {e}', exc_info=True)
         try:
-            line_api.reply_message(
+            send_with_games_menu(
                 event.reply_token,
                 TextSendMessage(text='❌ حدث خطأ، حاول مرة أخرى')
             )
@@ -358,7 +426,7 @@ def on_follow(event):
         gm.register(uid)
         
         builder = FlexBuilder('white')
-        line_api.reply_message(
+        send_with_games_menu(
             event.reply_token,
             FlexSendMessage(alt_text='مرحباً', contents=builder.welcome())
         )
