@@ -1,36 +1,63 @@
-# Bot Mesh - Dockerfile (Production Ready)
+# Bot Mesh - Production Dockerfile
 # Created by: Abeer Aldosari © 2025
+# Python 3.11 Slim Image
 
 FROM python:3.11-slim
 
-# --- إعداد البيئة ---
+# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    POETRY_VIRTUALENVS_CREATE=false
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONIOENCODING=UTF-8 \
+    LANG=C.UTF-8
 
+# Set working directory
 WORKDIR /app
 
-# --- تثبيت الأدوات الضرورية للبناء ---
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
     libffi-dev \
-    git \
+    libssl-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# --- نسخ وتثبيت المتطلبات ---
+# Copy requirements first (for better caching)
 COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r requirements.txt
 
-# --- نسخ الكود ---
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
 COPY . .
 
-# --- إنشاء مجلد البيانات ---
-RUN mkdir -p /app/data && chmod 755 /app/data
+# Create data directory with proper permissions
+RUN mkdir -p /app/data && \
+    chmod 755 /app/data && \
+    chmod 755 /app
 
-# --- فتح المنفذ ---
+# Create non-root user for security
+RUN useradd -m -u 1000 -s /bin/bash botuser && \
+    chown -R botuser:botuser /app
+
+# Switch to non-root user
+USER botuser
+
+# Health check
+HEALTHCHECK --interval=30s \
+    --timeout=10s \
+    --start-period=15s \
+    --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health').read()" || exit 1
+
+# Expose port
 EXPOSE 5000
 
-# --- أمر التشغيل الإنتاجي (Flask مثال) ---
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app", "--workers", "3", "--threads", "2"]
+# Run the application
+CMD ["python", "app.py"]
