@@ -7,7 +7,7 @@ from .base_game import BaseGame
 import random
 import math
 
-class MathGameAI(BaseGame):
+class MathGame(BaseGame):
     """لعبة العمليات الحسابية مع دعم AI"""
 
     def __init__(self, line_bot_api):
