@@ -3,7 +3,7 @@ from .base_game import BaseGame
 import random
 import difflib
 
-class OppositeGameAI(BaseGame):
+class OppositeGame(BaseGame):
     """لعبة ضد الكلمة - نسخة AI ▫️▪️"""
     
     def __init__(self, line_bot_api, questions_count=10, use_ai=False, ai_generate_question=None, ai_check_answer=None):
