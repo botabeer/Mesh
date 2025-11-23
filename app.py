@@ -1,13 +1,10 @@
 """
-Bot Mesh - Main Application (Enhanced Version)
+Bot Mesh - Main Application (Enhanced with Rich Menu & Themes)
 Created by: Abeer Aldosari © 2025
-Enhanced with better error handling and performance
 """
 import os
 import logging
 from flask import Flask, request, abort, jsonify
-from functools import wraps
-import time
 
 # === LINE SDK v3 - Correct Imports ===
 from linebot.v3 import WebhookHandler
@@ -19,15 +16,13 @@ from linebot.v3.messaging import (
     ReplyMessageRequest,
     TextMessage,
     FlexMessage,
-    FlexContainer,
-    QuickReply,
-    QuickReplyItem,
-    MessageAction
+    FlexContainer
 )
 from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent,
-    FollowEvent
+    FollowEvent,
+    MentionEvent
 )
 
 # استيراد المكونات
@@ -35,7 +30,7 @@ from config import LINE_TOKEN, LINE_SECRET, DB_PATH, THEMES
 from database import DB
 from flex_builder import FlexBuilder
 from game_manager import GameManager
-from cache import CacheManager
+from rich_menu_manager import RichMenuManager
 
 # استيراد جميع الألعاب تلقائياً
 from games import *
@@ -56,7 +51,7 @@ handler = WebhookHandler(LINE_SECRET)
 # Initialize managers
 db = DB(DB_PATH)
 gm = GameManager()
-cache = CacheManager(ttl=300)  # 5 minutes cache
+rich_menu_mgr = RichMenuManager(LINE_TOKEN)
 
 # ==================== قاموس الألعاب ====================
 GAMES = {
@@ -74,133 +69,51 @@ GAMES = {
     'توافق': CompatibilityGame
 }
 
-# ==================== Decorators ====================
-def error_handler(f):
-    """Decorator for error handling"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            logger.error(f'❌ Error in {f.__name__}: {str(e)}', exc_info=True)
-            return None
-    return decorated_function
-
-def performance_monitor(f):
-    """Decorator for performance monitoring"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        start_time = time.time()
-        result = f(*args, **kwargs)
-        elapsed_time = time.time() - start_time
-        if elapsed_time > 1:  # Log if takes more than 1 second
-            logger.warning(f'⚠️ Slow operation: {f.__name__} took {elapsed_time:.2f}s')
-        return result
-    return decorated_function
-
 # ==================== Helpers ====================
-@error_handler
-@performance_monitor
 def get_name(uid):
-    """Get user name with caching"""
-    # Check cache first
-    cached_name = cache.get(f'name_{uid}')
-    if cached_name:
-        return cached_name
-    
     try:
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
             profile = line_api.get_profile(uid)
-            name = profile.display_name
-            cache.set(f'name_{uid}', name)
-            return name
+            return profile.display_name
     except Exception as e:
         logger.error(f'Error getting profile: {e}')
         return 'لاعب'
 
-@error_handler
 def get_theme(uid):
-    """Get user theme"""
     user = db.get_user(uid)
     return user.get('theme', 'white') if user else 'white'
 
-def get_games_quick_reply(uid):
-    """Generate quick reply buttons for games"""
-    items = []
-    
-    # Game buttons
-    for label in GAMES.keys():
-        items.append(QuickReplyItem(
-            action=MessageAction(label=label, text=label)
-        ))
-    
-    # Control buttons
-    control_buttons = ['إيقاف', 'انضم', 'انسحب', 'إحصائيات']
-    for label in control_buttons:
-        items.append(QuickReplyItem(
-            action=MessageAction(label=label, text=label)
-        ))
-    
-    return QuickReply(items=items)
-
-@error_handler
-@performance_monitor
-def send_flex_reply(reply_token, flex_content, uid=None, alt_text='القائمة'):
-    """إرسال رسالة Flex مع Quick Reply باستخدام v3 API"""
+def send_flex_reply(reply_token, flex_content, alt_text='القائمة'):
+    """إرسال رسالة Flex"""
     try:
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
             
-            messages = []
-            
-            # Flex message
-            if flex_content:
-                flex_msg = FlexMessage(
-                    altText=alt_text,
-                    contents=FlexContainer.from_dict(flex_content)
-                )
-                messages.append(flex_msg)
-            
-            # Quick reply
-            if uid:
-                text_msg = TextMessage(
-                    text="اختر لعبة أو أمر:",
-                    quickReply=get_games_quick_reply(uid)
-                )
-                messages.append(text_msg)
-            
-            if messages:
-                line_api.reply_message(
-                    ReplyMessageRequest(
-                        replyToken=reply_token,
-                        messages=messages
-                    )
-                )
-                return True
-            
-    except Exception as e:
-        logger.error(f'❌ Error sending flex reply: {e}')
-        # Fallback to text message
-        if uid:
-            send_text_reply(reply_token, "حدث خطأ في عرض الرسالة. الرجاء المحاولة مرة أخرى.")
-    
-    return False
-
-@error_handler
-def send_text_reply(reply_token, text, quick_reply=None):
-    """Send text message reply"""
-    try:
-        with ApiClient(configuration) as api_client:
-            line_api = MessagingApi(api_client)
-            msg = TextMessage(text=text)
-            if quick_reply:
-                msg.quickReply = quick_reply
+            flex_msg = FlexMessage(
+                altText=alt_text,
+                contents=FlexContainer.from_dict(flex_content)
+            )
             
             line_api.reply_message(
                 ReplyMessageRequest(
                     replyToken=reply_token,
-                    messages=[msg]
+                    messages=[flex_msg]
+                )
+            )
+            return True
+    except Exception as e:
+        logger.error(f'❌ Error sending flex reply: {e}')
+    return False
+
+def send_text_reply(reply_token, text):
+    try:
+        with ApiClient(configuration) as api_client:
+            line_api = MessagingApi(api_client)
+            line_api.reply_message(
+                ReplyMessageRequest(
+                    replyToken=reply_token,
+                    messages=[TextMessage(text=text)]
                 )
             )
             return True
@@ -208,28 +121,469 @@ def send_text_reply(reply_token, text, quick_reply=None):
         logger.error(f'❌ Error sending text reply: {e}')
     return False
 
-@error_handler
-def get_user_stats(uid):
-    """Get user statistics"""
+def create_welcome_flex(uid):
+    """نافذة الترحيب مع الأوامر والثيمات"""
+    theme = get_theme(uid)
+    colors = THEMES[theme]
     user = db.get_user(uid)
-    if not user:
-        return "لم تلعب أي ألعاب بعد!"
+    name = user['name'] if user else 'عزيزي اللاعب'
     
-    win_rate = (user['wins'] / user['games'] * 100) if user['games'] > 0 else 0
+    return {
+        "type": "carousel",
+        "contents": [
+            # البطاقة الأولى: الترحيب والأوامر
+            {
+                "type": "bubble",
+                "size": "mega",
+                "header": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🎮 Bot Mesh",
+                            "size": "xxl",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "text",
+                            "text": "بوت الألعاب الترفيهية",
+                            "size": "sm",
+                            "color": colors["text2"],
+                            "align": "center",
+                            "margin": "sm"
+                        }
+                    ],
+                    "backgroundColor": colors["bg"],
+                    "paddingAll": "20px"
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"مرحباً {name} 👋",
+                            "size": "lg",
+                            "weight": "bold",
+                            "color": colors["primary"],
+                            "align": "center",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "text",
+                            "text": "📚 الأوامر المتاحة:",
+                            "size": "md",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "👥 انضم - التسجيل في الألعاب", "size": "sm", "color": colors["text2"], "margin": "md"},
+                                {"type": "text", "text": "🚪 انسحب - الانسحاب من اللعبة", "size": "sm", "color": colors["text2"], "margin": "sm"},
+                                {"type": "text", "text": "⛔ إيقاف - إنهاء اللعبة الحالية", "size": "sm", "color": colors["text2"], "margin": "sm"},
+                                {"type": "text", "text": "📊 إحصائيات - عرض نقاطك", "size": "sm", "color": colors["text2"], "margin": "sm"},
+                                {"type": "text", "text": "❓ مساعدة - عرض المساعدة", "size": "sm", "color": colors["text2"], "margin": "sm"},
+                                {"type": "text", "text": "🎨 ثيم - تغيير الألوان", "size": "sm", "color": colors["text2"], "margin": "sm"}
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "15px",
+                            "paddingAll": "15px",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "text",
+                            "text": "اضغط على الألعاب بالأسفل للبدء! 🎯",
+                            "size": "sm",
+                            "color": colors["primary"],
+                            "align": "center",
+                            "margin": "lg",
+                            "wrap": True
+                        }
+                    ],
+                    "backgroundColor": colors["bg"],
+                    "paddingAll": "20px"
+                },
+                "footer": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "🎨 اختر الثيم", "text": "ثيم"},
+                            "style": "primary",
+                            "color": colors["primary"],
+                            "height": "sm"
+                        },
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "❓ مساعدة", "text": "مساعدة"},
+                            "style": "secondary",
+                            "margin": "sm",
+                            "height": "sm"
+                        }
+                    ],
+                    "backgroundColor": colors["bg"],
+                    "paddingAll": "15px"
+                }
+            },
+            # البطاقة الثانية: قائمة الألعاب
+            create_games_list_flex(colors)
+        ]
+    }
+
+def create_games_list_flex(colors):
+    """بطاقة قائمة الألعاب"""
+    games_info = [
+        {"name": "ذكاء", "icon": "🧠", "desc": "أسئلة ذكاء"},
+        {"name": "لون", "icon": "🎨", "desc": "الكلمة واللون"},
+        {"name": "ترتيب", "icon": "abc", "desc": "ترتيب الحروف"},
+        {"name": "رياضيات", "icon": "🔢", "desc": "مسائل حسابية"},
+        {"name": "أسرع", "icon": "⚡", "desc": "كتابة سريعة"},
+        {"name": "ضد", "icon": "↔️", "desc": "ضد الكلمة"},
+        {"name": "تكوين", "icon": "✏️", "desc": "تكوين كلمات"},
+        {"name": "أغنية", "icon": "🎵", "desc": "تخمين المغني"},
+        {"name": "لعبة", "icon": "🎯", "desc": "إنسان حيوان"},
+        {"name": "سلسلة", "icon": "🔗", "desc": "سلسلة الكلمات"},
+        {"name": "خمن", "icon": "🤔", "desc": "تخمين الكلمة"},
+        {"name": "توافق", "icon": "💕", "desc": "لعبة التوافق"}
+    ]
     
-    stats = f"""
-📊 إحصائياتك:
-━━━━━━━━━━━━━━
-👤 الاسم: {user['name']}
-⭐ النقاط: {user['points']}
-🎮 الألعاب: {user['games']}
-🏆 الفوز: {user['wins']}
-📈 نسبة الفوز: {win_rate:.1f}%
-📅 انضممت: {user['joined_at'][:10]}
-━━━━━━━━━━━━━━
-    """.strip()
+    game_buttons = []
+    for game in games_info:
+        game_buttons.append({
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": f"{game['icon']} {game['name']}",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "flex": 3
+                },
+                {
+                    "type": "text",
+                    "text": game['desc'],
+                    "size": "xs",
+                    "color": colors["text2"],
+                    "align": "end",
+                    "flex": 2
+                }
+            ],
+            "action": {
+                "type": "message",
+                "text": game['name']
+            },
+            "backgroundColor": colors["card"],
+            "cornerRadius": "10px",
+            "paddingAll": "12px",
+            "margin": "sm"
+        })
     
-    return stats
+    return {
+        "type": "bubble",
+        "size": "mega",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎮 الألعاب المتاحة",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "align": "center"
+                }
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": game_buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        }
+    }
+
+def create_help_flex(uid):
+    """نافذة المساعدة (مثل الصورة)"""
+    theme = get_theme(uid)
+    colors = THEMES[theme]
+    
+    return {
+        "type": "bubble",
+        "size": "mega",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎮 Bot Mesh",
+                    "size": "xxl",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "بوت الألعاب الترفيهية",
+                    "size": "sm",
+                    "color": colors["text2"],
+                    "align": "center",
+                    "margin": "sm"
+                }
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                # صف الألعاب الأول
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        create_game_card("🧠", "ذكاء", colors),
+                        create_game_card("🎨", "لون", colors),
+                        create_game_card("abc", "ترتيب", colors)
+                    ],
+                    "spacing": "sm"
+                },
+                # صف الألعاب الثاني
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        create_game_card("🔢", "رياضيات", colors),
+                        create_game_card("⚡", "أسرع", colors),
+                        create_game_card("↔️", "ضد", colors)
+                    ],
+                    "spacing": "sm",
+                    "margin": "sm"
+                },
+                # صف الألعاب الثالث
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        create_game_card("✏️", "تكوين", colors),
+                        create_game_card("🎵", "أغنية", colors),
+                        create_game_card("🎯", "لعبة", colors)
+                    ],
+                    "spacing": "sm",
+                    "margin": "sm"
+                },
+                # صف الألعاب الرابع
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        create_game_card("🔗", "سلسلة", colors),
+                        create_game_card("🤔", "خمن", colors),
+                        create_game_card("💕", "توافق", colors)
+                    ],
+                    "spacing": "sm",
+                    "margin": "sm"
+                },
+                {
+                    "type": "separator",
+                    "margin": "xl"
+                },
+                # الأزرار السفلية
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "نقاطي 📊", "size": "md", "weight": "bold", "color": colors["text"], "align": "center"}
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "15px",
+                            "paddingAll": "15px",
+                            "flex": 1,
+                            "action": {"type": "message", "text": "إحصائيات"}
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "صدارة 🏆", "size": "md", "weight": "bold", "color": colors["text"], "align": "center"}
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "15px",
+                            "paddingAll": "15px",
+                            "flex": 1,
+                            "margin": "sm",
+                            "action": {"type": "message", "text": "صدارة"}
+                        }
+                    ],
+                    "margin": "xl"
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "إيقاف 🔴", "size": "md", "weight": "bold", "color": "#FFFFFF", "align": "center"}
+                            ],
+                            "backgroundColor": "#EF4444",
+                            "cornerRadius": "15px",
+                            "paddingAll": "15px",
+                            "flex": 1,
+                            "action": {"type": "message", "text": "إيقاف"}
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "انضم 👥", "size": "md", "weight": "bold", "color": "#FFFFFF", "align": "center"}
+                            ],
+                            "backgroundColor": colors["primary"],
+                            "cornerRadius": "15px",
+                            "paddingAll": "15px",
+                            "flex": 1,
+                            "margin": "sm",
+                            "action": {"type": "message", "text": "انضم"}
+                        }
+                    ],
+                    "margin": "sm"
+                },
+                {
+                    "type": "text",
+                    "text": "© 2025 Abeer Aldosari",
+                    "size": "xs",
+                    "color": colors["text2"],
+                    "align": "center",
+                    "margin": "xl"
+                }
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+def create_game_card(icon, name, colors):
+    """إنشاء بطاقة لعبة صغيرة"""
+    return {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {
+                "type": "text",
+                "text": icon,
+                "size": "xxl",
+                "align": "center"
+            },
+            {
+                "type": "text",
+                "text": name,
+                "size": "sm",
+                "weight": "bold",
+                "color": colors["text"],
+                "align": "center",
+                "margin": "sm"
+            }
+        ],
+        "backgroundColor": colors["card"],
+        "cornerRadius": "15px",
+        "paddingAll": "15px",
+        "flex": 1,
+        "action": {
+            "type": "message",
+            "text": name
+        }
+    }
+
+def create_theme_selector_flex(uid):
+    """نافذة اختيار الثيم"""
+    current_theme = get_theme(uid)
+    
+    theme_buttons = []
+    for theme_key, theme_data in THEMES.items():
+        is_current = "✓ " if theme_key == current_theme else ""
+        theme_buttons.append({
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [],
+                    "backgroundColor": theme_data["primary"],
+                    "width": "30px",
+                    "height": "30px",
+                    "cornerRadius": "15px"
+                },
+                {
+                    "type": "text",
+                    "text": f"{is_current}{theme_data['name']}",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": theme_data["text"],
+                    "margin": "md",
+                    "flex": 1
+                }
+            ],
+            "backgroundColor": theme_data["card"],
+            "cornerRadius": "15px",
+            "paddingAll": "15px",
+            "margin": "sm",
+            "action": {
+                "type": "message",
+                "text": f"ثيم:{theme_key}"
+            }
+        })
+    
+    return {
+        "type": "bubble",
+        "size": "mega",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎨 اختر الثيم المفضل",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": "#FFFFFF",
+                    "align": "center"
+                }
+            ],
+            "backgroundColor": THEMES[current_theme]["primary"],
+            "paddingAll": "20px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": theme_buttons,
+            "backgroundColor": THEMES[current_theme]["bg"],
+            "paddingAll": "20px"
+        }
+    }
 
 # ==================== Routes ====================
 @app.route('/')
@@ -243,51 +597,17 @@ def home():
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
-    try:
-        # Check database
-        db.get_user('health_check')
-        db_status = 'ok'
-    except Exception as e:
-        db_status = f'error: {str(e)}'
-    
     return jsonify({
         'status': 'ok',
-        'database': db_status,
         'active_games': gm.get_active_games_count(),
         'registered_users': gm.get_users_count(),
-        'total_games': len(GAMES),
-        'themes': len(THEMES),
-        'cache_hits': cache.hits,
-        'cache_misses': cache.misses
-    })
-
-@app.route('/stats')
-def stats():
-    """Statistics endpoint"""
-    return jsonify({
-        'games': {
-            'total_available': len(GAMES),
-            'active_sessions': gm.get_active_games_count(),
-            'game_types': list(GAMES.keys())
-        },
-        'users': {
-            'registered': gm.get_users_count()
-        },
-        'cache': {
-            'hits': cache.hits,
-            'misses': cache.misses,
-            'hit_rate': f"{(cache.hits / (cache.hits + cache.misses) * 100):.1f}%" if (cache.hits + cache.misses) > 0 else "0%"
-        }
+        'total_games': len(GAMES)
     })
 
 @app.route('/callback', methods=['POST'])
-@performance_monitor
 def callback():
-    """LINE webhook callback"""
     signature = request.headers.get('X-Line-Signature')
     if not signature:
-        logger.error('❌ Missing signature')
         abort(400)
     
     body = request.get_data(as_text=True)
@@ -298,58 +618,117 @@ def callback():
         logger.error('❌ Invalid signature')
         abort(400)
     except Exception as e:
-        logger.error(f'❌ Error handling webhook: {e}', exc_info=True)
-        abort(500)
+        logger.error(f'❌ Error handling webhook: {e}')
+        abort(400)
     
     return 'OK'
 
 # ==================== Event Handlers ====================
 @handler.add(FollowEvent)
-@performance_monitor
 def on_follow(event):
-    """Handle new follower"""
     uid = event.source.user_id
     name = get_name(uid)
     db.add_or_update_user(uid, name)
-    builder = FlexBuilder('white')
-    send_flex_reply(event.reply_token, builder.welcome(), uid, 'مرحباً')
+    
+    # إرسال نافذة الترحيب
+    welcome_flex = create_welcome_flex(uid)
+    send_flex_reply(event.reply_token, welcome_flex, 'مرحباً')
+    
+    # إنشاء Rich Menu للمستخدم
+    rich_menu_mgr.create_and_link_rich_menu(uid)
+    
     logger.info(f'✅ New follower: {name} ({uid})')
 
+# معالجة المنشن (Mention)
+def handle_mention(event):
+    """معالجة المنشن - إرسال قائمة الألعاب"""
+    uid = event.source.user_id
+    
+    # إرسال نافذة المساعدة
+    help_flex = create_help_flex(uid)
+    send_flex_reply(event.reply_token, help_flex, 'الألعاب')
+
 @handler.add(MessageEvent, message=TextMessageContent)
-@performance_monitor
 def on_message(event):
-    """Handle incoming messages"""
     uid = event.source.user_id
     txt = event.message.text.strip()
     gid = getattr(event.source, 'group_id', uid)
     name = get_name(uid)
     
+    # التحقق من المنشن في المجموعات
+    if hasattr(event.message, 'mention') and event.message.mention:
+        # تم منشن البوت
+        handle_mention(event)
+        return
+    
     # Update user
     db.add_or_update_user(uid, name)
-    builder = FlexBuilder(get_theme(uid))
+
+    # بداية / Start / البداية
+    if txt in ['بداية', 'البداية', 'start', 'Start']:
+        welcome_flex = create_welcome_flex(uid)
+        send_flex_reply(event.reply_token, welcome_flex, 'مرحباً')
+        return
+
+    # مساعدة / Help
+    if txt in ['مساعدة', 'help', 'Help', '؟', 'الالعاب']:
+        help_flex = create_help_flex(uid)
+        send_flex_reply(event.reply_token, help_flex, 'المساعدة')
+        return
+
+    # ثيم / Theme
+    if txt in ['ثيم', 'theme', 'Theme', 'الوان', 'ألوان']:
+        theme_flex = create_theme_selector_flex(uid)
+        send_flex_reply(event.reply_token, theme_flex, 'الثيمات')
+        return
+
+    # تغيير الثيم
+    if txt.startswith('ثيم:'):
+        theme_key = txt.split(':')[1]
+        if theme_key in THEMES:
+            db.update_user_theme(uid, theme_key)
+            send_text_reply(event.reply_token, f"✅ تم تغيير الثيم إلى {THEMES[theme_key]['name']}")
+        return
 
     # انضم
-    if txt == 'انضم':
+    if txt in ['انضم', 'join']:
         gm.register(uid)
-        send_flex_reply(event.reply_token, builder.welcome(), uid, 'مرحباً')
+        welcome_flex = create_welcome_flex(uid)
+        send_flex_reply(event.reply_token, welcome_flex, 'مرحباً')
         logger.info(f'✅ User registered: {name}')
         return
 
     # انسحب
-    if txt == 'انسحب':
+    if txt in ['انسحب', 'leave']:
         gm.unregister(uid)
-        send_text_reply(event.reply_token, 'تم الانسحاب، لن تُحسب إجاباتك')
+        send_text_reply(event.reply_token, '🚪 تم الانسحاب، لن تُحسب إجاباتك')
         logger.info(f'ℹ️ User unregistered: {name}')
         return
 
-    # إحصائيات
-    if txt == 'إحصائيات':
-        stats = get_user_stats(uid)
+    # إحصائيات / نقاطي
+    if txt in ['إحصائيات', 'احصائيات', 'stats', 'نقاطي']:
+        user = db.get_user(uid)
+        if not user:
+            send_text_reply(event.reply_token, "لم تلعب أي ألعاب بعد!")
+            return
+        
+        win_rate = (user['wins'] / user['games'] * 100) if user['games'] > 0 else 0
+        stats = f"""
+📊 إحصائياتك:
+━━━━━━━━━━━━━━
+👤 الاسم: {user['name']}
+⭐ النقاط: {user['points']}
+🎮 الألعاب: {user['games']}
+🏆 الفوز: {user['wins']}
+📈 نسبة الفوز: {win_rate:.1f}%
+📅 انضممت: {user['joined_at'][:10]}
+━━━━━━━━━━━━━━
+        """.strip()
         send_text_reply(event.reply_token, stats)
         return
 
     # إيقاف
-    if txt == 'إيقاف':
+    if txt in ['إيقاف', 'ايقاف', 'stop']:
         if gm.get_game(gid):
             gm.end_game(gid)
             send_text_reply(event.reply_token, '✅ تم إيقاف اللعبة')
@@ -376,7 +755,20 @@ def on_message(event):
                 game.set_theme(get_theme(uid))
                 gm.start_game(gid, game, txt)
                 response = game.start_game()
-                send_flex_reply(event.reply_token, response, uid, f'لعبة {txt}')
+                
+                # إرسال الرد
+                if hasattr(response, 'altText'):
+                    # FlexMessage
+                    line_api.reply_message(
+                        ReplyMessageRequest(
+                            replyToken=event.reply_token,
+                            messages=[response]
+                        )
+                    )
+                else:
+                    # Dict
+                    send_flex_reply(event.reply_token, response, f'لعبة {txt}')
+                
                 logger.info(f'✅ Game started: {txt} in {gid} by {name}')
         except Exception as e:
             logger.error(f'❌ Error starting game {txt}: {e}', exc_info=True)
@@ -389,7 +781,6 @@ def on_message(event):
         game = game_data['game']
         
         if gm.has_answered(gid, uid):
-            # User already answered
             return
         
         try:
@@ -402,26 +793,25 @@ def on_message(event):
                 response = result.get('response')
                 
                 if response:
-                    send_flex_reply(event.reply_token, response, uid, 'نتيجة')
+                    if hasattr(response, 'altText'):
+                        with ApiClient(configuration) as api_client:
+                            line_api = MessagingApi(api_client)
+                            line_api.reply_message(
+                                ReplyMessageRequest(
+                                    replyToken=event.reply_token,
+                                    messages=[response]
+                                )
+                            )
+                    else:
+                        send_flex_reply(event.reply_token, response, 'نتيجة')
                     logger.info(f'✅ Answer from {name}: {"✓" if won else "✗"} (+{points} points)')
                 
-                # Check if game should end
                 if result.get('game_over'):
                     gm.end_game(gid)
                     
         except Exception as e:
             logger.error(f'❌ Error checking answer: {e}', exc_info=True)
         return
-
-# ==================== Background Tasks ====================
-def cleanup_task():
-    """Periodic cleanup task"""
-    try:
-        db.cleanup_names()
-        cache.clear()
-        logger.info('✅ Cleanup completed')
-    except Exception as e:
-        logger.error(f'❌ Cleanup error: {e}')
 
 # ==================== Run ====================
 if __name__ == '__main__':
