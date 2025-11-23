@@ -6,11 +6,13 @@ import os
 import logging
 from flask import Flask, request, abort, jsonify
 
-# === LINE SDK v3 - Fixed Imports ===
+# === LINE SDK v3 - Correct Imports ===
+from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
-    MessagingApi,
     Configuration,
     ApiClient,
+    MessagingApi,
     ReplyMessageRequest,
     TextMessage,
     FlexMessage,
@@ -20,12 +22,10 @@ from linebot.v3.messaging import (
     MessageAction
 )
 from linebot.v3.webhooks import (
-    WebhookHandler,
     MessageEvent,
     TextMessageContent,
     FollowEvent
 )
-from linebot.v3.exceptions import InvalidSignatureError
 
 # استيراد المكونات
 from config import LINE_TOKEN, LINE_SECRET, DB_PATH, THEMES
@@ -46,10 +46,8 @@ logger = logging.getLogger(__name__)
 # ==================== Flask & Line ====================
 app = Flask(__name__)
 
-# تكوين LINE API v3 بشكل صحيح
+# تكوين LINE API v3 بالطريقة الصحيحة
 configuration = Configuration(access_token=LINE_TOKEN)
-api_client = ApiClient(configuration)
-line_api = MessagingApi(api_client)
 handler = WebhookHandler(LINE_SECRET)
 
 db = DB(DB_PATH)
@@ -59,7 +57,7 @@ gm = GameManager()
 GAMES = {
     'ذكاء': IqGame,
     'لون': WordColorGame,
-    'ترتيب': ScrambleWordGame,
+    'ترتيب': ScrambleWordGameAI,
     'رياضيات': MathGame,
     'أسرع': FastTypingGame,
     'ضد': OppositeGame,
@@ -74,9 +72,12 @@ GAMES = {
 # ==================== Helpers ====================
 def get_name(uid):
     try:
-        profile = line_api.get_profile(uid)
-        return profile.display_name
-    except:
+        with ApiClient(configuration) as api_client:
+            line_api = MessagingApi(api_client)
+            profile = line_api.get_profile(uid)
+            return profile.display_name
+    except Exception as e:
+        logger.error(f'Error getting profile: {e}')
         return 'لاعب'
 
 def get_theme(uid):
@@ -97,44 +98,54 @@ def get_games_quick_reply(uid):
 def send_flex_reply(reply_token, flex_content, uid=None):
     """إرسال رسالة Flex مع Quick Reply باستخدام v3 API"""
     try:
-        # رسالة نصية مع Quick Reply
-        text_msg = TextMessage(
-            text="اختر لعبة أو أمر:",
-            quickReply=get_games_quick_reply(uid)
-        )
-        
-        # رسالة Flex
-        flex_msg = FlexMessage(
-            altText='القائمة',
-            contents=FlexContainer.from_dict(flex_content)
-        )
-        
-        # إرسال الرسائل
-        line_api.reply_message(
-            ReplyMessageRequest(
-                replyToken=reply_token,
-                messages=[flex_msg, text_msg]
+        with ApiClient(configuration) as api_client:
+            line_api = MessagingApi(api_client)
+            
+            # رسالة نصية مع Quick Reply
+            text_msg = TextMessage(
+                text="اختر لعبة أو أمر:",
+                quickReply=get_games_quick_reply(uid)
             )
-        )
+            
+            # رسالة Flex
+            flex_msg = FlexMessage(
+                altText='القائمة',
+                contents=FlexContainer.from_dict(flex_content)
+            )
+            
+            # إرسال الرسائل
+            line_api.reply_message(
+                ReplyMessageRequest(
+                    replyToken=reply_token,
+                    messages=[flex_msg, text_msg]
+                )
+            )
     except Exception as e:
         logger.error(f'❌ Error sending flex reply: {e}')
         # إرسال رسالة نصية بديلة
-        line_api.reply_message(
-            ReplyMessageRequest(
-                replyToken=reply_token,
-                messages=[text_msg]
-            )
-        )
+        try:
+            with ApiClient(configuration) as api_client:
+                line_api = MessagingApi(api_client)
+                line_api.reply_message(
+                    ReplyMessageRequest(
+                        replyToken=reply_token,
+                        messages=[text_msg]
+                    )
+                )
+        except Exception as e2:
+            logger.error(f'❌ Error sending fallback reply: {e2}')
 
 def send_text_reply(reply_token, text):
     """إرسال رسالة نصية باستخدام v3 API"""
     try:
-        line_api.reply_message(
-            ReplyMessageRequest(
-                replyToken=reply_token,
-                messages=[TextMessage(text=text)]
+        with ApiClient(configuration) as api_client:
+            line_api = MessagingApi(api_client)
+            line_api.reply_message(
+                ReplyMessageRequest(
+                    replyToken=reply_token,
+                    messages=[TextMessage(text=text)]
+                )
             )
-        )
     except Exception as e:
         logger.error(f'❌ Error sending text reply: {e}')
 
@@ -220,12 +231,18 @@ def on_message(event):
             send_text_reply(event.reply_token, '⚠️ يوجد لعبة نشطة بالفعل')
             return
 
-        game_class = GAMES[txt]
-        game = game_class(line_api)
-        game.set_theme(get_theme(uid))
-        gm.start_game(gid, game, txt)
-        response = game.start_game()
-        send_flex_reply(event.reply_token, response, uid)
+        try:
+            with ApiClient(configuration) as api_client:
+                line_api = MessagingApi(api_client)
+                game_class = GAMES[txt]
+                game = game_class(line_api)
+                game.set_theme(get_theme(uid))
+                gm.start_game(gid, game, txt)
+                response = game.start_game()
+                send_flex_reply(event.reply_token, response, uid)
+        except Exception as e:
+            logger.error(f'❌ Error starting game: {e}')
+            send_text_reply(event.reply_token, '❌ حدث خطأ أثناء بدء اللعبة')
         return
 
     # الرد على اللعبة (أول إجابة صحيحة فقط)
@@ -233,15 +250,18 @@ def on_message(event):
     if game_data and gm.is_registered(uid):
         game = game_data['game']
         if not gm.has_answered(gid, uid):
-            result = game.check_answer(txt, uid, name)
-            if result:
-                gm.mark_answered(gid, uid)
-                points = result.get('points', 0)
-                won = result.get('won', False)
-                db.update_points(uid, points, won)
-                response = result.get('response')
-                if response:
-                    send_flex_reply(event.reply_token, response, uid)
+            try:
+                result = game.check_answer(txt, uid, name)
+                if result:
+                    gm.mark_answered(gid, uid)
+                    points = result.get('points', 0)
+                    won = result.get('won', False)
+                    db.update_points(uid, points, won)
+                    response = result.get('response')
+                    if response:
+                        send_flex_reply(event.reply_token, response, uid)
+            except Exception as e:
+                logger.error(f'❌ Error checking answer: {e}')
         return
 
 # ==================== Run ====================
