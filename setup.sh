@@ -1,35 +1,128 @@
 #!/bin/bash
-# Bot Mesh - Auto Setup Script
+# Bot Mesh - Final Setup Script
 # Created by: Abeer Aldosari © 2025
-# يُنشئ جميع الملفات المطلوبة تلقائياً
 
 set -e
 
-echo "🎮 Bot Mesh - Auto Setup"
-echo "=========================="
+echo "╔════════════════════════════════════╗"
+echo "║   🎮 Bot Mesh - Final Setup       ║"
+echo "║   Created by: Abeer Aldosari      ║"
+echo "╚════════════════════════════════════╝"
 echo ""
 
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Check if running in correct directory
-if [ ! -f "app.py" ]; then
-    echo -e "${RED}❌ Error: app.py not found${NC}"
-    echo "Please run this script from the project root directory"
-    exit 1
-fi
-
-echo -e "${YELLOW}📁 Creating missing files...${NC}"
+# ===== 1. إنشاء المجلدات =====
+echo -e "${BLUE}📁 إنشاء المجلدات...${NC}"
+mkdir -p data games
+echo -e "${GREEN}✅ data/ و games/ جاهزة${NC}"
 echo ""
 
-# ===== Dockerfile =====
-if [ ! -f "Dockerfile" ]; then
-    echo -e "${YELLOW}Creating Dockerfile...${NC}"
-    cat > Dockerfile << 'DOCKERFILE_EOF'
-# Bot Mesh - Optimized Dockerfile
+# ===== 2. إنشاء .env =====
+if [ ! -f ".env" ]; then
+    echo -e "${YELLOW}📝 إنشاء ملف .env...${NC}"
+    cat > .env << 'EOF'
+# LINE Bot Credentials (REQUIRED)
+LINE_CHANNEL_ACCESS_TOKEN=your_token_here
+LINE_CHANNEL_SECRET=your_secret_here
+
+# Database
+DB_PATH=data/game.db
+
+# Redis (Optional)
+REDIS_ENABLED=false
+REDIS_URL=redis://localhost:6379/0
+CACHE_TTL=3600
+
+# Application
+PORT=5000
+DEBUG=false
+EOF
+    echo -e "${GREEN}✅ .env${NC}"
+    echo -e "${RED}⚠️  لا تنسَ تعديل LINE_CHANNEL_ACCESS_TOKEN و LINE_CHANNEL_SECRET${NC}"
+else
+    echo -e "${GREEN}✅ .env موجود${NC}"
+fi
+echo ""
+
+# ===== 3. إنشاء .gitignore =====
+cat > .gitignore << 'EOF'
+# Environment
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# Database
+*.db
+*.db-journal
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+EOF
+echo -e "${GREEN}✅ .gitignore${NC}"
+
+# ===== 4. إنشاء runtime.txt =====
+echo "python-3.11.7" > runtime.txt
+echo -e "${GREEN}✅ runtime.txt (Python 3.11.7)${NC}"
+
+# ===== 5. إنشاء Procfile =====
+cat > Procfile << 'EOF'
+web: gunicorn app:app --workers 2 --threads 2 --timeout 60 --bind 0.0.0.0:$PORT
+EOF
+echo -e "${GREEN}✅ Procfile${NC}"
+
+# ===== 6. تحديث render.yaml =====
+cat > render.yaml << 'EOF'
+services:
+  - type: web
+    name: bot-mesh
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 60
+    envVars:
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: DB_PATH
+        value: data/game.db
+      - key: PYTHON_VERSION
+        value: 3.11.7
+    healthCheckPath: /health
+EOF
+echo -e "${GREEN}✅ render.yaml${NC}"
+
+# ===== 7. إنشاء Dockerfile =====
+cat > Dockerfile << 'EOF'
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -38,7 +131,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -48,7 +142,9 @@ COPY . .
 
 RUN mkdir -p /app/data && chmod 755 /app/data
 
-RUN useradd -m -u 1000 botuser && chown -R botuser:botuser /app
+RUN useradd -m -u 1000 botuser && \
+    chown -R botuser:botuser /app
+
 USER botuser
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
@@ -57,16 +153,32 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 EXPOSE 5000
 
 CMD ["python", "app.py"]
-DOCKERFILE_EOF
-    echo -e "${GREEN}✅ Dockerfile created${NC}"
-else
-    echo -e "${GREEN}✅ Dockerfile exists${NC}"
-fi
+EOF
+echo -e "${GREEN}✅ Dockerfile${NC}"
 
-# ===== .dockerignore =====
-if [ ! -f ".dockerignore" ]; then
-    echo -e "${YELLOW}Creating .dockerignore...${NC}"
-    cat > .dockerignore << 'DOCKERIGNORE_EOF'
+# ===== 8. إنشاء docker-compose.yml =====
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: bot-mesh
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+volumes:
+  data:
+EOF
+echo -e "${GREEN}✅ docker-compose.yml${NC}"
+
+# ===== 9. إنشاء .dockerignore =====
+cat > .dockerignore << 'EOF'
 .git
 .gitignore
 __pycache__
@@ -83,206 +195,77 @@ data/
 .env
 README.md
 tests/
-DOCKERIGNORE_EOF
-    echo -e "${GREEN}✅ .dockerignore created${NC}"
-else
-    echo -e "${GREEN}✅ .dockerignore exists${NC}"
-fi
+EOF
+echo -e "${GREEN}✅ .dockerignore${NC}"
 
-# ===== .gitignore =====
-if [ ! -f ".gitignore" ]; then
-    echo -e "${YELLOW}Creating .gitignore...${NC}"
-    cat > .gitignore << 'GITIGNORE_EOF'
-# Environment
-.env
-*.env
-!.env.example
-
-# Python
-__pycache__/
-*.py[cod]
-.Python
-venv/
-.venv/
-
-# Database
-*.db
-data/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# OS
-.DS_Store
-
-# Logs
-*.log
-logs/
-GITIGNORE_EOF
-    echo -e "${GREEN}✅ .gitignore created${NC}"
-else
-    echo -e "${GREEN}✅ .gitignore exists${NC}"
-fi
-
-# ===== Procfile (for Heroku) =====
-if [ ! -f "Procfile" ]; then
-    echo -e "${YELLOW}Creating Procfile...${NC}"
-    cat > Procfile << 'PROCFILE_EOF'
-web: gunicorn app:app --workers 2 --timeout 60 --bind 0.0.0.0:$PORT
-PROCFILE_EOF
-    echo -e "${GREEN}✅ Procfile created${NC}"
-else
-    echo -e "${GREEN}✅ Procfile exists${NC}"
-fi
-
-# ===== runtime.txt (for Heroku) =====
-if [ ! -f "runtime.txt" ]; then
-    echo -e "${YELLOW}Creating runtime.txt...${NC}"
-    echo "python-3.11.7" > runtime.txt
-    echo -e "${GREEN}✅ runtime.txt created${NC}"
-else
-    echo -e "${GREEN}✅ runtime.txt exists${NC}"
-fi
-
-# ===== requirements.txt check =====
-if [ ! -f "requirements.txt" ]; then
-    echo -e "${YELLOW}Creating requirements.txt...${NC}"
-    cat > requirements.txt << 'REQUIREMENTS_EOF'
-line-bot-sdk==3.5.0
-Flask==3.0.0
-gunicorn==21.2.0
-google-generativeai==0.3.2
-redis==5.0.1
-python-dotenv==1.0.0
-Pillow==10.1.0
-prometheus-client==0.19.0
-REQUIREMENTS_EOF
-    echo -e "${GREEN}✅ requirements.txt created${NC}"
-else
-    echo -e "${GREEN}✅ requirements.txt exists${NC}"
-fi
-
-# ===== .env.example check =====
-if [ ! -f ".env.example" ]; then
-    echo -e "${YELLOW}Creating .env.example...${NC}"
-    cat > .env.example << 'ENV_EOF'
-# LINE Bot Credentials (REQUIRED)
-LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token_here
-LINE_CHANNEL_SECRET=your_channel_secret_here
-
-# Google Gemini AI Keys (Optional)
-GEMINI_API_KEY_1=your_gemini_api_key_1
-GEMINI_API_KEY_2=
-GEMINI_API_KEY_3=
-
-# Redis (Optional)
-REDIS_URL=redis://redis:6379/0
-REDIS_ENABLED=false
-
-# Database
-DB_PATH=data
-DB_NAME=game_scores.db
-
-# Application
-DEBUG=false
-PORT=5000
-
-# Monitoring
-ENABLE_METRICS=true
-ENV_EOF
-    echo -e "${GREEN}✅ .env.example created${NC}"
-else
-    echo -e "${GREEN}✅ .env.example exists${NC}"
-fi
-
-# ===== Create .env if not exists =====
-if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}Creating .env from .env.example...${NC}"
-    cp .env.example .env
-    echo -e "${YELLOW}⚠️  Please edit .env and add your LINE Bot credentials!${NC}"
-else
-    echo -e "${GREEN}✅ .env exists${NC}"
-fi
-
-# ===== Create data directory =====
-if [ ! -d "data" ]; then
-    echo -e "${YELLOW}Creating data directory...${NC}"
-    mkdir -p data
-    echo -e "${GREEN}✅ data/ created${NC}"
-else
-    echo -e "${GREEN}✅ data/ exists${NC}"
-fi
-
-# ===== Check games directory =====
-if [ ! -d "games" ]; then
-    echo -e "${RED}❌ Error: games/ directory not found${NC}"
-    echo "Please create the games directory with all game files"
-    exit 1
-else
-    echo -e "${GREEN}✅ games/ exists${NC}"
-fi
-
-# ===== Check games/__init__.py =====
-if [ ! -f "games/__init__.py" ]; then
-    echo -e "${YELLOW}Creating games/__init__.py...${NC}"
-    cat > games/__init__.py << 'INIT_EOF'
-"""Bot Mesh - Games Package | Abeer Aldosari © 2025"""
-import os,sys,logging,importlib
-
-__version__='2.0.0'
-__author__='Abeer Aldosari'
-__all__=[]
-
-logger=logging.getLogger(__name__)
-current_dir=os.path.dirname(__file__)
-
-try:
-    from .base_game import BaseGame
-    __all__.append('BaseGame')
-except ImportError as e:
-    logger.error(f"❌ BaseGame: {e}")
-    sys.exit(1)
-
-for f in os.listdir(current_dir):
-    if f.endswith("_game.py")and f!="base_game.py":
-        m=f[:-3]
-        try:
-            module=importlib.import_module(f".{m}",package=__name__)
-            __all__.append(m)
-            logger.debug(f"✅ {m}")
-        except Exception as e:
-            logger.warning(f"⚠️ {m}: {e}")
-
-logger.info(f"📦 Loaded: {len(__all__)} modules")
-INIT_EOF
-    echo -e "${GREEN}✅ games/__init__.py created${NC}"
-else
-    echo -e "${GREEN}✅ games/__init__.py exists${NC}"
-fi
-
-# ===== Summary =====
+# ===== 10. فحص الملفات الأساسية =====
 echo ""
-echo "================================"
-echo -e "${GREEN}🎉 Setup Complete!${NC}"
-echo "================================"
+echo -e "${BLUE}🔍 فحص الملفات الأساسية...${NC}"
+
+required_files=(
+    "app.py"
+    "config.py"
+    "database.py"
+    "game_manager.py"
+    "flex_builder.py"
+    "cache.py"
+    "requirements.txt"
+    "games/__init__.py"
+    "games/base_game.py"
+)
+
+missing_files=()
+
+for file in "${required_files[@]}"; do
+    if [ -f "$file" ]; then
+        echo -e "${GREEN}✅${NC} $file"
+    else
+        echo -e "${RED}❌${NC} $file"
+        missing_files+=("$file")
+    fi
+done
+
+# ===== 11. النتيجة النهائية =====
 echo ""
-echo "📋 Next Steps:"
+echo "════════════════════════════════════"
+
+if [ ${#missing_files[@]} -eq 0 ]; then
+    echo -e "${GREEN}🎉 الإعداد مكتمل بنجاح!${NC}"
+    echo "════════════════════════════════════"
+    echo ""
+    echo -e "${BLUE}📋 الخطوات التالية:${NC}"
+    echo ""
+    echo "1️⃣  تعديل .env وإضافة بيانات LINE Bot:"
+    echo "   nano .env"
+    echo ""
+    echo "2️⃣  تثبيت المتطلبات (اختياري للاختبار المحلي):"
+    echo "   python3.11 -m venv venv"
+    echo "   source venv/bin/activate"
+    echo "   pip install -r requirements.txt"
+    echo ""
+    echo "3️⃣  اختبار محلي:"
+    echo "   python app.py"
+    echo "   # ثم استخدم ngrok:"
+    echo "   ngrok http 5000"
+    echo ""
+    echo "4️⃣  النشر على Render:"
+    echo "   git init"
+    echo "   git add ."
+    echo "   git commit -m 'Initial commit'"
+    echo "   git push origin main"
+    echo "   # ثم اربط في Render Dashboard"
+    echo ""
+    echo -e "${YELLOW}💡 نصيحة: استخدم Render للنشر المجاني والسهل${NC}"
+else
+    echo -e "${RED}⚠️  بعض الملفات مفقودة:${NC}"
+    for file in "${missing_files[@]}"; do
+        echo "   - $file"
+    done
+    echo ""
+    echo "الرجاء التأكد من وجود جميع الملفات"
+fi
+
 echo ""
-echo "1. Edit .env file with your LINE Bot credentials:"
-echo "   nano .env"
-echo ""
-echo "2. Test locally:"
-echo "   docker-compose up --build"
-echo ""
-echo "3. Or deploy to Railway:"
-echo "   git add ."
-echo "   git commit -m 'Add missing files'"
-echo "   git push origin main"
-echo ""
-echo "4. Or deploy to Heroku:"
-echo "   git push heroku main"
-echo ""
-echo -e "${YELLOW}⚠️  Don't forget to add your LINE credentials in .env!${NC}"
-echo ""
+echo "════════════════════════════════════"
+echo -e "${BLUE}Created by: Abeer Aldosari © 2025${NC}"
+echo "════════════════════════════════════"
