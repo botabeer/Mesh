@@ -1,18 +1,16 @@
 """
-لعبة تخمين الأغنية - النسخة النهائية مع تلميحات AI-like
+لعبة تخمين الأغنية - محسنة
 Created by: Abeer Aldosari © 2025
 """
-from linebot.models import TextSendMessage, FlexSendMessage
 from .base_game import BaseGame
 import random
 import difflib
 
 class SongGame(BaseGame):
-    """لعبة تخمين المغني من كلمات الأغنية مع تلميحات محسنة"""
+    """لعبة تخمين المغني من كلمات الأغنية"""
     
-    def __init__(self, line_bot_api, theme="blue"):
-        super().__init__(line_bot_api, questions_count=5)
-        self.theme = theme
+    def __init__(self, line_api):
+        super().__init__(line_api, rounds=5)
         self.songs = [
             {'lyrics': 'رجعت لي أيام الماضي معاك', 'artist': 'أم كلثوم'},
             {'lyrics': 'جلست والخوف بعينيها تتأمل فنجاني', 'artist': 'عبد الحليم حافظ'},
@@ -38,162 +36,105 @@ class SongGame(BaseGame):
             {'lyrics': 'نكتشف مر الحقيقة بعد ما يفوت الأوان', 'artist': 'أصالة'},
             {'lyrics': 'يا هي توجع كذبة اخباري تمام', 'artist': 'أميمة طالب'},
             {'lyrics': 'احس اني لقيتك بس عشان تضيع مني', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'بردان أنا تكفى أبي احترق بدفا لعيونك', 'artist': 'محمد عبده'},
-            {'lyrics': 'أشوفك كل يوم وأروح وأقول نظرة ترد الروح', 'artist': 'محمد عبده'},
-            {'lyrics': 'في زحمة الناس صعبة حالتي', 'artist': 'محمد عبده'},
-            {'lyrics': 'اختلفنا مين يحب الثاني أكثر', 'artist': 'محمد عبده'},
-            {'lyrics': 'لبيه يا بو عيون وساع', 'artist': 'محمد عبده'},
-            {'lyrics': 'اسمحيلي يا الغرام العف', 'artist': 'محمد عبده'},
-            {'lyrics': 'سألوني الناس عنك يا حبيبي', 'artist': 'فيروز'},
-            {'lyrics': 'أنا لحبيبي وحبيبي إلي', 'artist': 'فيروز'},
-            {'lyrics': 'أحبك موت كلمة مالها تفسير', 'artist': 'ماجد المهندس'},
-            {'lyrics': 'جننت قلبي بحب يلوي ذراعي', 'artist': 'ماجد المهندس'},
-            {'lyrics': 'بديت أطيب بديت احس بك عادي', 'artist': 'ماجد المهندس'},
-            {'lyrics': 'من أول نظرة شفتك قلت هذا اللي تمنيته', 'artist': 'ماجد المهندس'},
-            {'lyrics': 'أنا بلياك إذا أرمش تنزل ألف دمعة', 'artist': 'ماجد المهندس'},
-            {'lyrics': 'عطشان يا برق السما', 'artist': 'ماجد المهندس'},
-            {'lyrics': 'هيجيلي موجوع دموعه ف عينه', 'artist': 'تامر عاشور'},
-            {'lyrics': 'تيجي نتراهن إن هيجي اليوم', 'artist': 'تامر عاشور'},
-            {'lyrics': 'خليني ف حضنك يا حبيبي', 'artist': 'تامر عاشور'},
-            {'lyrics': 'أريد الله يسامحني لأن أذيت نفسي', 'artist': 'رحمة رياض'},
-            {'lyrics': 'كون نصير أنا وياك نجمة بالسما', 'artist': 'رحمة رياض'},
-            {'lyrics': 'على طاري الزعل والدمعتين', 'artist': 'أصيل هميم'},
-            {'lyrics': 'يشبهك قلبي كنك القلب مخلوق', 'artist': 'أصيل هميم'},
-            {'lyrics': 'أحبه بس مو معناه اسمحله يجرح', 'artist': 'أصيل هميم'},
-            {'lyrics': 'المفروض أعوفك من زمان', 'artist': 'أصيل هميم'},
-            {'lyrics': 'ضعت منك وانهدم جسر التلاقي', 'artist': 'أميمة طالب'},
-            {'lyrics': 'بيان صادر من معاناة المحبة', 'artist': 'أميمة طالب'},
-            {'lyrics': 'أنا ودي إذا ودك نعيد الماضي', 'artist': 'رابح صقر'},
-            {'lyrics': 'مثل ما تحب ياروحي ألبي رغبتك', 'artist': 'رابح صقر'},
-            {'lyrics': 'كل ما بلل مطر وصلك ثيابي', 'artist': 'رابح صقر'},
-            {'lyrics': 'يراودني شعور إني أحبك أكثر من أول', 'artist': 'راشد الماجد'},
-            {'lyrics': 'أنا أكثر شخص بالدنيا يحبك', 'artist': 'راشد الماجد'},
-            {'lyrics': 'ليت العمر لو كان مليون مرة', 'artist': 'راشد الماجد'},
-            {'lyrics': 'تلمست لك عذر', 'artist': 'راشد الماجد'},
-            {'lyrics': 'عظيم إحساسي والشوق فيني', 'artist': 'راشد الماجد'},
-            {'lyrics': 'خذ راحتك ماعاد تفرق معي', 'artist': 'راشد الماجد'},
-            {'lyrics': 'قال الوداع ومقصده يجرح القلب', 'artist': 'راشد الماجد'},
-            {'lyrics': 'اللي لقى احبابه نسى اصحابه', 'artist': 'راشد الماجد'},
-            {'lyrics': 'واسع خيالك اكتبه أنا بكذبك معجبه', 'artist': 'شمة حمدان'},
-            {'lyrics': 'ما دريت إني أحبك ما دريت', 'artist': 'شمة حمدان'},
-            {'lyrics': 'حبيته بيني وبين نفسي', 'artist': 'شيرين'},
-            {'lyrics': 'كلها غيرانة بتحقد', 'artist': 'شيرين'},
-            {'lyrics': 'مشاعر تشاور تودع تسافر', 'artist': 'شيرين'},
-            {'lyrics': 'أنا مش بتاعت الكلام ده', 'artist': 'شيرين'},
-            {'lyrics': 'مقادير يا قلبي العنا مقادير', 'artist': 'طلال مداح'},
-            {'lyrics': 'ظلمتني والله قوي يجازيك', 'artist': 'طلال مداح'},
-            {'lyrics': 'فزيت من نومي أناديلك', 'artist': 'ذكرى'},
-            {'lyrics': 'ابد على حطة يدك', 'artist': 'ذكرى'},
-            {'lyrics': 'أنا لولا الغلا والمحبة', 'artist': 'فؤاد عبدالواحد'},
-            {'lyrics': 'كلمة ولو جبر خاطر', 'artist': 'عبادي الجوهر'},
-            {'lyrics': 'أحبك لو تكون حاضر', 'artist': 'عبادي الجوهر'},
-            {'lyrics': 'إلحق عيني إلحق', 'artist': 'وليد الشامي'},
-            {'lyrics': 'يردون قلت لازم يردون', 'artist': 'وليد الشامي'},
-            {'lyrics': 'ولهان أنا ولهان', 'artist': 'وليد الشامي'},
-            {'lyrics': 'اقولها كبر عن الدنيا حبيبي', 'artist': 'وليد الشامي'},
-            {'lyrics': 'أنا استاهل وداع أفضل وداع', 'artist': 'نوال الكويتية'},
-            {'lyrics': 'لقيت روحي بعد ما لقيتك', 'artist': 'نوال الكويتية'},
-            {'lyrics': 'غريبة الناس غريبة الدنيا', 'artist': 'وائل جسار'},
-            {'lyrics': 'اعذريني يوم زفافك', 'artist': 'وائل جسار'},
-            {'lyrics': 'ماعاد يمديني ولا عاد يمديك', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'يا بعدهم كلهم يا سراجي بينهم', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'حتى الكره احساس', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'استكثرك وقتي علي', 'artist': 'عبدالمجيد عبدالله'},
-            {'lyrics': 'ياما حاولت الفراق وما قويت', 'artist': 'عبدالمجيد عبدالله'}
+            {'lyrics': 'بردان أنا تكفى أبي احترق بدفا لعيونك', 'artist': 'محمد عبده'}
         ]
         random.shuffle(self.songs)
 
-    def _get_colors(self):
-        themes = {
-            "blue": {"bg": "#0C1929", "card": "#0F2744", "accent": "#00D9FF", "text": "#E0F2FE", "text2": "#7DD3FC", "button": "#1E3A5F"},
-            "red": {"bg": "#290C0C", "card": "#440F0F", "accent": "#FF0000", "text": "#FFE0E0", "text2": "#FC7D7D", "button": "#5F1E1E"},
-            "green": {"bg": "#0C290C", "card": "#0F440F", "accent": "#00FF00", "text": "#E0FFE0", "text2": "#7DFC7D", "button": "#1E5F1E"}
-        }
-        return themes.get(self.theme, themes["blue"])
-
     def start_game(self):
-        self.current_question = 0
-        self.game_active = True
-        return self.get_question()
-    
-    def get_question(self):
-        song = self.songs[self.current_question % len(self.songs)]
-        self.current_answer = song["artist"]
-        colors = self._get_colors()
-        progress = self.current_question + 1
+        """بدء اللعبة"""
+        self.current_round = 0
+        return self.generate_question()
 
-        flex_content = {
-            "type": "bubble",
-            "size": "kilo",
-            "styles": {"body": {"backgroundColor": colors["bg"]}},
-            "header": {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": "🎵", "size": "xl", "align": "center"}],
-                     "backgroundColor": colors["text"], "cornerRadius": "25px", "width": "45px", "height": "45px", "justifyContent": "center"},
-                    {"type": "box", "layout": "vertical", "contents": [
-                        {"type": "text", "text": "لعبة الأغنية", "size": "xl", "weight": "bold", "color": colors["text"]},
-                        {"type": "text", "text": f"السؤال {progress}/{self.questions_count}", "size": "sm", "color": colors["text2"]}
-                    ], "margin": "lg", "flex": 1}
-                ],
-                "backgroundColor": colors["accent"], "paddingAll": "15px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "box", "layout": "vertical", "contents": [
-                        {"type": "text", "text": song["lyrics"], "size": "lg", "weight": "bold", "color": colors["text"], "align": "center", "wrap": True}
-                    ], "backgroundColor": colors["card"], "cornerRadius": "15px", "paddingAll": "25px", "margin": "lg"},
-                    {"type": "text", "text": "من المغني؟", "size": "md", "color": colors["accent"], "align": "center", "margin": "xl"},
-                    {"type": "box", "layout": "horizontal", "contents": [
-                        {"type": "box", "layout": "vertical", "contents": [], "backgroundColor": colors["accent"], "height": "5px", "flex": progress},
-                        {"type": "box", "layout": "vertical", "contents": [], "backgroundColor": colors["card"], "height": "5px", "flex": self.questions_count - progress}
-                    ], "cornerRadius": "3px", "margin": "md"},
-                    {"type": "box", "layout": "horizontal", "contents": [
-                        {"type": "button", "action": {"type": "message", "label": "💡 لمح", "text": "لمح"}, "style": "secondary", "color": colors["button"], "height": "sm"},
-                        {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "primary", "color": colors["accent"], "height": "sm"}
-                    ], "spacing": "md", "margin": "xl"}
-                ], "backgroundColor": colors["bg"], "paddingAll": "15px"
-            }
-        }
-        return FlexSendMessage(alt_text="لعبة الأغنية", contents=flex_content)
+    def generate_question(self):
+        """توليد سؤال جديد"""
+        song = self.songs[self.current_round % len(self.songs)]
+        self.current_answer = song['artist']
+        
+        extra_info = f"💡 اكتب اسم المغني\n• لمح: للحصول على تلميح\n• جاوب: لمعرفة الإجابة"
+        
+        return self.build_question_flex(
+            "لعبة الأغنية 🎵",
+            f"🎤 من المغني؟\n\n« {song['lyrics']} »",
+            extra_info
+        )
 
-    def get_hint(self):
-        song = self.songs[self.current_question % len(self.songs)]
-        artist = song["artist"].strip()
-        first_char = artist[0]
-        length = len(artist)
-        return f"💡 تلميح: أول حرف '{first_char}' وعدد الحروف {length}"
-
-    def check_answer(self, user_answer, user_id, display_name):
-        if not self.game_active: return None
-        if user_id in self.answered_users: return None
-
-        answer = user_answer.strip()
-        if answer == 'لمح':
-            hint = self.get_hint()
-            return {'message': hint, 'response': TextSendMessage(text=hint), 'points': 0}
-        if answer == 'جاوب':
-            song = self.songs[self.current_question % len(self.songs)]
-            reveal = f"🎤 المغني: {song['artist']}\n🎵 الأغنية: {song.get('title','غير معروف')}"
-            next_q = self.next_question()
-            if isinstance(next_q, dict) and next_q.get('game_over'):
-                next_q['message'] = f"{reveal}\n\n{next_q.get('message','')}"
-                return next_q
-            return {'message': reveal, 'response': next_q, 'points': 0}
-
+    def check_answer(self, answer, uid, name):
+        """فحص الإجابة"""
         normalized = self.normalize_text(answer)
-        correct = self.normalize_text(self.current_answer)
-        if correct in normalized or normalized in correct or difflib.SequenceMatcher(None, normalized, correct).ratio() > 0.8:
-            points = self.add_score(user_id, display_name, 10)
-            song = self.songs[self.current_question % len(self.songs)]
-            next_q = self.next_question()
-            if isinstance(next_q, dict) and next_q.get('game_over'):
-                next_q['points'] = points
-                return next_q
-            msg = f"✅ صحيح يا {display_name}!\n🎤 {song['artist']}\n🎵 {song.get('title','غير معروف')}\n+{points} نقطة"
-            return {'message': msg, 'response': next_q, 'points': points}
-
-        return {'message': "▫️ إجابة غير صحيحة ▪️", 'response': TextSendMessage(text="▫️ إجابة غير صحيحة ▪️"), 'points': 0}
+        
+        # تلميح
+        if normalized == 'لمح':
+            first_char = self.current_answer[0]
+            length = len(self.current_answer)
+            hint = f"💡 تلميح: أول حرف '{first_char}' وعدد الحروف {length}"
+            return {
+                'points': 0,
+                'won': False,
+                'response': self.build_question_flex(
+                    "لعبة الأغنية 🎵",
+                    hint,
+                    "اكتب اسم المغني"
+                )
+            }
+        
+        # عرض الإجابة
+        if normalized == 'جاوب':
+            song = self.songs[self.current_round % len(self.songs)]
+            reveal = f"🎤 المغني: {song['artist']}"
+            
+            # الانتقال للسؤال التالي
+            self.current_round += 1
+            if self.current_round >= self.rounds:
+                return {
+                    'points': 0,
+                    'won': False,
+                    'response': self.build_result_flex(
+                        "انتهت اللعبة",
+                        reveal,
+                        0,
+                        True
+                    )
+                }
+            
+            next_q = self.generate_question()
+            return {
+                'points': 0,
+                'won': False,
+                'response': next_q
+            }
+        
+        # التحقق من الإجابة الصحيحة
+        correct_normalized = self.normalize_text(self.current_answer)
+        
+        # مقارنة مع تحمل الأخطاء
+        if (correct_normalized in normalized or 
+            normalized in correct_normalized or 
+            difflib.SequenceMatcher(None, normalized, correct_normalized).ratio() > 0.75):
+            
+            points = POINTS_PER_CORRECT
+            self.add_player_score(uid, points)
+            
+            # الانتقال للسؤال التالي
+            self.current_round += 1
+            is_final = self.current_round >= self.rounds
+            
+            if is_final:
+                return {
+                    'points': points,
+                    'won': True,
+                    'response': self.build_result_flex(
+                        name,
+                        f"المغني: {self.current_answer}",
+                        points,
+                        True
+                    )
+                }
+            
+            next_q = self.generate_question()
+            return {
+                'points': points,
+                'won': False,
+                'response': next_q
+            }
+        
+        return None
