@@ -1,220 +1,112 @@
 """
-لعبة إنسان حيوان نبات جماد بلاد - Enhanced Version
-Created by: Abeer Aldosari © 2025
+لعبة إنسان حيوان نبات جماد بلاد - نسخة محسّنة مع AI ▫️▪️
 """
 from linebot.models import TextSendMessage
 from .base_game import BaseGame
 import random
 
-
 class HumanAnimalPlantGame(BaseGame):
-    """لعبة إنسان حيوان نبات جماد بلاد - محسّنة"""
+    """لعبة إنسان حيوان نبات جماد بلاد محسّنة ▫️▪️ مع AI"""
     
-    def __init__(self, line_bot_api, use_ai=False, get_api_key=None, switch_key=None):
-        super().__init__(line_bot_api, questions_count=10)
-        
-        # الحروف الشائعة والسهلة
+    def __init__(self, line_bot_api, ai_checker=None):
+        super().__init__(line_bot_api, questions_count=5)
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
         random.shuffle(self.letters)
-        
-        # الفئات
         self.categories = ["إنسان", "حيوان", "نبات", "جماد", "بلاد"]
-        self.current_category = None
-        self.current_letter = None
+        self.ai_checker = ai_checker  # دالة للتحقق من الإجابة باستخدام AI
         
-        # قاعدة بيانات موسّعة
+        # قاعدة بيانات موسّعة مع أمثلة أكثر
         self.answers_db = {
             "إنسان": {
-                "أ": ["أحمد", "أمل", "أسامة", "أمير", "إبراهيم", "أسماء"],
-                "ب": ["بدر", "بسمة", "باسل", "بشرى", "بلال"],
-                "ت": ["تامر", "تالا", "تركي"],
-                "ج": ["جمال", "جميلة", "جابر", "جواد"],
-                "ح": ["حسن", "حنان", "حامد", "حليمة"],
-                "د": ["داود", "دانا", "ديما", "دلال"],
-                "ر": ["رامي", "رنا", "راشد", "ريم"],
-                "ز": ["زيد", "زينب", "زياد", "زهرة"],
-                "س": ["سارة", "سعيد", "سامي", "سلمى", "سليمان"],
-                "ش": ["شادي", "شيماء", "شهد"],
-                "ص": ["صالح", "صفاء", "صابر"],
-                "ط": ["طارق", "طلال"],
-                "ع": ["علي", "عمر", "عائشة", "عبدالله", "عماد"],
-                "ف": ["فاطمة", "فهد", "فيصل", "فريد"],
-                "ق": ["قاسم", "قصي"],
-                "ك": ["كريم", "كمال"],
-                "ل": ["ليلى", "لطيفة", "لؤي", "لينا"],
-                "م": ["محمد", "مريم", "ماجد", "منى", "مصطفى"],
-                "ن": ["نور", "نادر", "نهى", "نايف"],
-                "ه": ["هند", "هاني", "هدى", "هشام"],
-                "و": ["وليد", "وفاء", "وسام"],
-                "ي": ["يوسف", "ياسر", "ياسمين", "يارا"]
+                "أ": ["أحمد","أمل","أسامة","أمير","إبراهيم","أسماء"],
+                "ب": ["بدر","بسمة","باسل","بشرى","بلال"],
+                "ت": ["تامر","تالا","تركي","تهاني"],
             },
             "حيوان": {
-                "أ": ["أسد", "أرنب", "أفعى", "أخطبوط"],
-                "ب": ["بقرة", "بطة", "ببغاء", "بجعة"],
-                "ج": ["جمل", "جاموس", "جراد"],
-                "د": ["دجاجة", "ديك", "دب", "دودة", "دلفين"],
-                "ذ": ["ذئب", "ذبابة"],
-                "ز": ["زرافة", "زواحف"],
-                "س": ["سمكة", "سلحفاة", "سنجاب", "سحلية"],
-                "ش": ["شاة", "شبل"],
-                "ط": ["طاووس", "طائر"],
-                "ع": ["عصفور", "عقرب", "عنكبوت"],
-                "ف": ["فيل", "فأر", "فهد", "فراشة"],
-                "ق": ["قط", "قرد", "قنفذ"],
-                "ك": ["كلب", "كنغر"],
-                "ل": ["ليث", "لبؤة"],
-                "ن": ["نمر", "نسر", "نحلة", "نمل", "نعامة"],
-                "ه": ["هدهد", "هر"],
-                "و": ["وزة", "وطواط"],
-                "ي": ["يمامة"]
+                "أ": ["أسد","أرنب","أفعى","أخطبوط"],
+                "ب": ["بقرة","بطة","ببغاء","بجعة"],
+                "ج": ["جمل","جراد","جربوع"]
             },
             "نبات": {
-                "ت": ["تفاح", "توت", "تين", "تمر"],
-                "ج": ["جوز", "جزر"],
-                "ح": ["حمص"],
-                "ر": ["رمان", "ريحان", "رز"],
-                "ز": ["زيتون", "زعتر", "زنجبيل"],
-                "س": ["سفرجل"],
-                "ش": ["شعير", "شمام"],
-                "ط": ["طماطم"],
-                "ع": ["عنب", "عدس"],
-                "ف": ["فول", "فجل", "فلفل"],
-                "ق": ["قمح", "قرع"],
-                "ك": ["كمون", "كركم"],
-                "ل": ["ليمون", "لوز"],
-                "م": ["موز", "مانجو", "ملوخية"],
-                "ن": ["نخل", "نعناع"],
-                "و": ["ورد", "ورق"],
-                "ي": ["يقطين"]
+                "ت": ["تفاح","توت","تين","تمر"],
+                "ج": ["جزر","جوز","جعدة"],
+                "ح": ["حمص","حلبة"]
             },
             "جماد": {
-                "ب": ["باب", "بيت", "برج"],
-                "ت": ["تلفاز", "ترابيزة", "تاج"],
-                "ج": ["جدار", "جسر"],
-                "ح": ["حجر", "حائط"],
-                "د": ["درج"],
-                "ر": ["رف"],
-                "س": ["سرير", "سيارة", "سكين"],
-                "ش": ["شباك", "شاشة"],
-                "ط": ["طاولة", "طبق"],
-                "ف": ["فانوس"],
-                "ق": ["قفل"],
-                "ك": ["كتاب", "كرسي", "كوب"],
-                "م": ["مفتاح", "مكتب", "مصباح", "مروحة"],
-                "ن": ["نافذة"],
-                "ه": ["هاتف"]
+                "ب": ["باب","بيت","برج","بلاط"],
+                "ت": ["تلفاز","ترابيزة","تاج"],
+                "ج": ["جدار","جسر","جهاز"]
             },
             "بلاد": {
-                "أ": ["الأردن", "الإمارات", "إثيوبيا", "أفغانستان"],
-                "ب": ["البحرين", "بريطانيا"],
-                "ت": ["تونس", "تركيا", "تايلاند"],
-                "ج": ["الجزائر", "جيبوتي"],
-                "س": ["السعودية", "سوريا", "السودان", "السويد"],
-                "ش": ["الشام"],
-                "ع": ["عمان", "العراق"],
-                "ف": ["فلسطين", "فرنسا", "فنزويلا"],
-                "ق": ["قطر"],
-                "ك": ["الكويت", "كندا"],
-                "ل": ["لبنان", "ليبيا"],
-                "م": ["مصر", "المغرب", "ماليزيا", "موريتانيا"],
-                "ن": ["النرويج"],
-                "ه": ["هولندا", "الهند"],
-                "ي": ["اليمن", "اليابان"]
+                "أ": ["الأردن","الإمارات","إثيوبيا","أفغانستان"],
+                "ب": ["البحرين","بريطانيا","بلجيكا"],
+                "ت": ["تونس","تركيا","تايلاند"]
             }
         }
+        self.current_category = None
+        self.current_letter = None
     
     def start_game(self):
-        """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
         return self.get_question()
     
     def get_question(self):
-        """الحصول على السؤال الحالي"""
-        # اختيار حرف وفئة عشوائياً
         self.current_letter = self.letters[self.current_question % len(self.letters)]
         self.current_category = random.choice(self.categories)
-        
-        message = f"🎯 إنسان حيوان نبات ({self.current_question + 1}/{self.questions_count})\n\n"
-        message += f"🔤 الحرف: {self.current_letter}\n"
-        message += f"📂 الفئة: {self.current_category}\n\n"
-        message += f"✏️ اكتب {self.current_category} يبدأ بحرف {self.current_letter}\n\n"
-        message += "• جاوب - لعرض إجابة مقترحة"
-        
+        message = f"▫️ لعبة إنسان حيوان نبات ({self.current_question + 1}/{self.questions_count}) ▪️\n\n"
+        message += f"▫️ الفئة: {self.current_category} ▪️\n"
+        message += f"▫️ الحرف: {self.current_letter} ▪️\n\n"
+        message += f"▫️ اكتب {self.current_category} يبدأ بحرف {self.current_letter} ▪️\n"
+        message += "▫️ جاوب - لعرض إجابة مقترحة ▪️"
         return TextSendMessage(text=message)
     
     def check_answer(self, user_answer, user_id, display_name):
-        """فحص الإجابة"""
-        if not self.game_active:
+        if not self.game_active or user_id in self.answered_users:
             return None
         
-        if user_id in self.answered_users:
-            return None
+        normalized_answer = self.normalize_text(user_answer)
         
-        # أمر جاوب
-        if user_answer == 'جاوب':
+        # أمر "جاوب"
+        if normalized_answer == "جاوب":
             suggested = None
-            if self.current_category in self.answers_db:
-                if self.current_letter in self.answers_db[self.current_category]:
-                    answers_list = self.answers_db[self.current_category][self.current_letter]
-                    if answers_list:
-                        suggested = random.choice(answers_list)
-            
-            if suggested:
-                reveal = f"💡 إجابة مقترحة: {suggested}"
-            else:
-                reveal = f"💡 أي كلمة تبدأ بحرف {self.current_letter}"
-            
+            if self.current_category in self.answers_db and self.current_letter in self.answers_db[self.current_category]:
+                suggested = random.choice(self.answers_db[self.current_category][self.current_letter])
+            reveal = f"▫️ إجابة مقترحة: {suggested} ▪️" if suggested else f"▫️ أي كلمة تبدأ بحرف {self.current_letter} ▪️"
             next_q = self.next_question()
-            
-            if isinstance(next_q, dict) and next_q.get('game_over'):
-                next_q['message'] = f"{reveal}\n\n{next_q.get('message', '')}"
-                return next_q
-            
             message = f"{reveal}\n\n"
             if hasattr(next_q, 'text'):
                 message += next_q.text
-            
-            return {
-                'message': message,
-                'response': TextSendMessage(text=message),
-                'points': 0
-            }
+            return {"message": message, "response": TextSendMessage(text=message), "points": 0}
         
-        # تطبيع الإجابة
-        normalized_answer = self.normalize_text(user_answer)
-        normalized_letter = self.normalize_text(self.current_letter)
+        # التحقق من الحرف
+        if not normalized_answer or normalized_answer[0] != self.normalize_text(self.current_letter):
+            return {"message": f"▫️ يجب أن تبدأ الكلمة بحرف {self.current_letter} ▪️",
+                    "response": TextSendMessage(text=f"▫️ يجب أن تبدأ الكلمة بحرف {self.current_letter} ▪️"),
+                    "points": 0}
         
-        # التحقق من أن الإجابة تبدأ بالحرف الصحيح
-        if not normalized_answer or not normalized_answer[0] == normalized_letter:
-            return {
-                'message': f"⚠️ يجب أن تبدأ الكلمة بحرف {self.current_letter}",
-                'response': TextSendMessage(text=f"⚠️ يجب أن تبدأ الكلمة بحرف {self.current_letter}"),
-                'points': 0
-            }
-        
-        # التحقق من طول الكلمة (على الأقل حرفين)
         if len(normalized_answer) < 2:
-            return {
-                'message': "⚠️ الكلمة قصيرة جداً",
-                'response': TextSendMessage(text="⚠️ الكلمة قصيرة جداً"),
-                'points': 0
-            }
+            return {"message": "▫️ الكلمة قصيرة جداً ▪️",
+                    "response": TextSendMessage(text="▫️ الكلمة قصيرة جداً ▪️"),
+                    "points": 0}
         
-        # قبول الإجابة المنطقية
+        # قبول الإجابة: من القاعدة أو AI
+        valid = False
+        if self.current_category in self.answers_db and self.current_letter in self.answers_db[self.current_category]:
+            valid = normalized_answer in [self.normalize_text(a) for a in self.answers_db[self.current_category][self.current_letter]]
+        # تحقق باستخدام AI إذا متاح
+        if not valid and self.ai_checker:
+            valid = self.ai_checker(self.current_category, normalized_answer)
+        
+        if not valid:
+            return {"message": "▫️ إجابة غير صحيحة ▪️",
+                    "response": TextSendMessage(text="▫️ إجابة غير صحيحة ▪️"),
+                    "points": 0}
+        
+        # نقاط وإنتقال للسؤال التالي
         points = self.add_score(user_id, display_name, 10)
         next_q = self.next_question()
-        
-        if isinstance(next_q, dict) and next_q.get('game_over'):
-            next_q['points'] = points
-            return next_q
-        
-        message = f"✅ إجابة مقبولة يا {display_name}!\n+{points} نقطة\n\n"
+        message = f"▫️ إجابة صحيحة يا {display_name} ▪️\n+{points} نقطة\n\n"
         if hasattr(next_q, 'text'):
             message += next_q.text
-        
-        return {
-            'message': message,
-            'response': TextSendMessage(text=message),
-            'points': points
-        }
+        return {"message": message, "response": TextSendMessage(text=message), "points": points}
