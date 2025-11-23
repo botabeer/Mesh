@@ -1,134 +1,99 @@
 """
-Bot Mesh - Flex Message Builder (3D Themed)
+Bot Mesh - Flex Builder (Enhanced 3D Theme Version)
 Created by: Abeer Aldosari © 2025
 """
+from linebot.models import BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction, FlexSendMessage
+
 from config import THEMES
 
 class FlexBuilder:
-    """منشئ رسائل Flex Messages المتقدمة مع دعم ثيمات المستخدم"""
-    
-    def __init__(self, theme='white'):
-        self.theme_name = theme
-        self.t = THEMES.get(theme, THEMES['white'])
-    
-    def _btn(self, emoji, txt, cmd):
-        """زر 3D"""
-        return {
-            "type": "box",
-            "layout": "vertical",
-            "action": {"type": "message", "text": cmd},
-            "contents": [
-                {"type": "text", "text": emoji, "size": "xl", "align": "center", "color": self.t['primary']},
-                {"type": "text", "text": txt, "size": "sm", "align": "center", "weight": "bold", "margin": "sm"}
-            ],
-            "backgroundColor": self.t['card'],
-            "cornerRadius": "15px",
-            "paddingAll": "md",
-            "flex": 1,
-            "shadow": "md"
-        }
-    
-    def _card(self, contents):
-        """كارت 3D"""
-        return {
-            "type": "box",
-            "layout": "vertical",
-            "contents": contents,
-            "backgroundColor": self.t['card'],
-            "cornerRadius": "20px",
-            "paddingAll": "lg",
-            "margin": "lg",
-            "shadow": "lg"
-        }
-    
+    def __init__(self, theme_key: str = 'white'):
+        self.theme = THEMES.get(theme_key, THEMES['white'])
+
+    def _card(self, title: str, subtitle: str = '', emoji: str = '', button_text: str = None):
+        """إنشاء بطاقة 3D"""
+        return BubbleContainer(
+            direction='ltr',
+            body=BoxComponent(
+                layout='vertical',
+                spacing='md',
+                contents=[
+                    TextComponent(text=f"{emoji} {title}", size='lg', weight='bold', color=self.theme['text']),
+                    TextComponent(text=subtitle, size='sm', color=self.theme['text2']) if subtitle else None,
+                    ButtonComponent(
+                        action=URIAction(label=button_text or 'فتح', uri='https://line.me'),
+                        style='primary',
+                        color=self.theme['primary']
+                    ) if button_text else None
+                ]
+            ),
+            styles={
+                'header': {'backgroundColor': self.theme['card']},
+                'hero': {'backgroundColor': self.theme['bg']},
+                'body': {'backgroundColor': self.theme['bg']}
+            }
+        )
+
     def welcome(self):
-        """نافذة البداية مع زر اختيار الثيم"""
-        games = [
-            ['🧠','ذكاء','ذكاء'], ['🎨','لون','لون'], ['🔤','ترتيب','ترتيب'],
-            ['🔢','رياضيات','رياضيات'], ['⚡','أسرع','أسرع'], ['↔️','ضد','ضد'],
-            ['✏️','تكوين','تكوين'], ['🎵','أغنية','أغنية'], ['🎯','لعبة','لعبة'],
-            ['⛓️','سلسلة','سلسلة'], ['🤔','خمن','خمن'], ['💖','توافق','توافق']
+        """نافذة البداية"""
+        cards = [
+            self._card("🎮 مرحباً بك في Bot Mesh", "اختر لعبة من الأزرار أدناه", "🎉"),
+            self._card("🎨 اختر ثيمك", "يمكنك تغييره في أي وقت", "🖌️")
         ]
-        
-        rows = []
-        for i in range(0, len(games), 3):
-            rows.append({
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "sm",
-                "contents": [self._btn(*g) for g in games[i:i+3]]
-            })
-        
-        # زر إيقاف
-        control_btn = {
-            "type": "button",
-            "action": {"type": "message", "label": "⏹️ إيقاف", "text": "إيقاف"},
-            "style": "secondary",
-            "height": "sm"
+        return {
+            "type": "carousel",
+            "contents": cards
         }
-        
-        # زر اختيار الثيم
-        theme_btn = {
-            "type": "button",
-            "action": {"type": "message", "label": "🎨 ثيم", "text": "ثيم"},
-            "style": "primary",
-            "color": self.t['primary'],
-            "height": "sm"
-        }
-        
+
+    def help(self):
+        """نافذة المساعدة"""
         return {
             "type": "bubble",
-            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": self.t['bg'],
-                "paddingAll": "20px",
                 "contents": [
-                    self._card([
-                        {"type": "text","text":"🎮 Bot Mesh","size":"xxl","weight":"bold","color":self.t['primary'],"align":"center"},
-                        {"type": "text","text":"بوت الألعاب الترفيهية","size":"sm","color":self.t['text2'],"align":"center"}
-                    ]),
-                    *rows,
-                    {"type": "separator","margin":"lg","color":self.t['text2']+"30"},
-                    {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[control_btn, theme_btn]},
-                    {"type":"text","text":"© 2025 Abeer Aldosari","size":"xxs","color":self.t['text2'],"align":"center","margin":"md"}
-                ]
+                    {"type": "text", "text": "💡 مساعدة Bot Mesh", "weight": "bold", "color": self.theme['text']},
+                    {"type": "text", "text": "• اكتب اسم اللعبة لبدء اللعب\n• اكتب 'إيقاف' لإنهاء اللعبة\n• اكتب 'ثيم' لتغيير ثيمك", "color": self.theme['text2']}
+                ],
+                "backgroundColor": self.theme['bg']
             }
         }
-    
+
     def themes(self):
-        """نافذة اختيار الثيمات مباشرة من البداية"""
-        rows = []
-        for theme_key in THEMES:
-            theme_data = THEMES[theme_key]
-            rows.append({
-                "type":"box",
-                "layout":"horizontal",
-                "margin":"sm",
-                "backgroundColor": self.t['card'],
-                "cornerRadius":"15px",
-                "paddingAll":"md",
-                "action":{"type":"message","text":f"ثيم:{theme_key}"},
-                "contents":[
-                    {"type":"box","layout":"vertical","backgroundColor":theme_data['primary'],"cornerRadius":"10px","width":"40px","height":"40px","justifyContent":"center",
-                     "contents":[{"type":"text","text":theme_data['name'][:2],"align":"center","color":"#FFFFFF"}]},
-                    {"type":"text","text":theme_data['name'],"size":"md","weight":"bold","margin":"md","gravity":"center","color":self.t['text']}
-                ]
+        """نافذة الثيمات"""
+        items = []
+        for key, theme in THEMES.items():
+            items.append({
+                "type": "button",
+                "action": {"type": "message", "label": theme['name'], "text": f"ثيم:{key}"},
+                "color": theme['primary'],
+                "style": "primary",
+                "margin": "sm"
             })
-        
         return {
-            "type":"bubble",
-            "size":"mega",
-            "body":{
-                "type":"box",
-                "layout":"vertical",
-                "backgroundColor":self.t['bg'],
-                "paddingAll":"20px",
-                "contents":[
-                    self._card([{"type":"text","text":"🎨 اختر الثيم","size":"xl","weight":"bold","align":"center","color":self.t['primary']}]),
-                    *rows
-                ]
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": items,
+                "backgroundColor": self.theme['bg']
             }
         }
+
+    def stats(self, data: dict, rank: int):
+        """نافذة إحصائيات المستخدم"""
+        return {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": f"👤 نقاط {data.get('points',0)}", "weight": "bold", "color": self.theme['text']},
+                    {"type": "text", "text": f"🎮 الألعاب: {data.get('games',0)}", "color": self.theme['text2']},
+                    {"type": "text", "text": f"🏆 الانتصارات: {data.get('wins',0)}", "color": self.theme['text2']},
+                    {"type": "text", "text": f"🥇 ترتيبك: {rank}", "color": self.theme['text2']}
+                ],
+                "backgroundColor": self.theme['bg']
+            }
+        )
