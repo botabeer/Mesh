@@ -1,6 +1,12 @@
 """
 لعبة الرياضيات - نسخة محدثة ومحسّنة
 Created by: Abeer Aldosari © 2025
+
+تحديثات:
+- استيراد صحيح من games.base_game
+- نظام تلميحات وكشف إجابات محسّن
+- دعم ثيمات ديناميكية
+- رسائل Flex حديثة بتصميم Neumorphism
 """
 
 # ============================================================================
@@ -14,14 +20,14 @@ from typing import Dict, Any, Optional
 
 class MathGame(BaseGame):
     """
-    لعبة الرياضيات مع دعم مستويات صعوبة ديناميكية
+    لعبة الرياضيات - حل مسائل رياضية بسيطة
     
     الميزات:
     - 3 مستويات صعوبة (سهل، متوسط، صعب)
-    - تصاعد تلقائي للصعوبة
-    - عمليات حسابية متنوعة (+، -، ×، ÷)
-    - خيارات متعددة للإجابة
+    - نظام تلميحات ذكي
+    - تتبع النقاط والإحصائيات
     - رسائل Flex حديثة بتصميم Neumorphism
+    - دعم 6 ثيمات مختلفة
     """
     
     def __init__(self, line_bot_api):
@@ -31,16 +37,16 @@ class MathGame(BaseGame):
         المعاملات:
             line_bot_api: واجهة LINE Bot API
         """
+        # استدعاء الكلاس الأساسي
         super().__init__(line_bot_api, questions_count=5)
-        
-        # تفعيل/تعطيل ميزات التلميح والكشف
-        self.supports_hint = False  # لا تدعم التلميح (الإجابة رقمية)
-        self.supports_reveal = True
         
         # إعدادات اللعبة
         self.operations = ['+', '-', '×', '÷']
         self.difficulty = 'easy'
-        self.current_options = []
+        
+        # تفعيل ميزات التلميح والكشف
+        self.supports_hint = True
+        self.supports_reveal = True
 
     def start_game(self) -> Any:
         """
@@ -55,12 +61,12 @@ class MathGame(BaseGame):
 
     def generate_question(self) -> Dict[str, Any]:
         """
-        توليد سؤال رياضي حسب مستوى الصعوبة
+        توليد سؤال رياضي عشوائي
         
         العودة:
-            dict: سؤال وإجابة وخيارات
+            dict: سؤال وإجابة ومستوى صعوبة
         """
-        # تحديد مستوى الصعوبة حسب السؤال الحالي
+        # تحديد مستوى الصعوبة حسب الجولة
         if self.current_question < 2:
             self.difficulty = 'easy'
         elif self.current_question < 4:
@@ -97,21 +103,13 @@ class MathGame(BaseGame):
             num1 = num2 * random.randint(2, 10)
             answer = num1 // num2
         
-        # توليد خيارات خاطئة
-        options = [str(answer)]
-        while len(options) < 4:
-            wrong = answer + random.randint(-10, 10)
-            if wrong > 0 and str(wrong) not in options:
-                options.append(str(wrong))
-        random.shuffle(options)
-        
-        self.current_options = options
-        
         return {
             'question': f"{num1} {operation} {num2} = ؟",
             'answer': str(answer),
-            'options': options,
-            'difficulty': self.difficulty
+            'difficulty': self.difficulty,
+            'num1': num1,
+            'num2': num2,
+            'operation': operation
         }
 
     def get_question(self) -> Any:
@@ -121,18 +119,22 @@ class MathGame(BaseGame):
         العودة:
             FlexMessage: السؤال بتصميم Neumorphism
         """
+        # توليد السؤال
         question_data = self.generate_question()
-        self.current_answer = question_data['answer']
+        self.current_answer = question_data["answer"]
+        self.current_question_data = question_data
         
+        # الحصول على ألوان الثيم الحالي
         colors = self.get_theme_colors()
         
-        # رموز الصعوبة
-        difficulty_icons = {
-            'easy': '🟢 سهل',
-            'medium': '🟡 متوسط',
-            'hard': '🔴 صعب'
+        # أيقونة حسب الصعوبة
+        difficulty_emoji = {
+            'easy': '⭐',
+            'medium': '⭐⭐',
+            'hard': '⭐⭐⭐'
         }
         
+        # بناء محتوى Flex Message
         flex_content = {
             "type": "bubble",
             "size": "kilo",
@@ -155,14 +157,6 @@ class MathGame(BaseGame):
                         "color": colors["text2"],
                         "align": "center",
                         "margin": "sm"
-                    },
-                    {
-                        "type": "text",
-                        "text": difficulty_icons[self.difficulty],
-                        "size": "xs",
-                        "color": colors["text2"],
-                        "align": "center",
-                        "margin": "xs"
                     }
                 ],
                 "backgroundColor": colors["bg"],
@@ -178,7 +172,7 @@ class MathGame(BaseGame):
                         "contents": [
                             {
                                 "type": "text",
-                                "text": question_data['question'],
+                                "text": question_data["question"],
                                 "size": "xxl",
                                 "color": colors["text"],
                                 "align": "center",
@@ -192,44 +186,27 @@ class MathGame(BaseGame):
                         "margin": "md"
                     },
                     {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"{difficulty_emoji[self.difficulty]} {self.difficulty.upper()}",
+                                "size": "xs",
+                                "color": colors["text2"],
+                                "align": "center",
+                                "flex": 1
+                            }
+                        ],
+                        "margin": "lg"
+                    },
+                    {
                         "type": "separator",
                         "margin": "lg"
                     },
                     {
                         "type": "text",
-                        "text": "الخيارات:",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "margin": "lg",
-                        "weight": "bold"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": f"أ) {question_data['options'][0]}    ب) {question_data['options'][1]}",
-                                "size": "md",
-                                "color": colors["text"],
-                                "margin": "sm"
-                            },
-                            {
-                                "type": "text",
-                                "text": f"ج) {question_data['options'][2]}    د) {question_data['options'][3]}",
-                                "size": "md",
-                                "color": colors["text"],
-                                "margin": "sm"
-                            }
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "15px",
-                        "paddingAll": "15px",
-                        "margin": "md"
-                    },
-                    {
-                        "type": "text",
-                        "text": "📝 اكتب 'جاوب' للكشف عن الإجابة",
+                        "text": "💡 اكتب 'لمح' للتلميح\n📝 اكتب 'جاوب' للكشف عن الإجابة",
                         "size": "xs",
                         "color": colors["text2"],
                         "align": "center",
@@ -249,6 +226,39 @@ class MathGame(BaseGame):
         
         return self._create_flex_with_buttons("لعبة الرياضيات", flex_content)
 
+    def get_hint(self) -> str:
+        """
+        الحصول على تلميح للسؤال الحالي
+        
+        العودة:
+            str: التلميح
+        """
+        if not hasattr(self, 'current_question_data'):
+            return "💡 لا يوجد تلميح متاح"
+        
+        q_data = self.current_question_data
+        answer = int(self.current_answer)
+        
+        # تلميحات مختلفة حسب العملية
+        if q_data['operation'] == '+':
+            hint = f"💡 اجمع {q_data['num1']} + {q_data['num2']}"
+        elif q_data['operation'] == '-':
+            hint = f"💡 اطرح {q_data['num2']} من {q_data['num1']}"
+        elif q_data['operation'] == '×':
+            hint = f"💡 اضرب {q_data['num1']} × {q_data['num2']}"
+        else:
+            hint = f"💡 اقسم {q_data['num1']} ÷ {q_data['num2']}"
+        
+        # إضافة تلميح عن نطاق الإجابة
+        if answer < 10:
+            hint += f"\n🔢 الإجابة أقل من 10"
+        elif answer < 50:
+            hint += f"\n🔢 الإجابة بين 10 و 50"
+        else:
+            hint += f"\n🔢 الإجابة أكبر من 50"
+        
+        return hint
+
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         """
         التحقق من إجابة اللاعب
@@ -261,12 +271,23 @@ class MathGame(BaseGame):
         العودة:
             dict: نتيجة الإجابة أو None إذا كانت خاطئة
         """
+        # التحقق من حالة اللعبة
         if not self.game_active:
             return None
 
-        normalized_answer = self.normalize_text(user_answer).strip()
+        # تنظيم الإجابة
+        normalized_answer = self.normalize_text(user_answer.strip())
 
-        # معالجة أمر كشف الإجابة
+        # ===== معالجة أمر التلميح =====
+        if normalized_answer == "لمح":
+            hint = self.get_hint()
+            return {
+                "message": hint,
+                "response": self._create_text_message(hint),
+                "points": 0
+            }
+
+        # ===== معالجة أمر كشف الإجابة =====
         if normalized_answer == "جاوب":
             reveal = self.reveal_answer()
             next_question = self.next_question()
@@ -281,29 +302,53 @@ class MathGame(BaseGame):
                 'points': 0
             }
 
-        # التحقق من الإجابة
-        if normalized_answer == self.current_answer:
-            # إجابة صحيحة
-            points = self.add_score(user_id, display_name, 10)
-            next_question = self.next_question()
-            
-            if isinstance(next_question, dict) and next_question.get('game_over'):
-                next_question['points'] = points
-                return next_question
-            
-            success_message = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة"
-            
+        # ===== التحقق من صحة الإجابة =====
+        # إزالة المسافات والرموز غير الرقمية
+        try:
+            user_number = int(normalized_answer.replace(' ', ''))
+            correct_number = int(self.current_answer)
+            is_valid = (user_number == correct_number)
+        except ValueError:
+            # إجابة غير رقمية
             return {
-                "message": success_message,
-                "response": next_question,
-                "points": points
+                "message": "❌ يجب أن تكون الإجابة رقماً",
+                "response": self._create_text_message("❌ يجب أن تكون الإجابة رقماً"),
+                "points": 0
             }
-        
+
         # إجابة خاطئة
+        if not is_valid:
+            return {
+                "message": "▫️ إجابة غير صحيحة ▪️",
+                "response": self._create_text_message("▫️ إجابة غير صحيحة ▪️"),
+                "points": 0
+            }
+
+        # ===== إجابة صحيحة =====
+        # حساب النقاط حسب الصعوبة
+        difficulty_bonus = {
+            'easy': 10,
+            'medium': 15,
+            'hard': 20
+        }
+        points = difficulty_bonus.get(self.difficulty, 10)
+        points = self.add_score(user_id, display_name, points)
+        
+        # الانتقال للسؤال التالي
+        next_question = self.next_question()
+        
+        # التحقق من انتهاء اللعبة
+        if isinstance(next_question, dict) and next_question.get('game_over'):
+            next_question['points'] = points
+            return next_question
+        
+        # رسالة النجاح
+        success_message = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة"
+        
         return {
-            "message": "❌ إجابة غير صحيحة",
-            "response": self._create_text_message("❌ إجابة غير صحيحة"),
-            "points": 0
+            "message": success_message,
+            "response": next_question,
+            "points": points
         }
 
     def get_game_info(self) -> Dict[str, Any]:
@@ -318,18 +363,27 @@ class MathGame(BaseGame):
             "emoji": "🔢",
             "description": "حل مسائل رياضية بسيطة",
             "questions_count": self.questions_count,
+            "difficulty_levels": 3,
             "supports_hint": self.supports_hint,
             "supports_reveal": self.supports_reveal,
             "active": self.game_active,
             "current_question": self.current_question,
-            "players_count": len(self.scores),
-            "difficulty": self.difficulty
+            "players_count": len(self.scores)
         }
+
+
+# ============================================================================
+# Alias للـ IqGame إذا أردت استخدام نفس الكود
+# ============================================================================
+# (محذوف لأن MathGame مستقلة)
 
 
 # ============================================================================
 # مثال على الاستخدام
 # ============================================================================
 if __name__ == "__main__":
+    """
+    مثال على كيفية استخدام اللعبة
+    """
     print("✅ ملف لعبة الرياضيات جاهز للاستخدام!")
     print("📝 تأكد من استخدام: from games.base_game import BaseGame")
