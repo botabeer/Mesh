@@ -38,10 +38,10 @@ AI_ENABLED = len(GEMINI_API_KEYS) > 0
 # =============================================================================
 # Points System
 # =============================================================================
-POINTS_PER_WIN = 10          # عدد النقاط لكل فوز في اللعبة
-POINTS_PER_CORRECT = 10      # عدد النقاط لكل إجابة صحيحة
-POINTS_PER_HINT = -2         # خصم النقاط عند استخدام تلميح
-POINTS_PER_SKIP = -1         # خصم النقاط عند تخطي السؤال
+POINTS_PER_WIN = 10
+POINTS_PER_CORRECT = 10
+POINTS_PER_HINT = -2
+POINTS_PER_SKIP = -1
 
 # =============================================================================
 # Game Settings
@@ -68,11 +68,11 @@ GAMES_LIST = {
 }
 
 # =============================================================================
-# Bot Behavior
+# Bot Behavior - تم التعديل هنا
 # =============================================================================
 BOT_SETTINGS = {
-    "silent_mode": True,
-    "registered_users_only": True,
+    "silent_mode": False,  # ✅ تم تعطيل الوضع الصامت
+    "registered_users_only": False,  # ✅ السماح لجميع المستخدمين
     "auto_delete_after_days": 7,
     "max_active_games": 10
 }
@@ -106,3 +106,4 @@ print("✅ Configuration loaded successfully!")
 print(f"✅ AI Features: {'Enabled' if AI_ENABLED else 'Disabled'}")
 print(f"✅ AI Keys Available: {len(GEMINI_API_KEYS)}")
 print(f"✅ Available Games: {len(GAMES_LIST)}")
+print(f"✅ Silent Mode: {'Disabled' if not BOT_SETTINGS['silent_mode'] else 'Enabled'}")
