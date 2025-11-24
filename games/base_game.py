@@ -1,7 +1,12 @@
+# -*- coding: utf-8 -*-
 """
-Bot Mesh - Base Game Class (Enhanced & Fixed)
+Bot Mesh - Base Game Class (LINE Compatible)
 Created by: Abeer Aldosari © 2025
+
+⚠️ CRITICAL: LINE doesn't support 'margin' in Flex Messages!
+✅ Use 'spacing' in box layout instead
 """
+
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Set
 from dataclasses import dataclass
@@ -9,7 +14,7 @@ from datetime import datetime
 import re
 import logging
 
-# LINE SDK v3 imports
+# LINE SDK v3 imports (CORRECT)
 from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
 
 logger = logging.getLogger(__name__)
@@ -17,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PlayerScore:
+    """بيانات اللاعب"""
     user_id: str
     display_name: str
     points: int = 0
@@ -24,7 +30,17 @@ class PlayerScore:
 
 
 class BaseGame(ABC):
-    def __init__(self, line_bot_api, questions_count: int = 10, rounds: int = None):
+    """الكلاس الأساسي لجميع الألعاب"""
+    
+    def __init__(self, line_bot_api, questions_count: int = 5, rounds: int = None):
+        """
+        تهيئة اللعبة
+        
+        Args:
+            line_bot_api: واجهة LINE Bot API
+            questions_count: عدد الأسئلة
+            rounds: عدد الجولات (افتراضي = questions_count)
+        """
         self.line_bot_api = line_bot_api
         self.questions_count = questions_count
         self.rounds = rounds if rounds is not None else questions_count
@@ -35,42 +51,49 @@ class BaseGame(ABC):
         self.scores: Dict[str, PlayerScore] = {}
         self.answered_users: Set[str] = set()
         self.created_at = datetime.now()
-        self.theme = "white"
+        self.theme = "💜"  # Default theme emoji
         self.supports_hint = True
         self.supports_reveal = True
     
     @abstractmethod
     def start_game(self) -> Any:
-        """Start the game and return first question"""
+        """بدء اللعبة وإرجاع أول سؤال"""
         pass
     
     @abstractmethod
     def check_answer(self, answer: str, uid: str, name: str) -> Optional[Dict[str, Any]]:
-        """Check player answer"""
+        """التحقق من إجابة اللاعب"""
         pass
     
     def generate_question(self) -> Any:
-        """Generate a new question - override in subclass if needed"""
+        """توليد سؤال جديد - override في اللعبة"""
         pass
     
     def get_question(self) -> Any:
-        """Get current question - override in subclass if needed"""
+        """الحصول على السؤال الحالي - override في اللعبة"""
         pass
     
-    def set_theme(self, theme_name: str):
-        """Set game theme"""
-        self.theme = theme_name
+    def set_theme(self, theme_emoji: str):
+        """تعيين ثيم اللعبة"""
+        self.theme = theme_emoji
     
-    def get_theme_colors(self):
-        """Get current theme colors"""
+    def get_theme_colors(self) -> Dict[str, str]:
+        """الحصول على ألوان الثيم الحالي"""
+        # Theme mapping
+        theme_map = {
+            "💜": "purple",
+            "💚": "green",
+            "🤍": "white",
+            "🖤": "black",
+            "💙": "blue",
+            "🩶": "gray",
+            "🩷": "pink",
+            "🧡": "orange",
+            "🤎": "brown"
+        }
+        
+        # Theme colors (LINE Compatible)
         themes_config = {
-            "white": {
-                "bg": "#F8F9FA",
-                "card": "#FFFFFF",
-                "primary": "#667EEA",
-                "text": "#2D3748",
-                "text2": "#718096"
-            },
             "purple": {
                 "bg": "#F3E8FF",
                 "card": "#FAF5FF",
@@ -84,6 +107,13 @@ class BaseGame(ABC):
                 "primary": "#38B2AC",
                 "text": "#234E52",
                 "text2": "#2C7A7B"
+            },
+            "white": {
+                "bg": "#F8F9FA",
+                "card": "#FFFFFF",
+                "primary": "#667EEA",
+                "text": "#2D3748",
+                "text2": "#718096"
             },
             "black": {
                 "bg": "#1A202C",
@@ -129,70 +159,72 @@ class BaseGame(ABC):
             }
         }
         
-        # تحويل الثيم من emoji إلى اسم
-        theme_map = {
-            "💜": "purple",
-            "💚": "green",
-            "🤍": "white",
-            "🖤": "black",
-            "💙": "blue",
-            "🩶": "gray",
-            "🩷": "pink",
-            "🧡": "orange",
-            "🤎": "brown"
-        }
-        
         theme_name = theme_map.get(self.theme, "white")
         return themes_config.get(theme_name, themes_config["white"])
     
     def normalize_text(self, text: str) -> str:
-        """Normalize Arabic text"""
+        """تطبيع النص العربي"""
         if not text:
             return ""
+        
+        # إزالة التشكيل
         t = re.sub(r'[\u0617-\u061A\u064B-\u0652]', '', text)
-        t = re.sub(r'[إأآا]', 'ا', t)
+        
+        # توحيد الهمزات
+        t = re.sub(r'[أإآ]', 'ا', t)
+        
+        # توحيد التاء المربوطة والهاء
         t = re.sub(r'[ة]', 'ه', t)
+        
+        # توحيد الياء
         t = re.sub(r'[ىئ]', 'ي', t)
+        
         return ' '.join(t.split()).strip()
     
     def add_score(self, uid: str, name: str, pts: int) -> int:
-        """Add score for a player"""
+        """إضافة نقاط للاعب"""
         if uid not in self.scores:
             self.scores[uid] = PlayerScore(uid, name)
+        
         self.scores[uid].points += pts
         self.scores[uid].correct += 1
         self.answered_users.add(uid)
+        
         return pts
     
     def add_player_score(self, uid: str, pts: int):
-        """Add points to player (compatibility method)"""
+        """إضافة نقاط (طريقة بديلة للتوافق)"""
         if uid in self.scores:
             self.scores[uid].points += pts
         else:
             self.scores[uid] = PlayerScore(uid, "Player", pts, 1)
     
     def get_hint(self) -> str:
-        """Get hint for current answer"""
+        """الحصول على تلميح"""
         if not self.current_answer:
             return "لا يوجد تلميح"
-        a = str(self.current_answer).strip()
-        first_char = a[0] if a else "؟"
-        length = len(a)
+        
+        answer_str = str(self.current_answer).strip()
+        first_char = answer_str[0] if answer_str else "؟"
+        length = len(answer_str)
+        
         return f"💡 تلميح: أول حرف '{first_char}' وعدد الحروف {length}"
     
     def reveal_answer(self) -> str:
-        """Reveal the correct answer"""
-        return f"📝 الإجابة: {self.current_answer}"
+        """كشف الإجابة الصحيحة"""
+        return f"📝 الإجابة الصحيحة: {self.current_answer}"
     
     def next_question(self) -> Any:
-        """Move to next question"""
+        """الانتقال للسؤال التالي"""
         self.current_question += 1
         self.current_round += 1
         self.answered_users.clear()
         
+        # التحقق من انتهاء اللعبة
         if self.current_question >= self.questions_count:
             return self.end_game()
         
+        # محاولة الحصول على السؤال التالي
         try:
             return self.get_question()
         except:
@@ -202,20 +234,28 @@ class BaseGame(ABC):
                 return self.end_game()
     
     def end_game(self) -> Dict[str, Any]:
-        """End the game and show results"""
+        """إنهاء اللعبة وعرض النتائج"""
         self.game_active = False
         
-        sorted_players = sorted(self.scores.values(), key=lambda x: x.points, reverse=True)
+        # ترتيب اللاعبين حسب النقاط
+        sorted_players = sorted(
+            self.scores.values(),
+            key=lambda x: x.points,
+            reverse=True
+        )
         
+        # بناء رسالة النتائج
         msg = "🏁 انتهت اللعبة\n" + "─" * 20 + "\n\n"
         
         if sorted_players:
-            msg += "🏆 النتائج:\n\n"
+            msg += "🏆 النتائج النهائية:\n\n"
             medals = ["🥇", "🥈", "🥉"]
-            for i, p in enumerate(sorted_players[:10]):
+            
+            for i, player in enumerate(sorted_players[:10]):
                 medal = medals[i] if i < 3 else f"{i+1}."
-                msg += f"{medal} {p.display_name}: {p.points} نقطة\n"
-            msg += f"\n🎉 مبروك {sorted_players[0].display_name}!"
+                msg += f"{medal} {player.display_name}: {player.points} نقطة\n"
+            
+            msg += f"\n🎉 مبروك للفائز: {sorted_players[0].display_name}!"
         else:
             msg += "لم يشارك أحد في اللعبة"
         
@@ -228,28 +268,97 @@ class BaseGame(ABC):
         }
     
     def _create_text_message(self, text: str):
-        """Create LINE text message (SDK v3)"""
+        """إنشاء رسالة نصية LINE"""
         if not text or not text.strip():
             text = "رسالة فارغة"
         return TextMessage(text=text)
     
     def _create_flex_message(self, alt_text: str, contents: dict):
-        """Create LINE Flex message (SDK v3)"""
+        """إنشاء Flex Message LINE"""
         if not alt_text:
             alt_text = "رسالة"
+        
         return FlexMessage(
-            altText=alt_text,
+            alt_text=alt_text,
             contents=FlexContainer.from_dict(contents)
         )
     
-    def _create_flex_with_buttons(self, alt_text: str, flex_content: dict):
-        """Create Flex message with fixed buttons"""
-        # إضافة أزرار ثابتة إذا لم تكن موجودة
-        if "footer" not in flex_content:
-            colors = self.get_theme_colors()
-            flex_content["footer"] = {
+    def build_question_flex(self, title: str, question: str, extra_info: str = ""):
+        """بناء Flex Message للسؤال (LINE Compatible)"""
+        colors = self.get_theme_colors()
+        
+        # Body contents
+        body_contents = [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": question,
+                        "size": "lg",
+                        "color": colors["text"],
+                        "wrap": True,
+                        "weight": "bold",
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": colors["card"],
+                "cornerRadius": "20px",
+                "paddingAll": "25px"
+            }
+        ]
+        
+        # إضافة معلومات إضافية إن وجدت
+        if extra_info:
+            body_contents.append({
+                "type": "text",
+                "text": extra_info,
+                "size": "sm",
+                "color": colors["text2"],
+                "align": "center",
+                "wrap": True
+            })
+        
+        flex_content = {
+            "type": "bubble",
+            "size": "kilo",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": title,
+                        "weight": "bold",
+                        "size": "xl",
+                        "color": "#FFFFFF",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"الجولة {self.current_round + 1}/{self.rounds}",
+                        "size": "sm",
+                        "color": "#FFFFFF",
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": colors["primary"],
+                "paddingAll": "20px"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "lg",
+                "contents": body_contents,
+                "backgroundColor": colors["bg"],
+                "paddingAll": "20px"
+            },
+            "footer": {
                 "type": "box",
                 "layout": "horizontal",
+                "spacing": "sm",
                 "contents": [
                     {
                         "type": "button",
@@ -271,77 +380,7 @@ class BaseGame(ABC):
                         "style": "primary",
                         "height": "sm"
                     }
-                ],
-                "spacing": "sm",
-                "margin": "md"
-            }
-        
-        return self._create_flex_message(alt_text, flex_content)
-    
-    def build_question_flex(self, title: str, question: str, extra_info: str = ""):
-        """Build modern 3D question Flex message"""
-        colors = self.get_theme_colors()
-        
-        flex_content = {
-            "type": "bubble",
-            "size": "kilo",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": title,
-                        "weight": "bold",
-                        "size": "xl",
-                        "color": "#FFFFFF",
-                        "align": "center"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"الجولة {self.current_round + 1}/{self.rounds}",
-                        "size": "sm",
-                        "color": "#FFFFFF",
-                        "align": "center",
-                        "margin": "sm"
-                    }
-                ],
-                "backgroundColor": colors["primary"],
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": question,
-                                "size": "lg",
-                                "color": colors["text"],
-                                "wrap": True,
-                                "weight": "bold",
-                                "align": "center"
-                            }
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "25px"
-                    }
-                ] + ([{
-                    "type": "text",
-                    "text": extra_info,
-                    "size": "sm",
-                    "color": colors["text2"],
-                    "align": "center",
-                    "margin": "lg",
-                    "wrap": True
-                }] if extra_info else []),
-                "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
+                ]
             },
             "styles": {
                 "body": {
@@ -353,10 +392,10 @@ class BaseGame(ABC):
             }
         }
         
-        return self._create_flex_with_buttons(title, flex_content)
+        return self._create_flex_message(title, flex_content)
     
     def build_result_flex(self, player_name: str, result_text: str, points: int, is_final: bool = False):
-        """Build modern 3D result Flex message"""
+        """بناء Flex Message للنتيجة (LINE Compatible)"""
         colors = self.get_theme_colors()
         
         status_color = colors["primary"] if points > 0 else "#EF4444"
@@ -384,10 +423,12 @@ class BaseGame(ABC):
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "md",
                 "contents": [
                     {
                         "type": "box",
                         "layout": "vertical",
+                        "spacing": "md",
                         "contents": [
                             {
                                 "type": "text",
@@ -398,8 +439,7 @@ class BaseGame(ABC):
                                 "align": "center"
                             },
                             {
-                                "type": "separator",
-                                "margin": "md"
+                                "type": "separator"
                             },
                             {
                                 "type": "text",
@@ -407,8 +447,7 @@ class BaseGame(ABC):
                                 "size": "md",
                                 "color": colors["text2"],
                                 "wrap": True,
-                                "align": "center",
-                                "margin": "md"
+                                "align": "center"
                             },
                             {
                                 "type": "text",
@@ -416,8 +455,7 @@ class BaseGame(ABC):
                                 "size": "lg",
                                 "color": colors["primary"],
                                 "weight": "bold",
-                                "align": "center",
-                                "margin": "md"
+                                "align": "center"
                             }
                         ],
                         "backgroundColor": colors["card"],
@@ -427,7 +465,72 @@ class BaseGame(ABC):
                 ],
                 "backgroundColor": colors["bg"],
                 "paddingAll": "20px"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "Games",
+                            "text": "Games"
+                        },
+                        "style": "primary",
+                        "height": "sm"
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "Home",
+                            "text": "Home"
+                        },
+                        "style": "secondary",
+                        "height": "sm"
+                    }
+                ]
             }
         }
         
-        return self._create_flex_with_buttons("نتيجة", flex_content)
+        return self._create_flex_message("نتيجة", flex_content)
+
+
+# ============================================================================
+# Utility Functions
+# ============================================================================
+
+def create_simple_question(title: str, text: str, theme_colors: dict) -> dict:
+    """إنشاء سؤال بسيط بدون margin"""
+    return {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": title,
+                    "weight": "bold",
+                    "size": "xl",
+                    "color": theme_colors["primary"]
+                },
+                {
+                    "type": "separator"
+                },
+                {
+                    "type": "text",
+                    "text": text,
+                    "size": "md",
+                    "color": theme_colors["text"],
+                    "wrap": True
+                }
+            ],
+            "backgroundColor": theme_colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
