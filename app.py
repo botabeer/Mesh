@@ -1,5 +1,5 @@
 """
-Bot Mesh - Main Application (Enhanced with Rich Menu & Themes)
+Bot Mesh - Main Application (Fixed & Enhanced)
 Created by: Abeer Aldosari © 2025
 """
 import os
@@ -18,19 +18,13 @@ from linebot.v3.messaging import (
     FlexMessage,
     FlexContainer
 )
-from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent (
-    MessageEvent,
-    TextMessageContent,
-    FollowEvent,
-    MentionEvent
-)
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 
 # استيراد المكونات
 from config import LINE_TOKEN, LINE_SECRET, DB_PATH, THEMES
 from database import DB
 from flex_builder import FlexBuilder
 from game_manager import GameManager
-from rich_menu_manager import RichMenuManager
 
 # استيراد جميع الألعاب تلقائياً
 from games import *
@@ -51,7 +45,6 @@ handler = WebhookHandler(LINE_SECRET)
 # Initialize managers
 db = DB(DB_PATH)
 gm = GameManager()
-rich_menu_mgr = RichMenuManager(LINE_TOKEN)
 
 # ==================== قاموس الألعاب ====================
 GAMES = {
@@ -122,174 +115,11 @@ def send_text_reply(reply_token, text):
     return False
 
 def create_welcome_flex(uid):
-    """نافذة الترحيب مع الأوامر والثيمات"""
+    """نافذة الترحيب"""
     theme = get_theme(uid)
     colors = THEMES[theme]
     user = db.get_user(uid)
     name = user['name'] if user else 'عزيزي اللاعب'
-    
-    return {
-        "type": "carousel",
-        "contents": [
-            # البطاقة الأولى: الترحيب والأوامر
-            {
-                "type": "bubble",
-                "size": "mega",
-                "header": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "🎮 Bot Mesh",
-                            "size": "xxl",
-                            "weight": "bold",
-                            "color": colors["text"],
-                            "align": "center"
-                        },
-                        {
-                            "type": "text",
-                            "text": "بوت الألعاب الترفيهية",
-                            "size": "sm",
-                            "color": colors["text2"],
-                            "align": "center",
-                            "margin": "sm"
-                        }
-                    ],
-                    "backgroundColor": colors["bg"],
-                    "paddingAll": "20px"
-                },
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": f"مرحباً {name} 👋",
-                            "size": "lg",
-                            "weight": "bold",
-                            "color": colors["primary"],
-                            "align": "center",
-                            "margin": "md"
-                        },
-                        {
-                            "type": "separator",
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "text",
-                            "text": "📚 الأوامر المتاحة:",
-                            "size": "md",
-                            "weight": "bold",
-                            "color": colors["text"],
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "👥 انضم - التسجيل في الألعاب", "size": "sm", "color": colors["text2"], "margin": "md"},
-                                {"type": "text", "text": "🚪 انسحب - الانسحاب من اللعبة", "size": "sm", "color": colors["text2"], "margin": "sm"},
-                                {"type": "text", "text": "⛔ إيقاف - إنهاء اللعبة الحالية", "size": "sm", "color": colors["text2"], "margin": "sm"},
-                                {"type": "text", "text": "📊 إحصائيات - عرض نقاطك", "size": "sm", "color": colors["text2"], "margin": "sm"},
-                                {"type": "text", "text": "❓ مساعدة - عرض المساعدة", "size": "sm", "color": colors["text2"], "margin": "sm"},
-                                {"type": "text", "text": "🎨 ثيم - تغيير الألوان", "size": "sm", "color": colors["text2"], "margin": "sm"}
-                            ],
-                            "backgroundColor": colors["card"],
-                            "cornerRadius": "15px",
-                            "paddingAll": "15px",
-                            "margin": "md"
-                        },
-                        {
-                            "type": "text",
-                            "text": "اضغط على الألعاب بالأسفل للبدء! 🎯",
-                            "size": "sm",
-                            "color": colors["primary"],
-                            "align": "center",
-                            "margin": "lg",
-                            "wrap": True
-                        }
-                    ],
-                    "backgroundColor": colors["bg"],
-                    "paddingAll": "20px"
-                },
-                "footer": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🎨 اختر الثيم", "text": "ثيم"},
-                            "style": "primary",
-                            "color": colors["primary"],
-                            "height": "sm"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "❓ مساعدة", "text": "مساعدة"},
-                            "style": "secondary",
-                            "margin": "sm",
-                            "height": "sm"
-                        }
-                    ],
-                    "backgroundColor": colors["bg"],
-                    "paddingAll": "15px"
-                }
-            },
-            # البطاقة الثانية: قائمة الألعاب
-            create_games_list_flex(colors)
-        ]
-    }
-
-def create_games_list_flex(colors):
-    """بطاقة قائمة الألعاب"""
-    games_info = [
-        {"name": "ذكاء", "icon": "🧠", "desc": "أسئلة ذكاء"},
-        {"name": "لون", "icon": "🎨", "desc": "الكلمة واللون"},
-        {"name": "ترتيب", "icon": "abc", "desc": "ترتيب الحروف"},
-        {"name": "رياضيات", "icon": "🔢", "desc": "مسائل حسابية"},
-        {"name": "أسرع", "icon": "⚡", "desc": "كتابة سريعة"},
-        {"name": "ضد", "icon": "↔️", "desc": "ضد الكلمة"},
-        {"name": "تكوين", "icon": "✏️", "desc": "تكوين كلمات"},
-        {"name": "أغنية", "icon": "🎵", "desc": "تخمين المغني"},
-        {"name": "لعبة", "icon": "🎯", "desc": "إنسان حيوان"},
-        {"name": "سلسلة", "icon": "🔗", "desc": "سلسلة الكلمات"},
-        {"name": "خمن", "icon": "🤔", "desc": "تخمين الكلمة"},
-        {"name": "توافق", "icon": "💕", "desc": "لعبة التوافق"}
-    ]
-    
-    game_buttons = []
-    for game in games_info:
-        game_buttons.append({
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": f"{game['icon']} {game['name']}",
-                    "size": "md",
-                    "weight": "bold",
-                    "color": colors["text"],
-                    "flex": 3
-                },
-                {
-                    "type": "text",
-                    "text": game['desc'],
-                    "size": "xs",
-                    "color": colors["text2"],
-                    "align": "end",
-                    "flex": 2
-                }
-            ],
-            "action": {
-                "type": "message",
-                "text": game['name']
-            },
-            "backgroundColor": colors["card"],
-            "cornerRadius": "10px",
-            "paddingAll": "12px",
-            "margin": "sm"
-        })
     
     return {
         "type": "bubble",
@@ -300,11 +130,19 @@ def create_games_list_flex(colors):
             "contents": [
                 {
                     "type": "text",
-                    "text": "🎮 الألعاب المتاحة",
-                    "size": "xl",
+                    "text": "🎮 Bot Mesh",
+                    "size": "xxl",
                     "weight": "bold",
                     "color": colors["text"],
                     "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "بوت الألعاب الترفيهية",
+                    "size": "sm",
+                    "color": colors["text2"],
+                    "align": "center",
+                    "margin": "sm"
                 }
             ],
             "backgroundColor": colors["bg"],
@@ -313,14 +151,50 @@ def create_games_list_flex(colors):
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": game_buttons,
+            "contents": [
+                {
+                    "type": "text",
+                    "text": f"مرحباً {name} 👋",
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": colors["primary"],
+                    "align": "center",
+                    "margin": "md"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": "📚 الأوامر المتاحة:",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "margin": "lg"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": "👥 انضم - التسجيل", "size": "sm", "color": colors["text2"], "margin": "md"},
+                        {"type": "text", "text": "📊 إحصائيات - نقاطك", "size": "sm", "color": colors["text2"], "margin": "sm"},
+                        {"type": "text", "text": "❓ مساعدة - الألعاب", "size": "sm", "color": colors["text2"], "margin": "sm"},
+                        {"type": "text", "text": "🎨 ثيم - الألوان", "size": "sm", "color": colors["text2"], "margin": "sm"}
+                    ],
+                    "backgroundColor": colors["card"],
+                    "cornerRadius": "15px",
+                    "paddingAll": "15px",
+                    "margin": "md"
+                }
+            ],
             "backgroundColor": colors["bg"],
-            "paddingAll": "15px"
+            "paddingAll": "20px"
         }
     }
 
 def create_help_flex(uid):
-    """نافذة المساعدة (مثل الصورة)"""
+    """نافذة المساعدة مع الألعاب"""
     theme = get_theme(uid)
     colors = THEMES[theme]
     
@@ -486,7 +360,7 @@ def create_help_flex(uid):
     }
 
 def create_game_card(icon, name, colors):
-    """إنشاء بطاقة لعبة صغيرة"""
+    """إنشاء بطاقة لعبة"""
     return {
         "type": "box",
         "layout": "vertical",
@@ -630,23 +504,10 @@ def on_follow(event):
     name = get_name(uid)
     db.add_or_update_user(uid, name)
     
-    # إرسال نافذة الترحيب
     welcome_flex = create_welcome_flex(uid)
     send_flex_reply(event.reply_token, welcome_flex, 'مرحباً')
     
-    # إنشاء Rich Menu للمستخدم
-    rich_menu_mgr.create_and_link_rich_menu(uid)
-    
     logger.info(f'✅ New follower: {name} ({uid})')
-
-# معالجة المنشن (Mention)
-def handle_mention(event):
-    """معالجة المنشن - إرسال قائمة الألعاب"""
-    uid = event.source.user_id
-    
-    # إرسال نافذة المساعدة
-    help_flex = create_help_flex(uid)
-    send_flex_reply(event.reply_token, help_flex, 'الألعاب')
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event):
@@ -655,28 +516,21 @@ def on_message(event):
     gid = getattr(event.source, 'group_id', uid)
     name = get_name(uid)
     
-    # التحقق من المنشن في المجموعات
-    if hasattr(event.message, 'mention') and event.message.mention:
-        # تم منشن البوت
-        handle_mention(event)
-        return
-    
-    # Update user
     db.add_or_update_user(uid, name)
 
-    # بداية / Start / البداية
+    # بداية
     if txt in ['بداية', 'البداية', 'start', 'Start']:
         welcome_flex = create_welcome_flex(uid)
         send_flex_reply(event.reply_token, welcome_flex, 'مرحباً')
         return
 
-    # مساعدة / Help
+    # مساعدة
     if txt in ['مساعدة', 'help', 'Help', '؟', 'الالعاب']:
         help_flex = create_help_flex(uid)
         send_flex_reply(event.reply_token, help_flex, 'المساعدة')
         return
 
-    # ثيم / Theme
+    # ثيم
     if txt in ['ثيم', 'theme', 'Theme', 'الوان', 'ألوان']:
         theme_flex = create_theme_selector_flex(uid)
         send_flex_reply(event.reply_token, theme_flex, 'الثيمات')
@@ -705,7 +559,7 @@ def on_message(event):
         logger.info(f'ℹ️ User unregistered: {name}')
         return
 
-    # إحصائيات / نقاطي
+    # إحصائيات
     if txt in ['إحصائيات', 'احصائيات', 'stats', 'نقاطي']:
         user = db.get_user(uid)
         if not user:
@@ -756,9 +610,7 @@ def on_message(event):
                 gm.start_game(gid, game, txt)
                 response = game.start_game()
                 
-                # إرسال الرد
                 if hasattr(response, 'altText'):
-                    # FlexMessage
                     line_api.reply_message(
                         ReplyMessageRequest(
                             replyToken=event.reply_token,
@@ -766,7 +618,6 @@ def on_message(event):
                         )
                     )
                 else:
-                    # Dict
                     send_flex_reply(event.reply_token, response, f'لعبة {txt}')
                 
                 logger.info(f'✅ Game started: {txt} in {gid} by {name}')
