@@ -1,230 +1,204 @@
-"""
-Bot Mesh - LINE Bot Application (Enhanced with Fixed Footer & Mentions)
-Created by: Abeer Aldosari © 2025
-"""
-
 import os
 import logging
-from datetime import datetime
-from flask import Flask, request, abort
+from flask import Flask, request, jsonify
+from linebot.v3.messaging import ApiClient, WebhookHandler, FlexSendMessage
+from linebot.v3.messaging.models import TextMessage
 
-from linebot.v3 import WebhookHandler
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import (
-    Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, TextMessage, FlexMessage, FlexContainer
-)
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
-
-# ============================================================================
-# Configuration
-# ============================================================================
-BOT_NAME = "@Bot Mesh"
-BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
-
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
-CHANNEL_ACCESS = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-
-if not CHANNEL_SECRET or not CHANNEL_ACCESS:
-    raise ValueError("❌ Missing LINE credentials!")
-
-# ============================================================================
-# Flask Setup
-# ============================================================================
+# -------------------------------
+# إعداد Flask و Logging
+# -------------------------------
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-configuration = Configuration(access_token=CHANNEL_ACCESS)
-line_bot_api = MessagingApi(ApiClient(configuration))
+# -------------------------------
+# متغيرات البيئة
+# -------------------------------
+CHANNEL_ACCESS = os.environ.get("CHANNEL_ACCESS", "YOUR_CHANNEL_ACCESS")
+CHANNEL_SECRET = os.environ.get("CHANNEL_SECRET", "YOUR_CHANNEL_SECRET")
+
+# -------------------------------
+# LINE API Client
+# -------------------------------
+api_client = ApiClient(CHANNEL_ACCESS)
 handler = WebhookHandler(CHANNEL_SECRET)
 
-# ============================================================================
-# In-Memory Data
-# ============================================================================
-registered_users = {}
-user_themes = {}
-active_games = {}
+# -------------------------------
+# المستخدمين
+# -------------------------------
+USERS = {}  # user_id: {"name": str, "points": int, "theme": str}
 
-# ============================================================================
-# Themes
-# ============================================================================
-THEMES = {
-    "💜": {"primary": "#9F7AEA", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#44337A", "text2": "#6B46C1", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "💚": {"primary": "#48BB78", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#234E52", "text2": "#2C7A7B", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🤍": {"primary": "#667EEA", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#2D3748", "text2": "#718096", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🖤": {"primary": "#667EEA", "bg": "#2D3748", "card": "#3A4556", "text": "#E2E8F0", "text2": "#CBD5E0", "shadow1": "#1A202C", "shadow2": "#414D5F"},
-    "💙": {"primary": "#3182CE", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#2C5282", "text2": "#2B6CB0", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🩶": {"primary": "#718096", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#2D3748", "text2": "#4A5568", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🩷": {"primary": "#D53F8C", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#702459", "text2": "#97266D", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🧡": {"primary": "#DD6B20", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#7C2D12", "text2": "#C05621", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🤎": {"primary": "#8B4513", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#5C2E00", "text2": "#7A4F1D", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"}
-}
-DEFAULT_THEME = "💜"
+# -------------------------------
+# قائمة الألعاب
+# -------------------------------
+GAMES = [
+    "ذكاء","رياضيات","لون","أسرع","ترتيب","أغنية",
+    "كلمة","سلسلة","خمن","توافق","تكوين","ضد"
+]
 
-# ============================================================================
-# Load Games
-# ============================================================================
-AVAILABLE_GAMES = {}
-games_folder = "games"
-try:
-    for file in os.listdir(games_folder):
-        if file.endswith(".py") and not file.startswith("__"):
-            name = file.replace(".py", "")
-            module = __import__(f"games.{name}", fromlist=[name])
-            AVAILABLE_GAMES[name] = getattr(module, name.title())  # expects class name same as file title case
-except Exception as e:
-    logger.error(f"❌ Error loading games: {e}")
+# -------------------------------
+# الأزرار الثابتة أسفل الشاشة
+# -------------------------------
+FOOTER_BUTTONS = [
+    "إيقاف", "ذكاء", "لون", "ترتيب", "رياضيات",
+    "أسرع", "ضد", "تكوين", "أغنية",
+    "لعبة", "سلسلة", "خمن", "توافق"
+]
 
-# ============================================================================
-# Footer Builder (Fixed Buttons)
-# ============================================================================
-def build_fixed_footer(theme="💜"):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    games_buttons = [
-        {"label": "IQ", "text": "لعبة IQ"},
-        {"label": "لون", "text": "لعبة لون الكلمة"},
-        {"label": "ترتيب", "text": "لعبة كلمة مبعثرة"},
-        {"label": "رياضيات", "text": "لعبة رياضيات"},
-        {"label": "أسرع", "text": "لعبة كتابة سريعة"},
-        {"label": "ضد", "text": "لعبة عكس"},
-        {"label": "تكوين", "text": "لعبة حروف وكلمات"},
-        {"label": "أغنية", "text": "لعبة أغنية"},
-        {"label": "لعبة", "text": "لعبة إنسان حيوان نبات"},
-        {"label": "سلسلة", "text": "لعبة سلسلة كلمات"},
-        {"label": "خمن", "text": "لعبة تخمين"},
-        {"label": "توافق", "text": "لعبة توافق"},
-    ]
-    # Arrange buttons in rows of 4
-    rows = [games_buttons[i:i+4] for i in range(0, len(games_buttons), 4)]
-    row_boxes = []
-    for row in rows:
-        row_boxes.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "xs",
-            "contents": [
-                {
-                    "type": "button",
-                    "action": {"type": "message", "label": b["label"], "text": b["text"]},
-                    "style": "secondary",
-                    "height": "sm",
-                    "color": colors["shadow1"]
-                } for b in row
-            ]
+def build_footer():
+    buttons = []
+    for label in FOOTER_BUTTONS:
+        buttons.append({
+            "type": "button",
+            "action": {"type": "postback", "label": label, "data": label},
+            "style": "secondary",
+            "color": "#DDDDDD"
         })
-    # Add Stop + Navigation
-    row_boxes.append({
-        "type": "box",
-        "layout": "horizontal",
-        "spacing": "xs",
-        "contents": [
-            {"type": "button", "action":{"type":"message","label":"إيقاف","text":"إيقاف"},"style":"secondary","height":"sm","color":"#FF5555"},
-            {"type": "button", "action":{"type":"message","label":"بداية","text":"بداية"},"style":"secondary","height":"sm","color":colors["shadow1"]},
-            {"type": "button", "action":{"type":"message","label":"مساعدة","text":"مساعدة"},"style":"secondary","height":"sm","color":colors["shadow1"]},
-        ]
-    })
-    return row_boxes
+    return buttons
 
-# ============================================================================
-# Build Windows
-# ============================================================================
-def build_home(theme="💜", username="مستخدم", points=0, is_registered=False):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    status = "✅ مسجل" if is_registered else "⚠️ غير مسجل"
-    contents = {
+# -------------------------------
+# نافذة البداية
+# -------------------------------
+def build_home_flex(user_id):
+    user = USERS.get(user_id, {"name": "ضيف", "points": 0, "theme": "💜"})
+    flex = {
         "type": "bubble",
-        "body": {"type": "box", "layout": "vertical", "spacing": "md", "contents":[
-            {"type":"text","text":f"🎮 {BOT_NAME}","weight":"bold","size":"xl","color":colors["primary"],"align":"center"},
-            {"type":"text","text":f"▪️ مرحباً: {username}","size":"sm","color":colors["text"]},
-            {"type":"text","text":f"▪️ الحالة: {status}","size":"sm","color":colors["text"]},
-            {"type":"text","text":f"▪️ نقاطك: {points}","size":"sm","color":colors["text"]},
-        ], "backgroundColor": colors["bg"], "paddingAll":"20px"},
-        "footer":{"type":"box","layout":"vertical","spacing":"sm","contents":build_fixed_footer(theme), "backgroundColor": colors["bg"], "paddingAll":"10px"}
+        "header": {"type": "text", "text": "🤖 Bot Mesh", "weight": "bold", "size": "lg"},
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": f"▪️ مرحباً: {user['name']}"},
+                {"type": "text", "text": f"▪️ النقاط: {user['points']}"},
+                {"type": "text", "text": "▪️ اختر ثيمك:"},
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "button", "action": {"type": "postback", "label": t, "data": f"theme_{t}"}} 
+                    for t in ["💜","💚","🤍","🖤","💙","🩶","🩷","🧡","🤎"]
+                ]}
+            ]
+        },
+        "footer": {"type": "box", "layout": "vertical", "contents": build_footer()}
     }
-    return FlexMessage(alt_text="Bot Mesh - البداية", contents=FlexContainer.from_dict(contents))
+    return FlexSendMessage(alt_text="Bot Mesh Home", contents=flex)
 
-def build_games_menu(theme="💜"):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    contents = {
-        "type":"bubble",
-        "body":{"type":"box","layout":"vertical","spacing":"md","contents":[
-            {"type":"text","text":f"🤖 {BOT_NAME} – مساعدة","weight":"bold","size":"xl","color":colors["primary"],"align":"center"},
-            {"type":"text","text":"🎮 الألعاب المتاحة: IQ – لون – ترتيب – رياضيات – أسرع – ضد – تكوين – أغنية – لعبة – سلسلة – خمن – توافق","size":"sm","color":colors["text"],"wrap":True},
-            {"type":"text","text":"📝 الأوامر أثناء اللعب: ▫️ لمح ▫️ جاوب ▫️ إيقاف","size":"sm","color":colors["text"]},
-        ],"backgroundColor": colors["bg"], "paddingAll":"20px"},
-        "footer":{"type":"box","layout":"vertical","spacing":"sm","contents":build_fixed_footer(theme),"backgroundColor":colors["bg"],"paddingAll":"10px"}
+# -------------------------------
+# نافذة المساعدة
+# -------------------------------
+def build_help_flex():
+    commands = ["▫️ لمح → تلميح أول حرف وعدد حروف الكلمة",
+                "▫️ جاوب → لإرسال إجابتك",
+                "▫️ إعادة → لإعادة نفس السؤال",
+                "▫️ إيقاف → لإيقاف اللعبة"]
+    flex = {
+        "type": "bubble",
+        "header": {"type": "text", "text": "🤖 Bot Mesh – مساعدة", "weight": "bold", "size": "lg"},
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "🎮 الألعاب المتاحة:"},
+                {"type": "text", "text": " – ".join(GAMES[:10])},
+                {"type": "text", "text": "📝 الأوامر أثناء اللعب:"},
+            ] + [{"type": "text", "text": cmd} for cmd in commands]
+        },
+        "footer": {"type": "box", "layout": "vertical", "contents": build_footer()}
     }
-    return FlexMessage(alt_text="Bot Mesh - مساعدة", contents=FlexContainer.from_dict(contents))
+    return FlexSendMessage(alt_text="Bot Mesh Help", contents=flex)
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
-def get_username(profile):
-    try: return profile.display_name
-    except: return "مستخدم"
+# -------------------------------
+# نافذة النقاط
+# -------------------------------
+def build_points_flex(user_id):
+    user = USERS.get(user_id, {"name": "ضيف", "points": 0})
+    flex = {
+        "type": "bubble",
+        "header": {"type": "text", "text": "📊 نقاطي", "weight": "bold", "size": "lg"},
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": f"▪️ {user['name']} نقاطه: {user['points']}"},
+                {"type": "text", "text": "⚠️ ملاحظة: سيتم حذف الحساب بعد 7 أيام من عدم النشاط"}
+            ]
+        },
+        "footer": {"type": "box", "layout": "vertical", "contents": build_footer()}
+    }
+    return FlexSendMessage(alt_text="Bot Mesh Points", contents=flex)
 
-def update_user_activity(user_id):
-    if user_id in registered_users:
-        registered_users[user_id]["last_activity"] = datetime.now()
+# -------------------------------
+# نافذة الصدارة
+# -------------------------------
+def build_leaderboard_flex():
+    sorted_users = sorted(USERS.items(), key=lambda x: x[1]["points"], reverse=True)
+    contents = [{"type": "text", "text": f"{idx+1}. {user[1]['name']} - {user[1]['points']}"} for idx, user in enumerate(sorted_users[:10])]
+    flex = {
+        "type": "bubble",
+        "header": {"type": "text", "text": "🏆 الصدارة", "weight": "bold", "size": "lg"},
+        "body": {"type": "box", "layout": "vertical", "contents": contents},
+        "footer": {"type": "box", "layout": "vertical", "contents": build_footer()}
+    }
+    return FlexSendMessage(alt_text="Bot Mesh Leaderboard", contents=flex)
 
-# ============================================================================
-# Routes
-# ============================================================================
-@app.route("/callback", methods=["POST"])
+# -------------------------------
+# مؤشر التقدم بصري
+# -------------------------------
+def progress_bar(current, total, width=12):
+    filled = int((current / total) * width)
+    empty = width - filled
+    return "█"*filled + "░"*empty
+
+# -------------------------------
+# نافذة الجولة
+# -------------------------------
+def build_game_round_flex(game_name, round_number, total_rounds, question, previous_answer="-"):
+    progress = progress_bar(round_number, total_rounds)
+    flex = {
+        "type": "bubble",
+        "header": {"type": "text", "text": f"🕹️ {game_name}", "weight": "bold", "size": "lg"},
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": f"▪️ الجولة {round_number} من {total_rounds}"},
+                {"type": "text", "text": f"التقدم: {progress}"},
+                {"type": "text", "text": f"السؤال: {question}"},
+                {"type": "text", "text": f"✅ الإجابة الصحيحة للجولة السابقة: {previous_answer}"},
+                {"type": "text", "text": "الأوامر المتاحة: ▫️ لمح ▫️ جاوب ▫️ إعادة ▫️ إيقاف"},
+            ]
+        },
+        "footer": {"type": "box", "layout": "vertical", "contents": build_footer()}
+    }
+    return FlexSendMessage(alt_text=f"Game Round {round_number}", contents=flex)
+
+# -------------------------------
+# Webhook
+# -------------------------------
+@app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers.get("X-Line-Signature", "")
-    body = request.get_data(as_text=True)
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        abort(400)
-    except Exception as e:
-        logger.error(f"❌ Error: {e}")
-        abort(500)
-    return "OK"
+    data = request.get_json()
+    user_id = data.get("source", {}).get("userId", "guest")
+    message_text = data.get("message", {}).get("text", "")
 
-@app.route("/", methods=["GET"])
-def home_route():
-    return f"<h1>{BOT_NAME} is running</h1>"
+    if user_id not in USERS:
+        USERS[user_id] = {"name": f"مستخدم {len(USERS)+1}", "points": 0, "theme": "💜"}
 
-# ============================================================================
-# Message Handler
-# ============================================================================
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event):
-    user_id = event.source.user_id
-    text = event.message.text.strip()
-    if not text: return
+    # منشنة البوت
+    if "@Bot Mesh" in message_text:
+        return jsonify({"reply": [build_home_flex(user_id), build_help_flex()]})
 
-    # User registration
-    if user_id not in registered_users:
-        registered_users[user_id] = {"name":"مستخدم","points":0,"is_registered":False,"created_at":datetime.now(),"last_activity":datetime.now()}
-    update_user_activity(user_id)
-    theme = user_themes.get(user_id, DEFAULT_THEME)
+    # الأوامر النصية
+    if message_text.startswith("بداية"):
+        return jsonify({"reply": [build_home_flex(user_id)]})
+    if message_text.startswith("مساعدة"):
+        return jsonify({"reply": [build_help_flex()]})
+    if message_text.startswith("نقاطي"):
+        return jsonify({"reply": [build_points_flex(user_id)]})
+    if message_text.startswith("صدارة"):
+        return jsonify({"reply": [build_leaderboard_flex()]})
 
-    # Mentions
-    if f"@bot mesh" in text.lower():
-        msg = build_home(theme, registered_users[user_id]["name"], registered_users[user_id]["points"], registered_users[user_id]["is_registered"])
-        line_bot_api.reply_message_with_http_info(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
-        return
+    return jsonify({"reply": [{"type": "text", "text": "مرحباً! استخدم @Bot Mesh. لعرض الألعاب."}]})
 
-    # Commands
-    reply = None
-    text_lower = text.lower()
-    if text_lower in ["بداية", "home"]:
-        reply = build_home(theme, registered_users[user_id]["name"], registered_users[user_id]["points"], registered_users[user_id]["is_registered"])
-    elif text_lower in ["مساعدة","games"]:
-        reply = build_games_menu(theme)
-    # Additional commands and games logic here...
-
-    if reply:
-        line_bot_api.reply_message_with_http_info(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
-
-# ============================================================================
-# Run
-# ============================================================================
+# -------------------------------
+# تشغيل التطبيق
+# -------------------------------
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 10000))
-    logger.info(f"🚀 Starting {BOT_NAME} on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=10000)
