@@ -25,7 +25,6 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-# Import from config (without THEMES)
 from config import (
     BOT_NAME,
     LINE_CHANNEL_SECRET,
@@ -36,10 +35,7 @@ from config import (
     GAMES_LIST
 )
 
-# Import THEMES from theme_styles (unified source)
 from theme_styles import THEMES, DEFAULT_THEME, FIXED_BUTTONS
-
-# Import UI Builder
 from ui_builder import UIBuilder
 
 # =============================================================================
@@ -284,6 +280,10 @@ def home():
                     <span><strong>AI Features:</strong></span>
                     <span>{'✅ Enabled' if AI_ENABLED else '❌ Disabled'}</span>
                 </div>
+                <div class="stat-item">
+                    <span><strong>Silent Mode:</strong></span>
+                    <span>{'❌ Disabled' if not BOT_SETTINGS['silent_mode'] else '✅ Enabled'}</span>
+                </div>
             </div>
             
             <div class="footer">
@@ -308,10 +308,8 @@ def handle_message(event):
         if not text:
             return
         
-        # Clean old data periodically
         clean_old_data()
         
-        # Get user profile
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             
@@ -322,7 +320,7 @@ def handle_message(event):
                 logger.warning(f"⚠️ Failed to get user profile: {e}")
                 username = "مستخدم"
             
-            # Initialize user if not exists
+            # ✅ إرسال رسالة ترحيب للمستخدمين الجدد
             if user_id not in registered_users:
                 registered_users[user_id] = {
                     "name": username,
@@ -332,18 +330,29 @@ def handle_message(event):
                     "last_activity": datetime.now()
                 }
                 logger.info(f"✅ New user: {username} ({user_id})")
+                
+                # إرسال نافذة Home تلقائياً
+                current_theme = user_themes.get(user_id, DEFAULT_THEME)
+                welcome_reply = UIBuilder.build_home(current_theme, username, 0, False)
+                
+                try:
+                    line_bot_api.reply_message_with_http_info(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[welcome_reply]
+                        )
+                    )
+                    return
+                except Exception as e:
+                    logger.error(f"❌ Failed to send welcome message: {e}")
             
-            # Update activity
             update_user_activity(user_id)
             
-            # Get current theme
             current_theme = user_themes.get(user_id, DEFAULT_THEME)
             user_data = registered_users[user_id]
             
-            # Response variable
             reply = None
             
-            # Command processing
             text_lower = text.lower()
             
             # ================== FIXED BUTTONS ==================
@@ -439,11 +448,9 @@ def handle_message(event):
                         result = game_instance.check_answer(text, user_id, username)
                         
                         if result:
-                            # Update points
                             if result.get('points', 0) > 0:
                                 registered_users[user_id]['points'] += result['points']
                             
-                            # Game over?
                             if result.get('game_over', False):
                                 del active_games[user_id]
                             
@@ -453,10 +460,8 @@ def handle_message(event):
                         logger.error(f"❌ Error processing game answer: {e}")
                         reply = TextMessage(text="❌ حدث خطأ في معالجة إجابتك")
                 else:
-                    # Silent mode - ignore unknown messages
-                    if BOT_SETTINGS['silent_mode']:
-                        logger.info(f"🔇 Silent mode: Ignoring message from {username}")
-                        return
+                    # ✅ رسالة توجيهية بدلاً من التجاهل
+                    reply = TextMessage(text=f"مرحباً {username}! 👋\nاضغط على 'Home' للبدء أو 'Games' لعرض الألعاب 🎮")
             
             # Send reply
             if reply:
@@ -470,7 +475,7 @@ def handle_message(event):
                 except Exception as e:
                     logger.error(f"❌ Failed to send message: {e}")
             else:
-                logger.warning("⚠️ No reply to send - Silent mode active")
+                logger.warning("⚠️ No reply generated")
                 
     except Exception as e:
         logger.error(f"❌ General error in message handler: {e}", exc_info=True)
@@ -485,5 +490,6 @@ if __name__ == "__main__":
     logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
     logger.info(f"🎨 Available themes: {len(THEMES)}")
     logger.info(f"🤖 AI Features: {'Enabled' if AI_ENABLED else 'Disabled'}")
+    logger.info(f"🔇 Silent Mode: {'Disabled' if not BOT_SETTINGS['silent_mode'] else 'Enabled'}")
     
     app.run(host="0.0.0.0", port=port, debug=False)
