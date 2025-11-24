@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Bot Mesh - Theme & UI Styles
+Bot Mesh - Theme & UI Styles (Unified Source)
 Created by: Abeer Aldosari © 2025
 """
 
-from linebot.v3.messaging import TextMessage, FlexMessage, FlexContainer
-
-# ===================== ثيمات البوت =====================
+# ===================== الثيمات الموحدة =====================
 THEMES = {
     "💜": {
+        "name": "purple",
+        "color": "#9F7AEA",
         "bg": "#F3E8FF",
         "card": "#FAF5FF",
         "primary": "#9F7AEA",
@@ -16,6 +16,8 @@ THEMES = {
         "text2": "#6B46C1"
     },
     "💚": {
+        "name": "green",
+        "color": "#48BB78",
         "bg": "#E6FFFA",
         "card": "#F0FFF4",
         "primary": "#38B2AC",
@@ -23,6 +25,8 @@ THEMES = {
         "text2": "#2C7A7B"
     },
     "🤍": {
+        "name": "white",
+        "color": "#CBD5E0",
         "bg": "#F8F9FA",
         "card": "#FFFFFF",
         "primary": "#667EEA",
@@ -30,6 +34,8 @@ THEMES = {
         "text2": "#718096"
     },
     "🖤": {
+        "name": "black",
+        "color": "#2D3748",
         "bg": "#1A202C",
         "card": "#2D3748",
         "primary": "#667EEA",
@@ -37,6 +43,8 @@ THEMES = {
         "text2": "#CBD5E0"
     },
     "💙": {
+        "name": "blue",
+        "color": "#3182CE",
         "bg": "#EBF8FF",
         "card": "#BEE3F8",
         "primary": "#3182CE",
@@ -44,6 +52,8 @@ THEMES = {
         "text2": "#2B6CB0"
     },
     "🩶": {
+        "name": "gray",
+        "color": "#718096",
         "bg": "#F7FAFC",
         "card": "#EDF2F7",
         "primary": "#718096",
@@ -51,6 +61,8 @@ THEMES = {
         "text2": "#4A5568"
     },
     "🩷": {
+        "name": "pink",
+        "color": "#ED64A6",
         "bg": "#FFF5F7",
         "card": "#FED7E2",
         "primary": "#D53F8C",
@@ -58,6 +70,8 @@ THEMES = {
         "text2": "#97266D"
     },
     "🧡": {
+        "name": "orange",
+        "color": "#DD6B20",
         "bg": "#FFFAF0",
         "card": "#FEEBC8",
         "primary": "#DD6B20",
@@ -65,6 +79,8 @@ THEMES = {
         "text2": "#C05621"
     },
     "🤎": {
+        "name": "brown",
+        "color": "#8B4513",
         "bg": "#F7F3EF",
         "card": "#EDE0D4",
         "primary": "#8B4513",
@@ -76,86 +92,9 @@ THEMES = {
 DEFAULT_THEME = "💜"
 
 # ===================== الأزرار الثابتة =====================
-FIXED_BUTTONS = {
-    "home": "Home",
-    "games": "Games",
-    "info": "Info",
-    "stop": "إيقاف"
-}
+FIXED_BUTTONS = ["Home", "Games", "Info"]
 
-# ===================== Flex Builders =====================
-class UIBuilder:
-    """بناء الرسائل والواجهات Flex Messages"""
-
-    @staticmethod
-    def build_home(theme, username, points, is_registered):
-        colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-        content = {
-            "type": "bubble",
-            "size": "kilo",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": [
-                    {"type": "text", "text": f"مرحباً {username}", "size": "lg", "weight": "bold", "color": colors["primary"], "align": "center"},
-                    {"type": "text", "text": f"نقاطك: {points}", "size": "md", "color": colors["text"], "align": "center"},
-                    {"type": "text", "text": "اختر لعبة أو زر من الأسفل", "size": "sm", "color": colors["text2"], "align": "center"}
-                ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "20px",
-                "paddingAll": "20px"
-            }
-        }
-        return FlexMessage(alt_text="Home", contents=FlexContainer.from_dict(content))
-
-    @staticmethod
-    def build_games_menu(theme):
-        colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-        content = {
-            "type": "bubble",
-            "size": "kilo",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": [
-                    {"type": "text", "text": "🎮 قائمة الألعاب", "size": "lg", "weight": "bold", "color": colors["primary"], "align": "center"},
-                    {"type": "text", "text": "اختر اللعبة التي تريدها من القائمة", "size": "sm", "color": colors["text2"], "align": "center"}
-                ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "20px",
-                "paddingAll": "20px"
-            }
-        }
-        return FlexMessage(alt_text="Games Menu", contents=FlexContainer.from_dict(content))
-
-    @staticmethod
-    def build_info(theme):
-        colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-        content = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "ℹ️ معلومات البوت", "size": "lg", "weight": "bold", "color": colors["primary"], "align": "center"},
-                    {"type": "text", "text": "تم تطوير البوت بواسطة عبير الدوسري\n© 2025", "size": "sm", "color": colors["text2"], "align": "center"}
-                ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "20px",
-                "paddingAll": "20px"
-            }
-        }
-        return FlexMessage(alt_text="Info", contents=FlexContainer.from_dict(content))
-
-    @staticmethod
-    def build_my_points(username, points, theme):
-        colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-        return TextMessage(text=f"🏅 {username}, لديك {points} نقطة")
-
-    @staticmethod
-    def build_leaderboard(sorted_users, theme):
-        colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-        text = "🏆 الصدارة:\n" + "\n".join([f"{i+1}. {name}: {pts}" for i, (name, pts) in enumerate(sorted_users)])
-        return TextMessage(text=text)
+# ===================== دالة مساعدة =====================
+def get_theme_colors(theme_emoji):
+    """الحصول على ألوان الثيم المطلوب"""
+    return THEMES.get(theme_emoji, THEMES[DEFAULT_THEME])
