@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Bot Mesh - LINE Bot Application (Optimized & LINE Compatible)
 Created by: Abeer Aldosari © 2025
