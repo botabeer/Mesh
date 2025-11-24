@@ -19,21 +19,24 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 
+# استيراد UI Builder
+from ui_builder import UIBuilder
+
 # ==================== Configuration ====================
 LINE_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
 LINE_SECRET = os.getenv('LINE_CHANNEL_SECRET', '')
 DB_PATH = os.getenv('DB_PATH', 'data/game.db')
 
 THEMES = {
-    'white': {'bg': '#E0E5EC', 'card': '#D1D9E6', 'primary': '#667EEA', 'text': '#1A202C', 'text2': '#4A5568', 'name': 'أبيض', 'emoji': '🤍'},
-    'black': {'bg': '#0F0F1A', 'card': '#1A1A2E', 'primary': '#00D9FF', 'text': '#F7FAFC', 'text2': '#CBD5E0', 'name': 'أسود', 'emoji': '🖤'},
-    'gray': {'bg': '#2D3748', 'card': '#4A5568', 'primary': '#68D391', 'text': '#F7FAFC', 'text2': '#E2E8F0', 'name': 'رمادي', 'emoji': '🩶'},
-    'blue': {'bg': '#1E3A8A', 'card': '#1E40AF', 'primary': '#60A5FA', 'text': '#F0F9FF', 'text2': '#BFDBFE', 'name': 'أزرق', 'emoji': '💙'},
-    'green': {'bg': '#14532D', 'card': '#166534', 'primary': '#4ADE80', 'text': '#F0FDF4', 'text2': '#BBF7D0', 'name': 'أخضر', 'emoji': '💚'},
-    'pink': {'bg': '#FFF1F2', 'card': '#FFE4E6', 'primary': '#EC4899', 'text': '#831843', 'text2': '#9F1239', 'name': 'وردي', 'emoji': '💗'},
-    'orange': {'bg': '#431407', 'card': '#7C2D12', 'primary': '#FB923C', 'text': '#FFF7ED', 'text2': '#FDBA74', 'name': 'برتقالي', 'emoji': '🧡'},
-    'purple': {'bg': '#3B0764', 'card': '#581C87', 'primary': '#C084FC', 'text': '#FAF5FF', 'text2': '#E9D5FF', 'name': 'بنفسجي', 'emoji': '💜'},
-    'brown': {'bg': '#1C0A00', 'card': '#44403C', 'primary': '#A78BFA', 'text': '#FAFAF9', 'text2': '#D6D3D1', 'name': 'بني', 'emoji': '🤎'}
+    'white': {'bg': '#E0E5EC', 'card': '#D1D9E6', 'primary': '#667EEA', 'text': '#1A202C', 'text2': '#4A5568', 'name': 'أبيض'},
+    'black': {'bg': '#0F0F1A', 'card': '#1A1A2E', 'primary': '#00D9FF', 'text': '#F7FAFC', 'text2': '#CBD5E0', 'name': 'أسود'},
+    'gray': {'bg': '#2D3748', 'card': '#4A5568', 'primary': '#68D391', 'text': '#F7FAFC', 'text2': '#E2E8F0', 'name': 'رمادي'},
+    'blue': {'bg': '#1E3A8A', 'card': '#1E40AF', 'primary': '#60A5FA', 'text': '#F0F9FF', 'text2': '#BFDBFE', 'name': 'أزرق'},
+    'green': {'bg': '#14532D', 'card': '#166534', 'primary': '#4ADE80', 'text': '#F0FDF4', 'text2': '#BBF7D0', 'name': 'أخضر'},
+    'pink': {'bg': '#FFF1F2', 'card': '#FFE4E6', 'primary': '#EC4899', 'text': '#831843', 'text2': '#9F1239', 'name': 'وردي'},
+    'orange': {'bg': '#431407', 'card': '#7C2D12', 'primary': '#FB923C', 'text': '#FFF7ED', 'text2': '#FDBA74', 'name': 'برتقالي'},
+    'purple': {'bg': '#3B0764', 'card': '#581C87', 'primary': '#C084FC', 'text': '#FAF5FF', 'text2': '#E9D5FF', 'name': 'بنفسجي'},
+    'brown': {'bg': '#1C0A00', 'card': '#44403C', 'primary': '#A78BFA', 'text': '#FAFAF9', 'text2': '#D6D3D1', 'name': 'بني'}
 }
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -186,7 +189,7 @@ def send_flex_with_buttons(reply_token, content, alt='رسالة'):
             line_api = MessagingApi(api_client)
             messages = [
                 FlexMessage(altText=alt, contents=FlexContainer.from_dict(content)),
-                TextMessage(text="اختر لعبة للبدء", quickReply=create_game_buttons())
+                TextMessage(text="اختر لعبة", quickReply=create_game_buttons())
             ]
             line_api.reply_message(ReplyMessageRequest(replyToken=reply_token, messages=messages))
             return True
@@ -222,299 +225,10 @@ def send_text(reply_token, text):
         logger.error(f'Error: {e}')
     return False
 
-# ==================== UI Creation Functions ====================
-
-def create_welcome_screen(uid):
-    """نافذة البداية - عرض الثيمات"""
-    colors = THEMES[get_theme(uid)]
-    user = db.get_user(uid)
-    name = user['name'] if user else 'لاعب'
-    
-    # شبكة الثيمات 3x3
-    theme_grid = []
-    theme_list = list(THEMES.items())
-    
-    for i in range(0, 9, 3):
-        row = {
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [],
-            "spacing": "sm",
-            "margin": "md"
-        }
-        
-        for key, data in theme_list[i:i+3]:
-            row["contents"].append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": data['emoji'], "size": "xxl", "align": "center"},
-                    {"type": "text", "text": data['name'], "size": "xs", "color": colors["text2"], "align": "center", "margin": "xs"}
-                ],
-                "backgroundColor": data['card'],
-                "cornerRadius": "15px",
-                "paddingAll": "15px",
-                "flex": 1,
-                "action": {"type": "message", "text": f"ثيم:{key}"}
-            })
-        
-        theme_grid.append(row)
-    
-    return {
-        "type": "bubble",
-        "size": "giga",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "🎮 Bot Mesh", "size": "xxl", "weight": "bold", "color": colors["primary"], "align": "center"},
-                        {"type": "text", "text": "بوت الألعاب الترفيهية", "size": "sm", "color": colors["text2"], "align": "center", "margin": "sm"}
-                    ],
-                    "backgroundColor": colors["card"],
-                    "cornerRadius": "20px",
-                    "paddingAll": "20px"
-                },
-                {"type": "box", "layout": "vertical", "contents": [
-                    {"type": "text", "text": f"مرحباً ! 👋", "size": "xl", "weight": "bold", "color": colors["text"], "align": "center"}
-                ], "margin": "xl"},
-                {"type": "separator", "margin": "lg"},
-                {"type": "text", "text": "🎨 اختر الثيم المفضل", "size": "lg", "weight": "bold", "color": colors["text"], "margin": "xl"},
-                *theme_grid,
-                {"type": "separator", "margin": "xl"},
-                {"type": "text", "text": "💡 الأوامر المتاحة:", "size": "md", "weight": "bold", "color": colors["text"], "margin": "lg"},
-                {"type": "text", "text": "• مساعدة - عرض الألعاب", "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
-                {"type": "text", "text": "• انضم - للتسجيل", "size": "sm", "color": colors["text2"], "wrap": True, "margin": "xs"},
-                {"type": "text", "text": "• نقاطي - إحصائياتك", "size": "sm", "color": colors["text2"], "wrap": True, "margin": "xs"},
-                {"type": "text", "text": "• صدارة - أفضل اللاعبين", "size": "sm", "color": colors["text2"], "wrap": True, "margin": "xs"},
-                {"type": "separator", "margin": "lg"},
-                {"type": "text", "text": "© 2025 Abeer Aldosari", "size": "xs", "color": colors["text2"], "align": "center", "margin": "md"}
-            ],
-            "backgroundColor": colors["bg"],
-            "paddingAll": "25px"
-        }
-    }
-
-def create_games_menu(uid):
-    """نافذة المساعدة - عرض الألعاب"""
-    colors = THEMES[get_theme(uid)]
-    user = db.get_user(uid)
-    is_reg = user['registered'] if user else False
-    
-    # شبكة الألعاب 3x4
-    games_data = [
-        ("ذكاء", "🧠", "أسئلة"), ("لون", "🎨", "ألوان"), ("ترتيب", "abc", "حروف"),
-        ("رياضيات", "🔢", "حسابات"), ("أسرع", "⚡", "سرعة"), ("ضد", "↔️", "عكس"),
-        ("تكوين", "✏️", "كلمات"), ("أغنية", "🎵", "مغني"), ("لعبة", "🎯", "ح ن ج"),
-        ("سلسلة", "💊", "متتالية"), ("خمن", "🤔", "تخمين"), ("توافق", "💕", "نسبة")
-    ]
-    
-    game_grid = []
-    for i in range(0, 12, 3):
-        row = {
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [],
-            "spacing": "sm",
-            "margin": "sm"
-        }
-        
-        for name, emoji, desc in games_data[i:i+3]:
-            row["contents"].append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": emoji, "size": "xl", "align": "center"},
-                    {"type": "text", "text": name, "size": "sm", "weight": "bold", "color": colors["text"], "align": "center", "margin": "xs"},
-                    {"type": "text", "text": desc, "size": "xxs", "color": colors["text2"], "align": "center", "margin": "xxs"}
-                ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "12px",
-                "paddingAll": "10px",
-                "flex": 1,
-                "action": {"type": "message", "text": name}
-            })
-        
-        game_grid.append(row)
-    
-    # أزرار الإدارة
-    management_buttons = {
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "📊", "size": "lg", "align": "center"},
-                    {"type": "text", "text": "نقاطي", "size": "xs", "color": colors["text2"], "align": "center", "margin": "xs"}
-                ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "10px",
-                "paddingAll": "10px",
-                "flex": 1,
-                "action": {"type": "message", "text": "نقاطي"}
-            },
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "🏆", "size": "lg", "align": "center"},
-                    {"type": "text", "text": "صدارة", "size": "xs", "color": colors["text2"], "align": "center", "margin": "xs"}
-                ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "10px",
-                "paddingAll": "10px",
-                "flex": 1,
-                "margin": "sm",
-                "action": {"type": "message", "text": "صدارة"}
-            }
-        ],
-        "margin": "lg"
-    }
-    
-    # زر الانضمام أو الانسحاب
-    action_button = {
-        "type": "button",
-        "action": {"type": "message", "label": "انسحب 📤" if is_reg else "انضم 👥", "text": "انسحب" if is_reg else "انضم"},
-        "style": "primary" if not is_reg else "secondary",
-        "color": colors["primary"] if not is_reg else colors["text2"],
-        "height": "sm",
-        "margin": "md"
-    }
-    
-    return {
-        "type": "bubble",
-        "size": "giga",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "🎮 قائمة الألعاب", "size": "xl", "weight": "bold", "color": colors["primary"], "align": "center"},
-                        {"type": "text", "text": "اختر لعبة للبدء", "size": "sm", "color": colors["text2"], "align": "center", "margin": "sm"}
-                    ],
-                    "backgroundColor": colors["card"],
-                    "cornerRadius": "20px",
-                    "paddingAll": "20px"
-                },
-                *game_grid,
-                {"type": "separator", "margin": "xl"},
-                management_buttons,
-                action_button
-            ],
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px"
-        }
-    }
-
-def create_stats_flex(uid):
-    """إحصائيات المستخدم"""
-    user = db.get_user(uid)
-    colors = THEMES[get_theme(uid)]
-    
-    if not user:
-        return {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [{"type": "text", "text": "لم تلعب أي ألعاب بعد", "align": "center", "color": colors["text"]}],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
-            }
-        }
-    
-    win_rate = (user['wins'] / user['games'] * 100) if user['games'] > 0 else 0
-    
-    return {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [{"type": "text", "text": "📊 إحصائياتك", "size": "xl", "weight": "bold", "color": "#FFFFFF", "align": "center"}],
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px"
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {"type": "text", "text": user['name'], "size": "lg", "weight": "bold", "color": colors["text"], "align": "center"},
-                {"type": "separator", "margin": "md"},
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": f"🏆 النقاط: {user['points']}", "size": "md", "color": colors["text"], "margin": "md"},
-                        {"type": "text", "text": f"🎮 الألعاب: {user['games']}", "size": "md", "color": colors["text2"], "margin": "sm"},
-                        {"type": "text", "text": f"✅ الفوز: {user['wins']}", "size": "md", "color": colors["text2"], "margin": "sm"},
-                        {"type": "text", "text": f"📈 النسبة: {win_rate:.1f}%", "size": "md", "color": colors["text2"], "margin": "sm"}
-                    ],
-                    "backgroundColor": colors["card"],
-                    "cornerRadius": "15px",
-                    "paddingAll": "15px",
-                    "margin": "lg"
-                }
-            ],
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px"
-        }
-    }
-
-def create_leaderboard_flex(uid):
-    """قائمة الصدارة"""
-    colors = THEMES[get_theme(uid)]
-    leaders = db.get_leaderboard(10)
-    
-    items = []
-    medals = ["🥇", "🥈", "🥉"]
-    for i, player in enumerate(leaders):
-        medal = medals[i] if i < 3 else f"{i+1}."
-        items.append({
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {"type": "text", "text": medal, "size": "md", "weight": "bold", "color": colors["primary"], "flex": 0},
-                {"type": "text", "text": player['name'], "size": "md", "color": colors["text"], "flex": 3, "margin": "md"},
-                {"type": "text", "text": f"{player['points']}", "size": "md", "weight": "bold", "color": colors["text"], "flex": 1, "align": "end"}
-            ],
-            "backgroundColor": colors["card"],
-            "cornerRadius": "10px",
-            "paddingAll": "12px",
-            "margin": "sm"
-        })
-    
-    return {
-        "type": "bubble",
-        "size": "giga",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [{"type": "text", "text": "🏆 الصدارة", "size": "xl", "weight": "bold", "color": "#FFFFFF", "align": "center"}],
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px"
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": items if items else [{"type": "text", "text": "لا يوجد لاعبون", "align": "center", "color": colors["text"]}],
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px"
-        }
-    }
-
 # ==================== Routes ====================
 @app.route('/')
 def home():
-    return jsonify({'name': 'Bot Mesh Silent', 'status': 'active', 'version': '4.0', 'games': len(GAMES)})
+    return jsonify({'name': 'Bot Mesh Silent', 'status': 'active', 'version': '4.1', 'games': len(GAMES)})
 
 @app.route('/health')
 def health():
@@ -537,8 +251,11 @@ def callback():
 def on_follow(event):
     uid = event.source.user_id
     name = get_name(uid)
+    colors = THEMES[get_theme(uid)]
     db.add_or_update_user(uid, name, False)
-    send_flex_with_buttons(event.reply_token, create_welcome_screen(uid), 'مرحباً')
+    is_registered = db.is_registered(uid)
+    send_flex_with_buttons(event.reply_token, 
+        UIBuilder.create_welcome_flex(uid, colors, name, is_registered), 'مرحباً')
     logger.info(f'New user: {name}')
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -556,42 +273,57 @@ def on_message(event):
     
     # المنشن
     if '@Bot Mesh' in txt or '@bot' in txt.lower():
-        send_flex_with_buttons(event.reply_token, create_games_menu(uid), 'القائمة')
+        colors = THEMES[get_theme(uid)]
+        send_flex_with_buttons(event.reply_token, 
+            UIBuilder.create_welcome_flex(uid, colors, name, is_registered), 'القائمة')
         return
     
     # أوامر متاحة للجميع
-    if txt.lower() in ['بداية', 'start', 'ثيم', 'ثيمات']:
-        send_flex_with_buttons(event.reply_token, create_welcome_screen(uid), 'البداية')
-        return
-    
-    if txt.lower() in ['مساعدة', 'help', 'الالعاب', 'العاب']:
-        send_flex_with_buttons(event.reply_token, create_games_menu(uid), 'المساعدة')
+    if txt.lower() in ['بداية', 'start', 'مساعدة', 'help', 'الالعاب']:
+        colors = THEMES[get_theme(uid)]
+        send_flex_with_buttons(event.reply_token, 
+            UIBuilder.create_games_menu_flex(uid, colors), 'القائمة')
         return
     
     if txt.lower() in ['انضم', 'join']:
         db.register_user(uid)
-        send_text_with_buttons(event.reply_token, '✅ تم التسجيل بنجاح\nالآن يمكنك اللعب')
+        send_text_with_buttons(event.reply_token, '✅ تم التسجيل بنجاح!\nالآن يمكنك اللعب')
         logger.info(f'User registered: {name}')
+        return
+    
+    if txt == 'ثيم':
+        colors = THEMES[get_theme(uid)]
+        send_flex_with_buttons(event.reply_token, 
+            UIBuilder.create_theme_menu_flex(uid, colors, get_theme(uid)), 'الثيمات')
         return
     
     if txt.startswith('ثيم:'):
         theme_key = txt.split(':')[1]
         if theme_key in THEMES:
             db.update_theme(uid, theme_key)
-            send_text_with_buttons(event.reply_token, f"✅ تم التغيير إلى {THEMES[theme_key]['emoji']} {THEMES[theme_key]['name']}")
+            send_text_with_buttons(event.reply_token, f"✅ تم التغيير إلى {THEMES[theme_key]['name']}")
         return
     
     if txt.lower() in ['نقاطي', 'stats', 'إحصائيات']:
-        send_flex_with_buttons(event.reply_token, create_stats_flex(uid), 'إحصائياتك')
+        user = db.get_user(uid)
+        if not user:
+            send_text_with_buttons(event.reply_token, "لم تلعب أي ألعاب بعد!")
+            return
+        colors = THEMES[get_theme(uid)]
+        send_flex_with_buttons(event.reply_token, 
+            UIBuilder.create_stats_flex(uid, colors, user), 'إحصائياتك')
         return
     
     if txt.lower() in ['صدارة', 'leaderboard']:
-        send_flex_with_buttons(event.reply_token, create_leaderboard_flex(uid), 'الصدارة')
+        colors = THEMES[get_theme(uid)]
+        leaders = db.get_leaderboard(10)
+        send_flex_with_buttons(event.reply_token, 
+            UIBuilder.create_leaderboard_flex(uid, colors, leaders), 'الصدارة')
         return
     
     if txt.lower() in ['انسحب', 'leave']:
         db.unregister_user(uid)
-        send_text(event.reply_token, '👋 تم الانسحاب')
+        send_text(event.reply_token, '🚪 تم الانسحاب')
         logger.info(f'User unregistered: {name}')
         return
     
@@ -603,9 +335,9 @@ def on_message(event):
     if txt.lower() in ['إيقاف', 'stop']:
         if gm.get_game(gid):
             gm.end_game(gid)
-            send_text_with_buttons(event.reply_token, '⏹️ تم إيقاف اللعبة')
+            send_text_with_buttons(event.reply_token, '✅ تم إيقاف اللعبة')
         else:
-            send_text_with_buttons(event.reply_token, '❌ لا توجد لعبة نشطة')
+            send_text_with_buttons(event.reply_token, 'لا توجد لعبة نشطة')
         return
     
     # بدء لعبة
@@ -623,7 +355,7 @@ def on_message(event):
                 response = game.start_game()
                 
                 if hasattr(response, 'altText'):
-                    messages = [response, TextMessage(text="اختر لعبة للبدء", quickReply=create_game_buttons())]
+                    messages = [response, TextMessage(text="اختر لعبة", quickReply=create_game_buttons())]
                     line_api.reply_message(ReplyMessageRequest(replyToken=event.reply_token, messages=messages))
                 else:
                     send_flex_with_buttons(event.reply_token, response, txt)
@@ -631,7 +363,7 @@ def on_message(event):
                 logger.info(f'Game started: {txt} by {name}')
         except Exception as e:
             logger.error(f'Error starting game: {e}')
-            send_text_with_buttons(event.reply_token, '❌ حدث خطأ في بدء اللعبة')
+            send_text_with_buttons(event.reply_token, '❌ حدث خطأ')
         return
     
     # الرد على اللعبة
@@ -655,7 +387,7 @@ def on_message(event):
                     if hasattr(response, 'altText'):
                         with ApiClient(configuration) as api_client:
                             line_api = MessagingApi(api_client)
-                            messages = [response, TextMessage(text="اختر لعبة للبدء", quickReply=create_game_buttons())]
+                            messages = [response, TextMessage(text="اختر لعبة", quickReply=create_game_buttons())]
                             line_api.reply_message(ReplyMessageRequest(replyToken=event.reply_token, messages=messages))
                     else:
                         send_flex_with_buttons(event.reply_token, response, 'نتيجة')
@@ -663,12 +395,11 @@ def on_message(event):
                 if result.get('game_over'):
                     gm.end_game(gid)
         except Exception as e:
-            logger.error(f'Error checking answer: {e}')
+            logger.error(f'Error: {e}')
 
 # ==================== Run ====================
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
-    logger.info(f"🎮 Bot Mesh Silent v4.0 - Port {port}")
-    logger.info(f"📦 Loaded {len(GAMES)} games")
-    logger.info(f"🎨 Available {len(THEMES)} themes")
+    logger.info(f"🚀 Bot Mesh Silent v4.1 - Port {port}")
+    logger.info(f"📊 Loaded {len(GAMES)} games")
     app.run(host='0.0.0.0', port=port, debug=False)
