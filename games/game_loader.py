@@ -9,6 +9,7 @@ import logging
 import importlib
 import inspect
 
+# إعداد اللوج
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
@@ -22,6 +23,7 @@ from .base_game import BaseGame
 # مجلد الألعاب
 games_dir = os.path.dirname(__file__)
 
+# قائمة الألعاب الصالحة
 games_list = []
 invalid_modules = []
 
