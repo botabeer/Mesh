@@ -1,9 +1,9 @@
 """
-Bot Mesh - Math Game (Enhanced Example)
+Bot Mesh - Math & IQ Game
 Created by: Abeer Aldosari © 2025
 """
 import random
-from .base_game import BaseGame
+from games.base_game import BaseGame
 
 class MathGame(BaseGame):
     """لعبة الرياضيات - حل مسائل رياضية بسيطة"""
@@ -13,6 +13,8 @@ class MathGame(BaseGame):
         self.max_rounds = 5
         self.operations = ['+', '-', '×', '÷']
         self.difficulty = 'easy'  # easy, medium, hard
+        self.current_round = 0
+        self.correct_answer = None
     
     def start_game(self):
         self.current_round = 0
@@ -25,6 +27,7 @@ class MathGame(BaseGame):
     
     def generate_question(self):
         """توليد سؤال رياضي عشوائي"""
+        # تحديد مستوى الصعوبة حسب الجولة
         if self.current_round < 2:
             self.difficulty = 'easy'
         elif self.current_round < 4:
@@ -46,8 +49,6 @@ class MathGame(BaseGame):
             operations = ['+', '-', '×', '÷']
         
         operation = random.choice(operations)
-        
-        # حساب الإجابة
         if operation == '+':
             answer = num1 + num2
         elif operation == '-':
@@ -60,13 +61,12 @@ class MathGame(BaseGame):
             num1 = num2 * random.randint(2, 10)
             answer = num1 // num2
         
-        # توليد خيارات خاطئة
+        # توليد خيارات عشوائية للإجابة
         options = [str(answer)]
-        for _ in range(3):
+        while len(options) < 4:
             wrong = answer + random.randint(-10, 10)
-            if wrong != answer and str(wrong) not in options:
+            if str(wrong) not in options:
                 options.append(str(wrong))
-        
         random.shuffle(options)
         
         self.current_question = {
@@ -82,6 +82,7 @@ class MathGame(BaseGame):
         """التحقق من الإجابة وتحديث النقاط"""
         if not self.game_active:
             return None
+        
         self.add_player(uid, name)
         answer = answer.strip()
         is_correct = answer == self.correct_answer
@@ -128,7 +129,6 @@ class MathGame(BaseGame):
             'players': len(self.players)
         }
 
-
-# Alias للـ IqGame
+# Alias للـ IqGame إذا أردت استخدام نفس الكود
 class IqGame(MathGame):
     pass
