@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
+"""
+Bot Mesh - Main Application
+Created by: Abeer Aldosari © 2025
+"""
+
 import os
 import sys
 import logging
 from datetime import datetime, timedelta
 from flask import Flask, request, abort
 
-# إضافة المسار الرئيسي للمشروع
+# Add project root to path
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -21,61 +26,141 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-from constants import BOT_NAME, GEMINI_KEYS, get_username
+from config import (
+    BOT_NAME,
+    LINE_CHANNEL_SECRET,
+    LINE_CHANNEL_ACCESS_TOKEN,
+    GEMINI_API_KEYS,
+    AI_ENABLED,
+    THEMES,
+    DEFAULT_THEME,
+    BOT_SETTINGS,
+    GAMES_LIST
+)
 from ui_builder import UIBuilder
 
-# استيراد الألعاب
-from games import *
-
-# إعداد Flask
+# =============================================================================
+# Flask Setup
+# =============================================================================
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# التحقق من المتغيرات البيئية
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
-CHANNEL_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+# =============================================================================
+# LINE Configuration
+# =============================================================================
+configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-if not CHANNEL_SECRET or not CHANNEL_TOKEN:
-    logger.error("⚠️ متغيرات البيئة مفقودة! تحقق من LINE_CHANNEL_SECRET و LINE_CHANNEL_ACCESS_TOKEN")
-    exit(1)
-
-if not any(GEMINI_KEYS):
-    logger.warning("⚠️ تحذير: لا توجد مفاتيح Gemini API محددة")
-
-# إعداد LINE
-configuration = Configuration(access_token=CHANNEL_TOKEN)
-handler = WebhookHandler(CHANNEL_SECRET)
-
-# قاعدة بيانات المستخدمين والألعاب
+# =============================================================================
+# In-Memory Database
+# =============================================================================
 registered_users = {}
 user_themes = {}
 active_games = {}
 
-# خريطة الألعاب المتاحة
-AVAILABLE_GAMES = {
-    "IQ": IqGame,
-    "رياضيات": MathGame,
-    "لون الكلمة": WordColorGame,
-    "كلمة مبعثرة": ScrambleWordGame,
-    "كتابة سريعة": FastTypingGame,
-    "عكس": OppositeGame,
-    "حروف وكلمات": LettersWordsGame,
-    "أغنية": SongGame,
-    "إنسان حيوان نبات": HumanAnimalPlantGame,
-    "سلسلة كلمات": ChainWordsGame,
-    "تخمين": GuessGame,
-    "توافق": CompatibilityGame
-}
+# =============================================================================
+# Game Classes Import (Dynamic)
+# =============================================================================
+AVAILABLE_GAMES = {}
+
+try:
+    from games.iq_game import IqGame
+    AVAILABLE_GAMES["IQ"] = IqGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import IqGame: {e}")
+
+try:
+    from games.math_game import MathGame
+    AVAILABLE_GAMES["رياضيات"] = MathGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import MathGame: {e}")
+
+try:
+    from games.word_color_game import WordColorGame
+    AVAILABLE_GAMES["لون الكلمة"] = WordColorGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import WordColorGame: {e}")
+
+try:
+    from games.scramble_word_game import ScrambleWordGame
+    AVAILABLE_GAMES["كلمة مبعثرة"] = ScrambleWordGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import ScrambleWordGame: {e}")
+
+try:
+    from games.fast_typing_game import FastTypingGame
+    AVAILABLE_GAMES["كتابة سريعة"] = FastTypingGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import FastTypingGame: {e}")
+
+try:
+    from games.opposite_game import OppositeGame
+    AVAILABLE_GAMES["عكس"] = OppositeGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import OppositeGame: {e}")
+
+try:
+    from games.letters_words_game import LettersWordsGame
+    AVAILABLE_GAMES["حروف وكلمات"] = LettersWordsGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import LettersWordsGame: {e}")
+
+try:
+    from games.song_game import SongGame
+    AVAILABLE_GAMES["أغنية"] = SongGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import SongGame: {e}")
+
+try:
+    from games.human_animal_plant_game import HumanAnimalPlantGame
+    AVAILABLE_GAMES["إنسان حيوان نبات"] = HumanAnimalPlantGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import HumanAnimalPlantGame: {e}")
+
+try:
+    from games.chain_words_game import ChainWordsGame
+    AVAILABLE_GAMES["سلسلة كلمات"] = ChainWordsGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import ChainWordsGame: {e}")
+
+try:
+    from games.guess_game import GuessGame
+    AVAILABLE_GAMES["تخمين"] = GuessGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import GuessGame: {e}")
+
+try:
+    from games.compatibility_game import CompatibilityGame
+    AVAILABLE_GAMES["توافق"] = CompatibilityGame
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import CompatibilityGame: {e}")
+
+logger.info(f"✅ Loaded {len(AVAILABLE_GAMES)} games successfully")
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+def get_username(profile):
+    """Get username from LINE profile"""
+    try:
+        return profile.display_name
+    except:
+        return "مستخدم"
 
 def clean_old_data():
-    """حذف بيانات المستخدمين بعد أسبوع"""
+    """Delete user data after 7 days of inactivity"""
     current_time = datetime.now()
     to_delete = []
     
     for user_id, data in registered_users.items():
-        if 'registered_at' in data:
-            if current_time - data['registered_at'] > timedelta(days=7):
+        if 'last_activity' in data:
+            inactive_days = (current_time - data['last_activity']).days
+            if inactive_days >= BOT_SETTINGS['auto_delete_after_days']:
                 to_delete.append(user_id)
     
     for user_id in to_delete:
@@ -84,40 +169,146 @@ def clean_old_data():
             del user_themes[user_id]
         if user_id in active_games:
             del active_games[user_id]
-        logger.info(f"🗑️ تم حذف بيانات المستخدم: {user_id}")
+        logger.info(f"🗑️ Deleted inactive user: {user_id}")
+
+def update_user_activity(user_id):
+    """Update last activity timestamp"""
+    if user_id in registered_users:
+        registered_users[user_id]['last_activity'] = datetime.now()
+
+# =============================================================================
+# Flask Routes
+# =============================================================================
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    """استقبال رسائل LINE"""
+    """LINE Webhook Callback"""
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("⚠️ توقيع غير صالح")
+        logger.error("⚠️ Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"❌ خطأ في معالجة الطلب: {e}")
+        logger.error(f"❌ Error handling request: {e}")
         abort(500)
     
     return 'OK'
 
+@app.route("/", methods=['GET'])
+def home():
+    """Simple status page"""
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{BOT_NAME}</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }}
+            .container {{
+                background: rgba(255,255,255,0.1);
+                backdrop-filter: blur(10px);
+                padding: 40px;
+                border-radius: 20px;
+                max-width: 600px;
+                width: 100%;
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            }}
+            h1 {{
+                font-size: 2.5em;
+                margin-bottom: 20px;
+                text-align: center;
+            }}
+            .status {{
+                text-align: center;
+                font-size: 1.2em;
+                margin: 20px 0;
+            }}
+            .stats {{
+                background: rgba(255,255,255,0.2);
+                padding: 20px;
+                border-radius: 10px;
+                margin-top: 30px;
+            }}
+            .stat-item {{
+                display: flex;
+                justify-content: space-between;
+                padding: 10px 0;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+            }}
+            .stat-item:last-child {{ border-bottom: none; }}
+            .footer {{
+                text-align: center;
+                margin-top: 20px;
+                font-size: 0.8em;
+                opacity: 0.7;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🤖 {BOT_NAME}</h1>
+            <div class="status">✅ Bot is running successfully</div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <span><strong>Registered Users:</strong></span>
+                    <span>{len(registered_users)}</span>
+                </div>
+                <div class="stat-item">
+                    <span><strong>Available Games:</strong></span>
+                    <span>{len(AVAILABLE_GAMES)}</span>
+                </div>
+                <div class="stat-item">
+                    <span><strong>Active Games:</strong></span>
+                    <span>{len(active_games)}</span>
+                </div>
+                <div class="stat-item">
+                    <span><strong>AI Features:</strong></span>
+                    <span>{'✅ Enabled' if AI_ENABLED else '❌ Disabled'}</span>
+                </div>
+            </div>
+            
+            <div class="footer">
+                تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+# =============================================================================
+# Message Handler
+# =============================================================================
+
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """معالجة الرسائل الواردة"""
+    """Handle incoming messages"""
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
         
         if not text:
-            logger.warning(f"⚠️ رسالة فارغة من {user_id}")
             return
         
-        # تنظيف البيانات القديمة
+        # Clean old data periodically
         clean_old_data()
         
-        # جلب معلومات المستخدم
+        # Get user profile
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             
@@ -125,84 +316,98 @@ def handle_message(event):
                 profile = line_bot_api.get_profile(user_id)
                 username = get_username(profile)
             except Exception as e:
-                logger.warning(f"⚠️ فشل جلب ملف المستخدم: {e}")
+                logger.warning(f"⚠️ Failed to get user profile: {e}")
                 username = "مستخدم"
             
-            # تسجيل المستخدم تلقائيًا عند أول تفاعل
+            # Initialize user if not exists
             if user_id not in registered_users:
                 registered_users[user_id] = {
                     "name": username,
                     "points": 0,
-                    "registered_at": datetime.now(),
-                    "is_registered": False
+                    "is_registered": False,
+                    "created_at": datetime.now(),
+                    "last_activity": datetime.now()
                 }
-                logger.info(f"✅ مستخدم جديد: {username} ({user_id})")
+                logger.info(f"✅ New user: {username} ({user_id})")
             
-            # الحصول على الثيم الحالي
-            current_theme = user_themes.get(user_id, "💜")
+            # Update activity
+            update_user_activity(user_id)
             
-            # متغير للرد (مهم جداً)
+            # Get current theme
+            current_theme = user_themes.get(user_id, DEFAULT_THEME)
+            user_data = registered_users[user_id]
+            
+            # Response variable
             reply = None
             
-            # معالجة الأوامر
+            # Command processing
             text_lower = text.lower()
             
+            # ================== FIXED BUTTONS ==================
             if text_lower == "home":
-                reply = UIBuilder.build_home(current_theme)
+                reply = UIBuilder.build_home(
+                    current_theme,
+                    username,
+                    user_data['points'],
+                    user_data['is_registered']
+                )
                 
-            elif text_lower in ["games", "info", "help"]:
-                reply = UIBuilder.build_help(current_theme)
-                
+            elif text_lower in ["games", "info"]:
+                if text_lower == "games":
+                    reply = UIBuilder.build_games_menu(current_theme)
+                else:
+                    reply = UIBuilder.build_info(current_theme)
+                    
+            # ================== THEME SELECTION ==================
             elif text.startswith("ثيم "):
                 theme = text.replace("ثيم ", "").strip()
-                if theme in ["💜", "💚", "🤍", "🖤", "💙", "🩶", "🩷", "🧡", "🤎"]:
+                if theme in THEMES:
                     user_themes[user_id] = theme
-                    reply = UIBuilder.build_home(theme)
+                    reply = UIBuilder.build_home(
+                        theme,
+                        username,
+                        user_data['points'],
+                        user_data['is_registered']
+                    )
                 else:
-                    reply = TextMessage(text="⚠️ الثيم غير صالح")
+                    reply = TextMessage(text="⚠️ الثيم غير متوفر")
                     
+            # ================== USER MANAGEMENT ==================
             elif text == "انضم":
                 registered_users[user_id]["is_registered"] = True
-                reply = TextMessage(text=f"✅ {username} تم تسجيلك بنجاح! يمكنك الآن اللعب")
+                reply = TextMessage(text=f"✅ مرحباً {username}! تم تسجيلك بنجاح\nيمكنك الآن اختيار لعبة من قائمة الألعاب")
                 
             elif text == "انسحب":
                 if user_id in registered_users:
                     registered_users[user_id]["is_registered"] = False
-                reply = TextMessage(text=f"👋 {username} تم إلغاء تسجيلك")
-                
-            elif text == "نقاطي":
-                if user_id in registered_users:
-                    points = registered_users[user_id]["points"]
-                    reply = UIBuilder.build_my_points(username, points, current_theme)
-                else:
-                    reply = TextMessage(text="⚠️ يجب التسجيل أولاً باستخدام زر 'انضم'")
+                    reply = TextMessage(text=f"👋 {username} تم إلغاء تسجيلك بنجاح")
                     
+            elif text == "نقاطي":
+                reply = UIBuilder.build_my_points(
+                    username,
+                    user_data['points'],
+                    current_theme
+                )
+                
             elif text == "صدارة":
                 sorted_users = sorted(
                     [(u["name"], u["points"]) for u in registered_users.values() if u.get("is_registered")],
                     key=lambda x: x[1],
                     reverse=True
-                )[:10]
+                )
+                reply = UIBuilder.build_leaderboard(sorted_users, current_theme)
                 
-                if sorted_users:
-                    leaderboard = "🏆 لوحة الصدارة:\n\n"
-                    for i, (name, points) in enumerate(sorted_users, 1):
-                        medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
-                        leaderboard += f"{medal} {name}: {points} نقطة\n"
-                else:
-                    leaderboard = "لا يوجد لاعبين مسجلين بعد"
-                
-                reply = TextMessage(text=leaderboard)
-                
+            # ================== GAME CONTROL ==================
             elif text == "إيقاف":
                 if user_id in active_games:
                     del active_games[user_id]
-                    reply = TextMessage(text="⏸️ تم إيقاف اللعبة الحالية")
+                    reply = TextMessage(text="⏹️ تم إيقاف اللعبة الحالية")
                 else:
                     reply = TextMessage(text="⚠️ لا توجد لعبة نشطة")
-                
+                    
+            # ================== START GAME ==================
             elif text.startswith("لعبة "):
-                if not registered_users.get(user_id, {}).get("is_registered"):
+                if not user_data.get("is_registered"):
                     reply = TextMessage(text="⚠️ يجب التسجيل أولاً باستخدام زر 'انضم'")
                 else:
                     game_name = text.replace("لعبة ", "").strip()
@@ -210,24 +415,20 @@ def handle_message(event):
                     if game_name in AVAILABLE_GAMES:
                         GameClass = AVAILABLE_GAMES[game_name]
                         try:
-                            # إنشاء نسخة من اللعبة
                             game_instance = GameClass(line_bot_api)
                             game_instance.set_theme(current_theme)
-                            
-                            # حفظ اللعبة النشطة
                             active_games[user_id] = game_instance
                             
-                            # بدء اللعبة
                             reply = game_instance.start_game()
-                            logger.info(f"🎮 {username} بدأ لعبة {game_name}")
+                            logger.info(f"🎮 {username} started game: {game_name}")
                         except Exception as e:
-                            logger.error(f"❌ خطأ في تشغيل اللعبة {game_name}: {e}")
-                            reply = TextMessage(text=f"❌ حدث خطأ في تشغيل اللعبة: {str(e)}")
+                            logger.error(f"❌ Error starting game {game_name}: {e}")
+                            reply = TextMessage(text=f"❌ حدث خطأ في تشغيل اللعبة")
                     else:
-                        reply = TextMessage(text=f"⚠️ اللعبة '{game_name}' غير متاحة")
-                    
+                        reply = TextMessage(text=f"⚠️ اللعبة '{game_name}' غير متوفرة")
+                        
+            # ================== GAME RESPONSES ==================
             else:
-                # التحقق إذا كان المستخدم في لعبة نشطة
                 if user_id in active_games:
                     game_instance = active_games[user_id]
                     
@@ -235,30 +436,26 @@ def handle_message(event):
                         result = game_instance.check_answer(text, user_id, username)
                         
                         if result:
-                            # تحديث النقاط
+                            # Update points
                             if result.get('points', 0) > 0:
                                 registered_users[user_id]['points'] += result['points']
                             
-                            # إذا انتهت اللعبة، احذفها
+                            # Game over?
                             if result.get('game_over', False):
                                 del active_games[user_id]
                             
-                            # الحصول على الرد
                             reply = result.get('response')
                             
-                            if not reply:
-                                logger.warning(f"⚠️ اللعبة لم ترجع رد مناسب")
-                                return
-                                
                     except Exception as e:
-                        logger.error(f"❌ خطأ في معالجة إجابة اللعبة: {e}")
+                        logger.error(f"❌ Error processing game answer: {e}")
                         reply = TextMessage(text="❌ حدث خطأ في معالجة إجابتك")
                 else:
-                    # البوت صامت - لا يرد على رسائل غير معروفة
-                    logger.info(f"📝 رسالة من مستخدم غير مسجل في لعبة: {text[:50]}")
-                    return
+                    # Silent mode - ignore unknown messages
+                    if BOT_SETTINGS['silent_mode']:
+                        logger.info(f"🔇 Silent mode: Ignoring message from {username}")
+                        return
             
-            # إرسال الرد (فقط إذا كان موجود)
+            # Send reply
             if reply:
                 try:
                     line_bot_api.reply_message_with_http_info(
@@ -268,64 +465,22 @@ def handle_message(event):
                         )
                     )
                 except Exception as e:
-                    logger.error(f"❌ فشل إرسال الرسالة: {e}")
+                    logger.error(f"❌ Failed to send message: {e}")
             else:
-                logger.warning("⚠️ لا يوجد رد للإرسال - البوت صامت")
-            
+                logger.warning("⚠️ No reply to send - Silent mode active")
+                
     except Exception as e:
-        logger.error(f"❌ خطأ عام في معالجة الرسالة: {e}", exc_info=True)
+        logger.error(f"❌ General error in message handler: {e}", exc_info=True)
 
-@app.route("/", methods=['GET'])
-def home():
-    """صفحة رئيسية بسيطة"""
-    return f"""
-    <html>
-        <head>
-            <title>{BOT_NAME}</title>
-            <meta charset="utf-8">
-            <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    text-align: center;
-                    padding: 50px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                }}
-                .container {{
-                    background: rgba(255,255,255,0.1);
-                    padding: 30px;
-                    border-radius: 15px;
-                    max-width: 600px;
-                    margin: 0 auto;
-                }}
-                h1 {{ margin-bottom: 20px; }}
-                .stats {{
-                    background: rgba(255,255,255,0.2);
-                    padding: 20px;
-                    border-radius: 10px;
-                    margin-top: 20px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>🤖 {BOT_NAME}</h1>
-                <p>✅ البوت يعمل بنجاح</p>
-                <div class="stats">
-                    <p><strong>المستخدمين المسجلين:</strong> {len(registered_users)}</p>
-                    <p><strong>الألعاب المتاحة:</strong> {len(AVAILABLE_GAMES)}</p>
-                    <p><strong>الألعاب النشطة:</strong> {len(active_games)}</p>
-                </div>
-                <p style="margin-top: 20px; font-size: 12px;">
-                    تم الإنشاء بواسطة عبير الدوسري @ 2025
-                </p>
-            </div>
-        </body>
-    </html>
-    """
+# =============================================================================
+# Run Application
+# =============================================================================
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
-    logger.info(f"🚀 بدء تشغيل {BOT_NAME} على المنفذ {port}")
-    logger.info(f"📦 تم تحميل {len(AVAILABLE_GAMES)} لعبة")
+    logger.info(f"🚀 Starting {BOT_NAME} on port {port}")
+    logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
+    logger.info(f"🎨 Available themes: {len(THEMES)}")
+    logger.info(f"🤖 AI Features: {'Enabled' if AI_ENABLED else 'Disabled'}")
+    
     app.run(host="0.0.0.0", port=port, debug=False)
