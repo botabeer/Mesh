@@ -50,27 +50,6 @@ DEFAULT_ROUNDS = 5
 DEFAULT_TIME_LIMIT = 30
 
 # =============================================================================
-# Theme System (LINE Compatible)
-# =============================================================================
-THEMES = {
-    "💜": {"name": "purple", "color": "#9F7AEA"},
-    "💚": {"name": "green", "color": "#48BB78"},
-    "🤍": {"name": "white", "color": "#CBD5E0"},
-    "🖤": {"name": "black", "color": "#2D3748"},
-    "💙": {"name": "blue", "color": "#3182CE"},
-    "🩶": {"name": "gray", "color": "#718096"},
-    "🩷": {"name": "pink", "color": "#ED64A6"},
-    "🧡": {"name": "orange", "color": "#DD6B20"},
-    "🤎": {"name": "brown", "color": "#8B4513"}
-}
-DEFAULT_THEME = "💜"
-
-# =============================================================================
-# Fixed Buttons (Always Visible)
-# =============================================================================
-FIXED_BUTTONS = ["Home", "Games", "Info"]
-
-# =============================================================================
 # Available Games
 # =============================================================================
 GAMES_LIST = {
@@ -127,4 +106,3 @@ print("✅ Configuration loaded successfully!")
 print(f"✅ AI Features: {'Enabled' if AI_ENABLED else 'Disabled'}")
 print(f"✅ AI Keys Available: {len(GEMINI_API_KEYS)}")
 print(f"✅ Available Games: {len(GAMES_LIST)}")
-print(f"✅ Available Themes: {len(THEMES)}")
