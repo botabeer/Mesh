@@ -1,74 +1,129 @@
-#import os
+# constants.py
+import os
 
-# ----------------------
-# Gemini AI
-# ----------------------
-GEMINI_MODEL = "gemini-2.0-flash-exp"
+# -------------------------------
+# LINE Bot Credentials
+# -------------------------------
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+
+# -------------------------------
+# Gemini AI API Keys
+# -------------------------------
 GEMINI_KEYS = [
     os.getenv("GEMINI_API_KEY_1"),
     os.getenv("GEMINI_API_KEY_2"),
-    os.getenv("GEMINI_API_KEY_3")
+    os.getenv("GEMINI_API_KEY_3"),
 ]
 
-# ----------------------
-# الثيمات (9 ألوان)
-# ----------------------
-THEMES = {
-    "💜": "#9C27B0",
-    "💚": "#4CAF50",
-    "🤍": "#FFFFFF",
-    "🖤": "#000000",
-    "💙": "#1976D2",
-    "🩶": "#E0E0E0",
-    "🩷": "#E91E63",
-    "🧡": "#FF9800",
-    "🤎": "#795548"
+GEMINI_MODEL = "Gemini (gemini-2.0-flash-exp)"
+
+# -------------------------------
+# Bot Settings
+# -------------------------------
+BOT_NAME = "Bot Mesh"
+BOT_CREATOR = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
+BOT_COLOR_THEME = "3D_Professional"
+BOT_RESPONSE_MODE = "silent"  # يرد فقط على المسجلين والأوامر
+MAX_ROUNDS_DEFAULT = 5
+POINTS_PER_WIN = 10
+POINTS_PER_CORRECT = 5
+
+# -------------------------------
+# UI / UX Settings
+# -------------------------------
+THEMES = [
+    "💜", "💚", "🤍", "🖤", "💙", "🩶", "🩷", "🧡", "🤎"
+]
+
+# رموز ثابتة للواجهات
+UI_SYMBOLS = {
+    "bullet_white": "▫️",
+    "bullet_black": "▪️",
+    "medal": "🏅",
+    "trophy": "🏆",
 }
 
-# ----------------------
-# أزرار ثابتة أسفل الشاشة
-# ----------------------
-
-# أزرار خاصة بكل لعبة (ألعاب + إيقاف)
-FIXED_GAME_BUTTONS = [
-    {"type":"button","style":"secondary","color":"#E0E0E0","height":"sm",
-     "action":{"type":"message","label":"ألعاب","text":"ألعاب"}},
-    {"type":"button","style":"secondary","color":"#D32F2F","height":"sm",
-     "action":{"type":"message","label":"إيقاف","text":"إيقاف"}}
-]
-
-# أزرار نافذة المساعدة
-HELP_SCREEN_BUTTONS = [
-    {"type":"button","style":"primary","color":"#3F51B5","height":"sm",
-     "action":{"type":"message","label":"انضم","text":"انضم"}},
-    {"type":"button","style":"secondary","color":"#E0E0E0","height":"sm",
-     "action":{"type":"message","label":"انسحب","text":"انسحب"}},
-    {"type":"button","style":"secondary","color":"#E0E0E0","height":"sm",
-     "action":{"type":"message","label":"نقاطي","text":"نقاطي"}},
-    {"type":"button","style":"secondary","color":"#E0E0E0","height":"sm",
-     "action":{"type":"message","label":"صدارة","text":"صدارة"}}
-] + FIXED_GAME_BUTTONS  # ألعاب + إيقاف أسفل الشاشة دائمًا
-
-# أزرار نافذة البداية (الثيمات وأوامر البوت)
-START_SCREEN_BUTTONS = []  # يمكن إضافة أزرار خاصة بالبداية إذا أردت
-
-# ----------------------
-# قواعد ثابتة
-# ----------------------
-BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
-ROUNDS_PER_GAME = 5  # كل لعبة 5 جولات
-
-# ----------------------
-# الحروف العربية لتطبيع الإجابات
-# ----------------------
-ARABIC_NORMALIZATION = {
-    "أ":"ا","إ":"ا","آ":"ا","ى":"ي","ئ":"ي","ؤ":"و","ة":"ه"
+# -------------------------------
+# Arabic Character Normalization
+# -------------------------------
+ARABIC_CHAR_MAP = {
+    "أ": "ا",
+    "إ": "ا",
+    "آ": "ا",
+    "ة": "ه",
+    "ى": "ي",
+    "ئ": "ي",
+    "ؤ": "و",
 }
 
-# ----------------------
-# أزرار إضافية (إعادة اللعبة)
-# ----------------------
-REPLAY_BUTTON = [
-    {"type":"button","style":"primary","color":"#4CAF50","height":"sm",
-     "action":{"type":"message","label":"إعادة","text":"إعادة"}}
+def normalize_arabic(text: str) -> str:
+    """حول الحروف العربية إلى صيغها العادية لتسهيل المطابقة."""
+    normalized = text.strip()
+    for key, val in ARABIC_CHAR_MAP.items():
+        normalized = normalized.replace(key, val)
+    return normalized.lower()
+
+# -------------------------------
+# Game Settings
+# -------------------------------
+# جميع الألعاب يمكن تغييرها أو إضافة ألعاب جديدة بدون قاعدة ثابته
+GAMES_DIR = "games"
+# هذا مجرد مثال على أسماء الألعاب
+AVAILABLE_GAMES = [
+    "IqGame",
+    "MathGame",
+    "WordColorGame",
+    "ScrambleWordGame",
+    "FastTypingGame",
+    "OppositeGame",
+    "LettersWordsGame",
+    "SongGame",
+    "HumanAnimalPlantGame",
+    "ChainWordsGame",
+    "GuessGame",
+    "CompatibilityGame",
 ]
+
+# -------------------------------
+# Fixed Buttons (Bottom Screen)
+# -------------------------------
+# كل البوت نوافذ فلكس وأزرار أسفل الشاشة بشكل دائم
+FIXED_BOTTOM_BUTTONS = [
+    {"title": "🏠 الرئيسية", "action": "home"},
+    {"title": "🎮 الألعاب", "action": "games"},
+    {"title": "ℹ️ مساعدة", "action": "help"},
+    {"title": "🔄 إعادة", "action": "restart"},
+]
+
+# -------------------------------
+# User Settings
+# -------------------------------
+# قاعدة بيانات للأسماء لتصحيح الاسم حسب Line
+USER_NAME_DATABASE = {}
+
+def get_user_name(user_id: str, line_profile_name: str) -> str:
+    """احفظ اسم المستخدم حسب ID وأرجعه."""
+    if user_id not in USER_NAME_DATABASE:
+        USER_NAME_DATABASE[user_id] = line_profile_name
+    return USER_NAME_DATABASE[user_id]
+
+# -------------------------------
+# Answer Validation
+# -------------------------------
+def is_valid_answer(user_answer: str, correct_answers: list[str]) -> bool:
+    """
+    تحقق من الإجابة وقارن مع قائمة الإجابات الصحيحة بعد التطبيع.
+    يقبل تنويعات الكلمات والأحرف العربية المختلفة.
+    """
+    normalized_answer = normalize_arabic(user_answer)
+    for ans in correct_answers:
+        if normalize_arabic(ans) == normalized_answer:
+            return True
+    return False
+
+# -------------------------------
+# LINE Policy Compliance
+# -------------------------------
+# جميع الصيغ والنوافذ والتنسيق متوافق مع قوانين LINE
+LINE_COMPLIANCE = True
