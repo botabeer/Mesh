@@ -8,7 +8,8 @@ Use 'spacing' in box layout instead
 """
 
 from linebot.v3.messaging import FlexMessage
-from config import BOT_RIGHTS, THEMES, FIXED_BUTTONS, GAMES_LIST
+from config import BOT_RIGHTS, GAMES_LIST
+from theme_styles import THEMES, FIXED_BUTTONS
 
 class UIBuilder:
     """بناء جميع واجهات Flex Messages متوافقة مع LINE"""
