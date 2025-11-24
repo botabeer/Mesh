@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Bot Mesh - Main Application
 Created by: Abeer Aldosari © 2025
