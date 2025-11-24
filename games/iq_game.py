@@ -1,6 +1,7 @@
 """
-لعبة أسئلة الذكاء - مع مؤشر التقدم
+لعبة أسئلة الذكاء - مع مؤشر تقدم احترافي
 Created by: Abeer Aldosari © 2025
+LINE Compatible - Neumorphism Soft Design
 """
 
 from games.base_game import BaseGame
@@ -10,7 +11,7 @@ from typing import Dict, Any, Optional
 
 
 class IqGame(BaseGame):
-    """لعبة أسئلة الذكاء مع مؤشر تقدم مرئي"""
+    """لعبة أسئلة الذكاء مع مؤشر تقدم مرئي احترافي"""
     
     def __init__(self, line_bot_api, ai_generate_question=None, ai_check_answer=None):
         super().__init__(line_bot_api, questions_count=5)
@@ -50,24 +51,59 @@ class IqGame(BaseGame):
                 pass
         return self.questions[self.current_question % len(self.questions)]
 
-    def get_progress_indicator(self) -> str:
-        """إنشاء مؤشر التقدم 🟢⚪⚪⚪⚪"""
-        progress = ""
+    def get_progress_bar(self) -> Dict:
+        """إنشاء شريط تقدم احترافي"""
+        colors = self.get_theme_colors()
+        progress_boxes = []
+        
         for i in range(self.questions_count):
             if i < self.current_question:
-                progress += "🟢"
+                # مكتمل - أخضر
+                progress_boxes.append({
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [],
+                    "width": f"{100//self.questions_count}%",
+                    "height": "6px",
+                    "backgroundColor": "#10B981",
+                    "cornerRadius": "3px"
+                })
             elif i == self.current_question:
-                progress += "🔵"
+                # حالي - أزرق
+                progress_boxes.append({
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [],
+                    "width": f"{100//self.questions_count}%",
+                    "height": "6px",
+                    "backgroundColor": colors["primary"],
+                    "cornerRadius": "3px"
+                })
             else:
-                progress += "⚪"
-        return progress
+                # قادم - رمادي
+                progress_boxes.append({
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [],
+                    "width": f"{100//self.questions_count}%",
+                    "height": "6px",
+                    "backgroundColor": "#E5E7EB",
+                    "cornerRadius": "3px"
+                })
+        
+        return {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": progress_boxes,
+            "spacing": "xs"
+        }
 
     def get_question(self) -> Any:
         question_data = self.generate_question()
         self.current_answer = question_data["a"]
         colors = self.get_theme_colors()
         
-        progress = self.get_progress_indicator()
+        progress_bar = self.get_progress_bar()
         
         flex_content = {
             "type": "bubble",
@@ -75,32 +111,38 @@ class IqGame(BaseGame):
             "header": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "md",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": f"▪️ الجولة {self.current_question + 1} من {self.questions_count}  {progress}",
-                        "size": "sm",
-                        "color": "#FFFFFF",
-                        "weight": "bold"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "🧠 لعبة الذكاء",
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": "#FFFFFF",
+                                "flex": 0
+                            },
+                            {
+                                "type": "text",
+                                "text": f"{self.current_question + 1}/{self.questions_count}",
+                                "size": "sm",
+                                "color": "#FFFFFF",
+                                "align": "end"
+                            }
+                        ]
                     },
-                    {
-                        "type": "separator",
-                        "color": "#FFFFFF"
-                    },
-                    {
-                        "type": "text",
-                        "text": "🕹️ اللعبة: الذكاء",
-                        "size": "md",
-                        "color": "#FFFFFF",
-                        "weight": "bold"
-                    }
+                    progress_bar
                 ],
                 "backgroundColor": colors["primary"],
-                "paddingAll": "15px"
+                "paddingAll": "20px"
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "lg",
                 "contents": [
                     {
                         "type": "box",
@@ -109,29 +151,26 @@ class IqGame(BaseGame):
                             {
                                 "type": "text",
                                 "text": question_data["q"],
-                                "size": "lg",
+                                "size": "md",
                                 "color": colors["text"],
-                                "align": "center",
                                 "wrap": True,
                                 "weight": "bold"
                             }
                         ],
                         "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "25px",
-                        "margin": "md"
+                        "cornerRadius": "15px",
+                        "paddingAll": "20px"
                     },
                     {
                         "type": "text",
                         "text": "💭 فكر جيداً...",
-                        "size": "sm",
+                        "size": "xs",
                         "color": colors["text2"],
-                        "align": "center",
-                        "margin": "lg"
+                        "align": "center"
                     }
                 ],
                 "backgroundColor": colors["bg"],
-                "paddingAll": "15px"
+                "paddingAll": "20px"
             },
             "footer": {
                 "type": "box",
@@ -139,38 +178,51 @@ class IqGame(BaseGame):
                 "spacing": "sm",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": "✅ الإجابة الصحيحة للجولة السابقة:",
-                        "size": "xs",
-                        "weight": "bold",
-                        "color": "#333333"
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "✅ الإجابة السابقة:",
+                                "size": "xxs",
+                                "color": colors["text2"],
+                                "weight": "bold"
+                            },
+                            {
+                                "type": "text",
+                                "text": self.last_correct_answer if self.last_correct_answer else "لا يوجد بعد",
+                                "size": "xs",
+                                "color": colors["text"]
+                            }
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "10px",
+                        "paddingAll": "10px"
                     },
                     {
-                        "type": "text",
-                        "text": f"▫️ {self.last_correct_answer if self.last_correct_answer else '- (لا يوجد بعد)'}",
-                        "size": "sm",
-                        "color": "#666666",
-                        "wrap": True
-                    },
-                    {
-                        "type": "separator"
-                    },
-                    {
-                        "type": "text",
-                        "text": "🎮 الأوامر المتاحة:",
-                        "size": "xs",
-                        "weight": "bold",
-                        "color": "#333333"
+                        "type": "separator",
+                        "color": colors["shadow1"]
                     },
                     {
                         "type": "box",
                         "layout": "horizontal",
                         "spacing": "xs",
                         "contents": [
-                            {"type": "button", "action": {"type": "message", "label": "▫️ لمح", "text": "لمح"},
-                             "style": "secondary", "height": "sm"},
-                            {"type": "button", "action": {"type": "message", "label": "▫️ جاوب", "text": "جاوب"},
-                             "style": "secondary", "height": "sm"}
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "💡 لمح", "text": "لمح"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "📝 جاوب", "text": "جاوب"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            }
                         ]
                     },
                     {
@@ -178,15 +230,34 @@ class IqGame(BaseGame):
                         "layout": "horizontal",
                         "spacing": "xs",
                         "contents": [
-                            {"type": "button", "action": {"type": "message", "label": "▫️ إيقاف", "text": "إيقاف"},
-                             "style": "primary", "color": "#FF5555", "height": "sm"}
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                                "style": "primary",
+                                "color": "#FF5555",
+                                "height": "sm"
+                            }
                         ]
+                    },
+                    {
+                        "type": "separator",
+                        "color": colors["shadow1"]
+                    },
+                    {
+                        "type": "text",
+                        "text": "تم إنشاؤه بواسطة عبير الدوسري © 2025",
+                        "size": "xxs",
+                        "color": colors["text2"],
+                        "align": "center"
                     }
-                ]
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
             },
             "styles": {
                 "body": {"backgroundColor": colors["bg"]},
-                "header": {"backgroundColor": colors["primary"]}
+                "header": {"backgroundColor": colors["primary"]},
+                "footer": {"backgroundColor": colors["bg"]}
             }
         }
         
@@ -228,12 +299,11 @@ class IqGame(BaseGame):
 
         if not is_valid:
             return {
-                "message": "▫️ إجابة غير صحيحة ▪️",
-                "response": self._create_text_message("▫️ إجابة غير صحيحة ▪️"),
+                "message": "❌ إجابة غير صحيحة",
+                "response": self._create_text_message("❌ إجابة غير صحيحة، حاول مرة أخرى"),
                 "points": 0
             }
 
-        # حفظ الإجابة الصحيحة
         self.last_correct_answer = self.current_answer
         points = self.add_score(user_id, display_name, 10)
         next_question = self.next_question()
