@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Bot Mesh - LINE Bot Application (Optimized)
+Bot Mesh - LINE Bot Application (Optimized & LINE Compatible)
 Created by: Abeer Aldosari © 2025
 """
 
@@ -14,7 +14,7 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, TextMessage
+    ReplyMessageRequest, TextMessage, FlexMessage, FlexContainer
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
@@ -48,45 +48,93 @@ user_themes = {}
 active_games = {}
 
 # ============================================================================
-# Themes - Neumorphism Soft Style
+# Themes - Neumorphism Soft Style (LINE Compatible)
 # ============================================================================
 THEMES = {
-    "💜": {"color": "#9F7AEA", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#44337A", "text2": "#6B46C1", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "💚": {"color": "#48BB78", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#234E52", "text2": "#2C7A7B", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🤍": {"color": "#667EEA", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#2D3748", "text2": "#718096", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🖤": {"color": "#667EEA", "bg": "#2D3748", "card": "#3A4556", "text": "#E2E8F0", "text2": "#CBD5E0", "shadow1": "#1A202C", "shadow2": "#414D5F"},
-    "💙": {"color": "#3182CE", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#2C5282", "text2": "#2B6CB0", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🩶": {"color": "#718096", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#2D3748", "text2": "#4A5568", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🩷": {"color": "#D53F8C", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#702459", "text2": "#97266D", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🧡": {"color": "#DD6B20", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#7C2D12", "text2": "#C05621", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"},
-    "🤎": {"color": "#8B4513", "bg": "#E0E5EC", "card": "#E0E5EC", "text": "#5C2E00", "text2": "#7A4F1D", "shadow1": "#A3B1C6", "shadow2": "#FFFFFF"}
+    "💜": {
+        "primary": "#9F7AEA",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#44337A",
+        "text2": "#6B46C1",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    },
+    "💚": {
+        "primary": "#48BB78",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#234E52",
+        "text2": "#2C7A7B",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    },
+    "🤍": {
+        "primary": "#667EEA",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#2D3748",
+        "text2": "#718096",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    },
+    "🖤": {
+        "primary": "#667EEA",
+        "bg": "#2D3748",
+        "card": "#3A4556",
+        "text": "#E2E8F0",
+        "text2": "#CBD5E0",
+        "shadow1": "#1A202C",
+        "shadow2": "#414D5F"
+    },
+    "💙": {
+        "primary": "#3182CE",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#2C5282",
+        "text2": "#2B6CB0",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    },
+    "🩶": {
+        "primary": "#718096",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#2D3748",
+        "text2": "#4A5568",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    },
+    "🩷": {
+        "primary": "#D53F8C",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#702459",
+        "text2": "#97266D",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    },
+    "🧡": {
+        "primary": "#DD6B20",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#7C2D12",
+        "text2": "#C05621",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    },
+    "🤎": {
+        "primary": "#8B4513",
+        "bg": "#E0E5EC",
+        "card": "#E0E5EC",
+        "text": "#5C2E00",
+        "text2": "#7A4F1D",
+        "shadow1": "#A3B1C6",
+        "shadow2": "#FFFFFF"
+    }
 }
 
 DEFAULT_THEME = "💜"
-
-# ============================================================================
-# Fixed Bottom Buttons (Always Visible)
-# ============================================================================
-FIXED_BUTTONS = {
-    "games": [
-        {"label": "ذكاء", "command": "لعبة IQ"},
-        {"label": "لون", "command": "لعبة لون الكلمة"},
-        {"label": "ترتيب", "command": "لعبة كلمة مبعثرة"},
-        {"label": "رياضيات", "command": "لعبة رياضيات"},
-        {"label": "أسرع", "command": "لعبة كتابة سريعة"},
-        {"label": "ضد", "command": "لعبة عكس"},
-        {"label": "تكوين", "command": "لعبة حروف وكلمات"},
-        {"label": "أغنية", "command": "لعبة أغنية"},
-        {"label": "لعبة", "command": "لعبة إنسان حيوان نبات"},
-        {"label": "سلسلة", "command": "لعبة سلسلة كلمات"},
-        {"label": "خمن", "command": "لعبة تخمين"},
-        {"label": "توافق", "command": "لعبة توافق"}
-    ],
-    "main": [
-        {"label": "بداية", "command": "بداية"},
-        {"label": "مساعدة", "command": "مساعدة"}
-    ]
-}
 
 # ============================================================================
 # Game Loading
@@ -126,12 +174,11 @@ except Exception as e:
     logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
 
 # ============================================================================
-# UI Builder Functions
+# UI Builder Functions (LINE Compatible)
 # ============================================================================
-from linebot.v3.messaging import FlexMessage, FlexContainer
 
 def build_home(theme="💜", username="مستخدم", points=0, is_registered=False):
-    """نافذة البداية مع أزرار ثابتة"""
+    """نافذة البداية مع أزرار ثابتة (LINE Compatible)"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     status = "✅ مسجل" if is_registered else "⚠️ غير مسجل"
     
@@ -142,40 +189,183 @@ def build_home(theme="💜", username="مستخدم", points=0, is_registered=Fa
             "layout": "vertical",
             "spacing": "md",
             "contents": [
-                {"type": "text", "text": f"🎮 Bot Mesh", "weight": "bold", "size": "xl", "color": colors["color"], "align": "center"},
-                {"type": "text", "text": "بوت الألعاب الترفيهية", "size": "xs", "color": colors["text2"], "align": "center"},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [
-                    {"type": "text", "text": f"▪️ مرحباً: {username}", "size": "sm", "color": colors["text"]},
-                    {"type": "text", "text": f"▪️ الحالة: {status}", "size": "sm", "color": colors["text"]},
-                    {"type": "text", "text": f"▪️ نقاطك: {points}", "size": "sm", "color": colors["text"]},
-                    {"type": "text", "text": "▪️ اختر ثيمك:", "size": "sm", "weight": "bold", "color": colors["color"]}
-                ]},
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": t, "text": f"ثيم {t}"},
-                     "style": "primary" if t == theme else "secondary", "height": "sm", "color": colors["color"] if t == theme else colors["shadow1"]}
-                    for t in list(THEMES.keys())[:3]
-                ]},
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": t, "text": f"ثيم {t}"},
-                     "style": "primary" if t == theme else "secondary", "height": "sm", "color": colors["color"] if t == theme else colors["shadow1"]}
-                    for t in list(THEMES.keys())[3:6]
-                ]},
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": t, "text": f"ثيم {t}"},
-                     "style": "primary" if t == theme else "secondary", "height": "sm", "color": colors["color"] if t == theme else colors["shadow1"]}
-                    for t in list(THEMES.keys())[6:]
-                ]},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": "🕹️ الأزرار الثابتة:", "size": "sm", "weight": "bold", "color": colors["color"]},
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "انسحب", "text": "انسحب"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}
-                ]},
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "صدارة", "text": "صدارة"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}
-                ]}
+                {
+                    "type": "text",
+                    "text": f"🎮 {BOT_NAME}",
+                    "weight": "bold",
+                    "size": "xl",
+                    "color": colors["primary"],
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "بوت الألعاب الترفيهية",
+                    "size": "xs",
+                    "color": colors["text2"],
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"▪️ مرحباً: {username}",
+                            "size": "sm",
+                            "color": colors["text"]
+                        },
+                        {
+                            "type": "text",
+                            "text": f"▪️ الحالة: {status}",
+                            "size": "sm",
+                            "color": colors["text"]
+                        },
+                        {
+                            "type": "text",
+                            "text": f"▪️ نقاطك: {points}",
+                            "size": "sm",
+                            "color": colors["text"]
+                        },
+                        {
+                            "type": "text",
+                            "text": "▪️ اختر ثيمك:",
+                            "size": "sm",
+                            "weight": "bold",
+                            "color": colors["primary"]
+                        }
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": t,
+                                "text": f"ثيم {t}"
+                            },
+                            "style": "primary" if t == theme else "secondary",
+                            "height": "sm",
+                            "color": colors["primary"] if t == theme else colors["shadow1"]
+                        }
+                        for t in list(THEMES.keys())[:3]
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": t,
+                                "text": f"ثيم {t}"
+                            },
+                            "style": "primary" if t == theme else "secondary",
+                            "height": "sm",
+                            "color": colors["primary"] if t == theme else colors["shadow1"]
+                        }
+                        for t in list(THEMES.keys())[3:6]
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": t,
+                                "text": f"ثيم {t}"
+                            },
+                            "style": "primary" if t == theme else "secondary",
+                            "height": "sm",
+                            "color": colors["primary"] if t == theme else colors["shadow1"]
+                        }
+                        for t in list(THEMES.keys())[6:]
+                    ]
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": "🕹️ الأزرار الثابتة:",
+                    "size": "sm",
+                    "weight": "bold",
+                    "color": colors["primary"]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "انضم",
+                                "text": "انضم"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "انسحب",
+                                "text": "انسحب"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        }
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "نقاطي",
+                                "text": "نقاطي"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "صدارة",
+                                "text": "صدارة"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        }
+                    ]
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "20px"
@@ -185,22 +375,35 @@ def build_home(theme="💜", username="مستخدم", points=0, is_registered=Fa
             "layout": "vertical",
             "spacing": "sm",
             "contents": [
-                {"type": "text", "text": "📝 ملاحظة: يمكنك استخدام البوت في الخاص أو القروبات", "size": "xxs", "color": colors["text2"], "align": "center", "wrap": True},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": colors["text2"], "align": "center"}
+                {
+                    "type": "text",
+                    "text": "📝 ملاحظة: يمكنك استخدام البوت في الخاص أو القروبات",
+                    "size": "xxs",
+                    "color": colors["text2"],
+                    "align": "center",
+                    "wrap": True
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": BOT_RIGHTS,
+                    "size": "xxs",
+                    "color": colors["text2"],
+                    "align": "center"
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "10px"
-        },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]},
-            "footer": {"backgroundColor": colors["bg"]}
         }
     }
+    
     return FlexMessage(alt_text="Bot Mesh - البداية", contents=FlexContainer.from_dict(contents))
 
 def build_games_menu(theme="💜"):
-    """نافذة المساعدة مع الألعاب وأزرار ثابتة أسفل الشاشة"""
+    """نافذة المساعدة مع الألعاب وأزرار ثابتة (LINE Compatible)"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     contents = {
@@ -210,17 +413,69 @@ def build_games_menu(theme="💜"):
             "layout": "vertical",
             "spacing": "md",
             "contents": [
-                {"type": "text", "text": "🤖 Bot Mesh – مساعدة", "weight": "bold", "size": "xl", "color": colors["color"], "align": "center"},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": "🎮 الألعاب المتاحة:", "weight": "bold", "size": "md", "color": colors["color"]},
-                {"type": "text", "text": "ذكاء – رياضيات – لون – أسرع – ترتيب – أغنية\nكلمة – سلسلة – خمن – توافق", "size": "sm", "color": colors["text"], "wrap": True},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": "📝 الأوامر أثناء اللعب (كنص):", "weight": "bold", "size": "md", "color": colors["color"]},
-                {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [
-                    {"type": "text", "text": "▫️ لمح → تلميح أول حرف وعدد حروف الكلمة", "size": "xs", "color": colors["text"], "wrap": True},
-                    {"type": "text", "text": "▫️ جاوب → لإرسال إجابتك", "size": "xs", "color": colors["text"]},
-                    {"type": "text", "text": "▫️ إيقاف → لإيقاف اللعبة", "size": "xs", "color": colors["text"]}
-                ]}
+                {
+                    "type": "text",
+                    "text": f"🤖 {BOT_NAME} – مساعدة",
+                    "weight": "bold",
+                    "size": "xl",
+                    "color": colors["primary"],
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": "🎮 الألعاب المتاحة:",
+                    "weight": "bold",
+                    "size": "md",
+                    "color": colors["primary"]
+                },
+                {
+                    "type": "text",
+                    "text": "ذكاء – رياضيات – لون – أسرع – ترتيب – أغنية\nكلمة – سلسلة – خمن – توافق",
+                    "size": "sm",
+                    "color": colors["text"],
+                    "wrap": True
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": "📝 الأوامر أثناء اللعب (كنص):",
+                    "weight": "bold",
+                    "size": "md",
+                    "color": colors["primary"]
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "▫️ لمح → تلميح أول حرف وعدد حروف الكلمة",
+                            "size": "xs",
+                            "color": colors["text"],
+                            "wrap": True
+                        },
+                        {
+                            "type": "text",
+                            "text": "▫️ جاوب → لإرسال إجابتك",
+                            "size": "xs",
+                            "color": colors["text"]
+                        },
+                        {
+                            "type": "text",
+                            "text": "▫️ إيقاف → لإيقاف اللعبة",
+                            "size": "xs",
+                            "color": colors["text"]
+                        }
+                    ]
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "20px"
@@ -230,47 +485,208 @@ def build_games_menu(theme="💜"):
             "layout": "vertical",
             "spacing": "xs",
             "contents": [
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": "⏹️ إيقاف", "weight": "bold", "size": "sm", "color": "#FF5555", "align": "center"},
-                {"type": "separator", "color": colors["shadow1"]},
-                # الصف الأول من أزرار الألعاب
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "ذكاء", "text": "لعبة IQ"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "لون", "text": "لعبة لون الكلمة"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "ترتيب", "text": "لعبة كلمة مبعثرة"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "رياضيات", "text": "لعبة رياضيات"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}
-                ]},
-                # الصف الثاني
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "أسرع", "text": "لعبة كتابة سريعة"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "ضد", "text": "لعبة عكس"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "تكوين", "text": "لعبة حروف وكلمات"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "أغنية", "text": "لعبة أغنية"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}
-                ]},
-                # الصف الثالث
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "لعبة", "text": "لعبة إنسان حيوان نبات"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "سلسلة", "text": "لعبة سلسلة كلمات"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "خمن", "text": "لعبة تخمين"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "توافق", "text": "لعبة توافق"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}
-                ]},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": "📝 ملاحظة: يمكنك استخدام البوت في الخاص أو القروبات", "size": "xxs", "color": colors["text2"], "align": "center", "wrap": True},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": colors["text2"], "align": "center"}
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": "⛔ إيقاف",
+                    "weight": "bold",
+                    "size": "sm",
+                    "color": "#FF5555",
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "ذكاء",
+                                "text": "لعبة IQ"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "لون",
+                                "text": "لعبة لون الكلمة"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "ترتيب",
+                                "text": "لعبة كلمة مبعثرة"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "رياضيات",
+                                "text": "لعبة رياضيات"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        }
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "أسرع",
+                                "text": "لعبة كتابة سريعة"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "ضد",
+                                "text": "لعبة عكس"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "تكوين",
+                                "text": "لعبة حروف وكلمات"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "أغنية",
+                                "text": "لعبة أغنية"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        }
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "لعبة",
+                                "text": "لعبة إنسان حيوان نبات"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "سلسلة",
+                                "text": "لعبة سلسلة كلمات"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "خمن",
+                                "text": "لعبة تخمين"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "توافق",
+                                "text": "لعبة توافق"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        }
+                    ]
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": "📝 ملاحظة: يمكنك استخدام البوت في الخاص أو القروبات",
+                    "size": "xxs",
+                    "color": colors["text2"],
+                    "align": "center",
+                    "wrap": True
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": BOT_RIGHTS,
+                    "size": "xxs",
+                    "color": colors["text2"],
+                    "align": "center"
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "10px"
-        },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]},
-            "footer": {"backgroundColor": colors["bg"]}
         }
     }
+    
     return FlexMessage(alt_text="Bot Mesh - مساعدة", contents=FlexContainer.from_dict(contents))
 
 def build_my_points(username, points, theme="💜"):
-    """نافذة نقاطي مع تصميم Neumorphism"""
+    """نافذة نقاطي (LINE Compatible)"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     contents = {
@@ -280,18 +696,69 @@ def build_my_points(username, points, theme="💜"):
             "layout": "vertical",
             "spacing": "md",
             "contents": [
-                {"type": "text", "text": f"{theme} نقاطي", "weight": "bold", "size": "xl", "color": colors["color"], "align": "center"},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "box", "layout": "vertical", "spacing": "md", "contents": [
-                    {"type": "text", "text": f"👤 الاسم: {username}", "size": "md", "color": colors["text"], "weight": "bold"},
-                    {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [
-                        {"type": "text", "text": f"⭐ النقاط", "size": "sm", "color": colors["text2"], "align": "center"},
-                        {"type": "text", "text": f"{points}", "size": "xxl", "weight": "bold", "color": colors["color"], "align": "center"}
-                    ], "backgroundColor": colors["card"], "cornerRadius": "20px", "paddingAll": "20px"},
-                    {"type": "separator", "color": colors["shadow1"]},
-                    {"type": "text", "text": "⚠️ تحذير: سيتم حذف بياناتك بعد 7 أيام من عدم النشاط",
-                     "size": "xs", "color": "#FF5551", "wrap": True, "align": "center"}
-                ]},
+                {
+                    "type": "text",
+                    "text": f"{theme} نقاطي",
+                    "weight": "bold",
+                    "size": "xl",
+                    "color": colors["primary"],
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "md",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"👤 الاسم: {username}",
+                            "size": "md",
+                            "color": colors["text"],
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "spacing": "sm",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "⭐ النقاط",
+                                    "size": "sm",
+                                    "color": colors["text2"],
+                                    "align": "center"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": f"{points}",
+                                    "size": "xxl",
+                                    "weight": "bold",
+                                    "color": colors["primary"],
+                                    "align": "center"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "20px",
+                            "paddingAll": "20px"
+                        },
+                        {
+                            "type": "separator",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "text",
+                            "text": "⚠️ تحذير: سيتم حذف بياناتك بعد 7 أيام من عدم النشاط",
+                            "size": "xs",
+                            "color": "#FF5551",
+                            "wrap": True,
+                            "align": "center"
+                        }
+                    ]
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "20px"
@@ -301,101 +768,57 @@ def build_my_points(username, points, theme="💜"):
             "layout": "vertical",
             "spacing": "xs",
             "contents": [
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "بداية", "text": "بداية"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}
-                ]},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": colors["text2"], "align": "center"}
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "بداية",
+                                "text": "بداية"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "مساعدة",
+                                "text": "مساعدة"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        }
+                    ]
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": BOT_RIGHTS,
+                    "size": "xxs",
+                    "color": colors["text2"],
+                    "align": "center"
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "10px"
-        },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]},
-            "footer": {"backgroundColor": colors["bg"]}
         }
     }
-    return FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(contents))
-
-def build_leaderboard(top_users, theme="💜"):
-    """نافذة الصدارة مع تصميم Neumorphism"""
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
-    leaderboard_contents = []
-    medals = ["🥇", "🥈", "🥉"]
-    
-    for i, (name, points) in enumerate(top_users[:10], 1):
-        medal = medals[i-1] if i <= 3 else f"{i}."
-        leaderboard_contents.append({
-            "type": "text",
-            "text": f"{medal} {name}: {points} نقطة",
-            "size": "sm",
-            "color": colors["text"]
-        })
-    
-    if not leaderboard_contents:
-        leaderboard_contents.append({
-            "type": "text",
-            "text": "لا يوجد لاعبين مسجلين بعد",
-            "size": "sm",
-            "color": colors["text2"],
-            "align": "center"
-        })
-    
-    contents = {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-                {"type": "text", "text": f"🏆 لوحة الصدارة", "weight": "bold", "size": "xl", "color": colors["color"], "align": "center"},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "box", "layout": "vertical", "spacing": "sm", "contents": leaderboard_contents,
-                 "backgroundColor": colors["card"], "cornerRadius": "20px", "paddingAll": "15px"}
-            ],
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px"
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "xs",
-            "contents": [
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "بداية", "text": "بداية"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]},
-                    {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}
-                ]},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": colors["text2"], "align": "center"}
-            ],
-            "backgroundColor": colors["bg"],
-            "paddingAll": "10px"
-        },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]},
-            "footer": {"backgroundColor": colors["bg"]}
-        }
-    }
     return FlexMessage(alt_text="الصدارة", contents=FlexContainer.from_dict(contents))
-
-# ============================================================================
-# Helper Functions
-# ============================================================================
-def get_username(profile):
-    """Get username from LINE profile"""
-    try:
-        return profile.display_name
-    except:
-        return "مستخدم"
-
-def update_user_activity(user_id):
-    """Update last activity"""
-    if user_id in registered_users:
-        registered_users[user_id]['last_activity'] = datetime.now()
 
 def send_fixed_buttons(line_bot_api, reply_token, theme="💜"):
     """إرسال الأزرار الثابتة عند منشنة البوت"""
@@ -408,10 +831,33 @@ def send_fixed_buttons(line_bot_api, reply_token, theme="💜"):
             "layout": "vertical",
             "spacing": "md",
             "contents": [
-                {"type": "text", "text": "🎮 Bot Mesh", "weight": "bold", "size": "xxl", "color": colors["color"], "align": "center"},
-                {"type": "text", "text": "بوت الألعاب الترفيهية", "size": "sm", "color": colors["text2"], "align": "center"},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": "مرحباً بك! اضغط على الأزرار أدناه للبدء 👇", "size": "md", "color": colors["text"], "wrap": True, "align": "center"}
+                {
+                    "type": "text",
+                    "text": f"🎮 {BOT_NAME}",
+                    "weight": "bold",
+                    "size": "xxl",
+                    "color": colors["primary"],
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "بوت الألعاب الترفيهية",
+                    "size": "sm",
+                    "color": colors["text2"],
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": "مرحباً بك! اضغط على الأزرار أدناه للبدء 👇",
+                    "size": "md",
+                    "color": colors["text"],
+                    "wrap": True,
+                    "align": "center"
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "20px"
@@ -421,20 +867,53 @@ def send_fixed_buttons(line_bot_api, reply_token, theme="💜"):
             "layout": "vertical",
             "spacing": "xs",
             "contents": [
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "بداية", "text": "بداية"}, "style": "primary", "height": "sm", "color": colors["color"]},
-                    {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "primary", "height": "sm", "color": colors["color"]}
-                ]},
-                {"type": "separator", "color": colors["shadow1"]},
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": colors["text2"], "align": "center"}
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "بداية",
+                                "text": "بداية"
+                            },
+                            "style": "primary",
+                            "height": "sm",
+                            "color": colors["primary"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "مساعدة",
+                                "text": "مساعدة"
+                            },
+                            "style": "primary",
+                            "height": "sm",
+                            "color": colors["primary"]
+                        }
+                    ]
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": BOT_RIGHTS,
+                    "size": "xxs",
+                    "color": colors["text2"],
+                    "align": "center"
+                }
             ],
             "backgroundColor": colors["bg"],
             "paddingAll": "10px"
-        },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]},
-            "footer": {"backgroundColor": colors["bg"]}
         }
     }
     
@@ -448,8 +927,25 @@ def send_fixed_buttons(line_bot_api, reply_token, theme="💜"):
         logger.error(f"❌ خطأ في إرسال الأزرار الثابتة: {e}")
 
 # ============================================================================
+# Helper Functions
+# ============================================================================
+
+def get_username(profile):
+    """Get username from LINE profile"""
+    try:
+        return profile.display_name
+    except:
+        return "مستخدم"
+
+def update_user_activity(user_id):
+    """Update last activity"""
+    if user_id in registered_users:
+        registered_users[user_id]['last_activity'] = datetime.now()
+
+# ============================================================================
 # Flask Routes
 # ============================================================================
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
@@ -511,6 +1007,7 @@ def home():
 # ============================================================================
 # Message Handler
 # ============================================================================
+
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     try:
@@ -589,7 +1086,7 @@ def handle_message(event):
             elif text == "إيقاف":
                 if user_id in active_games:
                     del active_games[user_id]
-                    reply = TextMessage(text="⏹️ تم إيقاف اللعبة")
+                    reply = TextMessage(text="⛔ تم إيقاف اللعبة")
             elif text.startswith("لعبة "):
                 if not user_data.get("is_registered"):
                     reply = TextMessage(text="⚠️ يجب التسجيل أولاً")
@@ -612,7 +1109,7 @@ def handle_message(event):
                             del active_games[user_id]
                         reply = result.get('response')
                 else:
-                    reply = TextMessage(text=f"مرحباً {username}! 👋\nاضغط على 'Home' للبدء أو 'Games' لعرض الألعاب 🎮")
+                    reply = TextMessage(text=f"مرحباً {username}! 👋\nاضغط على 'بداية' للبدء أو 'مساعدة' لعرض الألعاب 🎮")
             
             if reply:
                 line_bot_api.reply_message_with_http_info(
@@ -625,8 +1122,123 @@ def handle_message(event):
 # ============================================================================
 # Run
 # ============================================================================
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info(f"🚀 Starting {BOT_NAME} on port {port}")
     logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
     app.run(host="0.0.0.0", port=port, debug=False)
+                                "text": "مساعدة"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        }
+                    ]
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "text",
+                    "text": BOT_RIGHTS,
+                    "size": "xxs",
+                    "color": colors["text2"],
+                    "align": "center"
+                }
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "10px"
+        }
+    }
+    
+    return FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(contents))
+
+def build_leaderboard(top_users, theme="💜"):
+    """نافذة الصدارة (LINE Compatible)"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    leaderboard_contents = []
+    medals = ["🥇", "🥈", "🥉"]
+    
+    for i, (name, points) in enumerate(top_users[:10], 1):
+        medal = medals[i-1] if i <= 3 else f"{i}."
+        leaderboard_contents.append({
+            "type": "text",
+            "text": f"{medal} {name}: {points} نقطة",
+            "size": "sm",
+            "color": colors["text"]
+        })
+    
+    if not leaderboard_contents:
+        leaderboard_contents.append({
+            "type": "text",
+            "text": "لا يوجد لاعبين مسجلين بعد",
+            "size": "sm",
+            "color": colors["text2"],
+            "align": "center"
+        })
+    
+    contents = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🏆 لوحة الصدارة",
+                    "weight": "bold",
+                    "size": "xl",
+                    "color": colors["primary"],
+                    "align": "center"
+                },
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": leaderboard_contents,
+                    "backgroundColor": colors["card"],
+                    "cornerRadius": "20px",
+                    "paddingAll": "15px"
+                }
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "xs",
+            "contents": [
+                {
+                    "type": "separator",
+                    "color": colors["shadow1"]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "بداية",
+                                "text": "بداية"
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "مساعدة",
