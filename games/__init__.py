@@ -1,94 +1,101 @@
 """
-Bot Mesh - Games Module (Fixed)
+Bot Mesh - Games Module (Fixed - No Relative Imports)
 Created by: Abeer Aldosari © 2025
 """
 import logging
+import sys
+import os
+
+# إضافة مسار المشروع لـ sys.path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 logger = logging.getLogger(__name__)
 
-# استيراد BaseGame أولاً
-from .base_game import BaseGame
+# استيراد BaseGame أولاً بدون relative import
+from games.base_game import BaseGame
 
-# استيراد جميع الألعاب يدوياً للتأكد من التوافق
+# استيراد جميع الألعاب
 try:
-    from .iq_game import IqGame
+    from games.iq_game import IqGame
     logger.info("✅ IqGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load IqGame: {e}")
     IqGame = None
 
 try:
-    from .math_game import MathGame
+    from games.math_game import MathGame
     logger.info("✅ MathGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load MathGame: {e}")
     MathGame = None
 
 try:
-    from .word_color_game import WordColorGame
+    from games.word_color_game import WordColorGame
     logger.info("✅ WordColorGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load WordColorGame: {e}")
     WordColorGame = None
 
 try:
-    from .scramble_word_game import ScrambleWordGame
+    from games.scramble_word_game import ScrambleWordGame
     logger.info("✅ ScrambleWordGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load ScrambleWordGame: {e}")
     ScrambleWordGame = None
 
 try:
-    from .fast_typing_game import FastTypingGame
+    from games.fast_typing_game import FastTypingGame
     logger.info("✅ FastTypingGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load FastTypingGame: {e}")
     FastTypingGame = None
 
 try:
-    from .opposite_game import OppositeGame
+    from games.opposite_game import OppositeGame
     logger.info("✅ OppositeGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load OppositeGame: {e}")
     OppositeGame = None
 
 try:
-    from .letters_words_game import LettersWordsGame
+    from games.letters_words_game import LettersWordsGame
     logger.info("✅ LettersWordsGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load LettersWordsGame: {e}")
     LettersWordsGame = None
 
 try:
-    from .song_game import SongGame
+    from games.song_game import SongGame
     logger.info("✅ SongGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load SongGame: {e}")
     SongGame = None
 
 try:
-    from .human_animal_plant_game import HumanAnimalPlantGame
+    from games.human_animal_plant_game import HumanAnimalPlantGame
     logger.info("✅ HumanAnimalPlantGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load HumanAnimalPlantGame: {e}")
     HumanAnimalPlantGame = None
 
 try:
-    from .chain_words_game import ChainWordsGame
+    from games.chain_words_game import ChainWordsGame
     logger.info("✅ ChainWordsGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load ChainWordsGame: {e}")
     ChainWordsGame = None
 
 try:
-    from .guess_game import GuessGame
+    from games.guess_game import GuessGame
     logger.info("✅ GuessGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load GuessGame: {e}")
     GuessGame = None
 
 try:
-    from .compatibility_game import CompatibilityGame
+    from games.compatibility_game import CompatibilityGame
     logger.info("✅ CompatibilityGame loaded")
 except Exception as e:
     logger.error(f"❌ Failed to load CompatibilityGame: {e}")
