@@ -1,62 +1,36 @@
 """
-لعبة ضد الكلمة - نسخة محدثة ومحسّنة
+لعبة ضد الكلمة - مع دعم Gemini AI
 Created by: Abeer Aldosari © 2025
-
-تحديثات:
-- استيراد صحيح من games.base_game
-- قاعدة بيانات موسّعة من الأضداد
-- نظام تلميحات محسّن
-- دعم AI اختياري
-- دعم ثيمات ديناميكية
-- رسائل Flex حديثة بتصميم Neumorphism
+LINE Compatible - Neumorphism Soft Design
 """
 
-# ============================================================================
-# الاستيراد الصحيح
-# ============================================================================
-from games.base_game import BaseGame  # ✅ صحيح
-
+from games.base_game import BaseGame
 import random
 import difflib
 from typing import Dict, Any, Optional
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class OppositeGame(BaseGame):
-    """
-    لعبة ضد الكلمة - أوجد عكس الكلمة
+    """لعبة ضد الكلمة مع AI Fallback"""
     
-    الميزات:
-    - قاعدة بيانات موسّعة (20+ كلمة)
-    - دعم AI اختياري
-    - نظام تلميحات ذكي
-    - تتبع النقاط والإحصائيات
-    - رسائل Flex حديثة بتصميم Neumorphism
-    - دعم 6 ثيمات مختلفة
-    """
-    
-    def __init__(self, line_bot_api, use_ai=False, ai_generate_question=None, ai_check_answer=None):
-        """
-        تهيئة اللعبة
-        
-        المعاملات:
-            line_bot_api: واجهة LINE Bot API
-            use_ai: استخدام AI (اختياري)
-            ai_generate_question: دالة توليد أسئلة بالـ AI
-            ai_check_answer: دالة التحقق من الإجابات بالـ AI
-        """
-        # استدعاء الكلاس الأساسي
+    def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        
-        # إعدادات AI
-        self.use_ai = use_ai
-        self.ai_generate_question = ai_generate_question
-        self.ai_check_answer = ai_check_answer
-        
-        # تفعيل ميزات التلميح والكشف
         self.supports_hint = True
         self.supports_reveal = True
         
-        # قاعدة بيانات الأضداد (موسّعة)
+        # Gemini AI Keys
+        self.gemini_keys = [
+            os.getenv('GEMINI_API_KEY_1'),
+            os.getenv('GEMINI_API_KEY_2'),
+            os.getenv('GEMINI_API_KEY_3')
+        ]
+        self.current_key_index = 0
+        
+        # Fallback opposites
         self.default_opposites = [
             {"word": "كبير", "opposite": "صغير"},
             {"word": "طويل", "opposite": "قصير"},
@@ -67,112 +41,200 @@ class OppositeGame(BaseGame):
             {"word": "قوي", "opposite": "ضعيف"},
             {"word": "ثقيل", "opposite": "خفيف"},
             {"word": "جميل", "opposite": "قبيح"},
-            {"word": "سعيد", "opposite": "حزين"},
-            {"word": "نظيف", "opposite": "وسخ"},
-            {"word": "فاتح", "opposite": "غامق"},
-            {"word": "ممتلئ", "opposite": "فارغ"},
-            {"word": "هادئ", "opposite": "صاخب"},
-            {"word": "غالي", "opposite": "رخيص"},
-            {"word": "قريب", "opposite": "بعيد"},
-            {"word": "مشرق", "opposite": "مظلم"},
-            {"word": "سليم", "opposite": "مريض"},
-            {"word": "صادق", "opposite": "كاذب"},
-            {"word": "مشغول", "opposite": "فارغ"},
-            {"word": "صاعد", "opposite": "نازل"},
-            {"word": "داخل", "opposite": "خارج"},
-            {"word": "أعلى", "opposite": "أسفل"},
-            {"word": "يمين", "opposite": "يسار"},
-            {"word": "نهار", "opposite": "ليل"}
+            {"word": "سعيد", "opposite": "حزين"}
         ]
-        
         random.shuffle(self.default_opposites)
         
         self.current_word = None
+        self.last_correct_answer = None
+        self.using_ai = False
+
+    def get_gemini_client(self):
+        """الحصول على Gemini Client مع التبديل التلقائي"""
+        try:
+            import google.generativeai as genai
+            
+            for i in range(len(self.gemini_keys)):
+                key = self.gemini_keys[self.current_key_index]
+                if key:
+                    try:
+                        genai.configure(api_key=key)
+                        model = genai.GenerativeModel('gemini-pro')
+                        self.using_ai = True
+                        logger.info(f"✅ Gemini AI connected with key #{self.current_key_index + 1}")
+                        return model
+                    except Exception as e:
+                        logger.warning(f"⚠️ Gemini key #{self.current_key_index + 1} failed: {e}")
+                        self.current_key_index = (self.current_key_index + 1) % len(self.gemini_keys)
+            
+            logger.warning("⚠️ All Gemini keys failed, using fallback")
+            self.using_ai = False
+            return None
+        except ImportError:
+            logger.warning("⚠️ google-generativeai not installed, using fallback")
+            self.using_ai = False
+            return None
+
+    def generate_opposite_with_ai(self) -> Optional[Dict[str, str]]:
+        """توليد كلمة وعكسها باستخدام AI"""
+        model = self.get_gemini_client()
+        if not model:
+            return None
+        
+        try:
+            prompt = """أنشئ كلمة عربية وعكسها للعبة الأضداد.
+
+المتطلبات:
+- كلمة شائعة ويستخدمها الناس يومياً
+- الضد واضح ومعروف
+
+الرد بصيغة JSON فقط:
+{"word": "الكلمة", "opposite": "الضد"}"""
+
+            response = model.generate_content(prompt)
+            text = response.text.strip()
+            
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+            
+            import json
+            data = json.loads(text.strip())
+            
+            if "word" in data and "opposite" in data:
+                logger.info(f"✅ AI generated: {data['word']} ↔️ {data['opposite']}")
+                return data
+            
+            return None
+        except Exception as e:
+            logger.error(f"❌ AI generation failed: {e}")
+            return None
+
+    def check_answer_with_ai(self, correct: str, user: str) -> bool:
+        """التحقق من الإجابة باستخدام AI"""
+        model = self.get_gemini_client()
+        if not model:
+            return False
+        
+        try:
+            prompt = f"""هل هاتان الكلمتان متطابقتان أو متشابهتان جداً في المعنى؟
+
+الكلمة الصحيحة: {correct}
+إجابة المستخدم: {user}
+
+أجب بـ "نعم" أو "لا" فقط."""
+
+            response = model.generate_content(prompt)
+            answer = response.text.strip().lower()
+            
+            return "نعم" in answer or "yes" in answer
+        except Exception as e:
+            logger.error(f"❌ AI check failed: {e}")
+            return False
 
     def start_game(self) -> Any:
-        """
-        بدء اللعبة وإرجاع أول سؤال
-        
-        العودة:
-            FlexMessage: السؤال الأول
-        """
         self.current_question = 0
         self.game_active = True
+        self.last_correct_answer = None
         return self.get_question()
 
-    def generate_question(self) -> Dict[str, str]:
-        """
-        توليد سؤال (باستخدام AI أو القائمة الافتراضية)
+    def get_progress_bar(self) -> Dict:
+        colors = self.get_theme_colors()
+        progress_boxes = []
         
-        العودة:
-            dict: سؤال وإجابة {"word": "...", "opposite": "..."}
-        """
-        # محاولة استخدام AI أولاً
-        if self.use_ai and self.ai_generate_question:
-            try:
-                new_question = self.ai_generate_question()
-                if new_question and 'word' in new_question and 'opposite' in new_question:
-                    return new_question
-            except Exception:
-                pass  # Fallback للقائمة الافتراضية
+        for i in range(self.questions_count):
+            if i < self.current_question:
+                bg_color = "#10B981"
+            elif i == self.current_question:
+                bg_color = colors["primary"]
+            else:
+                bg_color = "#E5E7EB"
+            
+            progress_boxes.append({
+                "type": "box",
+                "layout": "vertical",
+                "contents": [],
+                "width": f"{100//self.questions_count}%",
+                "height": "6px",
+                "backgroundColor": bg_color,
+                "cornerRadius": "3px"
+            })
         
-        # استخدام القائمة الافتراضية
-        return self.default_opposites[self.current_question % len(self.default_opposites)]
+        return {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": progress_boxes,
+            "spacing": "xs"
+        }
 
     def get_question(self) -> Any:
-        """
-        إنشاء وإرجاع رسالة Flex للسؤال
+        # محاولة استخدام AI أولاً
+        q_data = self.generate_opposite_with_ai()
         
-        العودة:
-            FlexMessage: السؤال بتصميم Neumorphism
-        """
-        # توليد السؤال
-        q_data = self.generate_question()
+        # Fallback إذا فشل AI
+        if not q_data:
+            q_data = self.default_opposites[self.current_question % len(self.default_opposites)]
+            self.using_ai = False
+        
         self.current_word = q_data['word']
         self.current_answer = q_data['opposite']
         
-        # الحصول على ألوان الثيم الحالي
         colors = self.get_theme_colors()
+        progress_bar = self.get_progress_bar()
         
-        # بناء محتوى Flex Message
         flex_content = {
             "type": "bubble",
             "size": "kilo",
             "header": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "md",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": "↔️ ضد الكلمة",
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": colors["text"],
-                        "align": "center"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "↔️ ضد الكلمة",
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": "#FFFFFF",
+                                "flex": 0
+                            },
+                            {
+                                "type": "text",
+                                "text": "🤖 AI" if self.using_ai else "📦 DB",
+                                "size": "xs",
+                                "color": "#FFFFFF",
+                                "align": "end"
+                            }
+                        ]
                     },
+                    progress_bar,
                     {
                         "type": "text",
-                        "text": f"سؤال {self.current_question + 1} من {self.questions_count}",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "align": "center",
-                        "margin": "sm"
+                        "text": f"السؤال {self.current_question + 1} من {self.questions_count}",
+                        "size": "xs",
+                        "color": "#FFFFFF",
+                        "align": "center"
                     }
                 ],
-                "backgroundColor": colors["bg"],
+                "backgroundColor": colors["primary"],
                 "paddingAll": "20px"
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "lg",
                 "contents": [
                     {
                         "type": "text",
                         "text": "ما هو ضد:",
-                        "size": "md",
-                        "color": colors["text"],
-                        "align": "center",
-                        "margin": "md"
+                        "size": "sm",
+                        "color": colors["text2"],
+                        "align": "center"
                     },
                     {
                         "type": "box",
@@ -182,99 +244,138 @@ class OppositeGame(BaseGame):
                                 "type": "text",
                                 "text": f"『 {self.current_word} 』",
                                 "size": "xxl",
-                                "color": colors["primary"],
+                                "color": colors["text"],
                                 "align": "center",
-                                "wrap": True,
                                 "weight": "bold"
                             }
                         ],
                         "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "25px",
-                        "margin": "lg"
+                        "cornerRadius": "15px",
+                        "paddingAll": "25px"
                     },
                     {
                         "type": "text",
                         "text": "🤔 فكر في العكس...",
-                        "size": "sm",
+                        "size": "xs",
                         "color": colors["text2"],
-                        "align": "center",
-                        "margin": "lg"
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "20px"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "✅ الإجابة السابقة:",
+                                "size": "xxs",
+                                "color": colors["text2"],
+                                "weight": "bold"
+                            },
+                            {
+                                "type": "text",
+                                "text": self.last_correct_answer if self.last_correct_answer else "لا يوجد بعد",
+                                "size": "xs",
+                                "color": colors["text"]
+                            }
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "10px",
+                        "paddingAll": "10px"
                     },
                     {
                         "type": "separator",
-                        "margin": "lg"
+                        "color": colors["shadow1"]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "💡 لمح", "text": "لمح"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "📝 جاوب", "text": "جاوب"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                                "style": "primary",
+                                "color": "#FF5555",
+                                "height": "sm"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "color": colors["shadow1"]
                     },
                     {
                         "type": "text",
-                        "text": "💡 اكتب 'لمح' للتلميح\n📝 اكتب 'جاوب' للكشف عن الإجابة",
-                        "size": "xs",
+                        "text": "تم إنشاؤه بواسطة عبير الدوسري © 2025",
+                        "size": "xxs",
                         "color": colors["text2"],
-                        "align": "center",
-                        "margin": "md",
-                        "wrap": True
+                        "align": "center"
                     }
                 ],
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
             "styles": {
-                "body": {
-                    "backgroundColor": colors["bg"]
-                }
+                "body": {"backgroundColor": colors["bg"]},
+                "header": {"backgroundColor": colors["primary"]},
+                "footer": {"backgroundColor": colors["bg"]}
             }
         }
         
-        return self._create_flex_with_buttons("ضد الكلمة", flex_content)
+        return self._create_flex_message("ضد الكلمة", flex_content)
 
     def get_hint(self) -> str:
-        """
-        الحصول على تلميح للسؤال الحالي
-        
-        العودة:
-            str: التلميح
-        """
         if not self.current_answer:
             return "💡 لا يوجد تلميح متاح"
         
         first_char = self.current_answer[0]
         length = len(self.current_answer)
         
-        hint = f"💡 تلميح: الإجابة تبدأ بـ '{first_char}'"
-        hint += f"\n🔢 عدد الحروف: {length}"
-        
-        return hint
+        return f"💡 تلميح: الإجابة تبدأ بـ '{first_char}'\n🔢 عدد الحروف: {length}"
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """
-        التحقق من إجابة اللاعب
-        
-        المعاملات:
-            user_answer: إجابة المستخدم
-            user_id: معرف المستخدم
-            display_name: اسم المستخدم
-            
-        العودة:
-            dict: نتيجة الإجابة أو None إذا كانت خاطئة
-        """
-        # التحقق من حالة اللعبة
         if not self.game_active:
             return None
 
-        # تنظيم الإجابة
         normalized_answer = self.normalize_text(user_answer)
 
-        # ===== معالجة أمر التلميح =====
         if normalized_answer == "لمح":
             hint = self.get_hint()
-            return {
-                "message": hint,
-                "response": self._create_text_message(hint),
-                "points": 0
-            }
+            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
 
-        # ===== معالجة أمر كشف الإجابة =====
         if normalized_answer == "جاوب":
+            self.last_correct_answer = self.current_answer
             reveal = f"📝 الإجابة الصحيحة: {self.current_answer}"
             next_question = self.next_question()
             
@@ -282,53 +383,33 @@ class OppositeGame(BaseGame):
                 next_question['message'] = f"{reveal}\n\n{next_question.get('message','')}"
                 return next_question
             
-            return {
-                'message': reveal,
-                'response': next_question,
-                'points': 0
-            }
+            return {'message': reveal, 'response': next_question, 'points': 0}
 
-        # ===== التحقق من صحة الإجابة =====
         normalized_correct = self.normalize_text(self.current_answer)
         is_valid = False
 
-        # 1. مطابقة تامة
         if normalized_answer == normalized_correct:
             is_valid = True
-        
-        # 2. استخدام AI للتحقق (إن توفر)
-        elif self.use_ai and self.ai_check_answer:
-            try:
-                is_valid = self.ai_check_answer(self.current_answer, user_answer)
-            except Exception:
-                pass
-        
-        # 3. مطابقة جزئية (80% تشابه)
-        if not is_valid:
-            ratio = difflib.SequenceMatcher(None, normalized_answer, normalized_correct).ratio()
-            if ratio > 0.8:
-                is_valid = True
+        elif self.using_ai:
+            is_valid = self.check_answer_with_ai(self.current_answer, user_answer)
+        elif difflib.SequenceMatcher(None, normalized_answer, normalized_correct).ratio() > 0.8:
+            is_valid = True
 
-        # إجابة خاطئة
         if not is_valid:
             return {
-                "message": "▫️ إجابة غير صحيحة ▪️",
-                "response": self._create_text_message("▫️ إجابة غير صحيحة ▪️"),
+                "message": "❌ إجابة غير صحيحة",
+                "response": self._create_text_message("❌ إجابة غير صحيحة، حاول مرة أخرى"),
                 "points": 0
             }
 
-        # ===== إجابة صحيحة =====
+        self.last_correct_answer = self.current_answer
         points = self.add_score(user_id, display_name, 10)
-        
-        # الانتقال للسؤال التالي
         next_question = self.next_question()
         
-        # التحقق من انتهاء اللعبة
         if isinstance(next_question, dict) and next_question.get('game_over'):
             next_question['points'] = points
             return next_question
         
-        # رسالة النجاح
         success_message = f"✅ صحيح يا {display_name}!\n📝 {self.current_word} ↔️ {self.current_answer}\n+{points} نقطة"
         
         return {
@@ -338,33 +419,16 @@ class OppositeGame(BaseGame):
         }
 
     def get_game_info(self) -> Dict[str, Any]:
-        """
-        الحصول على معلومات اللعبة
-        
-        العودة:
-            dict: معلومات اللعبة
-        """
         return {
             "name": "لعبة ضد الكلمة",
             "emoji": "↔️",
             "description": "أوجد عكس الكلمة",
             "questions_count": self.questions_count,
             "words_count": len(self.default_opposites),
-            "supports_ai": self.use_ai,
+            "using_ai": self.using_ai,
             "supports_hint": self.supports_hint,
             "supports_reveal": self.supports_reveal,
             "active": self.game_active,
             "current_question": self.current_question,
             "players_count": len(self.scores)
         }
-
-
-# ============================================================================
-# مثال على الاستخدام
-# ============================================================================
-if __name__ == "__main__":
-    """
-    مثال على كيفية استخدام اللعبة
-    """
-    print("✅ ملف لعبة ضد الكلمة جاهز للاستخدام!")
-    print("📝 تأكد من استخدام: from games.base_game import BaseGame")
