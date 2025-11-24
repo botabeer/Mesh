@@ -1,26 +1,28 @@
-# Bot Mesh - Full LINE Bot with Gemini AI & Stable Rules
+# Bot Mesh - Full LINE Bot v2025
 # Created by: Abeer Aldosari © 2025
+# Features: Gemini AI, Games, Scoring, User Management, Arabic Normalization
 
-import os, sys, time, json, random, re, hashlib
+import os, sys, random, re, json, time
+from datetime import datetime, timedelta
 from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, FlexMessage, TextMessage
+from linebot.v3.messaging import (
+    Configuration, ApiClient, MessagingApi, ReplyMessageRequest, FlexMessage, TextMessage
+)
 import requests
 
 app = Flask(__name__)
 
 # --------------------------
-# LINE CONFIG - تأكد من تعيينها في Environment
+# LINE CONFIG
 # --------------------------
 CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-CHANNEL_SECRET = os.getenv("CHANNEL_SECRET")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 
 if not CHANNEL_ACCESS_TOKEN or not CHANNEL_SECRET:
     print("⚠️ متغير بيئة مفقود!")
-    if not CHANNEL_ACCESS_TOKEN:
-        print("LINE_CHANNEL_ACCESS_TOKEN غير موجود.")
-    if not CHANNEL_SECRET:
-        print("CHANNEL_SECRET غير موجود.")
+    if not CHANNEL_ACCESS_TOKEN: print("LINE_CHANNEL_ACCESS_TOKEN غير موجود.")
+    if not CHANNEL_SECRET: print("LINE_CHANNEL_SECRET غير موجود.")
     sys.exit(1)
 
 configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
@@ -56,39 +58,35 @@ GAME_RULES = {
 # --------------------------
 # قواعد المستخدمين والألعاب
 # --------------------------
-USERS = {}
-CURRENT_GAMES = {}
-THEMES = {}
+USERS = {}  # user_id: {"name":..., "joined":True, "score":0,"last_seen":datetime}
+CURRENT_GAMES = {}  # user_id: {"game":..., "round":..., "question":..., "answer":...}
+THEMES = {}  # user_id: theme_color
 
 # --------------------------
-# أزرار ثابتة
-# --------------------------
-def create_button(title,color="#4CAF50",style="primary"):
-    return {"type":"button","style":style,"color":color,"height":"sm","action":{"type":"message","label":title,"text":title}}
-
-# --------------------------
-# توحيد الحروف العربية
+# Arabic normalization
 # --------------------------
 ARABIC_NORMALIZATION = {"أ":"ا","إ":"ا","آ":"ا","ؤ":"و","ئ":"ي","ة":"ه","ى":"ي"}
 def normalize_arabic(text):
-    if not GAME_RULES["normalize_arabic"]: return text.strip().lower()
     text=text.strip().lower()
     text=re.sub(r'[\u0617-\u061A\u064B-\u0652]','',text)
     for k,v in ARABIC_NORMALIZATION.items(): text=text.replace(k,v)
     return text
-def verify_answer(question,answer):
-    return normalize_arabic(answer) in normalize_arabic(question)
+
+def verify_answer(correct, answer):
+    return normalize_arabic(answer) in normalize_arabic(correct)
 
 # --------------------------
-# Gemini AI
+# Gemini AI Query
 # --------------------------
 def query_gemini_ai(prompt):
     for key in GEMINI_KEYS:
         if not key: continue
         try:
-            resp=requests.post("https://api.gemini.com/v2/generate",
-                               headers={"Authorization":f"Bearer {key}"},
-                               json={"prompt":prompt,"max_tokens":200})
+            resp=requests.post(
+                "https://api.gemini.com/v2/generate",
+                headers={"Authorization":f"Bearer {key}"},
+                json={"prompt":prompt,"max_tokens":200}
+            )
             if resp.status_code==200: return resp.json().get("text","سؤال افتراضي").strip()
         except: continue
     try:
@@ -99,7 +97,13 @@ def query_gemini_ai(prompt):
     return "سؤال افتراضي"
 
 # --------------------------
-# نافذة البداية
+# Buttons
+# --------------------------
+def create_button(title,color="#4CAF50",style="primary"):
+    return {"type":"button","style":style,"color":color,"height":"sm","action":{"type":"message","label":title,"text":title}}
+
+# --------------------------
+# Welcome Screen
 # --------------------------
 def welcome_screen():
     bubble={"type":"bubble","size":"mega","paddingAll":"15px","body":{"type":"box","layout":"vertical","spacing":"md","contents":[
@@ -113,13 +117,13 @@ def welcome_screen():
         ]},
         {"type":"separator","margin":"md"},
         {"type":"text","text":"أوامر البوت:","size":"sm","margin":"xs"},
-        {"type":"text","text":"مساعدة - قائمة الألعاب\nانضم - التسجيل\nنقاطي - نقاطك\nصدارة - أفضل اللاعبين\nإيقاف - إيقاف البوت","size":"xs","color":"#777777","margin":"xs"},
+        {"type":"text","text":"مساعدة - قائمة الألعاب\nانضم - التسجيل\nنقاطي - نقاطك\nصدارة - أفضل اللاعبين\nإيقاف - إيقاف اللعبة","size":"xs","color":"#777777","margin":"xs"},
         {"type":"text","text":GAME_RULES["copyright"],"size":"xs","color":"#999999","align":"center","margin":"md"}
     ]}}
     return FlexMessage(alt_text="نافذة البداية",contents=bubble)
 
 # --------------------------
-# نافذة المساعدة
+# Games Menu
 # --------------------------
 def games_menu():
     game_names=[["ذكاء","لون","ترتيب"],["رياضيات","أسرع","ضد"],["تكوين","أغنية","لعبة"],["سلسلة","خمن","توافق"]]
@@ -127,7 +131,10 @@ def games_menu():
               {"type":"text","text":"اختر لعبة للبدء","size":"xs","align":"center","color":"#777777","margin":"xs"}]
     for row in game_names: contents.append({"type":"box","layout":"horizontal","spacing":"sm","contents":[create_button(name,"#F0F0F0","secondary") for name in row]})
     contents.append({"type":"separator","margin":"md"})
-    bottom_buttons=[create_button(name,"#3F51B5" if name=="انضم" else "#E0E0E0","primary" if name=="انضم" else "secondary") for name in GAME_RULES["permanent_buttons"]]
+    # bottom fixed buttons (permanent + repeated games)
+    bottom_buttons=[]
+    for name in GAME_RULES["permanent_buttons"]: 
+        bottom_buttons.append(create_button(name,"#3F51B5" if name=="انضم" else "#E0E0E0","primary" if name=="انضم" else "secondary"))
     for row in game_names:
         for game in row: bottom_buttons.append(create_button(game,"#F0F0F0","secondary"))
     contents.append({"type":"box","layout":"horizontal","spacing":"sm","contents":bottom_buttons})
@@ -148,7 +155,7 @@ def callback():
     return "OK"
 
 # --------------------------
-# MAIN
+# Main
 # --------------------------
 if __name__=="__main__":
     port=int(os.environ.get("PORT",5000))
