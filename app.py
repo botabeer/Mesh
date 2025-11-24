@@ -25,17 +25,21 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
+# Import from config (without THEMES)
 from config import (
     BOT_NAME,
     LINE_CHANNEL_SECRET,
     LINE_CHANNEL_ACCESS_TOKEN,
     GEMINI_API_KEYS,
     AI_ENABLED,
-    THEMES,
-    DEFAULT_THEME,
     BOT_SETTINGS,
     GAMES_LIST
 )
+
+# Import THEMES from theme_styles (unified source)
+from theme_styles import THEMES, DEFAULT_THEME, FIXED_BUTTONS
+
+# Import UI Builder
 from ui_builder import UIBuilder
 
 # =============================================================================
