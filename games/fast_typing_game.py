@@ -1,51 +1,23 @@
 """
-لعبة الكتابة السريعة - نسخة محدثة ومحسّنة
+لعبة الكتابة السريعة
 Created by: Abeer Aldosari © 2025
-
-تحديثات:
-- استيراد صحيح من games.base_game
-- نظام تتبع الوقت محسّن
-- دعم ثيمات ديناميكية
-- رسائل Flex حديثة بتصميم Neumorphism
+LINE Compatible - Neumorphism Soft Design
 """
 
-# ============================================================================
-# الاستيراد الصحيح
-# ============================================================================
-from games.base_game import BaseGame  # ✅ صحيح
-
+from games.base_game import BaseGame
 import random
 from datetime import datetime
 from typing import Dict, Any, Optional
 
 
 class FastTypingGame(BaseGame):
-    """
-    لعبة الكتابة السريعة
-    
-    الميزات:
-    - قاعدة بيانات موسّعة من الجمل
-    - تتبع الوقت بدقة
-    - نظام نقاط يعتمد على السرعة
-    - رسائل Flex حديثة بتصميم Neumorphism
-    - دعم 6 ثيمات مختلفة
-    """
+    """لعبة الكتابة السريعة"""
     
     def __init__(self, line_bot_api):
-        """
-        تهيئة اللعبة
-        
-        المعاملات:
-            line_bot_api: واجهة LINE Bot API
-        """
-        # استدعاء الكلاس الأساسي
         super().__init__(line_bot_api, questions_count=5)
+        self.supports_hint = False
+        self.supports_reveal = False
         
-        # إعدادات اللعبة
-        self.supports_hint = False  # لا تدعم التلميح (اللعبة تعتمد على الكتابة الدقيقة)
-        self.supports_reveal = False  # لا تدعم كشف الإجابة
-        
-        # قاعدة بيانات الجمل
         self.sentences = [
             "سبحان الله وبحمده",
             "الحمد لله رب العالمين",
@@ -56,83 +28,103 @@ class FastTypingGame(BaseGame):
             "الوقت كالسيف إن لم تقطعه قطعك",
             "التعاون أساس النجاح",
             "المعرفة قوة والعمل حياة",
-            "التواضع زينة العلم",
-            "الصدق منجاة والكذب مهلكة",
-            "احترم تُحترم",
-            "الإتقان من الإيمان",
-            "من جد وجد ومن زرع حصد",
-            "العقل السليم في الجسم السليم"
+            "التواضع زينة العلم"
         ]
         random.shuffle(self.sentences)
         
         self.start_time = None
         self.time_taken = 0
+        self.last_correct_answer = None
 
     def start_game(self) -> Any:
-        """
-        بدء اللعبة وإرجاع أول سؤال
-        
-        العودة:
-            FlexMessage: السؤال الأول
-        """
         self.current_question = 0
         self.game_active = True
+        self.last_correct_answer = None
         return self.get_question()
 
-    def get_question(self) -> Any:
-        """
-        إنشاء وإرجاع رسالة Flex للسؤال
+    def get_progress_bar(self) -> Dict:
+        """شريط تقدم احترافي"""
+        colors = self.get_theme_colors()
+        progress_boxes = []
         
-        العودة:
-            FlexMessage: السؤال بتصميم Neumorphism
-        """
-        # اختيار جملة
+        for i in range(self.questions_count):
+            if i < self.current_question:
+                bg_color = "#10B981"
+            elif i == self.current_question:
+                bg_color = colors["primary"]
+            else:
+                bg_color = "#E5E7EB"
+            
+            progress_boxes.append({
+                "type": "box",
+                "layout": "vertical",
+                "contents": [],
+                "width": f"{100//self.questions_count}%",
+                "height": "6px",
+                "backgroundColor": bg_color,
+                "cornerRadius": "3px"
+            })
+        
+        return {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": progress_boxes,
+            "spacing": "xs"
+        }
+
+    def get_question(self) -> Any:
         sentence = self.sentences[self.current_question % len(self.sentences)]
         self.current_answer = sentence
         self.start_time = datetime.now()
         
-        # الحصول على ألوان الثيم الحالي
         colors = self.get_theme_colors()
+        progress_bar = self.get_progress_bar()
         
-        # بناء محتوى Flex Message
         flex_content = {
             "type": "bubble",
             "size": "kilo",
             "header": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "md",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": "⚡ كتابة سريعة",
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": colors["text"],
-                        "align": "center"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "⚡ كتابة سريعة",
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": "#FFFFFF",
+                                "flex": 0
+                            },
+                            {
+                                "type": "text",
+                                "text": f"{self.current_question + 1}/{self.questions_count}",
+                                "size": "sm",
+                                "color": "#FFFFFF",
+                                "align": "end"
+                            }
+                        ]
                     },
-                    {
-                        "type": "text",
-                        "text": f"سؤال {self.current_question + 1} من {self.questions_count}",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "align": "center",
-                        "margin": "sm"
-                    }
+                    progress_bar
                 ],
-                "backgroundColor": colors["bg"],
+                "backgroundColor": colors["primary"],
                 "paddingAll": "20px"
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "lg",
                 "contents": [
                     {
                         "type": "text",
                         "text": "اكتب بسرعة ودقة:",
-                        "size": "md",
-                        "color": colors["text"],
-                        "align": "center",
-                        "margin": "md"
+                        "size": "sm",
+                        "color": colors["text2"],
+                        "align": "center"
                     },
                     {
                         "type": "box",
@@ -141,128 +133,144 @@ class FastTypingGame(BaseGame):
                             {
                                 "type": "text",
                                 "text": f"« {sentence} »",
-                                "size": "xl",
-                                "color": colors["primary"],
+                                "size": "lg",
+                                "color": colors["text"],
                                 "align": "center",
                                 "wrap": True,
                                 "weight": "bold"
                             }
                         ],
                         "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "25px",
-                        "margin": "lg"
+                        "cornerRadius": "15px",
+                        "paddingAll": "25px"
                     },
                     {
+                        "type": "text",
+                        "text": "⏱️ أسرع إجابة صحيحة تفوز!",
+                        "size": "xs",
+                        "color": colors["text2"],
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "20px"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {
                         "type": "box",
-                        "layout": "horizontal",
+                        "layout": "vertical",
+                        "spacing": "xs",
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "⏱️",
-                                "size": "lg",
-                                "flex": 0
+                                "text": "✅ الإجابة السابقة:",
+                                "size": "xxs",
+                                "color": colors["text2"],
+                                "weight": "bold"
                             },
                             {
                                 "type": "text",
-                                "text": "أسرع إجابة صحيحة تفوز!",
-                                "size": "sm",
-                                "color": colors["text2"],
-                                "flex": 1,
-                                "margin": "sm"
+                                "text": self.last_correct_answer if self.last_correct_answer else "لا يوجد بعد",
+                                "size": "xs",
+                                "color": colors["text"],
+                                "wrap": True
                             }
                         ],
-                        "margin": "lg"
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "10px",
+                        "paddingAll": "10px"
                     },
                     {
                         "type": "separator",
-                        "margin": "lg"
+                        "color": colors["shadow1"]
                     },
                     {
                         "type": "text",
                         "text": "⚠️ لا تدعم: لمح • جاوب",
                         "size": "xxs",
                         "color": "#FF6B6B",
-                        "align": "center",
-                        "margin": "md"
+                        "align": "center"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                                "style": "primary",
+                                "color": "#FF5555",
+                                "height": "sm"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "color": colors["shadow1"]
+                    },
+                    {
+                        "type": "text",
+                        "text": "تم إنشاؤه بواسطة عبير الدوسري © 2025",
+                        "size": "xxs",
+                        "color": colors["text2"],
+                        "align": "center"
                     }
                 ],
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
             "styles": {
-                "body": {
-                    "backgroundColor": colors["bg"]
-                }
+                "body": {"backgroundColor": colors["bg"]},
+                "header": {"backgroundColor": colors["primary"]},
+                "footer": {"backgroundColor": colors["bg"]}
             }
         }
         
-        return self._create_flex_with_buttons("كتابة سريعة", flex_content)
+        return self._create_flex_message("كتابة سريعة", flex_content)
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """
-        التحقق من إجابة اللاعب
-        
-        المعاملات:
-            user_answer: إجابة المستخدم
-            user_id: معرف المستخدم
-            display_name: اسم المستخدم
-            
-        العودة:
-            dict: نتيجة الإجابة أو None إذا كانت خاطئة
-        """
-        # التحقق من حالة اللعبة
         if not self.game_active:
             return None
 
-        # تنظيف الإجابة (بدون normalize لأننا نريد المطابقة الدقيقة)
         answer = user_answer.strip()
-
-        # رفض أوامر لمح/جاوب
         normalized = self.normalize_text(answer)
+        
         if normalized in ['لمح', 'جاوب']:
             msg = "❌ هذه اللعبة لا تدعم التلميحات أو كشف الإجابة"
-            return {
-                'message': msg,
-                'response': self._create_text_message(msg),
-                'points': 0
-            }
+            return {'message': msg, 'response': self._create_text_message(msg), 'points': 0}
 
-        # ===== التحقق من صحة الإجابة =====
-        # مطابقة دقيقة
         if answer != self.current_answer:
             return {
-                "message": "▫️ إجابة غير صحيحة ▪️\n⚠️ يجب كتابة الجملة بالضبط",
-                "response": self._create_text_message("▫️ إجابة غير صحيحة ▪️\n⚠️ يجب كتابة الجملة بالضبط"),
+                "message": "❌ إجابة غير صحيحة\n⚠️ يجب كتابة الجملة بالضبط",
+                "response": self._create_text_message("❌ إجابة غير صحيحة\n⚠️ يجب كتابة الجملة بالضبط"),
                 "points": 0
             }
 
-        # ===== إجابة صحيحة =====
-        # حساب الوقت المستغرق
         self.time_taken = (datetime.now() - self.start_time).total_seconds()
         
-        # حساب النقاط بناءً على السرعة
         if self.time_taken <= 5:
-            points = 20  # سريع جداً
+            points = 20
         elif self.time_taken <= 10:
-            points = 15  # سريع
+            points = 15
         elif self.time_taken <= 20:
-            points = 10  # متوسط
+            points = 10
         else:
-            points = 5   # بطيء
+            points = 5
         
+        self.last_correct_answer = self.current_answer
         points = self.add_score(user_id, display_name, points)
-        
-        # الانتقال للسؤال التالي
         next_question = self.next_question()
         
-        # التحقق من انتهاء اللعبة
         if isinstance(next_question, dict) and next_question.get('game_over'):
             next_question['points'] = points
             next_question['message'] = f"✅ ممتاز يا {display_name}!\n⏱️ الوقت: {self.time_taken:.1f}ث\n+{points} نقطة\n\n{next_question.get('message','')}"
             return next_question
         
-        # رسالة النجاح
         success_message = f"✅ ممتاز يا {display_name}!\n⏱️ الوقت: {self.time_taken:.1f}ث\n+{points} نقطة"
         
         return {
@@ -272,12 +280,6 @@ class FastTypingGame(BaseGame):
         }
 
     def get_game_info(self) -> Dict[str, Any]:
-        """
-        الحصول على معلومات اللعبة
-        
-        العودة:
-            dict: معلومات اللعبة
-        """
         return {
             "name": "لعبة الكتابة السريعة",
             "emoji": "⚡",
@@ -290,14 +292,3 @@ class FastTypingGame(BaseGame):
             "current_question": self.current_question,
             "players_count": len(self.scores)
         }
-
-
-# ============================================================================
-# مثال على الاستخدام
-# ============================================================================
-if __name__ == "__main__":
-    """
-    مثال على كيفية استخدام اللعبة
-    """
-    print("✅ ملف لعبة الكتابة السريعة جاهز للاستخدام!")
-    print("📝 تأكد من استخدام: from games.base_game import BaseGame")
