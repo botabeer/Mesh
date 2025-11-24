@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
 import logging
+import importlib
+import glob
 from datetime import datetime, timedelta
 from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
@@ -35,10 +38,32 @@ if not any(GEMINI_KEYS):
 configuration = Configuration(access_token=CHANNEL_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
+# تحميل الألعاب من مجلد games
+games = {}
+games_path = os.path.join(os.path.dirname(__file__), 'games')
+
+if os.path.exists(games_path):
+    sys.path.insert(0, games_path)
+    for file in glob.glob(os.path.join(games_path, "*.py")):
+        if file.endswith("__init__.py"):
+            continue
+        
+        name = os.path.basename(file)[:-3]
+        try:
+            module = importlib.import_module(name)
+            games[name] = module
+            logging.info(f"✅ تم تحميل لعبة: {name}")
+        except Exception as e:
+            logging.error(f"❌ فشل تحميل لعبة {name}: {e}")
+    
+    logging.info(f"📦 تم تحميل {len(games)} لعبة")
+else:
+    logging.warning("⚠️ مجلد games غير موجود")
+
 # قاعدة بيانات المستخدمين
 registered_users = {}
-user_themes = {}  # تخزين ثيم كل مستخدم
-active_games = {}  # الألعاب النشطة
+user_themes = {}
+active_games = {}
 
 # تنظيف البيانات القديمة (أسبوع)
 def clean_old_data():
@@ -138,7 +163,6 @@ def handle_message(event):
                     reply = TextMessage(text="⚠️ يجب التسجيل أولاً باستخدام زر 'انضم'")
                     
             elif text == "صدارة":
-                # ترتيب اللاعبين حسب النقاط
                 sorted_users = sorted(
                     [(u["name"], u["points"]) for u in registered_users.values() if u.get("is_registered")],
                     key=lambda x: x[1],
@@ -157,17 +181,47 @@ def handle_message(event):
                 reply = TextMessage(text="⏸️ تم إيقاف اللعبة الحالية")
                 
             elif text.startswith("لعبة "):
-                # التحقق من التسجيل
                 if not registered_users.get(user_id, {}).get("is_registered"):
                     reply = TextMessage(text="⚠️ يجب التسجيل أولاً باستخدام زر 'انضم'")
                 else:
-                    # هنا سيتم تشغيل اللعبة المطلوبة
                     game_name = text.replace("لعبة ", "").strip()
-                    reply = TextMessage(text=f"🎮 جاري تحميل لعبة {game_name}...\n(سيتم إضافة منطق الألعاب لاحقاً)")
+                    
+                    # البحث عن اللعبة في المجلد
+                    game_found = False
+                    for game_module_name, game_module in games.items():
+                        if hasattr(game_module, 'start_game'):
+                            try:
+                                # تشغيل اللعبة
+                                active_games[user_id] = game_module_name
+                                reply = game_module.start_game(user_id, username, current_theme)
+                                game_found = True
+                                logging.info(f"🎮 {username} بدأ لعبة {game_module_name}")
+                                break
+                            except Exception as e:
+                                logging.error(f"❌ خطأ في تشغيل اللعبة {game_module_name}: {e}")
+                    
+                    if not game_found:
+                        reply = TextMessage(text=f"⚠️ اللعبة '{game_name}' غير متاحة حالياً")
                     
             else:
-                # البوت صامت - لا يرد على رسائل عشوائية
-                return
+                # التحقق إذا كان المستخدم في لعبة نشطة
+                if user_id in active_games:
+                    game_module_name = active_games[user_id]
+                    if game_module_name in games:
+                        game_module = games[game_module_name]
+                        if hasattr(game_module, 'handle_answer'):
+                            try:
+                                reply = game_module.handle_answer(user_id, text, registered_users)
+                            except Exception as e:
+                                logging.error(f"❌ خطأ في معالجة إجابة اللعبة: {e}")
+                                reply = TextMessage(text="❌ حدث خطأ في معالجة إجابتك")
+                        else:
+                            return
+                    else:
+                        return
+                else:
+                    # البوت صامت
+                    return
             
             # إرسال الرد
             line_bot_api.reply_message_with_http_info(
@@ -193,6 +247,7 @@ def home():
             <h1>🤖 {BOT_NAME}</h1>
             <p>البوت يعمل بنجاح ✅</p>
             <p>المستخدمين المسجلين: {len(registered_users)}</p>
+            <p>الألعاب المحملة: {len(games)}</p>
             <p>تم الإنشاء بواسطة عبير الدوسري @ 2025</p>
         </body>
     </html>
