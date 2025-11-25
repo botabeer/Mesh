@@ -1,6 +1,7 @@
 """
 Bot Mesh v6.1 - Base Game Class
 Simple, Clean & Group-Friendly
+محدث: تغيير "جماعي" إلى "مجموعة"
 """
 
 import random
@@ -11,11 +12,11 @@ from datetime import datetime
 # ============================================================================
 
 class Game:
-    """محرك اللعبة الأساسي - يدعم الفردي والجماعي"""
+    """محرك اللعبة الأساسي - يدعم الفردي والمجموعة"""
     
     def __init__(self, game_type, mode="فردي", max_rounds=5):
         self.game_type = game_type
-        self.mode = mode  # "فردي" أو "جماعي"
+        self.mode = mode  # "فردي" أو "مجموعة"
         self.max_rounds = max_rounds
         
         # حالة اللعبة
@@ -24,7 +25,7 @@ class Game:
         self.current_question = None
         self.current_answer = None
         
-        # النقاط (للفردي والجماعي)
+        # النقاط (للفردي والمجموعة)
         self.scores = {}  # {user_id: {"name": str, "points": int}}
         self.answered_this_round = set()  # من أجاب في هذه الجولة
         
@@ -50,8 +51,8 @@ class Game:
         if self.mode == "فردي" and self.scores and user_id not in self.scores:
             return {"valid": False, "message": "هذه لعبة فردية لشخص آخر!"}
         
-        # إذا أجاب في هذه الجولة (جماعي فقط)
-        if self.mode == "جماعي" and user_id in self.answered_this_round:
+        # إذا أجاب في هذه الجولة (مجموعة فقط)
+        if self.mode == "مجموعة" and user_id in self.answered_this_round:
             return {"valid": False, "message": "لقد أجبت في هذه الجولة!"}
         
         # تسجيل اللاعب إذا لم يكن موجوداً
