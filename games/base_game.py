@@ -13,9 +13,6 @@ from datetime import datetime
 
 class Game:
     """محرك اللعبة الأساسي - يدعم الفردي والمجموعة"""
-
-# Alias للتوافق مع الألعاب القديمة
-BaseGame = Game
     
     def __init__(self, game_type, mode="فردي", max_rounds=5):
         self.game_type = game_type
@@ -176,3 +173,9 @@ BaseGame = Game
         """هل انتهت صلاحية اللعبة؟"""
         elapsed = (datetime.now() - self.last_activity).total_seconds() / 60
         return elapsed > max_minutes
+
+
+# ============================================================================
+# Alias للتوافق مع الألعاب
+# ============================================================================
+BaseGame = Game
