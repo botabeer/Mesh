@@ -17,7 +17,10 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
 # استيراد الوحدات
 import ui
-from games import create_game
+from games.game_loader import load_games
+
+# تحميل الألعاب من مجلد games/
+GAMES = load_games()
 
 # ============================================================================
 # إعداد التطبيق
@@ -47,7 +50,7 @@ handler = WebhookHandler(LINE_SECRET)
 # ============================================================================
 
 # المستخدمون
-users = {}  # {user_id: {"name": str, "points": int, "mode": str}}
+users = {}  # {user_id: {"name": str, "points": int, "mode": str, "theme": str}}
 
 # الألعاب النشطة
 active_games = {}  # {room_id: Game}
@@ -80,6 +83,7 @@ def get_or_create_user(user_id, username):
             "name": username,
             "points": 0,
             "mode": "فردي",
+            "theme": "💜",  # الثيم الافتراضي
             "last_active": datetime.now()
         }
         stats["total_users"] += 1
@@ -146,26 +150,39 @@ def handle_message(event):
             
             if text in ["بداية", "البداية", "start", "@"]:
                 # الشاشة الرئيسية
-                reply = ui.home_screen(username, user["points"])
+                reply = ui.home_screen(username, user["points"], user["theme"])
             
             elif text in ["جماعي", "لعب جماعي"]:
                 # تغيير الوضع إلى جماعي
                 user["mode"] = "جماعي"
-                reply = ui.games_menu(mode="جماعي")
+                reply = ui.games_menu(mode="جماعي", current_theme=user["theme"])
             
             elif text in ["فردي", "لعب فردي"]:
                 # تغيير الوضع إلى فردي
                 user["mode"] = "فردي"
-                reply = ui.games_menu(mode="فردي")
+                reply = ui.games_menu(mode="فردي", current_theme=user["theme"])
             
             elif text in ["العاب", "الألعاب", "ألعاب"]:
                 # قائمة الألعاب
-                reply = ui.games_menu(mode=user["mode"])
+                reply = ui.games_menu(mode=user["mode"], current_theme=user["theme"])
+            
+            elif text in ["ثيمات", "الثيمات", "themes"]:
+                # شاشة اختيار الثيمات
+                reply = ui.themes_selector(current_theme=user["theme"])
+            
+            elif text.startswith("ثيم "):
+                # تغيير الثيم
+                theme_emoji = text.replace("ثيم ", "").strip()
+                if theme_emoji in ui.THEMES:
+                    user["theme"] = theme_emoji
+                    reply = TextMessage(text=f"✅ تم تغيير الثيم إلى {ui.THEMES[theme_emoji]['name']}")
+                else:
+                    reply = TextMessage(text="❌ ثيم غير موجود!")
             
             elif text in ["صدارة", "الصدارة", "leaderboard"]:
                 # لوحة الصدارة
                 top = get_top_players()
-                reply = ui.leaderboard(top)
+                reply = ui.leaderboard(top, current_theme=user["theme"])
             
             # ============================================================
             # بدء لعبة جديدة
@@ -174,10 +191,10 @@ def handle_message(event):
             elif text.startswith("لعبة "):
                 game_name = text.replace("لعبة ", "").strip()
                 
-                # إنشاء اللعبة
-                game = create_game(game_name, mode=user["mode"])
-                
-                if game:
+                # إنشاء اللعبة من مجلد games/
+                if game_name in GAMES:
+                    game = GAMES[game_name](mode=user["mode"])
+                    
                     # حفظ اللعبة
                     active_games[room_id] = game
                     stats["total_games"] += 1
@@ -189,7 +206,8 @@ def handle_message(event):
                         q_data["question"],
                         q_data["round"],
                         q_data["total_rounds"],
-                        q_data["mode"]
+                        q_data["mode"],
+                        user["theme"]
                     )
                 else:
                     reply = TextMessage(text="❌ لعبة غير موجودة!")
@@ -217,7 +235,8 @@ def handle_message(event):
                             results["winner_name"],
                             results["winner_points"],
                             results["all_players"],
-                            results["mode"]
+                            results["mode"],
+                            user["theme"]
                         )
                         
                         # تحديث نقاط اللاعبين
@@ -233,7 +252,8 @@ def handle_message(event):
                             q_data["question"],
                             q_data["round"],
                             q_data["total_rounds"],
-                            q_data["mode"]
+                            q_data["mode"],
+                            user["theme"]
                         )
                 
                 elif text in ["ايقاف", "إيقاف", "stop", "خروج"]:
@@ -257,7 +277,8 @@ def handle_message(event):
                                 results["winner_name"],
                                 results["winner_points"],
                                 results["all_players"],
-                                results["mode"]
+                                results["mode"],
+                                user["theme"]
                             )
                             
                             # تحديث نقاط اللاعبين
@@ -273,14 +294,15 @@ def handle_message(event):
                                 q_data["question"],
                                 q_data["round"],
                                 q_data["total_rounds"],
-                                q_data["mode"]
+                                q_data["mode"],
+                                user["theme"]
                             )
                     else:
                         reply = TextMessage(text=result["message"])
             
             else:
                 # رسالة افتراضية
-                reply = ui.home_screen(username, user["points"])
+                reply = ui.home_screen(username, user["points"], user["theme"])
             
             # إرسال الرد
             line_api.reply_message(
@@ -422,8 +444,9 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     
     logger.info("=" * 60)
-    logger.info("🎮 Bot Mesh v6.0 - Simple & Clean")
-    logger.info("📦 6 ألعاب متاحة")
+    logger.info("🎮 Bot Mesh v6.1 - Themes + Games Folder")
+    logger.info(f"📦 {len(GAMES)} ألعاب متاحة")
+    logger.info("🎨 9 ثيمات جميلة")
     logger.info("👥 يدعم اللعب الفردي والجماعي")
     logger.info(f"🌐 Port {port}")
     logger.info("=" * 60)
