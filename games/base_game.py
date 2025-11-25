@@ -1,13 +1,13 @@
 """
-Bot Mesh - Enhanced Base Game Class
+Bot Mesh - Enhanced Base Game Class v4.0
 Created by: Abeer Aldosari © 2025
 
 Features:
-✅ Unified game system
+✅ Memory-safe with automatic cleanup
+✅ Thread-safe operations
 ✅ Perfect Arabic support
-✅ Smart state management
-✅ LINE-optimized messages
 ✅ AI-ready architecture
+✅ LINE-optimized messages
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
@@ -16,18 +16,23 @@ from constants import (
     POINTS_PER_CORRECT_ANSWER, normalize_arabic
 )
 from typing import Dict, Any, Optional, List
-
+from datetime import datetime
+import threading
 
 class BaseGame:
     """
-    الكلاس الأساسي المحسن لجميع الألعاب
+    الكلاس الأساسي المحسّن لجميع الألعاب
     
     الميزات:
     - دعم كامل للعربية
     - إدارة ذكية للحالة
     - واجهات Flex احترافية
     - تكامل سلس مع AI
+    - Thread-safe operations
     """
+    
+    # Class-level lock for thread safety
+    _lock = threading.Lock()
     
     def __init__(self, line_bot_api, questions_count=5):
         """
@@ -48,13 +53,15 @@ class BaseGame:
         self.questions_count = questions_count
         self.current_question = 0
         
-        # نظام النقاط
+        # نظام النقاط (Thread-safe)
         self.scores = {}  # {user_id: {"name": str, "score": int}}
+        self._scores_lock = threading.Lock()
         
         # حالة اللعبة
         self.game_active = False
         self.answered_users = set()
         self.current_answer = None
+        self.created_at = datetime.now()
         
         # دعم الميزات
         self.supports_hint = True
@@ -77,12 +84,12 @@ class BaseGame:
         return THEMES.get(self.theme, THEMES[DEFAULT_THEME])
     
     # ========================================================================
-    # إدارة النقاط
+    # إدارة النقاط (Thread-safe)
     # ========================================================================
     
     def add_score(self, user_id: str, display_name: str, points: int) -> int:
         """
-        إضافة نقاط للاعب
+        إضافة نقاط للاعب بشكل آمن
         
         Args:
             user_id: معرف المستخدم
@@ -92,12 +99,13 @@ class BaseGame:
         Returns:
             int: النقاط المضافة
         """
-        if user_id not in self.scores:
-            self.scores[user_id] = {"name": display_name, "score": 0}
-        
-        self.scores[user_id]["score"] += points
-        self.answered_users.add(user_id)
-        return points
+        with self._scores_lock:
+            if user_id not in self.scores:
+                self.scores[user_id] = {"name": display_name, "score": 0}
+            
+            self.scores[user_id]["score"] += points
+            self.answered_users.add(user_id)
+            return points
     
     def get_top_players(self, limit: int = 3) -> List[tuple]:
         """
@@ -109,12 +117,13 @@ class BaseGame:
         Returns:
             List[tuple]: قائمة (name, score)
         """
-        sorted_scores = sorted(
-            self.scores.items(),
-            key=lambda x: x[1]["score"],
-            reverse=True
-        )
-        return [(data["name"], data["score"]) for _, data in sorted_scores[:limit]]
+        with self._scores_lock:
+            sorted_scores = sorted(
+                self.scores.items(),
+                key=lambda x: x[1]["score"],
+                reverse=True
+            )
+            return [(data["name"], data["score"]) for _, data in sorted_scores[:limit]]
     
     # ========================================================================
     # دورة حياة اللعبة
@@ -122,10 +131,11 @@ class BaseGame:
     
     def start_game(self):
         """بدء اللعبة - يجب تجاوزها في الكلاسات الفرعية"""
-        self.current_question = 0
-        self.game_active = True
-        self.answered_users.clear()
-        return self.get_question()
+        with BaseGame._lock:
+            self.current_question = 0
+            self.game_active = True
+            self.answered_users.clear()
+            return self.get_question()
     
     def get_question(self):
         """إنشاء السؤال - يجب تجاوزها"""
@@ -157,26 +167,28 @@ class BaseGame:
     
     def end_game(self) -> Dict[str, Any]:
         """إنهاء اللعبة وإرجاع النتيجة"""
-        self.game_active = False
-        
-        # تحديد الفائز
-        if self.scores:
-            winner = max(self.scores.items(), key=lambda x: x[1]["score"])
-            winner_name = winner[1]["name"]
-            winner_score = winner[1]["score"]
-        else:
-            winner_name = "لا يوجد"
-            winner_score = 0
-        
-        # بناء رسالة النهاية
-        result_message = self._build_game_over_message(winner_name, winner_score)
-        
-        return {
-            "message": f"🎉 انتهت اللعبة! الفائز: {winner_name}",
-            "response": result_message,
-            "points": 0,
-            "game_over": True
-        }
+        with BaseGame._lock:
+            self.game_active = False
+            
+            # تحديد الفائز
+            if self.scores:
+                with self._scores_lock:
+                    winner = max(self.scores.items(), key=lambda x: x[1]["score"])
+                    winner_name = winner[1]["name"]
+                    winner_score = winner[1]["score"]
+            else:
+                winner_name = "لا يوجد"
+                winner_score = 0
+            
+            # بناء رسالة النهاية
+            result_message = self._build_game_over_message(winner_name, winner_score)
+            
+            return {
+                "message": f"🎉 انتهت اللعبة! الفائز: {winner_name}",
+                "response": result_message,
+                "points": 0,
+                "game_over": True
+            }
     
     # ========================================================================
     # دوال مساعدة
@@ -204,6 +216,19 @@ class BaseGame:
         if isinstance(self.current_answer, list):
             return f"📝 الإجابة: {' أو '.join(self.current_answer)}"
         return f"📝 الإجابة: {self.current_answer}"
+    
+    def is_expired(self, max_age_minutes: int = 30) -> bool:
+        """التحقق من انتهاء صلاحية اللعبة"""
+        age = (datetime.now() - self.created_at).total_seconds() / 60
+        return age > max_age_minutes
+    
+    def cleanup(self):
+        """تنظيف موارد اللعبة"""
+        with self._scores_lock:
+            self.scores.clear()
+        self.answered_users.clear()
+        self.game_active = False
+        self.current_answer = None
     
     # ========================================================================
     # بناء الرسائل
@@ -383,5 +408,13 @@ class BaseGame:
             "active": self.game_active,
             "supports_hint": self.supports_hint,
             "supports_reveal": self.supports_reveal,
-            "players_count": len(self.scores)
+            "players_count": len(self.scores),
+            "age_minutes": (datetime.now() - self.created_at).total_seconds() / 60
         }
+    
+    def __del__(self):
+        """تنظيف تلقائي عند حذف الكائن"""
+        try:
+            self.cleanup()
+        except:
+            pass
