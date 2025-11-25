@@ -1,246 +1,31 @@
 """
-Bot Mesh - Enhanced UI Builder with Perfect LINE Compatibility
+Bot Mesh - Enhanced UI Builder v5.0
 Created by: Abeer Aldosari © 2025
 
-Features:
-✅ Perfect Arabic encoding
-✅ Professional Neumorphism design
-✅ LINE-optimized Flex Messages
-✅ Smooth animations
-✅ Accessibility-friendly colors
+التحسينات:
+✅ نصوص مختصرة وواضحة
+✅ أزرار ثابتة محسّنة
+✅ تصميم موحد
+✅ ألوان متناسقة
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer
 from constants import (
-    BOT_NAME, BOT_RIGHTS, THEMES, DEFAULT_THEME,
-    GAME_LIST, FIXED_BUTTONS
+    BOT_NAME, BOT_RIGHTS, THEMES, DEFAULT_THEME, GAME_LIST
 )
 
 
-def create_neumorphic_card(colors, contents, footer_contents=None, size="mega"):
-    """
-    إنشاء بطاقة Neumorphic محسنة
-    
-    Args:
-        colors: ألوان الثيم
-        contents: محتويات البطاقة
-        footer_contents: محتويات التذييل (اختياري)
-        size: حجم البطاقة (kilo/mega/giga)
-    
-    Returns:
-        dict: بطاقة Flex Message
-    """
-    card = {
-        "type": "bubble",
-        "size": size,
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "lg",
-            "contents": contents,
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px"
-        },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]}
-        }
-    }
-    
-    if footer_contents:
-        card["footer"] = {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "sm",
-            "contents": footer_contents,
-            "backgroundColor": colors["bg"],
-            "paddingAll": "15px"
-        }
-        card["styles"]["footer"] = {"backgroundColor": colors["bg"]}
-    
-    return card
-
-
-def create_button(label, text, style="secondary", color=None):
-    """
-    إنشاء زر محسن
-    
-    Args:
-        label: نص الزر
-        text: الرسالة المرسلة عند الضغط
-        style: نمط الزر (primary/secondary)
-        color: لون مخصص (اختياري)
-    
-    Returns:
-        dict: زر
-    """
-    button = {
-        "type": "button",
-        "action": {
-            "type": "message",
-            "label": label,
-            "text": text
-        },
-        "style": style,
-        "height": "sm"
-    }
-    
-    if color:
-        button["color"] = color
-    
-    return button
-
-
-def create_button_row(buttons, spacing="sm"):
-    """
-    إنشاء صف أزرار
-    
-    Args:
-        buttons: قائمة الأزرار
-        spacing: المسافة بين الأزرار
-    
-    Returns:
-        dict: صف أزرار أفقي
-    """
-    return {
-        "type": "box",
-        "layout": "horizontal",
-        "spacing": spacing,
-        "contents": buttons
-    }
-
-
-def create_separator(color="#E2E8F0", margin="md"):
-    """
-    إنشاء خط فاصل
-    
-    Args:
-        color: لون الخط
-        margin: الهامش
-    
-    Returns:
-        dict: خط فاصل
-    """
-    return {
-        "type": "separator",
-        "color": color,
-        "margin": margin
-    }
-
-
-def create_header(title, subtitle=None, colors=None):
-    """
-    إنشاء رأس احترافي
-    
-    Args:
-        title: العنوان الرئيسي
-        subtitle: العنوان الفرعي (اختياري)
-        colors: ألوان الثيم
-    
-    Returns:
-        dict: رأس البطاقة
-    """
-    if not colors:
-        colors = THEMES[DEFAULT_THEME]
-    
-    contents = [
-        {
-            "type": "text",
-            "text": title,
-            "weight": "bold",
-            "size": "xxl",
-            "color": colors["primary"],
-            "align": "center"
-        }
-    ]
-    
-    if subtitle:
-        contents.append({
-            "type": "text",
-            "text": subtitle,
-            "size": "sm",
-            "color": colors["text2"],
-            "align": "center",
-            "margin": "sm"
-        })
-    
-    return {
-        "type": "box",
-        "layout": "vertical",
-        "contents": contents,
-        "spacing": "xs"
-    }
-
-
-def create_info_card(icon, title, value, colors):
-    """
-    إنشاء بطاقة معلومات
-    
-    Args:
-        icon: أيقونة
-        title: عنوان
-        value: قيمة
-        colors: ألوان الثيم
-    
-    Returns:
-        dict: بطاقة معلومات
-    """
-    return {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-            {
-                "type": "text",
-                "text": icon,
-                "size": "xl",
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": title,
-                "size": "xs",
-                "color": colors["text2"],
-                "align": "center",
-                "margin": "sm"
-            },
-            {
-                "type": "text",
-                "text": str(value),
-                "size": "lg",
-                "weight": "bold",
-                "color": colors["primary"],
-                "align": "center",
-                "margin": "xs"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "20px",
-        "spacing": "xs"
-    }
-
-
 def build_home(theme="💜", username="مستخدم", points=0, is_registered=False):
-    """
-    بناء الصفحة الرئيسية المحسنة
-    
-    Args:
-        theme: رمز الثيم
-        username: اسم المستخدم
-        points: نقاط المستخدم
-        is_registered: حالة التسجيل
-    
-    Returns:
-        FlexMessage: رسالة الصفحة الرئيسية
-    """
+    """بناء الصفحة الرئيسية المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     status = "✅ مسجل" if is_registered else "⚪ غير مسجل"
     status_color = colors["success"] if is_registered else colors["text2"]
     
-    # بطاقة معلومات المستخدم
+    # بطاقة المستخدم
     user_card = {
         "type": "box",
         "layout": "vertical",
-        "spacing": "md",
+        "spacing": "sm",
         "contents": [
             {
                 "type": "text",
@@ -257,14 +42,14 @@ def build_home(theme="💜", username="مستخدم", points=0, is_registered=Fa
                     {
                         "type": "text",
                         "text": status,
-                        "size": "sm",
+                        "size": "xs",
                         "color": status_color,
                         "flex": 1
                     },
                     {
                         "type": "text",
                         "text": f"⭐ {points} نقطة",
-                        "size": "sm",
+                        "size": "xs",
                         "color": colors["primary"],
                         "align": "end",
                         "flex": 1
@@ -273,68 +58,124 @@ def build_home(theme="💜", username="مستخدم", points=0, is_registered=Fa
             }
         ],
         "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "20px"
+        "cornerRadius": "15px",
+        "paddingAll": "15px"
     }
     
-    # محدد الثيمات (3 في كل صف)
-    theme_buttons = []
+    # محدد الثيمات (صف واحد)
     theme_list = list(THEMES.keys())
+    theme_row1 = theme_list[:5]
+    theme_row2 = theme_list[5:]
     
-    for i in range(0, len(theme_list), 3):
-        row_themes = theme_list[i:i+3]
-        buttons = [
-            create_button(
-                t,
-                f"ثيم {t}",
-                "primary" if t == theme else "secondary",
-                colors["primary"] if t == theme else None
-            )
-            for t in row_themes
+    theme_buttons_row1 = {
+        "type": "box",
+        "layout": "horizontal",
+        "spacing": "xs",
+        "contents": [
+            {
+                "type": "button",
+                "action": {"type": "message", "label": t, "text": f"ثيم {t}"},
+                "style": "primary" if t == theme else "secondary",
+                "height": "sm",
+                "color": colors["primary"] if t == theme else None
+            }
+            for t in theme_row1
         ]
-        theme_buttons.append(create_button_row(buttons))
+    }
     
-    # بناء المحتوى
+    theme_buttons_row2 = {
+        "type": "box",
+        "layout": "horizontal",
+        "spacing": "xs",
+        "contents": [
+            {
+                "type": "button",
+                "action": {"type": "message", "label": t, "text": f"ثيم {t}"},
+                "style": "primary" if t == theme else "secondary",
+                "height": "sm",
+                "color": colors["primary"] if t == theme else None
+            }
+            for t in theme_row2
+        ]
+    }
+    
+    # المحتوى
     contents = [
-        create_header(f"🎮 {BOT_NAME}", "بوت الألعاب الترفيهية الذكي", colors),
-        create_separator(colors["shadow1"]),
+        {
+            "type": "text",
+            "text": f"🎮 {BOT_NAME}",
+            "size": "xxl",
+            "weight": "bold",
+            "color": colors["primary"],
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": "بوت الألعاب الترفيهية",
+            "size": "sm",
+            "color": colors["text2"],
+            "align": "center"
+        },
+        {"type": "separator", "color": colors["shadow1"], "margin": "md"},
         user_card,
         {
             "type": "text",
-            "text": "🎨 اختر ثيمك المفضل:",
-            "size": "md",
+            "text": "🎨 اختر ثيمك:",
+            "size": "sm",
             "weight": "bold",
             "color": colors["text"],
-            "margin": "lg"
-        }
-    ] + theme_buttons
+            "margin": "md"
+        },
+        theme_buttons_row1,
+        theme_buttons_row2
+    ]
     
     # التذييل
     footer_buttons = [
-        create_button_row([
-            create_button(
-                "📝 انضم" if not is_registered else "🚪 انسحب",
-                "انضم" if not is_registered else "انسحب",
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["games"]["label"],
-                FIXED_BUTTONS["games"]["text"],
-                "secondary"
-            )
-        ]),
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["points"]["label"],
-                FIXED_BUTTONS["points"]["text"]
-            ),
-            create_button(
-                FIXED_BUTTONS["leaderboard"]["label"],
-                FIXED_BUTTONS["leaderboard"]["text"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
+        {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "message",
+                        "label": "📝 انضم" if not is_registered else "🚪 انسحب",
+                        "text": "انضم" if not is_registered else "انسحب"
+                    },
+                    "style": "primary",
+                    "height": "sm",
+                    "color": colors["button"]
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "🎮 ألعاب", "text": "مساعدة"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ]
+        },
+        {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "⭐ نقاطي", "text": "نقاطي"},
+                    "style": "secondary",
+                    "height": "sm"
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "🏆 صدارة", "text": "صدارة"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ]
+        },
+        {"type": "separator", "color": colors["shadow1"]},
         {
             "type": "text",
             "text": BOT_RIGHTS,
@@ -344,23 +185,39 @@ def build_home(theme="💜", username="مستخدم", points=0, is_registered=Fa
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons)
+    flex_content = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": footer_buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
     return FlexMessage(
         alt_text=f"{BOT_NAME} - البداية",
-        contents=FlexContainer.from_dict(card)
+        contents=FlexContainer.from_dict(flex_content)
     )
 
 
 def build_games_menu(theme="💜"):
-    """
-    بناء قائمة الألعاب المحسنة
-    
-    Args:
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة قائمة الألعاب
-    """
+    """بناء قائمة الألعاب المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     # إنشاء أزرار الألعاب (3 في كل صف)
@@ -370,69 +227,70 @@ def build_games_menu(theme="💜"):
     for i in range(0, len(games), 3):
         row_games = games[i:i+3]
         buttons = [
-            create_button(
-                f"{game[1]['icon']} {game[1]['label']}",
-                f"لعبة {game[0]}",
-                "secondary",
-                colors["primary"]
-            )
+            {
+                "type": "button",
+                "action": {
+                    "type": "message",
+                    "label": f"{game[1]['icon']} {game[1]['label']}",
+                    "text": f"لعبة {game[0]}"
+                },
+                "style": "secondary",
+                "height": "sm",
+                "color": colors["primary"]
+            }
             for game in row_games
         ]
-        game_buttons.append(create_button_row(buttons))
+        game_buttons.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "xs",
+            "contents": buttons
+        })
     
-    # بطاقة التعليمات
-    instructions_card = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "sm",
-        "contents": [
-            {
-                "type": "text",
-                "text": "💡 الأوامر أثناء اللعب:",
-                "size": "sm",
-                "color": colors["text"],
-                "weight": "bold"
-            },
-            {
-                "type": "text",
-                "text": "• لمح - للحصول على تلميح\n• جاوب - لكشف الإجابة\n• إيقاف - لإنهاء اللعبة",
-                "size": "xs",
-                "color": colors["text2"],
-                "wrap": True,
-                "margin": "sm"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "15px",
-        "paddingAll": "15px"
-    }
-    
-    # بناء المحتوى
+    # المحتوى
     contents = [
-        create_header("🎮 الألعاب المتاحة", f"اختر من {len(GAME_LIST)} لعبة مختلفة", colors),
-        create_separator(colors["shadow1"])
-    ] + game_buttons + [
-        create_separator(colors["shadow1"], "lg"),
-        instructions_card
-    ]
+        {
+            "type": "text",
+            "text": "🎮 الألعاب",
+            "size": "xxl",
+            "weight": "bold",
+            "color": colors["primary"],
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": f"{len(GAME_LIST)} لعبة ممتعة",
+            "size": "sm",
+            "color": colors["text2"],
+            "align": "center"
+        },
+        {"type": "separator", "color": colors["shadow1"], "margin": "md"}
+    ] + game_buttons
     
     # التذييل
     footer_buttons = [
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"],
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["stop"]["label"],
-                FIXED_BUTTONS["stop"]["text"],
-                "secondary",
-                colors["error"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
+        {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "🏠 بداية", "text": "بداية"},
+                    "style": "primary",
+                    "height": "sm",
+                    "color": colors["button"]
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                    "style": "secondary",
+                    "height": "sm",
+                    "color": colors["error"]
+                }
+            ]
+        },
+        {"type": "separator", "color": colors["shadow1"]},
         {
             "type": "text",
             "text": BOT_RIGHTS,
@@ -442,25 +300,39 @@ def build_games_menu(theme="💜"):
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons)
+    flex_content = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": footer_buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
     return FlexMessage(
         alt_text=f"{BOT_NAME} - الألعاب",
-        contents=FlexContainer.from_dict(card)
+        contents=FlexContainer.from_dict(flex_content)
     )
 
 
 def build_my_points(username, points, theme="💜"):
-    """
-    بناء صفحة النقاط المحسنة
-    
-    Args:
-        username: اسم المستخدم
-        points: النقاط
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة النقاط
-    """
+    """بناء صفحة النقاط المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     # تحديد المستوى
@@ -481,19 +353,12 @@ def build_my_points(username, points, theme="💜"):
         level_color = "#D53F8C"
         progress = 100
     
-    # بطاقة النقاط الرئيسية
+    # بطاقة النقاط
     points_card = {
         "type": "box",
         "layout": "vertical",
-        "spacing": "lg",
+        "spacing": "sm",
         "contents": [
-            {
-                "type": "text",
-                "text": "النقاط الكلية",
-                "size": "sm",
-                "color": colors["text2"],
-                "align": "center"
-            },
             {
                 "type": "text",
                 "text": str(points),
@@ -505,38 +370,30 @@ def build_my_points(username, points, theme="💜"):
             {
                 "type": "text",
                 "text": "نقطة",
-                "size": "md",
+                "size": "sm",
                 "color": colors["text2"],
                 "align": "center"
             }
         ],
         "backgroundColor": colors["card"],
-        "cornerRadius": "25px",
-        "paddingAll": "30px"
+        "cornerRadius": "20px",
+        "paddingAll": "20px"
     }
     
     # بطاقة المستوى
     level_card = {
         "type": "box",
         "layout": "vertical",
-        "spacing": "md",
+        "spacing": "sm",
         "contents": [
             {
                 "type": "text",
-                "text": "المستوى الحالي",
-                "size": "sm",
-                "color": colors["text2"],
-                "align": "center"
-            },
-            {
-                "type": "text",
                 "text": level,
-                "size": "xl",
+                "size": "lg",
                 "weight": "bold",
                 "color": level_color,
                 "align": "center"
             },
-            # شريط التقدم
             {
                 "type": "box",
                 "layout": "vertical",
@@ -547,12 +404,12 @@ def build_my_points(username, points, theme="💜"):
                         "contents": [],
                         "width": f"{progress}%",
                         "backgroundColor": level_color,
-                        "height": "6px"
+                        "height": "4px"
                     }
                 ],
                 "backgroundColor": colors["shadow1"],
-                "height": "6px",
-                "cornerRadius": "3px"
+                "height": "4px",
+                "cornerRadius": "2px"
             },
             {
                 "type": "text",
@@ -563,50 +420,56 @@ def build_my_points(username, points, theme="💜"):
             }
         ],
         "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "20px"
+        "cornerRadius": "15px",
+        "paddingAll": "15px"
     }
     
-    # بناء المحتوى
+    # المحتوى
     contents = [
-        create_header("⭐ نقاطي", None, colors),
-        create_separator(colors["shadow1"]),
+        {
+            "type": "text",
+            "text": "⭐ نقاطي",
+            "size": "xxl",
+            "weight": "bold",
+            "color": colors["primary"],
+            "align": "center"
+        },
+        {"type": "separator", "color": colors["shadow1"], "margin": "sm"},
         {
             "type": "text",
             "text": f"👤 {username}",
-            "size": "lg",
+            "size": "md",
             "color": colors["text"],
             "weight": "bold",
             "align": "center"
         },
         points_card,
-        level_card,
-        create_separator(colors["shadow1"], "lg"),
-        {
-            "type": "text",
-            "text": "⚠️ سيتم حذف بياناتك بعد 7 أيام من عدم النشاط",
-            "size": "xs",
-            "color": colors["error"],
-            "wrap": True,
-            "align": "center"
-        }
+        level_card
     ]
     
     # التذييل
     footer_buttons = [
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"],
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["games"]["label"],
-                FIXED_BUTTONS["games"]["text"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
+        {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "🏠 بداية", "text": "بداية"},
+                    "style": "primary",
+                    "height": "sm",
+                    "color": colors["button"]
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "🎮 ألعاب", "text": "مساعدة"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ]
+        },
+        {"type": "separator", "color": colors["shadow1"]},
         {
             "type": "text",
             "text": BOT_RIGHTS,
@@ -616,34 +479,48 @@ def build_my_points(username, points, theme="💜"):
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
+    flex_content = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": footer_buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
     return FlexMessage(
         alt_text="نقاطي",
-        contents=FlexContainer.from_dict(card)
+        contents=FlexContainer.from_dict(flex_content)
     )
 
 
 def build_leaderboard(top_users, theme="💜"):
-    """
-    بناء لوحة الصدارة المحسنة
-    
-    Args:
-        top_users: قائمة أفضل المستخدمين [(name, points), ...]
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة لوحة الصدارة
-    """
+    """بناء لوحة الصدارة المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     medals = ["🥇", "🥈", "🥉"]
     
-    # إنشاء قائمة اللاعبين
+    # قائمة اللاعبين
     leaderboard_items = []
     
     for i, (name, points) in enumerate(top_users[:10], 1):
         medal = medals[i-1] if i <= 3 else f"{i}."
         item_color = colors["primary"] if i <= 3 else colors["text"]
-        bg_color = colors["card"] if i <= 3 else "transparent"
         
         leaderboard_items.append({
             "type": "box",
@@ -652,14 +529,14 @@ def build_leaderboard(top_users, theme="💜"):
                 {
                     "type": "text",
                     "text": medal,
-                    "size": "lg" if i <= 3 else "md",
+                    "size": "md" if i <= 3 else "sm",
                     "flex": 0,
                     "color": item_color,
                     "weight": "bold" if i <= 3 else "regular"
                 },
                 {
                     "type": "text",
-                    "text": name,
+                    "text": name[:15] + "..." if len(name) > 15 else name,
                     "size": "sm",
                     "color": colors["text"],
                     "flex": 3,
@@ -676,56 +553,73 @@ def build_leaderboard(top_users, theme="💜"):
                 }
             ],
             "spacing": "md",
-            "paddingAll": "md",
-            "backgroundColor": bg_color,
-            "cornerRadius": "10px" if i <= 3 else "0px"
+            "paddingAll": "sm"
         })
         
         if i < len(top_users[:10]):
-            leaderboard_items.append(create_separator(colors["shadow1"], "sm"))
+            leaderboard_items.append({"type": "separator", "color": colors["shadow1"]})
     
     if not leaderboard_items:
         leaderboard_items = [{
             "type": "text",
-            "text": "لا يوجد لاعبين مسجلين بعد",
+            "text": "لا يوجد لاعبين",
             "size": "sm",
             "color": colors["text2"],
             "align": "center"
         }]
     
-    # حاوية اللوحة
-    leaderboard_container = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "none",
-        "contents": leaderboard_items,
-        "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "15px"
-    }
-    
-    # بناء المحتوى
+    # المحتوى
     contents = [
-        create_header("🏆 لوحة الصدارة", "أفضل 10 لاعبين", colors),
-        create_separator(colors["shadow1"]),
-        leaderboard_container
+        {
+            "type": "text",
+            "text": "🏆 الصدارة",
+            "size": "xxl",
+            "weight": "bold",
+            "color": colors["primary"],
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": "أفضل 10 لاعبين",
+            "size": "sm",
+            "color": colors["text2"],
+            "align": "center"
+        },
+        {"type": "separator", "color": colors["shadow1"], "margin": "md"},
+        {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "none",
+            "contents": leaderboard_items,
+            "backgroundColor": colors["card"],
+            "cornerRadius": "15px",
+            "paddingAll": "10px"
+        }
     ]
     
     # التذييل
     footer_buttons = [
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"],
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["points"]["label"],
-                FIXED_BUTTONS["points"]["text"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
+        {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "🏠 بداية", "text": "بداية"},
+                    "style": "primary",
+                    "height": "sm",
+                    "color": colors["button"]
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "⭐ نقاطي", "text": "نقاطي"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ]
+        },
+        {"type": "separator", "color": colors["shadow1"]},
         {
             "type": "text",
             "text": BOT_RIGHTS,
@@ -735,23 +629,39 @@ def build_leaderboard(top_users, theme="💜"):
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
+    flex_content = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": footer_buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
     return FlexMessage(
         alt_text="الصدارة",
-        contents=FlexContainer.from_dict(card)
+        contents=FlexContainer.from_dict(flex_content)
     )
 
 
 def build_registration_required(theme="💜"):
-    """
-    بناء رسالة التسجيل المطلوب
-    
-    Args:
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة التسجيل
-    """
+    """بناء رسالة التسجيل المطلوب"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     contents = [
@@ -769,13 +679,13 @@ def build_registration_required(theme="💜"):
             "size": "xl",
             "color": colors["text"],
             "align": "center",
-            "margin": "md"
+            "margin": "sm"
         },
-        create_separator(colors["shadow1"]),
+        {"type": "separator", "color": colors["shadow1"], "margin": "sm"},
         {
             "type": "text",
-            "text": "اضغط 'انضم' للتسجيل والبدء باللعب",
-            "size": "md",
+            "text": "اضغط 'انضم' للتسجيل والبدء",
+            "size": "sm",
             "color": colors["text2"],
             "align": "center",
             "wrap": True
@@ -783,22 +693,54 @@ def build_registration_required(theme="💜"):
     ]
     
     footer_buttons = [
-        create_button_row([
-            create_button(
-                "📝 انضم",
-                "انضم",
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"]
-            )
-        ])
+        {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "📝 انضم", "text": "انضم"},
+                    "style": "primary",
+                    "height": "sm",
+                    "color": colors["button"]
+                },
+                {
+                    "type": "button",
+                    "action": {"type": "message", "label": "🏠 بداية", "text": "بداية"},
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ]
+        }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
+    flex_content = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": footer_buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        },
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
     return FlexMessage(
         alt_text="تسجيل مطلوب",
-        contents=FlexContainer.from_dict(card)
+        contents=FlexContainer.from_dict(flex_content)
     )
