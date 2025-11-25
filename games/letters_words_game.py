@@ -1,12 +1,6 @@
 """
-لعبة تكوين الكلمات - نسخة AI ▫️▪️
+لعبة تكوين الكلمات - Neumorphism Edition
 Created by: Abeer Aldosari © 2025
-
-تحديثات:
-- Flex Message Neumorphism
-- دعم ثيمات ديناميكية
-- تتبع النقاط لكل لاعب
-- دعم AI لتوليد الكلمات والتحقق من الإجابة
 """
 
 from games.base_game import BaseGame
@@ -15,40 +9,36 @@ import difflib
 from typing import Dict, Any, Optional
 
 class LettersWordsGame(BaseGame):
-    """لعبة تكوين كلمات من حروف معينة - AI Version"""
+    """لعبة تكوين كلمات من حروف معينة"""
     
-    def __init__(self, line_bot_api, use_ai=False, ai_generate_words=None, ai_check_answer=None):
-        """
-        ai_generate_words: دالة تولد مجموعة كلمات جديدة من الحروف، ترجع dict {"letters": [], "words": []}
-        ai_check_answer: دالة تتحقق من صحة الإجابة (مقاربة أو خطأ إملائي)
-        """
+    def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.use_ai = use_ai
-        self.ai_generate_words = ai_generate_words
-        self.ai_check_answer = ai_check_answer
+        self.supports_hint = True
+        self.supports_reveal = True
         
         self.letter_sets = [
             {"letters": ["ق", "ل", "م", "ع", "ر", "ب"], "words": ["قلم", "عمل", "علم", "قلب", "رقم", "مقر"]},
             {"letters": ["س", "ا", "ر", "ة", "ي", "م"], "words": ["سيارة", "سارية", "رئيس", "سير", "مسار"]},
+            {"letters": ["ك", "ت", "ا", "ب", "م", "ل"], "words": ["كتاب", "كتب", "مكتب", "كلام", "ملك"]},
+            {"letters": ["د", "ر", "س", "ة", "م", "ا"], "words": ["مدرسة", "درس", "مدرس", "سادر"]},
+            {"letters": ["ح", "د", "ي", "ق", "ة", "ر"], "words": ["حديقة", "حديد", "قرد", "دقيق"]}
         ]
         random.shuffle(self.letter_sets)
         self.current_set = None
-        self.current_answer = []
         self.found_words = set()
         self.required_words = 3
 
-    def generate_letters_set(self):
-        """توليد مجموعة حروف وكلمات باستخدام AI إذا متاح"""
-        if self.use_ai and self.ai_generate_words:
-            new_set = self.ai_generate_words()
-            if new_set and "letters" in new_set and "words" in new_set:
-                return new_set
-        return random.choice(self.letter_sets)
+    def start_game(self) -> Any:
+        """بدء اللعبة"""
+        self.current_question = 0
+        self.game_active = True
+        self.found_words.clear()
+        return self.get_question()
 
     def get_question(self) -> Any:
-        """إنشاء Flex Message للسؤال الحالي"""
+        """إنشاء Flex Message للسؤال"""
         colors = self.get_theme_colors()
-        self.current_set = self.generate_letters_set()
+        self.current_set = self.letter_sets[self.current_question % len(self.letter_sets)]
         self.current_answer = self.current_set["words"]
         self.found_words.clear()
         
@@ -61,10 +51,10 @@ class LettersWordsGame(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "📝 تكوين الكلمات", "size": "xl", "weight": "bold",
+                    {"type": "text", "text": "تكوين الكلمات", "size": "xl", "weight": "bold",
                      "color": colors["text"], "align": "center"},
                     {"type": "text", "text": f"سؤال {self.current_question+1} من {self.questions_count}",
-                     "size": "sm", "color": colors["text2"], "align": "center", "margin": "xs"}
+                     "size": "sm", "color": colors["text2"], "align": "center"}
                 ],
                 "backgroundColor": colors["bg"],
                 "paddingAll": "20px"
@@ -72,15 +62,23 @@ class LettersWordsGame(BaseGame):
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "lg",
                 "contents": [
-                    {"type": "text", "text": "🔤 استخدم الحروف التالية لتكوين الكلمات:", "size": "md",
-                     "color": colors["text"], "align": "center", "margin": "md"},
-                    {"type": "text", "text": letters_display, "size": "xxl", "weight": "bold",
-                     "color": colors["primary"], "align": "center", "margin": "md"},
-                    {"type": "text", "text": f"⚠️ يجب إيجاد {self.required_words} كلمات", "size": "sm",
-                     "color": colors["text2"], "align": "center", "margin": "md"},
-                    {"type": "text", "text": "💡 اكتب 'لمح' للتلميح، 'جاوب' للكشف عن الإجابات", "size": "xs",
-                     "color": colors["text2"], "align": "center", "margin": "md", "wrap": True}
+                    {"type": "text", "text": "استخدم الحروف التالية لتكوين الكلمات:", "size": "md",
+                     "color": colors["text"], "align": "center", "wrap": True},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": letters_display, "size": "xl", "weight": "bold",
+                             "color": colors["primary"], "align": "center", "wrap": True}
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "20px",
+                        "paddingAll": "20px"
+                    },
+                    {"type": "text", "text": f"يجب إيجاد {self.required_words} كلمات", "size": "sm",
+                     "color": colors["text2"], "align": "center"}
                 ],
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
@@ -94,35 +92,34 @@ class LettersWordsGame(BaseGame):
             return None
 
         answer = user_answer.strip()
+        normalized = self.normalize_text(answer)
 
-        # معالجة التلميح
-        if answer == 'لمح':
+        # التلميح
+        if normalized == 'لمح':
             remaining = [w for w in self.current_answer if self.normalize_text(w) not in self.found_words]
             if remaining:
                 word = remaining[0]
-                hint = f"💡 الكلمة من {len(word)} حروف وأولها '{word[0]}'"
+                hint = f"تلميح: الكلمة من {len(word)} حروف وأولها '{word[0]}'"
             else:
                 hint = "لا توجد تلميحات"
             return {'message': hint, 'response': self._create_text_message(hint), 'points': 0}
 
-        # معالجة كشف الإجابة
-        if answer in ['جاوب', 'تم', 'التالي']:
+        # كشف الإجابة
+        if normalized == 'جاوب':
             words = " • ".join(self.current_answer)
-            msg = f"📝 الكلمات الممكنة:\n{words}"
-            return self._next_question(msg=msg)
+            msg = f"الكلمات الممكنة:\n{words}"
+            next_q = self.next_question()
+            if isinstance(next_q, dict) and next_q.get('game_over'):
+                next_q['message'] = f"{msg}\n\n{next_q.get('message','')}"
+                return next_q
+            return {'message': msg, 'response': next_q, 'points': 0}
 
-        normalized = self.normalize_text(answer)
+        # التحقق من الإجابة
         valid_words = [self.normalize_text(w) for w in self.current_answer]
-
-        # تحقق باستخدام AI أو التشابه
         is_valid = False
+        
         if normalized in valid_words and normalized not in self.found_words:
             is_valid = True
-        elif self.ai_check_answer:
-            for w in self.current_answer:
-                if self.ai_check_answer(w, answer):
-                    is_valid = True
-                    break
         else:
             for w in valid_words:
                 if difflib.SequenceMatcher(None, normalized, w).ratio() > 0.8:
@@ -130,34 +127,29 @@ class LettersWordsGame(BaseGame):
                     break
 
         if not is_valid:
-            return {'message': f"▫️ إجابة غير صحيحة ▪️",
-                    'response': self._create_text_message(f"▫️ إجابة غير صحيحة ▪️"),
+            return {'message': "إجابة غير صحيحة",
+                    'response': self._create_text_message("إجابة غير صحيحة"),
                     'points': 0}
 
         self.found_words.add(normalized)
         points = self.add_score(user_id, display_name, 10)
 
         if len(self.found_words) >= self.required_words:
-            return self._next_question(points=points, msg=f"🎉 أحسنت يا {display_name}!\n+{points} نقطة")
+            next_q = self.next_question()
+            if isinstance(next_q, dict) and next_q.get('game_over'):
+                next_q['points'] = points
+                next_q['message'] = f"أحسنت يا {display_name}!\n+{points} نقطة\n\n{next_q.get('message','')}"
+                return next_q
+            return {'message': f"أحسنت يا {display_name}!\n+{points} نقطة", 
+                    'response': next_q, 'points': points}
 
         remaining = self.required_words - len(self.found_words)
-        msg = f"✅ صحيح!\n+{points} نقطة\n⏳ تبقى {remaining} كلمات"
+        msg = f"صحيح!\n+{points} نقطة\nتبقى {remaining} كلمات"
         return {'message': msg, 'response': self._create_text_message(msg), 'points': points}
-
-    def _next_question(self, points=0, msg=""):
-        self.current_question += 1
-        if self.current_question >= self.questions_count:
-            self.game_active = False
-            final_msg = f"{msg}\n\n🏁 انتهت اللعبة!" if msg else "🏁 انتهت اللعبة!"
-            return {'message': final_msg, 'response': self._create_text_message(final_msg),
-                    'game_over': True, 'points': points}
-        next_q = self.get_question()
-        return {'message': msg, 'response': next_q, 'points': points}
 
     def get_game_info(self) -> Dict[str, Any]:
         return {
             "name": "لعبة تكوين الكلمات",
-            "emoji": "▫️▪️",
             "description": "كوّن كلمات من الحروف المعطاة",
             "questions_count": self.questions_count,
             "required_words": self.required_words,
@@ -166,10 +158,3 @@ class LettersWordsGame(BaseGame):
             "current_question": self.current_question,
             "players_count": len(self.scores)
         }
-
-# ============================================================================
-# مثال على الاستخدام
-# ============================================================================
-if __name__ == "__main__":
-    print("✅ ملف لعبة تكوين الكلمات جاهز للاستخدام!")
-    print("📝 تأكد من استخدام: from games.base_game import BaseGame")
