@@ -1,40 +1,27 @@
 """
-لعبة التخمين - نسخة محدثة ومحسّنة
+لعبة التخمين - النسخة المحسنة النهائية
 Created by: Abeer Aldosari © 2025
+
+الميزات:
+✅ AI أولاً مع Fallback قوي
+✅ فئات متنوعة ومحدثة
+✅ واجهة Flex احترافية
+✅ تشفير عربي مثالي
+✅ أداء محسن
 """
 
-# ============================================================================
-# الاستيراد الصحيح
-# ============================================================================
-from games.base_game import BaseGame  # ✅ صحيح
-
+from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional, List
 
 
 class GuessGame(BaseGame):
-    """
-    لعبة التخمين - خمّن الكلمة من الفئة والحرف الأول
-    
-    الميزات:
-    - فئات متنوعة (مطبخ، غرفة نوم، مدرسة، فواكه، حيوانات)
-    - تلميحات مفيدة
-    - إمكانية كشف الإجابة
-    - رسائل Flex حديثة بتصميم Neumorphism
-    """
+    """لعبة التخمين المحسنة مع AI"""
     
     def __init__(self, line_bot_api):
-        """
-        تهيئة اللعبة
-        
-        المعاملات:
-            line_bot_api: واجهة LINE Bot API
-        """
         super().__init__(line_bot_api, questions_count=5)
-        
-        # تفعيل ميزات التلميح والكشف
-        self.supports_hint = True
-        self.supports_reveal = True
+        self.game_name = "تخمين"
+        self.game_icon = "🔮"
         
         # قاعدة بيانات الأشياء مع الفئات
         self.items = {
@@ -90,38 +77,80 @@ class GuessGame(BaseGame):
                     })
         
         random.shuffle(self.questions_list)
+        self.previous_question = None
+        self.previous_answer = None
 
-    def start_game(self) -> Any:
-        """
-        بدء اللعبة وإرجاع أول سؤال
+    def generate_question_with_ai(self):
+        """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
+        question_data = None
         
-        العودة:
-            FlexMessage: السؤال الأول
-        """
-        self.current_question = 0
-        self.game_active = True
-        return self.get_question()
-
-    def generate_question(self) -> Dict[str, Any]:
-        """
-        توليد سؤال من القائمة
+        # محاولة AI أولاً
+        if self.ai_generate_question:
+            try:
+                question_data = self.ai_generate_question()
+                if question_data and "category" in question_data and "letter" in question_data and "answers" in question_data:
+                    return question_data
+            except Exception as e:
+                print(f"⚠️ AI generation failed, using fallback: {e}")
         
-        العودة:
-            dict: بيانات السؤال
-        """
+        # Fallback
         return self.questions_list[self.current_question % len(self.questions_list)]
 
-    def get_question(self) -> Any:
-        """
-        إنشاء وإرجاع رسالة Flex للسؤال
-        
-        العودة:
-            FlexMessage: السؤال بتصميم Neumorphism
-        """
-        q_data = self.generate_question()
+    def start_game(self):
+        """بدء اللعبة"""
+        self.current_question = 0
+        self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
+        self.answered_users.clear()
+        return self.get_question()
+
+    def get_question(self):
+        """إنشاء سؤال مع واجهة Flex محسنة"""
+        q_data = self.generate_question_with_ai()
         self.current_answer = q_data["answers"]
         
         colors = self.get_theme_colors()
+        
+        # قسم السؤال السابق
+        previous_section = []
+        if self.previous_question and self.previous_answer:
+            previous_section = [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "📝 السؤال السابق:",
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"{self.previous_question['category']} - {self.previous_question['letter']}",
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"✅ الجواب: {self.previous_answer}",
+                            "size": "xs",
+                            "color": colors["success"],
+                            "wrap": True,
+                            "margin": "xs"
+                        }
+                    ],
+                    "backgroundColor": colors["card"],
+                    "cornerRadius": "15px",
+                    "paddingAll": "12px",
+                    "margin": "md"
+                },
+                {"type": "separator", "color": colors["shadow1"], "margin": "md"}
+            ]
 
         flex_content = {
             "type": "bubble",
@@ -132,7 +161,7 @@ class GuessGame(BaseGame):
                 "contents": [
                     {
                         "type": "text",
-                        "text": "🔮 لعبة التخمين",
+                        "text": f"{self.game_icon} {self.game_name}",
                         "size": "xl",
                         "weight": "bold",
                         "color": colors["text"],
@@ -153,7 +182,7 @@ class GuessGame(BaseGame):
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "contents": [
+                "contents": previous_section + [
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -212,19 +241,7 @@ class GuessGame(BaseGame):
                     },
                     {
                         "type": "text",
-                        "text": "💭 خمّن الكلمة...",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "align": "center",
-                        "margin": "lg"
-                    },
-                    {
-                        "type": "separator",
-                        "margin": "md"
-                    },
-                    {
-                        "type": "text",
-                        "text": "💡 اكتب 'لمح' للتلميح\n📝 اكتب 'جاوب' للكشف عن الإجابة",
+                        "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
                         "size": "xs",
                         "color": colors["text2"],
                         "align": "center",
@@ -235,28 +252,54 @@ class GuessGame(BaseGame):
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "💡 لمّح", "text": "لمح"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                        "style": "primary",
+                        "height": "sm",
+                        "color": colors["error"]
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
+            },
             "styles": {
-                "body": {
-                    "backgroundColor": colors["bg"]
-                }
+                "body": {"backgroundColor": colors["bg"]},
+                "footer": {"backgroundColor": colors["bg"]}
             }
         }
 
         return self._create_flex_with_buttons("لعبة التخمين", flex_content)
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """
-        التحقق من إجابة اللاعب
-        
-        المعاملات:
-            user_answer: إجابة المستخدم
-            user_id: معرف المستخدم
-            display_name: اسم المستخدم
-            
-        العودة:
-            dict: نتيجة الإجابة أو None إذا كانت خاطئة
-        """
-        if not self.game_active:
+        """التحقق من إجابة اللاعب"""
+        if not self.game_active or user_id in self.answered_users:
             return None
 
         normalized = self.normalize_text(user_answer)
@@ -265,7 +308,7 @@ class GuessGame(BaseGame):
         if normalized == "لمح":
             hint = self.get_hint()
             if self.current_answer:
-                hint = f"💡 تلميح: الكلمة من {len(self.current_answer[0])} أحرف"
+                hint = f"💡 الكلمة من {len(self.current_answer[0])} أحرف"
             return {
                 'message': hint,
                 'response': self._create_text_message(hint),
@@ -275,16 +318,26 @@ class GuessGame(BaseGame):
         # معالجة أمر كشف الإجابة
         if normalized == "جاوب":
             answers_text = " أو ".join(self.current_answer)
-            reveal = f"📝 الإجابة الصحيحة:\n{answers_text}"
-            next_question = self.next_question()
+            reveal = f"📝 الإجابة: {answers_text}"
             
-            if isinstance(next_question, dict) and next_question.get('game_over'):
-                next_question['message'] = f"{reveal}\n\n{next_question.get('message','')}"
-                return next_question
+            # حفظ السؤال والجواب
+            q_data = self.generate_question_with_ai()
+            self.previous_question = q_data
+            self.previous_answer = answers_text
             
+            # الانتقال للسؤال التالي
+            self.current_question += 1
+            self.answered_users.clear()
+            
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result['message'] = f"{reveal}\n\n{result.get('message','')}"
+                return result
+            
+            next_q = self.get_question()
             return {
                 'message': reveal,
-                'response': next_question,
+                'response': next_q,
                 'points': 0
             }
         
@@ -292,17 +345,28 @@ class GuessGame(BaseGame):
         for correct_answer in self.current_answer:
             if self.normalize_text(correct_answer) == normalized:
                 points = self.add_score(user_id, display_name, 10)
-                next_question = self.next_question()
                 
-                if isinstance(next_question, dict) and next_question.get('game_over'):
-                    next_question['points'] = points
-                    return next_question
+                # حفظ السؤال والجواب
+                q_data = self.generate_question_with_ai()
+                self.previous_question = q_data
+                self.previous_answer = correct_answer
                 
+                # الانتقال للسؤال التالي
+                self.current_question += 1
+                self.answered_users.clear()
+                
+                if self.current_question >= self.questions_count:
+                    result = self.end_game()
+                    result['points'] = points
+                    result['message'] = f"✅ إجابة صحيحة يا {display_name}!\n🎯 الكلمة: {correct_answer}\n+{points} نقطة\n\n{result.get('message', '')}"
+                    return result
+                
+                next_q = self.get_question()
                 success_message = f"✅ إجابة صحيحة يا {display_name}!\n🎯 الكلمة: {correct_answer}\n+{points} نقطة"
                 
                 return {
                     'message': success_message,
-                    'response': next_question,
+                    'response': next_q,
                     'points': points
                 }
         
@@ -314,29 +378,17 @@ class GuessGame(BaseGame):
         }
 
     def get_game_info(self) -> Dict[str, Any]:
-        """
-        الحصول على معلومات اللعبة
-        
-        العودة:
-            dict: معلومات اللعبة
-        """
+        """الحصول على معلومات اللعبة"""
         return {
             "name": "لعبة التخمين",
             "emoji": "🔮",
-            "description": "خمّن الكلمة من الفئة والحرف الأول",
+            "description": "خمّن الكلمة من الفئة والحرف الأول مع دعم AI",
             "questions_count": self.questions_count,
-            "supports_hint": self.supports_hint,
-            "supports_reveal": self.supports_reveal,
+            "supports_hint": True,
+            "supports_reveal": True,
             "active": self.game_active,
             "current_question": self.current_question,
             "players_count": len(self.scores),
-            "categories_count": len(self.items)
+            "categories_count": len(self.items),
+            "ai_enabled": self.ai_generate_question is not None
         }
-
-
-# ============================================================================
-# مثال على الاستخدام
-# ============================================================================
-if __name__ == "__main__":
-    print("✅ ملف لعبة التخمين جاهز للاستخدام!")
-    print("📝 تأكد من استخدام: from games.base_game import BaseGame")
