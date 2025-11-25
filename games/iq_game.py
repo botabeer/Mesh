@@ -1,13 +1,12 @@
 """
-لعبة الذكاء - النسخة المحسنة النهائية
+لعبة الذكاء - النسخة المحسنة v5.0
 Created by: Abeer Aldosari © 2025
 
-الميزات:
-✅ AI أولاً مع Fallback قوي
-✅ قبول إجابات ذكية ومتشابهة
-✅ واجهة Flex احترافية
-✅ تشفير عربي مثالي
-✅ أداء محسن
+التحسينات:
+✅ أزرار ثابتة موحدة
+✅ نصوص مختصرة وواضحة
+✅ تتبع محسّن للأسئلة السابقة
+✅ واجهة نظيفة وسريعة
 """
 
 from games.base_game import BaseGame
@@ -17,58 +16,43 @@ from typing import Dict, Any, Optional
 
 
 class IqGame(BaseGame):
-    """لعبة الذكاء المحسنة مع AI"""
+    """لعبة الذكاء المحسنة"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "IQ"
         self.game_icon = "🧠"
         
-        # قاعدة أسئلة محسنة ومتنوعة
+        # قاعدة أسئلة محسنة
         self.fallback_questions = [
-            {"q": "ما هو الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "السحابة", "الغيم", "السحب"]},
-            {"q": "له رأس ولا عين له؟", "a": ["الدبوس", "الدبابيس", "المسمار", "مسمار"]},
-            {"q": "ما هو الشيء الذي إذا أكلته كله تستفيد وإذا أكلت نصفه تموت؟", "a": ["السمسم", "سمسم"]},
-            {"q": "شيء موجود في السماء إذا أضفت إليه حرفا أصبح في الأرض؟", "a": ["نجم", "نجمة", "النجم"]},
-            {"q": "ما هو الشيء الذي كلما زاد نقص؟", "a": ["العمر", "الوقت", "الزمن", "عمر"]},
-            {"q": "ما هو الشيء الذي يكتب ولا يقرأ؟", "a": ["القلم", "الأقلام", "قلم"]},
-            {"q": "ما هو الشيء الذي له أسنان ولا يعض؟", "a": ["المشط", "الأمشاط", "المسطرة", "مشط"]},
-            {"q": "أنا في الماء ولكن إذا لمسني الماء أموت، من أنا؟", "a": ["الملح", "ملح"]},
-            {"q": "ما هو الشيء الذي يتحدث جميع لغات العالم؟", "a": ["صدى الصوت", "الصدى", "صدى"]},
-            {"q": "شيء يؤخذ منك قبل أن تعطيه؟", "a": ["الصورة", "الصوره", "صورة", "صوره"]},
-            {"q": "ما هو الشيء الذي إذا دخل الماء لم يبتل؟", "a": ["الضوء", "ضوء", "الشعاع", "شعاع"]},
-            {"q": "رجل معه ست بنات لكل بنت أخ واحد، كم عدد أولاد الرجل؟", "a": ["7", "سبعة", "سبعه", "٧"]},
-            {"q": "ما هو الشيء الذي يقرصك ولا تراه؟", "a": ["الجوع", "جوع"]},
-            {"q": "ما الذي يحترق دون أن يحترق؟", "a": ["الشمعة", "الشمعه", "شمعة", "شمعه"]},
-            {"q": "ما هو الشيء الذي كلما أخذت منه كبر؟", "a": ["الحفرة", "الحفره", "حفرة", "حفره"]},
-            {"q": "ما هو الشيء الذي له عين ولا يرى؟", "a": ["الإبرة", "الابرة", "إبرة", "ابرة"]},
-            {"q": "ما هو الشيء الذي تراه في الليل ثلاث مرات وفي النهار مرة واحدة؟", "a": ["حرف اللام", "اللام", "ل", "حرف ل"]},
-            {"q": "ما هو الشيء الذي يوجد في وسط باريس؟", "a": ["حرف الراء", "الراء", "ر", "حرف ر"]},
-            {"q": "ما هو الشيء الذي ترميه كلما احتجت إليه؟", "a": ["شبكة الصيد", "الشبكة", "شبكه", "شبكة صيد"]},
-            {"q": "أخ للخال وابن للجد وليس بعم ولا والد؟", "a": ["الأب", "الوالد", "أب", "والد"]},
+            {"q": "ما يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "الغيم"]},
+            {"q": "له رأس ولا عين له؟", "a": ["الدبوس", "المسمار"]},
+            {"q": "إذا أكلته كله تستفيد، نصفه تموت؟", "a": ["السمسم"]},
+            {"q": "في السماء، بحرف يصبح في الأرض؟", "a": ["نجم"]},
+            {"q": "كلما زاد نقص؟", "a": ["العمر", "الوقت"]},
+            {"q": "يكتب ولا يقرأ؟", "a": ["القلم"]},
+            {"q": "له أسنان ولا يعض؟", "a": ["المشط"]},
+            {"q": "في الماء، الماء يميته؟", "a": ["الملح"]},
+            {"q": "يتكلم كل اللغات؟", "a": ["الصدى"]},
+            {"q": "يؤخذ منك قبل أن تعطيه؟", "a": ["الصورة"]}
         ]
         
+        random.shuffle(self.fallback_questions)
         self.used_questions = []
-        self.previous_question = None
-        self.previous_answer = None
     
     def generate_question_with_ai(self):
-        """توليد سؤال بالذكاء الاصطناعي مع Fallback محسن"""
-        question_data = None
-        
-        # محاولة AI أولاً
+        """توليد سؤال مع Fallback"""
         if self.ai_generate_question:
             try:
                 question_data = self.ai_generate_question()
                 if question_data and "q" in question_data and "a" in question_data:
-                    # تأكد من أن الإجابة قائمة
                     if not isinstance(question_data["a"], list):
                         question_data["a"] = [str(question_data["a"])]
                     return question_data
             except Exception as e:
-                print(f"⚠️ AI generation failed, using fallback: {e}")
+                print(f"⚠️ AI فشل، Fallback: {e}")
         
-        # Fallback للأسئلة المخزنة
+        # Fallback
         available = [q for q in self.fallback_questions if q not in self.used_questions]
         if not available:
             self.used_questions = []
@@ -82,131 +66,85 @@ class IqGame(BaseGame):
         """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
-        self.previous_question = None
-        self.previous_answer = None
+        self.previous_question_text = None
+        self.previous_answer_text = None
         self.answered_users.clear()
         return self.get_question()
     
     def get_question(self):
-        """إنشاء سؤال مع واجهة Flex محسنة"""
+        """إنشاء سؤال"""
         q_data = self.generate_question_with_ai()
         self.current_answer = q_data["a"]
         
         colors = self.get_theme_colors()
         
-        # بناء قسم السؤال السابق
-        previous_section = []
-        if self.previous_question and self.previous_answer:
-            previous_section = [
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "📝 السؤال السابق:",
-                            "size": "xs",
-                            "color": colors["text2"],
-                            "weight": "bold"
-                        },
-                        {
-                            "type": "text",
-                            "text": self.previous_question,
-                            "size": "xs",
-                            "color": colors["text2"],
-                            "wrap": True,
-                            "margin": "xs"
-                        },
-                        {
-                            "type": "text",
-                            "text": f"✅ الجواب: {self.previous_answer}",
-                            "size": "xs",
-                            "color": colors["success"],
-                            "wrap": True,
-                            "margin": "xs"
-                        }
-                    ],
-                    "backgroundColor": colors["card"],
-                    "cornerRadius": "15px",
-                    "paddingAll": "12px",
-                    "margin": "md"
-                },
-                {"type": "separator", "color": colors["shadow1"], "margin": "md"}
-            ]
+        # بناء المحتوى
+        contents = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"{self.game_icon} {self.game_name}",
+                        "size": "xl",
+                        "weight": "bold",
+                        "color": colors["text"],
+                        "flex": 3
+                    },
+                    {
+                        "type": "text",
+                        "text": f"{self.current_question + 1}/5",
+                        "size": "sm",
+                        "color": colors["text2"],
+                        "align": "end",
+                        "flex": 1
+                    }
+                ]
+            }
+        ]
         
-        flex_content = {
-            "type": "bubble",
-            "size": "mega",
-            "header": {
+        # قسم السؤال السابق
+        contents.extend(self._create_previous_section(colors))
+        
+        # السؤال الحالي
+        contents.extend([
+            {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
                     {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": f"{self.game_icon} {self.game_name}",
-                                "size": "xl",
-                                "weight": "bold",
-                                "color": colors["text"],
-                                "flex": 3
-                            },
-                            {
-                                "type": "text",
-                                "text": f"جولة {self.current_question + 1}/5",
-                                "size": "sm",
-                                "color": colors["text2"],
-                                "align": "end",
-                                "flex": 2
-                            }
-                        ]
-                    }
-                ],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": previous_section + [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "❓ السؤال:",
-                                "size": "sm",
-                                "color": colors["text2"],
-                                "weight": "bold"
-                            },
-                            {
-                                "type": "text",
-                                "text": q_data["q"],
-                                "size": "md",
-                                "color": colors["text"],
-                                "wrap": True,
-                                "margin": "md",
-                                "weight": "bold"
-                            }
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "20px"
+                        "type": "text",
+                        "text": "❓ اللغز:",
+                        "size": "sm",
+                        "color": colors["text2"],
+                        "weight": "bold"
                     },
                     {
                         "type": "text",
-                        "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
-                        "size": "xs",
-                        "color": colors["text2"],
-                        "align": "center",
+                        "text": q_data["q"],
+                        "size": "md",
+                        "color": colors["text"],
                         "wrap": True,
-                        "margin": "md"
+                        "margin": "sm",
+                        "weight": "bold"
                     }
                 ],
+                "backgroundColor": colors["card"],
+                "cornerRadius": "20px",
+                "paddingAll": "20px",
+                "margin": "md"
+            }
+        ])
+        
+        flex_content = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": contents,
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
@@ -214,36 +152,7 @@ class IqGame(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "spacing": "sm",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "💡 لمّح", "text": "لمح"},
-                                "style": "secondary",
-                                "height": "sm",
-                                "color": colors["shadow1"]
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
-                                "style": "secondary",
-                                "height": "sm",
-                                "color": colors["shadow1"]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
-                        "style": "primary",
-                        "height": "sm",
-                        "color": colors["error"]
-                    }
-                ],
+                "contents": self._create_fixed_buttons(colors),
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
@@ -253,30 +162,25 @@ class IqGame(BaseGame):
             }
         }
         
-        return self._create_flex_with_buttons(f"{self.game_name} - جولة {self.current_question + 1}", flex_content)
+        return self._create_flex_with_buttons(f"{self.game_name} - {self.current_question + 1}/5", flex_content)
     
     def check_answer_intelligently(self, user_answer: str) -> bool:
-        """فحص ذكي للإجابة مع دعم AI"""
+        """فحص ذكي للإجابة"""
         normalized_user = self.normalize_text(user_answer)
         
-        # فحص مباشر
         for correct in self.current_answer:
             normalized_correct = self.normalize_text(correct)
             
-            # تطابق كامل
             if normalized_user == normalized_correct:
                 return True
             
-            # تطابق جزئي
             if normalized_user in normalized_correct or normalized_correct in normalized_user:
                 return True
             
-            # تشابه نصي (85% أو أكثر)
             ratio = difflib.SequenceMatcher(None, normalized_user, normalized_correct).ratio()
             if ratio > 0.85:
                 return True
         
-        # محاولة AI للتحقق
         if self.ai_check_answer:
             try:
                 for correct in self.current_answer:
@@ -288,7 +192,7 @@ class IqGame(BaseGame):
         return False
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """فحص الإجابة مع دعم كامل للتلميحات"""
+        """فحص الإجابة"""
         if not self.game_active or user_id in self.answered_users:
             return None
         
@@ -303,17 +207,16 @@ class IqGame(BaseGame):
                 'points': 0
             }
         
-        # أمر الإجابة
+        # أمر كشف الإجابة
         if normalized == "جاوب":
             answer_text = self.current_answer[0] if isinstance(self.current_answer, list) else str(self.current_answer)
-            reveal = f"📝 الإجابة: {answer_text}"
+            reveal = f"📝 الجواب: {answer_text}"
             
             # حفظ السؤال والجواب
-            current_q_data = self.generate_question_with_ai()
-            self.previous_question = current_q_data["q"]
-            self.previous_answer = answer_text
+            q_data = self.generate_question_with_ai()
+            self.previous_question_text = q_data["q"]
+            self.previous_answer_text = answer_text
             
-            # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
             
@@ -332,22 +235,21 @@ class IqGame(BaseGame):
             points = self.add_score(user_id, display_name, 10)
             
             # حفظ السؤال والجواب
-            current_q_data = self.generate_question_with_ai()
-            self.previous_question = current_q_data["q"]
-            self.previous_answer = self.current_answer[0] if isinstance(self.current_answer, list) else str(self.current_answer)
+            q_data = self.generate_question_with_ai()
+            self.previous_question_text = q_data["q"]
+            self.previous_answer_text = self.current_answer[0] if isinstance(self.current_answer, list) else str(self.current_answer)
             
-            # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
             
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['points'] = points
-                result['message'] = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
+                result['message'] = f"✅ صحيح يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
                 return result
             
             next_q = self.get_question()
-            success_msg = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة"
+            success_msg = f"✅ صحيح يا {display_name}!\n+{points} نقطة"
             
             return {
                 'message': success_msg,
@@ -356,8 +258,8 @@ class IqGame(BaseGame):
             }
         
         return {
-            'message': "❌ إجابة غير صحيحة",
-            'response': self._create_text_message("❌ إجابة غير صحيحة، حاول مرة أخرى"),
+            'message': "❌ غير صحيح، حاول مرة أخرى",
+            'response': self._create_text_message("❌ غير صحيح، حاول مرة أخرى"),
             'points': 0
         }
     
@@ -366,7 +268,7 @@ class IqGame(BaseGame):
         return {
             "name": "لعبة الذكاء",
             "emoji": "🧠",
-            "description": "ألغاز ذكاء ممتعة مع دعم AI",
+            "description": "ألغاز ذكاء ممتعة",
             "questions_count": self.questions_count,
             "supports_hint": True,
             "supports_reveal": True,
