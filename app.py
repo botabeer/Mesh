@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Bot Mesh - LINE Bot Application (Neumorphism Soft Edition)
 Created by: Abeer Aldosari © 2025
@@ -165,7 +164,7 @@ def ai_generate_question(game_type):
             return None
         
         genai.configure(api_key=key)
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')  # Updated model
         
         prompts = {
             "IQ": "أنشئ لغز ذكاء عربي مع إجابة قصيرة. رد بصيغة JSON: {\"q\": \"السؤال\", \"a\": \"الإجابة\"}",
@@ -191,7 +190,7 @@ def ai_check_answer(correct_answer, user_answer):
             return False
         
         genai.configure(api_key=key)
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')  # Updated model
         
         prompt = f"هل الإجابة '{user_answer}' صحيحة للجواب '{correct_answer}'? رد فقط بـ 'نعم' أو 'لا'"
         response = model.generate_content(prompt)
@@ -845,22 +844,8 @@ def handle_message(event):
                     if game_name in AVAILABLE_GAMES:
                         GameClass = AVAILABLE_GAMES[game_name]
                         
-                        # Pass AI functions to games that support them
-                        if game_name in ["IQ", "رياضيات"]:
-                            game_instance = GameClass(
-                                line_bot_api,
-                                ai_generate_question=lambda: ai_generate_question(game_name),
-                                ai_check_answer=ai_check_answer
-                            )
-                        elif game_name == "عكس":
-                            game_instance = GameClass(
-                                line_bot_api,
-                                use_ai=bool(gemini_keys),
-                                ai_generate_question=lambda: ai_generate_question("عكس"),
-                                ai_check_answer=ai_check_answer
-                            )
-                        else:
-                            game_instance = GameClass(line_bot_api)
+                        # Create game instance - all games use same constructor
+                        game_instance = GameClass(line_bot_api)
                         
                         game_instance.set_theme(current_theme)
                         active_games[user_id] = game_instance
