@@ -1,13 +1,13 @@
 """
-لعبة الذكاء - نسخة محسّنة مع AI ذكي
+لعبة الذكاء - النسخة المحسنة النهائية
 Created by: Abeer Aldosari © 2025
 
-التحسينات:
-- AI أولاً مع Fallback تلقائي
-- قبول إجابات منطقية ومتشابهة
-- 5 جولات مع إعلان فوري للفائز
-- واجهة Flex احترافية
-- عرض السؤال السابق والجواب
+الميزات:
+✅ AI أولاً مع Fallback قوي
+✅ قبول إجابات ذكية ومتشابهة
+✅ واجهة Flex احترافية
+✅ تشفير عربي مثالي
+✅ أداء محسن
 """
 
 from games.base_game import BaseGame
@@ -15,40 +15,37 @@ import random
 import difflib
 from typing import Dict, Any, Optional
 
+
 class IqGame(BaseGame):
-    """لعبة الذكاء المحسّنة"""
+    """لعبة الذكاء المحسنة مع AI"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "IQ"
         self.game_icon = "🧠"
         
-        # AI functions (will be set by app.py)
-        self.ai_generate_question = None
-        self.ai_check_answer = None
-        
-        # Fallback questions (محسّنة)
+        # قاعدة أسئلة محسنة ومتنوعة
         self.fallback_questions = [
-            {"q": "ما هو الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "السحابة", "الغيم"]},
-            {"q": "له رأس ولا عين له؟", "a": ["الدبوس", "الدبابيس", "المسمار"]},
+            {"q": "ما هو الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "السحابة", "الغيم", "السحب"]},
+            {"q": "له رأس ولا عين له؟", "a": ["الدبوس", "الدبابيس", "المسمار", "مسمار"]},
             {"q": "ما هو الشيء الذي إذا أكلته كله تستفيد وإذا أكلت نصفه تموت؟", "a": ["السمسم", "سمسم"]},
-            {"q": "شيء موجود في السماء إذا أضفت إليه حرفا أصبح في الأرض؟", "a": ["نجم", "نجمة"]},
-            {"q": "ما هو الشيء الذي كلما زاد نقص؟", "a": ["العمر", "الوقت", "الزمن"]},
-            {"q": "ما هو الشيء الذي يكتب ولا يقرأ؟", "a": ["القلم", "الاقلام"]},
-            {"q": "ما هو الشيء الذي له أسنان ولا يعض؟", "a": ["المشط", "الامشاط", "المسطرة"]},
+            {"q": "شيء موجود في السماء إذا أضفت إليه حرفا أصبح في الأرض؟", "a": ["نجم", "نجمة", "النجم"]},
+            {"q": "ما هو الشيء الذي كلما زاد نقص؟", "a": ["العمر", "الوقت", "الزمن", "عمر"]},
+            {"q": "ما هو الشيء الذي يكتب ولا يقرأ؟", "a": ["القلم", "الأقلام", "قلم"]},
+            {"q": "ما هو الشيء الذي له أسنان ولا يعض؟", "a": ["المشط", "الأمشاط", "المسطرة", "مشط"]},
             {"q": "أنا في الماء ولكن إذا لمسني الماء أموت، من أنا؟", "a": ["الملح", "ملح"]},
             {"q": "ما هو الشيء الذي يتحدث جميع لغات العالم؟", "a": ["صدى الصوت", "الصدى", "صدى"]},
-            {"q": "شيء يؤخذ منك قبل أن تعطيه؟", "a": ["الصورة", "الصوره", "صورة"]},
-            {"q": "ما هو الشيء الذي إذا دخل الماء لم يبتل؟", "a": ["الضوء", "ضوء", "الشعاع"]},
-            {"q": "رجل معه ست بنات لكل بنت أخ واحد، كم عدد أولاد الرجل؟", "a": ["7", "سبعة", "سبعه"]},
+            {"q": "شيء يؤخذ منك قبل أن تعطيه؟", "a": ["الصورة", "الصوره", "صورة", "صوره"]},
+            {"q": "ما هو الشيء الذي إذا دخل الماء لم يبتل؟", "a": ["الضوء", "ضوء", "الشعاع", "شعاع"]},
+            {"q": "رجل معه ست بنات لكل بنت أخ واحد، كم عدد أولاد الرجل؟", "a": ["7", "سبعة", "سبعه", "٧"]},
             {"q": "ما هو الشيء الذي يقرصك ولا تراه؟", "a": ["الجوع", "جوع"]},
-            {"q": "ما الذي يحترق دون أن يحترق؟", "a": ["الشمعة", "الشمعه", "شمعة"]},
-            {"q": "ما هو الشيء الذي كلما أخذت منه كبر؟", "a": ["الحفرة", "الحفره", "حفرة"]},
-            {"q": "ما هو الشيء الذي له عين ولا يرى؟", "a": ["الابرة", "الإبرة", "ابرة"]},
-            {"q": "ما هو الشيء الذي تراه في الليل ثلاث مرات وفي النهار مرة واحدة؟", "a": ["حرف اللام", "اللام", "ل"]},
-            {"q": "كلمة من أربعة حروف إذا أكلت نصفها تموت وإذا أكلتها كلها لا تموت؟", "a": ["سمسم", "السمسم"]},
-            {"q": "ما هو الشيء الذي يوجد في وسط باريس؟", "a": ["حرف الراء", "الراء", "ر"]},
-            {"q": "ما هو الشيء الذي ترميه كلما احتجت إليه؟", "a": ["شبكة الصيد", "الشبكة", "شبكه"]}
+            {"q": "ما الذي يحترق دون أن يحترق؟", "a": ["الشمعة", "الشمعه", "شمعة", "شمعه"]},
+            {"q": "ما هو الشيء الذي كلما أخذت منه كبر؟", "a": ["الحفرة", "الحفره", "حفرة", "حفره"]},
+            {"q": "ما هو الشيء الذي له عين ولا يرى؟", "a": ["الإبرة", "الابرة", "إبرة", "ابرة"]},
+            {"q": "ما هو الشيء الذي تراه في الليل ثلاث مرات وفي النهار مرة واحدة؟", "a": ["حرف اللام", "اللام", "ل", "حرف ل"]},
+            {"q": "ما هو الشيء الذي يوجد في وسط باريس؟", "a": ["حرف الراء", "الراء", "ر", "حرف ر"]},
+            {"q": "ما هو الشيء الذي ترميه كلما احتجت إليه؟", "a": ["شبكة الصيد", "الشبكة", "شبكه", "شبكة صيد"]},
+            {"q": "أخ للخال وابن للجد وليس بعم ولا والد؟", "a": ["الأب", "الوالد", "أب", "والد"]},
         ]
         
         self.used_questions = []
@@ -56,7 +53,7 @@ class IqGame(BaseGame):
         self.previous_answer = None
     
     def generate_question_with_ai(self):
-        """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
+        """توليد سؤال بالذكاء الاصطناعي مع Fallback محسن"""
         question_data = None
         
         # محاولة AI أولاً
@@ -69,7 +66,7 @@ class IqGame(BaseGame):
                         question_data["a"] = [str(question_data["a"])]
                     return question_data
             except Exception as e:
-                print(f"⚠️ AI failed, using fallback: {e}")
+                print(f"⚠️ AI generation failed, using fallback: {e}")
         
         # Fallback للأسئلة المخزنة
         available = [q for q in self.fallback_questions if q not in self.used_questions]
@@ -91,13 +88,13 @@ class IqGame(BaseGame):
         return self.get_question()
     
     def get_question(self):
-        """إنشاء سؤال مع واجهة Flex محسّنة"""
+        """إنشاء سؤال مع واجهة Flex محسنة"""
         q_data = self.generate_question_with_ai()
         self.current_answer = q_data["a"]
         
         colors = self.get_theme_colors()
         
-        # بناء السؤال السابق إن وجد
+        # بناء قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
             previous_section = [
@@ -124,7 +121,7 @@ class IqGame(BaseGame):
                             "type": "text",
                             "text": f"✅ الجواب: {self.previous_answer}",
                             "size": "xs",
-                            "color": "#48BB78",
+                            "color": colors["success"],
                             "wrap": True,
                             "margin": "xs"
                         }
@@ -175,7 +172,6 @@ class IqGame(BaseGame):
                 "layout": "vertical",
                 "spacing": "md",
                 "contents": previous_section + [
-                    # السؤال الحالي
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -201,7 +197,6 @@ class IqGame(BaseGame):
                         "cornerRadius": "20px",
                         "paddingAll": "20px"
                     },
-                    # معلومات
                     {
                         "type": "text",
                         "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
@@ -246,7 +241,7 @@ class IqGame(BaseGame):
                         "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
                         "style": "primary",
                         "height": "sm",
-                        "color": "#FF5555"
+                        "color": colors["error"]
                     }
                 ],
                 "backgroundColor": colors["bg"],
@@ -261,7 +256,7 @@ class IqGame(BaseGame):
         return self._create_flex_with_buttons(f"{self.game_name} - جولة {self.current_question + 1}", flex_content)
     
     def check_answer_intelligently(self, user_answer: str) -> bool:
-        """فحص ذكي للإجابة"""
+        """فحص ذكي للإجابة مع دعم AI"""
         normalized_user = self.normalize_text(user_answer)
         
         # فحص مباشر
@@ -272,13 +267,13 @@ class IqGame(BaseGame):
             if normalized_user == normalized_correct:
                 return True
             
-            # تطابق جزئي (يحتوي على)
+            # تطابق جزئي
             if normalized_user in normalized_correct or normalized_correct in normalized_user:
                 return True
             
-            # تشابه نصي (أكثر من 80%)
+            # تشابه نصي (85% أو أكثر)
             ratio = difflib.SequenceMatcher(None, normalized_user, normalized_correct).ratio()
-            if ratio > 0.80:
+            if ratio > 0.85:
                 return True
         
         # محاولة AI للتحقق
@@ -293,12 +288,8 @@ class IqGame(BaseGame):
         return False
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """فحص الإجابة"""
-        if not self.game_active:
-            return None
-        
-        # تجاهل المستخدمين الذين أجابوا
-        if user_id in self.answered_users:
+        """فحص الإجابة مع دعم كامل للتلميحات"""
+        if not self.game_active or user_id in self.answered_users:
             return None
         
         normalized = self.normalize_text(user_answer)
@@ -314,11 +305,12 @@ class IqGame(BaseGame):
         
         # أمر الإجابة
         if normalized == "جاوب":
-            answer_text = self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer
+            answer_text = self.current_answer[0] if isinstance(self.current_answer, list) else str(self.current_answer)
             reveal = f"📝 الإجابة: {answer_text}"
             
             # حفظ السؤال والجواب
-            self.previous_question = self.generate_question_with_ai()["q"]
+            current_q_data = self.generate_question_with_ai()
+            self.previous_question = current_q_data["q"]
             self.previous_answer = answer_text
             
             # الانتقال للسؤال التالي
@@ -340,8 +332,9 @@ class IqGame(BaseGame):
             points = self.add_score(user_id, display_name, 10)
             
             # حفظ السؤال والجواب
-            self.previous_question = self.generate_question_with_ai()["q"]
-            self.previous_answer = self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer
+            current_q_data = self.generate_question_with_ai()
+            self.previous_question = current_q_data["q"]
+            self.previous_answer = self.current_answer[0] if isinstance(self.current_answer, list) else str(self.current_answer)
             
             # الانتقال للسؤال التالي
             self.current_question += 1
@@ -368,25 +361,17 @@ class IqGame(BaseGame):
             'points': 0
         }
     
-    def get_hint(self):
-        """تلميح ذكي"""
-        answer = self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer
-        answer_str = str(answer)
-        
-        if len(answer_str) <= 3:
-            return f"💡 يبدأ بحرف: {answer_str[0]}"
-        
-        return f"💡 يبدأ بحرف: {answer_str[0]}\n📏 عدد الحروف: {len(answer_str)}"
-    
     def get_game_info(self) -> Dict[str, Any]:
+        """معلومات اللعبة"""
         return {
             "name": "لعبة الذكاء",
             "emoji": "🧠",
-            "description": "ألغاز ذكاء ممتعة",
+            "description": "ألغاز ذكاء ممتعة مع دعم AI",
             "questions_count": self.questions_count,
             "supports_hint": True,
             "supports_reveal": True,
             "active": self.game_active,
             "current_question": self.current_question,
-            "players_count": len(self.scores)
+            "players_count": len(self.scores),
+            "ai_enabled": self.ai_generate_question is not None
         }
