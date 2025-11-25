@@ -177,7 +177,7 @@ def games_menu(mode="فردي", theme="💜"):
             "layout": "vertical",
             "spacing": "sm",
             "contents": [
-                {"type": "button", "action": {"type": "message", "label": "🔄 وضع " + ("جماعي" if mode == "فردي" else "فردي"), "text": "جماعي" if mode == "فردي" else "فردي"}, "style": "secondary", "height": "sm"},
+                {"type": "button", "action": {"type": "message", "label": "🔄 وضع " + ("مجموعة" if mode == "فردي" else "فردي"), "text": "مجموعة" if mode == "فردي" else "فردي"}, "style": "secondary", "height": "sm"},
                 {"type": "button", "action": {"type": "message", "label": "🏠 الرئيسية", "text": "بداية"}, "style": "secondary", "height": "sm"}
             ],
             "paddingAll": "15px",
