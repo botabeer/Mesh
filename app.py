@@ -141,27 +141,48 @@ def ai_check_answer(correct_answer, user_answer):
         return False
 
 # ============================================================================
-# Game Loading System
+# Game Loading System - تحميل جميع الألعاب
 # ============================================================================
 AVAILABLE_GAMES = {}
 
 try:
+    # الألعاب الأساسية (النظام القديم)
     from games.iq_game import IqGame
     from games.math_game import MathGame
     from games.word_color_game import WordColorGame
     from games.scramble_word_game import ScrambleWordGame
-    # Import other games here...
+    from games.fast_typing_game import FastTypingGame
+    from games.opposite_game import OppositeGame
+    
+    # الألعاب المتقدمة (النظام الجديد)
+    from games.song_game import SongGame
+    from games.letters_words_game import LettersWordsGame
+    from games.human_animal_plant_game import HumanAnimalPlantGame
+    from games.chain_words_game import ChainWordsGame
+    from games.guess_game import GuessGame
+    from games.compatibility_game import CompatibilityGame
     
     AVAILABLE_GAMES = {
         "IQ": IqGame,
         "رياضيات": MathGame,
         "لون الكلمة": WordColorGame,
-        "كلمة مبعثرة": ScrambleWordGame
+        "كلمة مبعثرة": ScrambleWordGame,
+        "كتابة سريعة": FastTypingGame,
+        "عكس": OppositeGame,
+        "حروف وكلمات": LettersWordsGame,
+        "أغنية": SongGame,
+        "إنسان حيوان نبات": HumanAnimalPlantGame,
+        "سلسلة كلمات": ChainWordsGame,
+        "تخمين": GuessGame,
+        "توافق": CompatibilityGame
     }
     
     logger.info(f"✅ تم تحميل {len(AVAILABLE_GAMES)} لعبة بنجاح")
+    logger.info(f"📋 الألعاب المتاحة: {', '.join(AVAILABLE_GAMES.keys())}")
 except Exception as e:
     logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
+    import traceback
+    traceback.print_exc()
 
 # ============================================================================
 # Helper Functions
