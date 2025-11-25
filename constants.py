@@ -295,15 +295,15 @@ def normalize_arabic(text: str) -> str:
     """تطبيع النصوص العربية"""
     if not text:
         return ""
-
+    
     text = text.strip().lower()
-
+    
     for old, new in ARABIC_NORMALIZE.items():
         text = text.replace(old, new)
-
+    
     text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
     text = ' '.join(text.split())
-
+    
     return text
 
 # ============================================================================
@@ -325,15 +325,15 @@ def validate_env() -> bool:
     """التحقق من المتغيرات البيئية"""
     required = ['LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN']
     missing = [var for var in required if not os.getenv(var)]
-
+    
     if missing:
         raise ValueError(f"❌ متغيرات ناقصة: {', '.join(missing)}")
-
+    
     if not GEMINI_KEYS:
         print("⚠️ لا توجد مفاتيح Gemini AI")
     else:
         print(f"✅ {len(GEMINI_KEYS)} مفتاح AI متاح")
-
+    
     return True
 
 @lru_cache(maxsize=10)
@@ -360,11 +360,11 @@ def sanitize_user_input(text: str, max_length: int = MAX_MESSAGE_LENGTH) -> str:
     """تنظيف مدخلات المستخدم"""
     if not text:
         return ""
-
+    
     text = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
     text = re.sub(r'[<>"\'\\]', '', text)
     text = text[:max_length]
-
+    
     return text.strip()
 
 # ============================================================================
