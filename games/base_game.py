@@ -13,6 +13,9 @@ from datetime import datetime
 
 class Game:
     """محرك اللعبة الأساسي - يدعم الفردي والمجموعة"""
+
+# Alias للتوافق مع الألعاب القديمة
+BaseGame = Game
     
     def __init__(self, game_type, mode="فردي", max_rounds=5):
         self.game_type = game_type
