@@ -1,13 +1,13 @@
 """
-Bot Mesh - Enhanced Base Game Class v4.0
+Bot Mesh - Enhanced Base Game Class v5.0
 Created by: Abeer Aldosari © 2025
 
-Features:
-✅ Memory-safe with automatic cleanup
-✅ Thread-safe operations
-✅ Perfect Arabic support
-✅ AI-ready architecture
-✅ LINE-optimized messages
+التحسينات الجديدة:
+✅ أزرار ثابتة أسفل كل نافذة
+✅ نظام تتبع محسّن للأسئلة السابقة
+✅ واجهة موحدة لجميع الألعاب
+✅ نصوص مختصرة وواضحة
+✅ معالجة أخطاء شاملة
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
@@ -20,28 +20,12 @@ from datetime import datetime
 import threading
 
 class BaseGame:
-    """
-    الكلاس الأساسي المحسّن لجميع الألعاب
+    """الكلاس الأساسي المحسّن لجميع الألعاب"""
     
-    الميزات:
-    - دعم كامل للعربية
-    - إدارة ذكية للحالة
-    - واجهات Flex احترافية
-    - تكامل سلس مع AI
-    - Thread-safe operations
-    """
-    
-    # Class-level lock for thread safety
     _lock = threading.Lock()
     
     def __init__(self, line_bot_api, questions_count=5):
-        """
-        تهيئة اللعبة
-        
-        Args:
-            line_bot_api: واجهة LINE Bot API
-            questions_count: عدد الأسئلة (افتراضي 5)
-        """
+        """تهيئة اللعبة"""
         self.line_bot_api = line_bot_api
         
         # إعدادات اللعبة
@@ -53,8 +37,8 @@ class BaseGame:
         self.questions_count = questions_count
         self.current_question = 0
         
-        # نظام النقاط (Thread-safe)
-        self.scores = {}  # {user_id: {"name": str, "score": int}}
+        # نظام النقاط
+        self.scores = {}
         self._scores_lock = threading.Lock()
         
         # حالة اللعبة
@@ -63,42 +47,28 @@ class BaseGame:
         self.current_answer = None
         self.created_at = datetime.now()
         
+        # تتبع الأسئلة السابقة
+        self.previous_question_text = None
+        self.previous_answer_text = None
+        
         # دعم الميزات
         self.supports_hint = True
         self.supports_reveal = True
         
-        # AI functions (will be set by app.py)
+        # AI functions
         self.ai_generate_question = None
         self.ai_check_answer = None
-    
-    # ========================================================================
-    # إدارة الثيمات
-    # ========================================================================
     
     def set_theme(self, theme: str):
         """تعيين ثيم اللعبة"""
         self.theme = theme if theme in THEMES else DEFAULT_THEME
     
     def get_theme_colors(self) -> Dict[str, str]:
-        """الحصول على ألوان الثيم الحالي"""
+        """الحصول على ألوان الثيم"""
         return THEMES.get(self.theme, THEMES[DEFAULT_THEME])
     
-    # ========================================================================
-    # إدارة النقاط (Thread-safe)
-    # ========================================================================
-    
     def add_score(self, user_id: str, display_name: str, points: int) -> int:
-        """
-        إضافة نقاط للاعب بشكل آمن
-        
-        Args:
-            user_id: معرف المستخدم
-            display_name: اسم المستخدم
-            points: النقاط المضافة
-        
-        Returns:
-            int: النقاط المضافة
-        """
+        """إضافة نقاط للاعب"""
         with self._scores_lock:
             if user_id not in self.scores:
                 self.scores[user_id] = {"name": display_name, "score": 0}
@@ -108,15 +78,7 @@ class BaseGame:
             return points
     
     def get_top_players(self, limit: int = 3) -> List[tuple]:
-        """
-        الحصول على أفضل اللاعبين
-        
-        Args:
-            limit: عدد اللاعبين
-        
-        Returns:
-            List[tuple]: قائمة (name, score)
-        """
+        """الحصول على أفضل اللاعبين"""
         with self._scores_lock:
             sorted_scores = sorted(
                 self.scores.items(),
@@ -125,16 +87,14 @@ class BaseGame:
             )
             return [(data["name"], data["score"]) for _, data in sorted_scores[:limit]]
     
-    # ========================================================================
-    # دورة حياة اللعبة
-    # ========================================================================
-    
     def start_game(self):
-        """بدء اللعبة - يجب تجاوزها في الكلاسات الفرعية"""
+        """بدء اللعبة"""
         with BaseGame._lock:
             self.current_question = 0
             self.game_active = True
             self.answered_users.clear()
+            self.previous_question_text = None
+            self.previous_answer_text = None
             return self.get_question()
     
     def get_question(self):
@@ -142,35 +102,14 @@ class BaseGame:
         raise NotImplementedError("يجب تطبيق get_question()")
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """
-        التحقق من الإجابة - يجب تجاوزها
-        
-        Args:
-            user_answer: إجابة المستخدم
-            user_id: معرف المستخدم
-            display_name: اسم المستخدم
-        
-        Returns:
-            Optional[Dict]: نتيجة الإجابة أو None
-        """
+        """التحقق من الإجابة - يجب تجاوزها"""
         raise NotImplementedError("يجب تطبيق check_answer()")
     
-    def next_question(self) -> Any:
-        """الانتقال للسؤال التالي"""
-        self.current_question += 1
-        self.answered_users.clear()
-        
-        if self.current_question >= self.questions_count:
-            return self.end_game()
-        
-        return self.get_question()
-    
     def end_game(self) -> Dict[str, Any]:
-        """إنهاء اللعبة وإرجاع النتيجة"""
+        """إنهاء اللعبة"""
         with BaseGame._lock:
             self.game_active = False
             
-            # تحديد الفائز
             if self.scores:
                 with self._scores_lock:
                     winner = max(self.scores.items(), key=lambda x: x[1]["score"])
@@ -180,7 +119,6 @@ class BaseGame:
                 winner_name = "لا يوجد"
                 winner_score = 0
             
-            # بناء رسالة النهاية
             result_message = self._build_game_over_message(winner_name, winner_score)
             
             return {
@@ -190,52 +128,143 @@ class BaseGame:
                 "game_over": True
             }
     
-    # ========================================================================
-    # دوال مساعدة
-    # ========================================================================
-    
     def normalize_text(self, text: str) -> str:
         """تطبيع النص للمقارنة"""
         return normalize_arabic(text)
     
     def get_hint(self) -> str:
-        """الحصول على تلميح - يمكن تجاوزها"""
+        """الحصول على تلميح"""
         if not self.current_answer:
-            return "لا يوجد تلميح متاح"
+            return "💡 لا يوجد تلميح"
         
         answer = str(self.current_answer)
         if isinstance(self.current_answer, list):
             answer = str(self.current_answer[0])
         
         if len(answer) > 3:
-            return f"💡 يبدأ بحرف: {answer[0]}\n📏 عدد الحروف: {len(answer)}"
-        return f"💡 يبدأ بحرف: {answer[0]}"
+            return f"💡 يبدأ بـ: {answer[0]}\n📏 الطول: {len(answer)} حرف"
+        return f"💡 يبدأ بـ: {answer[0]}"
     
     def reveal_answer(self) -> str:
-        """كشف الإجابة الصحيحة"""
+        """كشف الإجابة"""
         if isinstance(self.current_answer, list):
-            return f"📝 الإجابة: {' أو '.join(self.current_answer)}"
-        return f"📝 الإجابة: {self.current_answer}"
+            return f"📝 الجواب: {' أو '.join(self.current_answer)}"
+        return f"📝 الجواب: {self.current_answer}"
     
     def is_expired(self, max_age_minutes: int = 30) -> bool:
-        """التحقق من انتهاء صلاحية اللعبة"""
+        """التحقق من انتهاء الصلاحية"""
         age = (datetime.now() - self.created_at).total_seconds() / 60
         return age > max_age_minutes
     
     def cleanup(self):
-        """تنظيف موارد اللعبة"""
+        """تنظيف الموارد"""
         with self._scores_lock:
             self.scores.clear()
         self.answered_users.clear()
         self.game_active = False
         self.current_answer = None
+        self.previous_question_text = None
+        self.previous_answer_text = None
     
-    # ========================================================================
-    # بناء الرسائل
-    # ========================================================================
+    def _create_previous_section(self, colors: Dict[str, str]) -> List[Dict]:
+        """إنشاء قسم السؤال السابق الموحد"""
+        if not self.previous_question_text or not self.previous_answer_text:
+            return []
+        
+        return [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "📝 السابق:",
+                        "size": "xs",
+                        "color": colors["text2"],
+                        "weight": "bold"
+                    },
+                    {
+                        "type": "text",
+                        "text": self.previous_question_text[:50] + "..." if len(self.previous_question_text) > 50 else self.previous_question_text,
+                        "size": "xs",
+                        "color": colors["text2"],
+                        "wrap": True,
+                        "margin": "xs"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"✅ {self.previous_answer_text[:30]}..." if len(self.previous_answer_text) > 30 else f"✅ {self.previous_answer_text}",
+                        "size": "xs",
+                        "color": colors["success"],
+                        "wrap": True,
+                        "margin": "xs"
+                    }
+                ],
+                "backgroundColor": colors["card"],
+                "cornerRadius": "15px",
+                "paddingAll": "10px",
+                "margin": "md"
+            },
+            {"type": "separator", "color": colors["shadow1"], "margin": "sm"}
+        ]
+    
+    def _create_fixed_buttons(self, colors: Dict[str, str]) -> List[Dict]:
+        """إنشاء الأزرار الثابتة الموحدة"""
+        buttons = []
+        
+        # أزرار التلميح والكشف (إذا كانت مدعومة)
+        hint_reveal_row = []
+        if self.supports_hint:
+            hint_reveal_row.append({
+                "type": "button",
+                "action": {"type": "message", "label": "💡 لمّح", "text": "لمح"},
+                "style": "secondary",
+                "height": "sm",
+                "color": colors["shadow1"]
+            })
+        
+        if self.supports_reveal:
+            hint_reveal_row.append({
+                "type": "button",
+                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
+                "style": "secondary",
+                "height": "sm",
+                "color": colors["shadow1"]
+            })
+        
+        if hint_reveal_row:
+            buttons.append({
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": hint_reveal_row
+            })
+        
+        # زر الإيقاف
+        buttons.append({
+            "type": "button",
+            "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+            "style": "primary",
+            "height": "sm",
+            "color": colors["error"]
+        })
+        
+        # فاصل وحقوق
+        buttons.extend([
+            {"type": "separator", "color": colors["shadow1"], "margin": "sm"},
+            {
+                "type": "text",
+                "text": BOT_RIGHTS,
+                "size": "xxs",
+                "color": colors["text2"],
+                "align": "center"
+            }
+        ])
+        
+        return buttons
     
     def _create_flex_with_buttons(self, alt_text: str, flex_content: Dict) -> FlexMessage:
-        """إنشاء Flex Message"""
+        """إنشاء Flex Message مع الأزرار الثابتة"""
         return FlexMessage(
             alt_text=alt_text,
             contents=FlexContainer.from_dict(flex_content)
@@ -246,7 +275,7 @@ class BaseGame:
         return TextMessage(text=text)
     
     def _build_game_over_message(self, winner_name: str, winner_score: int) -> FlexMessage:
-        """بناء رسالة نهاية اللعبة"""
+        """بناء رسالة نهاية اللعبة المحسّنة"""
         colors = self.get_theme_colors()
         
         # تحديد الأداء
@@ -254,10 +283,10 @@ class BaseGame:
         performance_ratio = winner_score / max_score if max_score > 0 else 0
         
         if performance_ratio >= 1.0:
-            performance = "🏆 ممتاز! إجابات كاملة!"
+            performance = "🏆 أداء مثالي!"
             perf_color = "#D53F8C"
         elif performance_ratio >= 0.8:
-            performance = "⭐ أداء رائع!"
+            performance = "⭐ أداء ممتاز!"
             perf_color = "#667EEA"
         elif performance_ratio >= 0.6:
             performance = "👍 أداء جيد"
@@ -272,7 +301,7 @@ class BaseGame:
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "spacing": "xl",
+                "spacing": "lg",
                 "contents": [
                     {
                         "type": "text",
@@ -286,7 +315,7 @@ class BaseGame:
                     {
                         "type": "box",
                         "layout": "vertical",
-                        "spacing": "lg",
+                        "spacing": "md",
                         "contents": [
                             {
                                 "type": "text",
@@ -314,7 +343,7 @@ class BaseGame:
                         ],
                         "backgroundColor": colors["card"],
                         "cornerRadius": "20px",
-                        "paddingAll": "30px"
+                        "paddingAll": "25px"
                     },
                     {
                         "type": "text",
@@ -334,22 +363,15 @@ class BaseGame:
                 "spacing": "sm",
                 "contents": [
                     {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "spacing": "sm",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "message",
-                                    "label": "🔄 إعادة اللعبة",
-                                    "text": f"لعبة {self.game_name}"
-                                },
-                                "style": "primary",
-                                "height": "sm",
-                                "color": colors["button"]
-                            }
-                        ]
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "🔄 إعادة اللعبة",
+                            "text": f"لعبة {self.game_name}"
+                        },
+                        "style": "primary",
+                        "height": "sm",
+                        "color": colors["button"]
                     },
                     {
                         "type": "box",
@@ -393,12 +415,8 @@ class BaseGame:
             contents=FlexContainer.from_dict(flex_content)
         )
     
-    # ========================================================================
-    # معلومات اللعبة
-    # ========================================================================
-    
     def get_game_info(self) -> Dict[str, Any]:
-        """الحصول على معلومات اللعبة"""
+        """معلومات اللعبة"""
         return {
             "name": self.game_name,
             "icon": self.game_icon,
@@ -413,7 +431,7 @@ class BaseGame:
         }
     
     def __del__(self):
-        """تنظيف تلقائي عند حذف الكائن"""
+        """تنظيف تلقائي"""
         try:
             self.cleanup()
         except:
