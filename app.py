@@ -1,198 +1,180 @@
 """
-Bot Mesh - Main App Fully Integrated v3 SDK
+Bot Mesh - Full Integrated App
 Created by: Abeer Aldosari © 2025
+All-in-One LINE Bot with 12 games, Flex Messages, fixed footer, progress bars, themes, and user management
 """
 
 import os
 import logging
-from datetime import datetime, timedelta
-from flask import Flask, request, abort, jsonify
+import json
+from flask import Flask, request, abort
 
 from linebot.v3.messaging import ApiClient, MessagingApi
-from linebot.v3.messaging.models import (
-    ReplyMessageRequest, TextMessage, FlexMessage
-)
-from linebot.v3.messaging.models import WebhookRequest
-from linebot.v3.messaging.models import Event, MessageEvent, TextMessageContent, FollowEvent
+from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage, FlexMessage
 
-# ===========================
+# -------------------------
 # CONFIGURATION
-# ===========================
-CHANNEL_ACCESS = os.environ.get("CHANNEL_ACCESS", "")
-PORT = int(os.environ.get("PORT", 10000))
+# -------------------------
+CHANNEL_ACCESS = os.environ.get("CHANNEL_ACCESS", "YOUR_CHANNEL_ACCESS_TOKEN")
 
+app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+# -------------------------
+# USER MANAGEMENT (IN-MEMORY for demo)
+# -------------------------
+USERS = {}  # user_id -> {name, points, theme, last_game, progress}
 
-# ===========================
-# USERS & POINTS SYSTEM
-# ===========================
-users_db = {}  # {user_id: {"name": str, "points": int, "theme": str, "last_active": datetime}}
-
-DEFAULT_THEME = "💜"
-THEMES = ["💜", "💚", "🤍", "🖤", "💙", "🩶", "🩷", "🧡", "🤎"]
-
-def register_user(user_id, name):
-    if user_id not in users_db:
-        users_db[user_id] = {
-            "name": name,
-            "points": 0,
-            "theme": DEFAULT_THEME,
-            "last_active": datetime.now()
-        }
-
-# ===========================
+# -------------------------
 # GAME LOADER
-# ===========================
-import importlib
-import inspect
-from games.base_game import BaseGame
+# -------------------------
+from games.game_loader import games_list  # كل الألعاب المدمجة
 
-games_list = []
-games_dir = os.path.dirname(__file__) + "/games"
-invalid_modules = []
+# -------------------------
+# UTILITIES
+# -------------------------
+def get_user(user_id):
+    if user_id not in USERS:
+        USERS[user_id] = {"name": f"مستخدم {len(USERS)+1}", "points": 0, "theme": "💜", "last_game": None, "progress": 0}
+    return USERS[user_id]
 
-for filename in os.listdir(games_dir):
-    if filename.endswith(".py") and filename not in ["__init__.py", "base_game.py", "game_loader.py"]:
-        module_name = filename[:-3]
-        try:
-            module = importlib.import_module(f"games.{module_name}")
-            found_game = False
-            for name, obj in inspect.getmembers(module, inspect.isclass):
-                if issubclass(obj, BaseGame) and obj.__module__ == module.__name__:
-                    games_list.append(obj)
-                    logger.info(f"✅ Loaded game: {obj.__name__}")
-                    found_game = True
-            if not found_game:
-                invalid_modules.append(module_name)
-                logger.warning(f"⚠️ Module '{module_name}' does not contain a valid BaseGame class")
-        except Exception as e:
-            invalid_modules.append(module_name)
-            logger.error(f"❌ Failed to import module '{module_name}': {e}")
+# -------------------------
+# FLEX BUILDERS
+# -------------------------
+def build_home(user_id):
+    user = get_user(user_id)
+    return {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                {"type": "text", "text": "🤖 Bot Mesh", "weight": "bold", "size": "lg"},
+                {"type": "text", "text": f"▪️ مرحباً: {user['name']}"},
+                {"type": "text", "text": f"▪️ الحالة: مسجل" if user else "▪️ الحالة: غير مسجل"},
+                {"type": "text", "text": f"▪️ نقاطك: {user['points']}"},
+                {"type": "text", "text": f"▪️ اختر ثيمك:"},
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "button", "action": {"type": "message", "label": t, "text": t}} for t in ["💜","💚","🤍","🖤","💙","🩶","🩷","🧡","🤎"]
+                ]},
+            ]
+        },
+        "footer": build_fixed_footer()
+    }
 
-logger.info(f"📊 Total valid games loaded: {len(games_list)}")
-if invalid_modules:
-    logger.warning(f"⚠️ Modules with issues: {', '.join(invalid_modules)}")
-else:
-    logger.info("🎉 All game modules loaded successfully")
+def build_games_menu():
+    return {
+        "type": "bubble",
+        "body": {
+            "type": "box", "layout": "vertical", "spacing": "sm",
+            "contents": [
+                {"type": "text", "text": "🤖 Bot Mesh – مساعدة", "weight":"bold","size":"md"},
+                {"type": "text", "text": "🎮 الألعاب المتاحة:"},
+                {"type": "text", "text": "ذكاء – رياضيات – لون – أسرع – ترتيب – أغنية – كلمة – سلسلة – خمن – توافق"},
+                {"type": "text", "text": "📝 الأوامر أثناء اللعب:"},
+                {"type": "text", "text": "▫️ لمح → تلميح أول حرف وعدد حروف الكلمة"},
+                {"type": "text", "text": "▫️ جاوب → لإرسال إجابتك"},
+                {"type": "text", "text": "▫️ إعادة → لإعادة نفس السؤال"},
+                {"type": "text", "text": "▫️ إيقاف → لإيقاف اللعبة"},
+            ]
+        },
+        "footer": build_fixed_footer()
+    }
 
-# ===========================
-# FLEX MESSAGES BUILDER
-# ===========================
-def build_footer():
+def build_fixed_footer():
     # أزرار ثابتة أسفل كل نافذة
-    buttons = [
-        {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم"}},
-        {"type": "button", "action": {"type": "message", "label": "انسحب", "text": "انسحب"}},
-        {"type": "button", "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}},
-        {"type": "button", "action": {"type": "message", "label": "صدارة", "text": "صدارة"}},
-    ]
     return {
         "type": "box",
         "layout": "horizontal",
         "spacing": "sm",
-        "contents": buttons
+        "contents": [
+            {"type": "button", "action": {"type": "message","label": g.__name__.replace("Game",""), "text": g.__name__.replace("Game","")}} for g in games_list
+        ] + [{"type": "button","action":{"type":"message","label":"إيقاف","text":"إيقاف"}}]
     }
 
-def build_home(user_id):
-    user = users_db.get(user_id, {})
-    name = user.get("name", "غير مسجل")
-    points = user.get("points", 0)
-    theme = user.get("theme", DEFAULT_THEME)
-    return {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "sm",
-            "contents": [
-                {"type": "text", "text": f" Bot Mesh"},
-                {"type": "text", "text": f"▪️ مرحباً: {name}"},
-                {"type": "text", "text": f"▪️ النقاط: {points}"},
-                {"type": "text", "text": f"▪️ اختر ثيمك: {theme}"},
-            ]
-        },
-        "footer": build_footer()
-    }
+def build_progress_bar(progress, total=5):
+    # مؤشر بصري احترافي بدون إيموجي
+    full = int((progress/total)*10)
+    empty = 10 - full
+    return "[" + "█"*full + "─"*empty + f"] {progress}/{total}"
 
-def build_games_menu():
-    game_buttons = []
-    for game in games_list:
-        game_buttons.append({
-            "type": "button",
-            "action": {"type": "message", "label": game.__name__, "text": game.__name__}
-        })
-    return {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [{"type": "text", "text": "🎮 اختر لعبتك:"}] + game_buttons
-        },
-        "footer": build_footer()
-    }
-
-# ===========================
-# ROUTES
-# ===========================
-@app.route("/", methods=["GET"])
-def index():
-    return "Bot Mesh Online ✅"
-
+# -------------------------
+# FLASK WEBHOOK
+# -------------------------
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    payload = request.get_data(as_text=True)
+    body = request.get_data(as_text=True)
     try:
-        webhook_request = WebhookRequest.parse_raw(payload)
+        data = json.loads(body)
     except Exception as e:
-        logger.error(f"❌ Invalid WebhookRequest: {e}")
+        logger.error(f"❌ Invalid JSON: {e}")
         abort(400)
 
-    for event in webhook_request.events:
+    for event in data.get("events", []):
         handle_event(event)
 
     return "OK"
 
-# ===========================
-# EVENT HANDLER
-# ===========================
-def handle_event(event: Event):
-    user_id = getattr(event.source, "user_id", None)
+def handle_event(event):
+    user_id = event.get("source", {}).get("userId")
     if not user_id:
         return
-
-    # تسجيل المستخدم عند أول مرة
-    if hasattr(event, "message") and isinstance(event.message, TextMessageContent):
-        text = event.message.text
-        name = "User"  # يمكنك تعديل لاحقًا لاسم حقيقي
-        register_user(user_id, name)
+    msg_type = event.get("type")
+    if msg_type == "message" and event["message"]["type"] == "text":
+        text = event["message"]["text"]
+        reply_token = event.get("replyToken")
+        user = get_user(user_id)
 
         if text == "بداية":
-            send_flex(user_id, build_home(user_id))
+            send_flex(reply_token, build_home(user_id))
         elif text == "مساعدة":
-            send_flex(user_id, build_games_menu())
-        # يمكنك إضافة التعامل مع الأوامر الأخرى هنا
+            send_flex(reply_token, build_games_menu())
+        elif text in [g.__name__.replace("Game","") for g in games_list]:
+            user["last_game"] = text
+            user["progress"] = 0
+            send_flex(reply_token, build_game_round(user, text))
+        elif text == "إيقاف":
+            user["last_game"] = None
+            send_text(reply_token, "تم إيقاف اللعبة.")
+        else:
+            send_text(reply_token, f"لم أفهم: {text}")
 
-# ===========================
-# SEND FLEX
-# ===========================
-def send_flex(user_id, flex_dict):
-    config = {"access_token": CHANNEL_ACCESS}
+def build_game_round(user, game_name):
+    progress_bar = build_progress_bar(user["progress"])
+    return {
+        "type": "bubble",
+        "body": {
+            "type": "box","layout":"vertical","spacing":"sm",
+            "contents":[
+                {"type":"text","text":f"🕹️ اللعبة: {game_name}"},
+                {"type":"text","text":f"▪️ الجولة {user['progress']+1} من 5"},
+                {"type":"text","text":progress_bar},
+            ]
+        },
+        "footer": build_fixed_footer()
+    }
+
+def send_flex(reply_token, flex_dict):
     flex_message = FlexMessage(alt_text="Bot Mesh", contents=flex_dict)
     with ApiClient({"access_token": CHANNEL_ACCESS}) as client:
         messaging_api = MessagingApi(client)
-        messaging_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token="dummy",  # يجب استبداله بـ event.reply_token عند الاستدعاء الحقيقي
-                messages=[flex_message]
-            )
+        messaging_api.reply_message(
+            reply_token=reply_token,
+            messages=[flex_message]
         )
 
-# ===========================
-# RUN APP
-# ===========================
+def send_text(reply_token, text):
+    with ApiClient({"access_token": CHANNEL_ACCESS}) as client:
+        messaging_api = MessagingApi(client)
+        messaging_api.reply_message(
+            reply_token=reply_token,
+            messages=[TextMessage(text=text)]
+        )
+
+# -------------------------
+# RUN
+# -------------------------
 if __name__ == "__main__":
-    logger.info("🚀 Starting @Bot Mesh on port %s", PORT)
-    app.run(host="0.0.0.0", port=PORT)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
