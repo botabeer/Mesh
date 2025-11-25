@@ -1,9 +1,3 @@
-"""
-Bot Mesh v6.1 - Base Game Class
-Simple, Clean & Group-Friendly
-محدث: تغيير "جماعي" إلى "مجموعة"
-"""
-
 import random
 from datetime import datetime
 
