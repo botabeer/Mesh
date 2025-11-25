@@ -13,28 +13,28 @@ from typing import Dict, Any, Optional
 
 class CompatibilityGame(BaseGame):
     """لعبة التوافق المحسّنة"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
         self.supports_hint = False
         self.supports_reveal = False
-    
+
     def calculate_compatibility(self, name1: str, name2: str) -> int:
         """حساب نسبة التوافق - نفس النسبة بغض النظر عن الترتيب"""
         # تطبيع الأسماء
         n1 = self.normalize_text(name1)
         n2 = self.normalize_text(name2)
-        
+
         # ترتيب الأسماء أبجدياً لضمان نفس النسبة
         names = sorted([n1, n2])
         combined = ''.join(names)
-        
+
         # حساب seed فريد
         seed = sum(ord(c) * (i + 1) for i, c in enumerate(combined))
-        
+
         # نسبة بين 20 و 100
         return (seed % 81) + 20
-    
+
     def get_compatibility_message(self, percentage: int) -> str:
         """رسالة التوافق"""
         if percentage >= 90:
@@ -47,16 +47,16 @@ class CompatibilityGame(BaseGame):
             return "🔧 توافق متوسط! يحتاج عمل 💛"
         else:
             return "⚠️ توافق ضعيف! قد تكون هناك تحديات 💔"
-    
+
     def start_game(self):
         self.current_question = 0
         self.game_active = True
         return self.get_question()
-    
+
     def get_question(self):
         """سؤال بسيط بدون أزرار"""
         colors = self.get_theme_colors()
-        
+
         flex_content = {
             "type": "bubble",
             "size": "kilo",
@@ -160,16 +160,16 @@ class CompatibilityGame(BaseGame):
                 "footer": {"backgroundColor": colors["bg"]}
             }
         }
-        
+
         return self._create_flex_with_buttons("لعبة التوافق", flex_content)
-    
+
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active:
             return None
-        
+
         # تقسيم الأسماء
         names = user_answer.strip().split()
-        
+
         if len(names) < 2:
             hint = "⚠️ يرجى كتابة اسمين مفصولين بمسافة\nمثال: أحمد سارة"
             return {
@@ -177,15 +177,15 @@ class CompatibilityGame(BaseGame):
                 'response': self._create_text_message(hint),
                 'points': 0
             }
-        
+
         name1, name2 = names[0], names[1]
-        
+
         # حساب التوافق
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
-        
+
         colors = self.get_theme_colors()
-        
+
         # نافذة النتيجة
         flex_content = {
             "type": "bubble",
@@ -305,18 +305,18 @@ class CompatibilityGame(BaseGame):
                 "footer": {"backgroundColor": colors["bg"]}
             }
         }
-        
+
         result_message = self._create_flex_with_buttons("نتيجة التوافق", flex_content)
         points = self.add_score(user_id, display_name, 5)
         self.game_active = False
-        
+
         return {
             'message': f"🖤 نسبة التوافق: {percentage}%",
             'response': result_message,
             'points': points,
             'game_over': True
         }
-    
+
     def get_game_info(self) -> Dict[str, Any]:
         return {
             "name": "لعبة التوافق",

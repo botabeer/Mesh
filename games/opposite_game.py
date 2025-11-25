@@ -18,12 +18,12 @@ from typing import Dict, Any, Optional
 
 class OppositeGame(BaseGame):
     """لعبة الأضداد المحسنة مع AI"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "أضداد"
         self.game_icon = "↔️"
-        
+
         # قاعدة أضداد محسنة ومتنوعة
         self.fallback_opposites = [
             {"word": "كبير", "opposite": ["صغير"]},
@@ -52,7 +52,7 @@ class OppositeGame(BaseGame):
             {"word": "ناعم", "opposite": ["خشن"]},
             {"word": "حلو", "opposite": ["مر", "حامض"]}
         ]
-        
+
         random.shuffle(self.fallback_opposites)
         self.used_words = []
         self.previous_question = None
@@ -61,7 +61,7 @@ class OppositeGame(BaseGame):
     def generate_question_with_ai(self):
         """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
         question_data = None
-        
+
         # محاولة AI أولاً
         if self.ai_generate_question:
             try:
@@ -73,13 +73,13 @@ class OppositeGame(BaseGame):
                     return question_data
             except Exception as e:
                 print(f"⚠️ AI generation failed, using fallback: {e}")
-        
+
         # Fallback للأضداد المخزنة
         available = [w for w in self.fallback_opposites if w not in self.used_words]
         if not available:
             self.used_words = []
             available = self.fallback_opposites.copy()
-        
+
         question_data = random.choice(available)
         self.used_words.append(question_data)
         return question_data
@@ -97,9 +97,9 @@ class OppositeGame(BaseGame):
         """إنشاء سؤال مع واجهة Flex محسنة"""
         q_data = self.generate_question_with_ai()
         self.current_answer = q_data["opposite"]
-        
+
         colors = self.get_theme_colors()
-        
+
         # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
@@ -282,24 +282,24 @@ class OppositeGame(BaseGame):
     def check_answer_intelligently(self, user_answer: str) -> bool:
         """فحص ذكي للإجابة مع دعم AI"""
         normalized_user = self.normalize_text(user_answer)
-        
+
         # فحص مباشر
         for correct in self.current_answer:
             normalized_correct = self.normalize_text(correct)
-            
+
             # تطابق كامل
             if normalized_user == normalized_correct:
                 return True
-            
+
             # تطابق جزئي
             if normalized_user in normalized_correct or normalized_correct in normalized_user:
                 return True
-            
+
             # تشابه نصي (85% أو أكثر)
             ratio = difflib.SequenceMatcher(None, normalized_user, normalized_correct).ratio()
             if ratio > 0.85:
                 return True
-        
+
         # محاولة AI للتحقق
         if self.ai_check_answer:
             try:
@@ -308,7 +308,7 @@ class OppositeGame(BaseGame):
                         return True
             except:
                 pass
-        
+
         return False
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
@@ -331,21 +331,21 @@ class OppositeGame(BaseGame):
         if normalized == "جاوب":
             answer_text = " أو ".join(self.current_answer)
             reveal = f"📝 الإجابة: {answer_text}"
-            
+
             # حفظ السؤال والجواب
             q_data = self.generate_question_with_ai()
             self.previous_question = q_data["word"]
             self.previous_answer = answer_text
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['message'] = f"{reveal}\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             return {'message': reveal, 'response': next_q, 'points': 0}
 
@@ -354,25 +354,25 @@ class OppositeGame(BaseGame):
 
         if is_correct:
             points = self.add_score(user_id, display_name, 10)
-            
+
             # حفظ السؤال والجواب
             q_data = self.generate_question_with_ai()
             self.previous_question = q_data["word"]
             self.previous_answer = self.current_answer[0]
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['points'] = points
                 result['message'] = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             success_msg = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة"
-            
+
             return {
                 'message': success_msg,
                 'response': next_q,
@@ -389,7 +389,7 @@ class OppositeGame(BaseGame):
         """تلميح ذكي محسن"""
         if not self.current_answer or len(self.current_answer[0]) < 2:
             return "💡 فكر في الضد"
-        
+
         first_answer = self.current_answer[0]
         return f"💡 يبدأ بحرف: {first_answer[0]}\n📏 عدد الحروف: {len(first_answer)}"
 

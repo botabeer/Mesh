@@ -17,16 +17,16 @@ from typing import Dict, Any, Optional
 
 class ChainWordsGame(BaseGame):
     """لعبة سلسلة الكلمات المحسنة"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "سلسلة كلمات"
         self.game_icon = "🔗"
         self.supports_hint = False
         self.supports_reveal = False
-        
+
         self.starting_words = [
-            "سيارة", "تفاح", "قلم", "نجم", "كتاب", "باب", "رمل", 
+            "سيارة", "تفاح", "قلم", "نجم", "كتاب", "باب", "رمل",
             "لعبة", "حديقة", "ورد", "دفتر", "معلم", "منزل", "شمس",
             "سفر", "رياضة", "علم", "مدرسة", "طائرة", "عصير"
         ]

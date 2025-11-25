@@ -19,14 +19,14 @@ from typing import Dict, Any, Optional
 
 class FastTypingGame(BaseGame):
     """لعبة الكتابة السريعة المحسنة"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "كتابة سريعة"
         self.game_icon = "⚡"
         self.supports_hint = False
         self.supports_reveal = True
-        
+
         # عبارات الكتابة
         self.phrases = [
             "السرعة والدقة مهمتان",
@@ -50,7 +50,7 @@ class FastTypingGame(BaseGame):
             "الأمل نور الحياة",
             "ثق بنفسك دائماً"
         ]
-        
+
         random.shuffle(self.phrases)
         self.used_phrases = []
         self.question_start_time = None
@@ -73,15 +73,15 @@ class FastTypingGame(BaseGame):
         if not available:
             self.used_phrases = []
             available = self.phrases.copy()
-        
+
         phrase = random.choice(available)
         self.used_phrases.append(phrase)
-        
+
         self.current_answer = phrase
         self.question_start_time = datetime.now()
-        
+
         colors = self.get_theme_colors()
-        
+
         # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
@@ -269,7 +269,7 @@ class FastTypingGame(BaseGame):
 
         text = user_answer.strip()
         normalized = self.normalize_text(text)
-        
+
         # رفض أمر لمح
         if normalized == 'لمح':
             msg = "❌ هذه اللعبة لا تدعم التلميحات\n⚡ اكتب النص بالضبط!"
@@ -282,41 +282,41 @@ class FastTypingGame(BaseGame):
         # أمر تخطي السؤال
         if normalized == 'جاوب':
             reveal = f"📝 العبارة: {self.current_answer}"
-            
+
             # حفظ السؤال والجواب
             self.previous_question = self.current_answer
             self.previous_answer = "تم التخطي"
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['message'] = f"{reveal}\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             return {'message': reveal, 'response': next_q, 'points': 0}
 
         # حساب الوقت المستغرق
         time_taken = (datetime.now() - self.question_start_time).total_seconds() if self.question_start_time else 0
-        
+
         # فحص التطابق التام
         is_correct = text == self.current_answer
-        
+
         if is_correct:
             # النقاط الأساسية
             points = 10
-            
+
             # مكافأة السرعة (أقل من 5 ثوانٍ)
             speed_bonus = 0
             if time_taken < 5:
                 speed_bonus = 5
                 points += speed_bonus
-            
+
             points = self.add_score(user_id, display_name, points)
-            
+
             # حفظ السؤال والجواب
             if speed_bonus > 0:
                 self.previous_question = self.current_answer
@@ -324,11 +324,11 @@ class FastTypingGame(BaseGame):
             else:
                 self.previous_question = self.current_answer
                 self.previous_answer = f"أنجزت في {time_taken:.1f}ث"
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['points'] = points
@@ -337,13 +337,13 @@ class FastTypingGame(BaseGame):
                 else:
                     result['message'] = f"✅ صحيح! الوقت: {time_taken:.1f} ثانية\n+{points} نقطة\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             if speed_bonus > 0:
                 success_msg = f"🎉 ممتاز يا {display_name}!\n⚡ أنجزتها في {time_taken:.1f} ثانية\n⭐ +{speed_bonus} نقاط إضافية للسرعة!\n+{points} نقطة"
             else:
                 success_msg = f"✅ صحيح يا {display_name}!\n⏱️ الوقت: {time_taken:.1f} ثانية\n+{points} نقطة"
-            
+
             return {
                 'message': success_msg,
                 'response': next_q,

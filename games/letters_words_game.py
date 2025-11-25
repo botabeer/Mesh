@@ -18,12 +18,12 @@ from typing import Dict, Any, Optional
 
 class LettersWordsGame(BaseGame):
     """لعبة تكوين الكلمات المحسنة مع AI"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "تكوين كلمات"
         self.game_icon = "🔤"
-        
+
         self.fallback_letter_sets = [
             {"letters": ["ق", "ل", "م", "ع", "ر", "ب"], "words": ["قلم", "عمل", "علم", "قلب", "رقم", "مقر"]},
             {"letters": ["س", "ا", "ر", "ة", "ي", "م"], "words": ["سيارة", "سارية", "رئيس", "سير", "مسار"]},
@@ -34,7 +34,7 @@ class LettersWordsGame(BaseGame):
             {"letters": ["ش", "م", "س", "ي", "ر", "ع"], "words": ["شمس", "مسير", "عرش", "سير"]},
             {"letters": ["ن", "ج", "م", "ا", "ل", "ر"], "words": ["نجم", "جمال", "رجل", "نمر"]}
         ]
-        
+
         random.shuffle(self.fallback_letter_sets)
         self.current_set = None
         self.found_words = set()
@@ -45,7 +45,7 @@ class LettersWordsGame(BaseGame):
     def generate_question_with_ai(self):
         """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
         question_data = None
-        
+
         # محاولة AI أولاً
         if self.ai_generate_question:
             try:
@@ -54,7 +54,7 @@ class LettersWordsGame(BaseGame):
                     return question_data
             except Exception as e:
                 print(f"⚠️ AI generation failed, using fallback: {e}")
-        
+
         # Fallback
         return self.fallback_letter_sets[self.current_question % len(self.fallback_letter_sets)]
 
@@ -74,10 +74,10 @@ class LettersWordsGame(BaseGame):
         self.current_set = q_data
         self.current_answer = q_data["words"]
         self.found_words.clear()
-        
+
         colors = self.get_theme_colors()
         letters_display = ' - '.join(q_data["letters"])
-        
+
         # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
@@ -117,7 +117,7 @@ class LettersWordsGame(BaseGame):
                 },
                 {"type": "separator", "color": colors["shadow1"], "margin": "md"}
             ]
-        
+
         flex_content = {
             "type": "bubble",
             "size": "kilo",
@@ -236,7 +236,7 @@ class LettersWordsGame(BaseGame):
                 "footer": {"backgroundColor": colors["bg"]}
             }
         }
-        
+
         return self._create_flex_with_buttons("تكوين الكلمات", flex_content)
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
@@ -265,28 +265,28 @@ class LettersWordsGame(BaseGame):
         if normalized == 'جاوب':
             words = " • ".join(self.current_answer)
             msg = f"📝 الكلمات الممكنة:\n{words}"
-            
+
             # حفظ السؤال والجواب
             self.previous_question = self.current_set["letters"]
             self.previous_answer = words
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
             self.found_words.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['message'] = f"{msg}\n\n{result.get('message','')}"
                 return result
-            
+
             next_q = self.get_question()
             return {'message': msg, 'response': next_q, 'points': 0}
 
         # التحقق من الإجابة
         valid_words = [self.normalize_text(w) for w in self.current_answer]
         is_valid = False
-        
+
         if normalized in valid_words and normalized not in self.found_words:
             is_valid = True
         else:
@@ -311,21 +311,21 @@ class LettersWordsGame(BaseGame):
             words = " • ".join(self.current_answer)
             self.previous_question = self.current_set["letters"]
             self.previous_answer = words
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
             self.found_words.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['points'] = points
                 result['message'] = f"✅ أحسنت يا {display_name}!\n+{points} نقطة\n\n{result.get('message','')}"
                 return result
-            
+
             next_q = self.get_question()
             return {
-                'message': f"✅ أحسنت يا {display_name}!\n+{points} نقطة", 
+                'message': f"✅ أحسنت يا {display_name}!\n+{points} نقطة",
                 'response': next_q,
                 'points': points
             }

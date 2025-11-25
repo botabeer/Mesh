@@ -18,14 +18,14 @@ from typing import Dict, Any, Optional
 
 class WordColorGame(BaseGame):
     """لعبة لون الكلمة المحسنة (Stroop Test)"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "لون الكلمة"
         self.game_icon = "🎨"
         self.supports_hint = False
         self.supports_reveal = False
-        
+
         # خريطة الألوان
         self.colors = {
             "أحمر": "#E53E3E",
@@ -37,7 +37,7 @@ class WordColorGame(BaseGame):
             "وردي": "#D53F8C",
             "بني": "#8B4513"
         }
-        
+
         self.color_names = list(self.colors.keys())
         self.previous_question = None
         self.previous_answer = None
@@ -55,18 +55,18 @@ class WordColorGame(BaseGame):
         """إنشاء سؤال مع واجهة Flex محسنة"""
         # اختيار كلمة ولون (عادة مختلفين)
         word = random.choice(self.color_names)
-        
+
         # 70% احتمالية عدم التطابق لجعل اللعبة تحديًا
         if random.random() < 0.7:
             color_name = random.choice([c for c in self.color_names if c != word])
         else:
             color_name = word
-        
+
         self.current_answer = color_name
         color_hex = self.colors[color_name]
-        
+
         colors = self.get_theme_colors()
-        
+
         # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
@@ -221,7 +221,7 @@ class WordColorGame(BaseGame):
             return None
 
         normalized = self.normalize_text(user_answer)
-        
+
         # رفض أوامر لمح/جاوب
         if normalized in ['لمح', 'جاوب']:
             msg = "❌ هذه اللعبة لا تدعم التلميحات\n🎨 ركز على اللون وليس الكلمة!"
@@ -237,24 +237,24 @@ class WordColorGame(BaseGame):
 
         if is_correct:
             points = self.add_score(user_id, display_name, 10)
-            
+
             # حفظ السؤال والجواب
             self.previous_question = "كلمة ملونة"
             self.previous_answer = self.current_answer
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['points'] = points
                 result['message'] = f"✅ ممتاز يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             success_msg = f"✅ ممتاز يا {display_name}!\n+{points} نقطة"
-            
+
             return {
                 'message': success_msg,
                 'response': next_q,

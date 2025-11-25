@@ -17,16 +17,16 @@ from typing import Dict, Any, Optional
 
 class HumanAnimalPlantGame(BaseGame):
     """لعبة إنسان حيوان نبات جماد بلاد المحسنة مع AI"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "إنسان حيوان نبات"
         self.game_icon = "🎯"
-        
+
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
         random.shuffle(self.letters)
         self.categories = ["إنسان", "حيوان", "نبات", "جماد", "بلاد"]
-        
+
         # قاعدة بيانات محسنة
         self.fallback_answers = {
             "إنسان": {
@@ -115,7 +115,7 @@ class HumanAnimalPlantGame(BaseGame):
                 "ي": ["اليمن", "اليابان"]
             }
         }
-        
+
         self.current_category = None
         self.current_letter = None
         self.previous_question = None
@@ -124,7 +124,7 @@ class HumanAnimalPlantGame(BaseGame):
     def generate_question_with_ai(self):
         """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
         question_data = None
-        
+
         # محاولة AI أولاً
         if self.ai_generate_question:
             try:
@@ -133,11 +133,11 @@ class HumanAnimalPlantGame(BaseGame):
                     return question_data
             except Exception as e:
                 print(f"⚠️ AI generation failed, using fallback: {e}")
-        
+
         # Fallback
         self.current_letter = self.letters[self.current_question % len(self.letters)]
         self.current_category = random.choice(self.categories)
-        
+
         return {
             "category": self.current_category,
             "letter": self.current_letter
@@ -157,9 +157,9 @@ class HumanAnimalPlantGame(BaseGame):
         q_data = self.generate_question_with_ai()
         self.current_category = q_data["category"]
         self.current_letter = q_data["letter"]
-        
+
         colors = self.get_theme_colors()
-        
+
         # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
@@ -311,22 +311,22 @@ class HumanAnimalPlantGame(BaseGame):
             suggested = None
             if self.current_category in self.fallback_answers and self.current_letter in self.fallback_answers[self.current_category]:
                 suggested = random.choice(self.fallback_answers[self.current_category][self.current_letter])
-            
+
             reveal = f"▫️ إجابة مقترحة: {suggested}" if suggested else f"▫️ أي كلمة تبدأ بحرف {self.current_letter}"
-            
+
             # حفظ السؤال والجواب
             self.previous_question = {"category": self.current_category, "letter": self.current_letter}
             self.previous_answer = suggested if suggested else "لا توجد"
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['message'] = f"{reveal}\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             return {'message': reveal, 'response': next_q, 'points': 0}
 
@@ -351,7 +351,7 @@ class HumanAnimalPlantGame(BaseGame):
         valid = False
         if self.current_category in self.fallback_answers and self.current_letter in self.fallback_answers[self.current_category]:
             valid = normalized_answer in [self.normalize_text(a) for a in self.fallback_answers[self.current_category][self.current_letter]]
-        
+
         if not valid and self.ai_check_answer:
             try:
                 valid = self.ai_check_answer(self.current_category, user_answer)
@@ -367,24 +367,24 @@ class HumanAnimalPlantGame(BaseGame):
             }
 
         points = self.add_score(user_id, display_name, 10)
-        
+
         # حفظ السؤال والجواب
         self.previous_question = {"category": self.current_category, "letter": self.current_letter}
         self.previous_answer = user_answer
-        
+
         # الانتقال للسؤال التالي
         self.current_question += 1
         self.answered_users.clear()
-        
+
         if self.current_question >= self.questions_count:
             result = self.end_game()
             result['points'] = points
             result['message'] = f"▫️ إجابة صحيحة يا {display_name} ▪️\n+{points} نقطة\n\n{result.get('message', '')}"
             return result
-        
+
         next_q = self.get_question()
         msg = f"▫️ إجابة صحيحة يا {display_name} ▪️\n+{points} نقطة"
-        
+
         return {
             'message': msg,
             'response': next_q,

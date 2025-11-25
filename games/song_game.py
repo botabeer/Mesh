@@ -18,12 +18,12 @@ from typing import Dict, Any, Optional
 
 class SongGame(BaseGame):
     """لعبة تخمين الأغنية المحسنة مع AI"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "أغنية"
         self.game_icon = "🎵"
-        
+
         # قاعدة أغاني محسنة
         self.fallback_songs = [
             {'lyrics': 'رجعت لي أيام الماضي معاك', 'artist': 'أم كلثوم'},
@@ -42,7 +42,7 @@ class SongGame(BaseGame):
             {'lyrics': 'عيونك يا حبيبي خطفت عقلي', 'artist': 'أنغام'},
             {'lyrics': 'سهران لوحدي والليل صاحبي', 'artist': 'ماجد المهندس'}
         ]
-        
+
         random.shuffle(self.fallback_songs)
         self.used_songs = []
         self.previous_question = None
@@ -51,7 +51,7 @@ class SongGame(BaseGame):
     def generate_question_with_ai(self):
         """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
         question_data = None
-        
+
         # محاولة AI أولاً
         if self.ai_generate_question:
             try:
@@ -60,13 +60,13 @@ class SongGame(BaseGame):
                     return question_data
             except Exception as e:
                 print(f"⚠️ AI generation failed, using fallback: {e}")
-        
+
         # Fallback للأغاني المخزنة
         available = [s for s in self.fallback_songs if s not in self.used_songs]
         if not available:
             self.used_songs = []
             available = self.fallback_songs.copy()
-        
+
         question_data = random.choice(available)
         self.used_songs.append(question_data)
         return question_data
@@ -84,9 +84,9 @@ class SongGame(BaseGame):
         """إنشاء سؤال مع واجهة Flex محسنة"""
         q_data = self.generate_question_with_ai()
         self.current_answer = q_data['artist']
-        
+
         colors = self.get_theme_colors()
-        
+
         # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
@@ -253,20 +253,20 @@ class SongGame(BaseGame):
         """فحص ذكي للإجابة مع دعم AI"""
         normalized_user = self.normalize_text(user_answer)
         normalized_correct = self.normalize_text(self.current_answer)
-        
+
         # تطابق كامل
         if normalized_user == normalized_correct:
             return True
-        
+
         # تطابق جزئي
         if normalized_user in normalized_correct or normalized_correct in normalized_user:
             return True
-        
+
         # تشابه نصي (80% أو أكثر)
         ratio = difflib.SequenceMatcher(None, normalized_user, normalized_correct).ratio()
         if ratio > 0.8:
             return True
-        
+
         # محاولة AI للتحقق
         if self.ai_check_answer:
             try:
@@ -274,7 +274,7 @@ class SongGame(BaseGame):
                     return True
             except:
                 pass
-        
+
         return False
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
@@ -296,21 +296,21 @@ class SongGame(BaseGame):
         # أمر كشف الإجابة
         if normalized == 'جاوب':
             reveal = f"🎤 المغني: {self.current_answer}"
-            
+
             # حفظ السؤال والجواب
             q_data = self.generate_question_with_ai()
             self.previous_question = q_data['lyrics']
             self.previous_answer = self.current_answer
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['message'] = f"{reveal}\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             return {'message': reveal, 'response': next_q, 'points': 0}
 
@@ -319,25 +319,25 @@ class SongGame(BaseGame):
 
         if is_correct:
             points = self.add_score(user_id, display_name, 10)
-            
+
             # حفظ السؤال والجواب
             q_data = self.generate_question_with_ai()
             self.previous_question = q_data['lyrics']
             self.previous_answer = self.current_answer
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['points'] = points
                 result['message'] = f"✅ صحيح يا {display_name}!\n🎤 {self.current_answer}\n+{points} نقطة\n\n{result.get('message', '')}"
                 return result
-            
+
             next_q = self.get_question()
             success_msg = f"✅ صحيح يا {display_name}!\n🎤 {self.current_answer}\n+{points} نقطة"
-            
+
             return {
                 'message': success_msg,
                 'response': next_q,

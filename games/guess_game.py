@@ -17,12 +17,12 @@ from typing import Dict, Any, Optional, List
 
 class GuessGame(BaseGame):
     """لعبة التخمين المحسنة مع AI"""
-    
+
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "تخمين"
         self.game_icon = "🔮"
-        
+
         # قاعدة بيانات الأشياء مع الفئات
         self.items = {
             "المطبخ 🍳": {
@@ -64,7 +64,7 @@ class GuessGame(BaseGame):
                 "ن": ["نمر"]
             }
         }
-        
+
         # إنشاء قائمة الأسئلة
         self.questions_list: List[Dict[str, Any]] = []
         for category, letters in self.items.items():
@@ -75,7 +75,7 @@ class GuessGame(BaseGame):
                         "letter": letter,
                         "answers": words
                     })
-        
+
         random.shuffle(self.questions_list)
         self.previous_question = None
         self.previous_answer = None
@@ -83,7 +83,7 @@ class GuessGame(BaseGame):
     def generate_question_with_ai(self):
         """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
         question_data = None
-        
+
         # محاولة AI أولاً
         if self.ai_generate_question:
             try:
@@ -92,7 +92,7 @@ class GuessGame(BaseGame):
                     return question_data
             except Exception as e:
                 print(f"⚠️ AI generation failed, using fallback: {e}")
-        
+
         # Fallback
         return self.questions_list[self.current_question % len(self.questions_list)]
 
@@ -109,9 +109,9 @@ class GuessGame(BaseGame):
         """إنشاء سؤال مع واجهة Flex محسنة"""
         q_data = self.generate_question_with_ai()
         self.current_answer = q_data["answers"]
-        
+
         colors = self.get_theme_colors()
-        
+
         # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
@@ -303,7 +303,7 @@ class GuessGame(BaseGame):
             return None
 
         normalized = self.normalize_text(user_answer)
-        
+
         # معالجة أمر التلميح
         if normalized == "لمح":
             hint = self.get_hint()
@@ -314,62 +314,62 @@ class GuessGame(BaseGame):
                 'response': self._create_text_message(hint),
                 'points': 0
             }
-        
+
         # معالجة أمر كشف الإجابة
         if normalized == "جاوب":
             answers_text = " أو ".join(self.current_answer)
             reveal = f"📝 الإجابة: {answers_text}"
-            
+
             # حفظ السؤال والجواب
             q_data = self.generate_question_with_ai()
             self.previous_question = q_data
             self.previous_answer = answers_text
-            
+
             # الانتقال للسؤال التالي
             self.current_question += 1
             self.answered_users.clear()
-            
+
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['message'] = f"{reveal}\n\n{result.get('message','')}"
                 return result
-            
+
             next_q = self.get_question()
             return {
                 'message': reveal,
                 'response': next_q,
                 'points': 0
             }
-        
+
         # التحقق من الإجابة
         for correct_answer in self.current_answer:
             if self.normalize_text(correct_answer) == normalized:
                 points = self.add_score(user_id, display_name, 10)
-                
+
                 # حفظ السؤال والجواب
                 q_data = self.generate_question_with_ai()
                 self.previous_question = q_data
                 self.previous_answer = correct_answer
-                
+
                 # الانتقال للسؤال التالي
                 self.current_question += 1
                 self.answered_users.clear()
-                
+
                 if self.current_question >= self.questions_count:
                     result = self.end_game()
                     result['points'] = points
                     result['message'] = f"✅ إجابة صحيحة يا {display_name}!\n🎯 الكلمة: {correct_answer}\n+{points} نقطة\n\n{result.get('message', '')}"
                     return result
-                
+
                 next_q = self.get_question()
                 success_message = f"✅ إجابة صحيحة يا {display_name}!\n🎯 الكلمة: {correct_answer}\n+{points} نقطة"
-                
+
                 return {
                     'message': success_message,
                     'response': next_q,
                     'points': points
                 }
-        
+
         # إجابة خاطئة
         return {
             'message': "❌ إجابة غير صحيحة، حاول مرة أخرى",
@@ -392,3 +392,16 @@ class GuessGame(BaseGame):
             "categories_count": len(self.items),
             "ai_enabled": self.ai_generate_question is not None
         }
+
+
+
+
+# --- Points hook for this game ---
+def notify_correct_answer(user_id):
+    try:
+        from games.base_game import BaseGame
+        # Create a transient BaseGame to call the points helper (no heavy init)
+        bg = BaseGame(api_client=None)
+        bg.apply_correct_answer_reward(user_id, base=15)
+    except Exception:
+        pass
