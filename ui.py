@@ -129,27 +129,33 @@ def get_theme(theme_emoji="💜"):
 # مكونات مساعدة
 # ============================================================================
 
-def button(label, text, color=None):
+def button(label, text, color=None, theme=None):
     """إنشاء زر"""
+    if theme is None:
+        theme = get_theme()
     return {
         "type": "button",
         "action": {"type": "message", "label": label, "text": text},
         "style": "primary" if color else "secondary",
         "height": "sm",
-        "color": color or THEME["shadow"]
+        "color": color or theme["shadow"]
     }
 
-def separator():
+def separator(theme=None):
     """خط فاصل"""
-    return {"type": "separator", "margin": "lg", "color": THEME["shadow"]}
+    if theme is None:
+        theme = get_theme()
+    return {"type": "separator", "margin": "lg", "color": theme["shadow"]}
 
-def text_box(text, size="md", color=None, bold=False):
+def text_box(text, size="md", color=None, bold=False, theme=None):
     """صندوق نص"""
+    if theme is None:
+        theme = get_theme()
     return {
         "type": "text",
         "text": text,
         "size": size,
-        "color": color or THEME["text"],
+        "color": color or theme["text"],
         "weight": "bold" if bold else "regular",
         "wrap": True,
         "align": "center"
@@ -159,8 +165,10 @@ def text_box(text, size="md", color=None, bold=False):
 # الشاشات الرئيسية
 # ============================================================================
 
-def home_screen(username, points):
+def home_screen(username, points, current_theme="💜"):
     """🏠 الشاشة الرئيسية"""
+    theme = get_theme(current_theme)
+    
     content = {
         "type": "bubble",
         "hero": {
@@ -184,7 +192,7 @@ def home_screen(username, points):
                     "margin": "sm"
                 }
             ],
-            "backgroundColor": THEME["primary"],
+            "backgroundColor": theme["primary"],
             "paddingAll": "30px"
         },
         "body": {
@@ -200,8 +208,8 @@ def home_screen(username, points):
                             "type": "box",
                             "layout": "vertical",
                             "contents": [
-                                text_box("👤 اللاعب", "xs", THEME["text2"]),
-                                text_box(username, "lg", THEME["primary"], True)
+                                text_box("👤 اللاعب", "xs", theme["text2"], theme=theme),
+                                text_box(username, "lg", theme["primary"], True, theme)
                             ],
                             "flex": 1
                         },
@@ -210,18 +218,18 @@ def home_screen(username, points):
                             "type": "box",
                             "layout": "vertical",
                             "contents": [
-                                text_box("⭐ النقاط", "xs", THEME["text2"]),
-                                text_box(str(points), "lg", THEME["success"], True)
+                                text_box("⭐ النقاط", "xs", theme["text2"], theme=theme),
+                                text_box(str(points), "lg", theme["success"], True, theme)
                             ],
                             "flex": 1
                         }
                     ],
-                    "backgroundColor": THEME["card"],
+                    "backgroundColor": theme["card"],
                     "cornerRadius": "15px",
                     "paddingAll": "15px"
                 },
-                separator(),
-                text_box("اختر وضع اللعب:", "md", THEME["text"], True)
+                separator(theme),
+                text_box("اختر وضع اللعب:", "md", theme["text"], True, theme)
             ]
         },
         "footer": {
@@ -229,16 +237,25 @@ def home_screen(username, points):
             "layout": "vertical",
             "spacing": "sm",
             "contents": [
-                button("👥 لعب جماعي", "جماعي", THEME["primary"]),
-                button("👤 لعب فردي", "فردي", THEME["secondary"]),
-                separator(),
+                button("👥 لعب جماعي", "جماعي", theme["primary"], theme),
+                button("👤 لعب فردي", "فردي", theme["secondary"], theme),
+                separator(theme),
                 {
                     "type": "box",
                     "layout": "horizontal",
                     "spacing": "sm",
                     "contents": [
-                        button("🎮 الألعاب", "العاب"),
-                        button("🏆 الصدارة", "صدارة")
+                        button("🎮 الألعاب", "العاب", theme=theme),
+                        button("🎨 الثيمات", "ثيمات", theme=theme)
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": [
+                        button("🏆 الصدارة", "صدارة", theme=theme),
+                        button("ℹ️ المساعدة", "مساعدة", theme=theme)
                     ]
                 }
             ],
@@ -249,8 +266,74 @@ def home_screen(username, points):
     return FlexMessage(alt_text="الشاشة الرئيسية", contents=FlexContainer.from_dict(content))
 
 
-def games_menu(mode="فردي"):
+def themes_selector(current_theme="💜"):
+    """🎨 شاشة اختيار الثيمات"""
+    theme = get_theme(current_theme)
+    
+    # بناء أزرار الثيمات (3 في كل صف)
+    theme_buttons = []
+    theme_items = list(THEMES.items())
+    
+    for i in range(0, len(theme_items), 3):
+        row_themes = theme_items[i:i+3]
+        buttons = []
+        
+        for emoji, t_data in row_themes:
+            is_current = (emoji == current_theme)
+            btn = button(
+                f"{emoji} {t_data['name']}" + (" ✓" if is_current else ""),
+                f"ثيم {emoji}",
+                t_data["primary"] if is_current else None,
+                theme
+            )
+            buttons.append(btn)
+        
+        theme_buttons.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": buttons
+        })
+    
+    content = {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                text_box("🎨 اختر الثيم المفضل", "xl", "#FFFFFF", True, theme)
+            ],
+            "backgroundColor": theme["primary"],
+            "paddingAll": "25px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                text_box(f"الثيم الحالي: {THEMES[current_theme]['name']}", "sm", theme["text2"], theme=theme),
+                separator(theme)
+            ] + theme_buttons,
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                button("🏠 الرئيسية", "بداية", theme["primary"], theme)
+            ],
+            "paddingAll": "15px"
+        }
+    }
+    
+    return FlexMessage(alt_text="اختيار الثيم", contents=FlexContainer.from_dict(content))
+
+
+def games_menu(mode="فردي", current_theme="💜"):
+def games_menu(mode="فردي", current_theme="💜"):
     """🎮 قائمة الألعاب"""
+    theme = get_theme(current_theme)
+    
     games = [
         {"icon": "🧠", "name": "ذكاء", "cmd": "لعبة ذكاء"},
         {"icon": "🔢", "name": "رياضيات", "cmd": "لعبة رياضيات"},
@@ -270,7 +353,7 @@ def games_menu(mode="فردي"):
             "contents": []
         }
         for game in games[i:i+2]:
-            row["contents"].append(button(f"{game['icon']} {game['name']}", game['cmd']))
+            row["contents"].append(button(f"{game['icon']} {game['name']}", game['cmd'], theme=theme))
         game_buttons.append(row)
     
     content = {
@@ -279,9 +362,9 @@ def games_menu(mode="فردي"):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                text_box(f"🎮 الألعاب - {mode}", "xl", "#FFFFFF", True)
+                text_box(f"🎮 الألعاب - {mode}", "xl", "#FFFFFF", True, theme)
             ],
-            "backgroundColor": THEME["primary"],
+            "backgroundColor": theme["primary"],
             "paddingAll": "20px"
         },
         "body": {
@@ -289,8 +372,8 @@ def games_menu(mode="فردي"):
             "layout": "vertical",
             "spacing": "md",
             "contents": game_buttons + [
-                separator(),
-                text_box(f"وضع اللعب: {mode}", "xs", THEME["text2"])
+                separator(theme),
+                text_box(f"وضع اللعب: {mode}", "xs", theme["text2"], theme=theme)
             ],
             "paddingAll": "20px"
         },
@@ -299,8 +382,8 @@ def games_menu(mode="فردي"):
             "layout": "vertical",
             "spacing": "sm",
             "contents": [
-                button("🏠 الرئيسية", "بداية", THEME["primary"]),
-                button("🔄 تغيير الوضع", "جماعي" if mode == "فردي" else "فردي")
+                button("🏠 الرئيسية", "بداية", theme["primary"], theme),
+                button("🔄 تغيير الوضع", "جماعي" if mode == "فردي" else "فردي", theme=theme)
             ],
             "paddingAll": "15px"
         }
@@ -309,8 +392,10 @@ def games_menu(mode="فردي"):
     return FlexMessage(alt_text="قائمة الألعاب", contents=FlexContainer.from_dict(content))
 
 
-def game_question(game_name, question, round_num, total_rounds, mode="فردي"):
+def game_question(game_name, question, round_num, total_rounds, mode="فردي", current_theme="💜"):
     """❓ سؤال اللعبة"""
+    theme = get_theme(current_theme)
+    
     content = {
         "type": "bubble",
         "header": {
@@ -321,13 +406,13 @@ def game_question(game_name, question, round_num, total_rounds, mode="فردي")
                     "type": "box",
                     "layout": "horizontal",
                     "contents": [
-                        text_box(f"🎮 {game_name}", "lg", "#FFFFFF", True),
-                        text_box(f"{round_num}/{total_rounds}", "md", "#FFFFFF")
+                        text_box(f"🎮 {game_name}", "lg", "#FFFFFF", True, theme),
+                        text_box(f"{round_num}/{total_rounds}", "md", "#FFFFFF", theme=theme)
                     ]
                 },
-                text_box(f"وضع: {mode}", "xs", "#FFFFFF")
+                text_box(f"وضع: {mode}", "xs", "#FFFFFF", theme=theme)
             ],
-            "backgroundColor": THEME["primary"],
+            "backgroundColor": theme["primary"],
             "paddingAll": "20px"
         },
         "body": {
@@ -339,14 +424,14 @@ def game_question(game_name, question, round_num, total_rounds, mode="فردي")
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
-                        text_box("❓ السؤال:", "sm", THEME["text2"], True),
-                        text_box(question, "xl", THEME["primary"], True)
+                        text_box("❓ السؤال:", "sm", theme["text2"], True, theme),
+                        text_box(question, "xl", theme["primary"], True, theme)
                     ],
-                    "backgroundColor": THEME["card"],
+                    "backgroundColor": theme["card"],
                     "cornerRadius": "20px",
                     "paddingAll": "25px"
                 },
-                text_box("💡 اكتب إجابتك في الدردشة", "xs", THEME["text2"])
+                text_box("💡 اكتب إجابتك في الدردشة", "xs", theme["text2"], theme=theme)
             ],
             "paddingAll": "20px"
         },
@@ -360,11 +445,11 @@ def game_question(game_name, question, round_num, total_rounds, mode="فردي")
                     "layout": "horizontal",
                     "spacing": "sm",
                     "contents": [
-                        button("💡 تلميح", "تلميح"),
-                        button("👁️ إجابة", "اجابة")
+                        button("💡 تلميح", "تلميح", theme=theme),
+                        button("👁️ إجابة", "اجابة", theme=theme)
                     ]
                 },
-                button("⛔ إيقاف", "ايقاف", THEME["error"])
+                button("⛔ إيقاف", "ايقاف", theme["error"], theme)
             ],
             "paddingAll": "15px"
         }
@@ -373,8 +458,10 @@ def game_question(game_name, question, round_num, total_rounds, mode="فردي")
     return FlexMessage(alt_text=f"{game_name} - سؤال {round_num}", contents=FlexContainer.from_dict(content))
 
 
-def game_result(winner_name, winner_points, all_players, mode="فردي"):
+def game_result(winner_name, winner_points, all_players, mode="فردي", current_theme="💜"):
     """🏆 نتيجة اللعبة"""
+    theme = get_theme(current_theme)
+    
     # قائمة اللاعبين
     players_list = []
     for i, (name, points) in enumerate(all_players[:5], 1):
@@ -383,10 +470,10 @@ def game_result(winner_name, winner_points, all_players, mode="فردي"):
             "type": "box",
             "layout": "horizontal",
             "contents": [
-                text_box(f"{medal} {name}", "sm", THEME["text"]),
-                text_box(f"{points} نقطة", "sm", THEME["primary"], True)
+                text_box(f"{medal} {name}", "sm", theme["text"], theme=theme),
+                text_box(f"{points} نقطة", "sm", theme["primary"], True, theme)
             ],
-            "backgroundColor": THEME["card"] if i == 1 else "transparent",
+            "backgroundColor": theme["card"] if i == 1 else "transparent",
             "cornerRadius": "10px",
             "paddingAll": "10px"
         })
@@ -397,9 +484,9 @@ def game_result(winner_name, winner_points, all_players, mode="فردي"):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                text_box("🎉 انتهت اللعبة!", "xxl", "#FFFFFF", True)
+                text_box("🎉 انتهت اللعبة!", "xxl", "#FFFFFF", True, theme)
             ],
-            "backgroundColor": THEME["success"],
+            "backgroundColor": theme["success"],
             "paddingAll": "30px"
         },
         "body": {
@@ -411,16 +498,16 @@ def game_result(winner_name, winner_points, all_players, mode="فردي"):
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
-                        text_box("🏆 الفائز", "sm", THEME["text2"]),
-                        text_box(winner_name, "xxl", THEME["primary"], True),
-                        text_box(f"{winner_points} نقطة", "lg", THEME["success"], True)
+                        text_box("🏆 الفائز", "sm", theme["text2"], theme=theme),
+                        text_box(winner_name, "xxl", theme["primary"], True, theme),
+                        text_box(f"{winner_points} نقطة", "lg", theme["success"], True, theme)
                     ],
-                    "backgroundColor": THEME["card"],
+                    "backgroundColor": theme["card"],
                     "cornerRadius": "20px",
                     "paddingAll": "25px"
                 },
-                separator(),
-                text_box("📊 جميع اللاعبين:", "sm", THEME["text"], True)
+                separator(theme),
+                text_box("📊 جميع اللاعبين:", "sm", theme["text"], True, theme)
             ] + players_list,
             "paddingAll": "20px"
         },
@@ -429,8 +516,8 @@ def game_result(winner_name, winner_points, all_players, mode="فردي"):
             "layout": "vertical",
             "spacing": "sm",
             "contents": [
-                button("🔄 لعب مرة أخرى", "العاب", THEME["primary"]),
-                button("🏠 الرئيسية", "بداية")
+                button("🔄 لعب مرة أخرى", "العاب", theme["primary"], theme),
+                button("🏠 الرئيسية", "بداية", theme=theme)
             ],
             "paddingAll": "15px"
         }
@@ -439,23 +526,24 @@ def game_result(winner_name, winner_points, all_players, mode="فردي"):
     return FlexMessage(alt_text="نتيجة اللعبة", contents=FlexContainer.from_dict(content))
 
 
-def leaderboard(top_players):
+def leaderboard(top_players, current_theme="💜"):
     """🏆 لوحة الصدارة"""
+    theme = get_theme(current_theme)
     medals = ["🥇", "🥈", "🥉"]
     
     # قائمة اللاعبين
     players_list = []
     for i, (name, points) in enumerate(top_players[:10], 1):
         medal = medals[i-1] if i <= 3 else f"{i}."
-        bg = THEME["card"] if i <= 3 else "transparent"
+        bg = theme["card"] if i <= 3 else "transparent"
         
         players_list.append({
             "type": "box",
             "layout": "horizontal",
             "contents": [
-                text_box(medal, "lg", THEME["primary"], True),
-                text_box(name, "md", THEME["text"]),
-                text_box(str(points), "md", THEME["success"], True)
+                text_box(medal, "lg", theme["primary"], True, theme),
+                text_box(name, "md", theme["text"], theme=theme),
+                text_box(str(points), "md", theme["success"], True, theme)
             ],
             "spacing": "md",
             "backgroundColor": bg,
@@ -469,10 +557,10 @@ def leaderboard(top_players):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                text_box("🏆 لوحة الصدارة", "xxl", "#FFFFFF", True),
-                text_box("أفضل 10 لاعبين", "sm", "#FFFFFF")
+                text_box("🏆 لوحة الصدارة", "xxl", "#FFFFFF", True, theme),
+                text_box("أفضل 10 لاعبين", "sm", "#FFFFFF", theme=theme)
             ],
-            "backgroundColor": THEME["primary"],
+            "backgroundColor": theme["primary"],
             "paddingAll": "25px"
         },
         "body": {
@@ -480,7 +568,7 @@ def leaderboard(top_players):
             "layout": "vertical",
             "spacing": "sm",
             "contents": players_list if players_list else [
-                text_box("لا يوجد لاعبون بعد", "md", THEME["text2"])
+                text_box("لا يوجد لاعبون بعد", "md", theme["text2"], theme=theme)
             ],
             "paddingAll": "20px"
         },
@@ -488,7 +576,7 @@ def leaderboard(top_players):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                button("🏠 الرئيسية", "بداية", THEME["primary"])
+                button("🏠 الرئيسية", "بداية", theme["primary"], theme)
             ],
             "paddingAll": "15px"
         }
