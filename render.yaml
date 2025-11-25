@@ -1,24 +1,57 @@
+# ============================================================================
+# Bot Mesh - Render.com Configuration (Enhanced)
+# Created by: Abeer Aldosari © 2025
+# ============================================================================
+
 services:
+  # Web Service Configuration
   - type: web
-    name: bot-mesh
+    name: bot-mesh-v3
     env: python
     region: singapore
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    healthCheckPath: /
+    
+    # Build Configuration
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --threads 4 --timeout 120
+    
+    # Health Check
+    healthCheckPath: /health
+    
+    # Auto Deploy
+    autoDeploy: true
+    
+    # Environment Variables
     envVars:
+      # Python Version
       - key: PYTHON_VERSION
         value: 3.9.16
+      
+      # Server Port
       - key: PORT
         value: 10000
+      
+      # LINE Credentials (من Dashboard)
       - key: LINE_CHANNEL_SECRET
         sync: false
+      
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
+      
+      # Gemini AI Keys (اختياري)
       - key: GEMINI_API_KEY_1
         sync: false
+      
       - key: GEMINI_API_KEY_2
         sync: false
+      
       - key: GEMINI_API_KEY_3
         sync: false
+      
+      # Flask Configuration
+      - key: FLASK_ENV
+        value: production
+      
+      # Gunicorn Workers
+      - key: WEB_CONCURRENCY
+        value: 2
