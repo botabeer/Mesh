@@ -1,38 +1,41 @@
 """
-لعبة الرياضيات - نسخة محسّنة مع AI
+لعبة الرياضيات - النسخة المحسنة مع AI
 Created by: Abeer Aldosari © 2025
+
+الميزات:
+✅ مستويات صعوبة متدرجة
+✅ دعم AI للأسئلة الديناميكية
+✅ تلميحات ذكية
+✅ واجهة احترافية
 """
 
 from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
 
+
 class MathGame(BaseGame):
-    """لعبة الرياضيات المحسّنة"""
+    """لعبة الرياضيات المحسنة"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "رياضيات"
         self.game_icon = "🔢"
         
-        # AI functions
-        self.ai_generate_question = None
-        self.ai_check_answer = None
-        
-        # مستويات الصعوبة
+        # مستويات الصعوبة المحسنة
         self.difficulty_levels = {
-            1: {"min": 1, "max": 20, "ops": ['+', '-'], "label": "سهل"},
-            2: {"min": 10, "max": 50, "ops": ['+', '-', '*'], "label": "متوسط"},
-            3: {"min": 20, "max": 100, "ops": ['+', '-', '*'], "label": "صعب"},
-            4: {"min": 50, "max": 200, "ops": ['+', '-', '*'], "label": "صعب جداً"},
-            5: {"min": 100, "max": 500, "ops": ['+', '-', '*'], "label": "خبير"}
+            1: {"min": 1, "max": 20, "ops": ['+', '-'], "label": "سهل 🌱"},
+            2: {"min": 10, "max": 50, "ops": ['+', '-', '×'], "label": "متوسط ⭐"},
+            3: {"min": 20, "max": 100, "ops": ['+', '-', '×'], "label": "صعب 🔥"},
+            4: {"min": 50, "max": 200, "ops": ['+', '-', '×'], "label": "صعب جداً 💪"},
+            5: {"min": 100, "max": 500, "ops": ['+', '-', '×'], "label": "خبير 👑"}
         }
         
         self.previous_question = None
         self.previous_answer = None
     
     def generate_math_question(self, round_num):
-        """توليد سؤال رياضي"""
+        """توليد سؤال رياضي محسن"""
         level = self.difficulty_levels[round_num]
         op = random.choice(level["ops"])
         
@@ -48,17 +51,22 @@ class MathGame(BaseGame):
             question = f"{a} - {b} = ؟"
             answer = a - b
         
-        else:  # *
+        else:  # ×
             max_factor = min(20, level["max"] // 10)
             a = random.randint(2, max_factor)
             b = random.randint(2, max_factor)
             question = f"{a} × {b} = ؟"
             answer = a * b
         
-        return {"q": question, "a": str(answer), "level": level["label"]}
+        return {
+            "q": question,
+            "a": str(answer),
+            "level": level["label"],
+            "operation": op
+        }
     
     def generate_question_with_ai(self, round_num):
-        """توليد سؤال بالذكاء الاصطناعي"""
+        """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
         question_data = None
         
         # محاولة AI
@@ -66,6 +74,9 @@ class MathGame(BaseGame):
             try:
                 question_data = self.ai_generate_question()
                 if question_data and "q" in question_data and "a" in question_data:
+                    # إضافة المستوى
+                    if "level" not in question_data:
+                        question_data["level"] = self.difficulty_levels[round_num]["label"]
                     return question_data
             except:
                 pass
@@ -74,6 +85,7 @@ class MathGame(BaseGame):
         return self.generate_math_question(round_num)
     
     def start_game(self):
+        """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
         self.previous_question = None
@@ -82,7 +94,7 @@ class MathGame(BaseGame):
         return self.get_question()
     
     def get_question(self):
-        """إنشاء سؤال مع واجهة Flex"""
+        """إنشاء سؤال مع واجهة Flex محسنة"""
         round_num = self.current_question + 1
         q_data = self.generate_question_with_ai(round_num)
         self.current_answer = q_data["a"]
@@ -90,7 +102,7 @@ class MathGame(BaseGame):
         colors = self.get_theme_colors()
         difficulty = q_data.get("level", "متوسط")
         
-        # السؤال السابق
+        # قسم السؤال السابق
         previous_section = []
         if self.previous_question and self.previous_answer:
             previous_section = [
@@ -109,7 +121,7 @@ class MathGame(BaseGame):
                             "type": "text",
                             "text": f"{self.previous_question} = {self.previous_answer}",
                             "size": "xs",
-                            "color": "#48BB78",
+                            "color": colors["success"],
                             "wrap": True,
                             "margin": "xs"
                         }
@@ -229,7 +241,7 @@ class MathGame(BaseGame):
                         "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
                         "style": "primary",
                         "height": "sm",
-                        "color": "#FF5555"
+                        "color": colors["error"]
                     }
                 ],
                 "backgroundColor": colors["bg"],
@@ -244,6 +256,7 @@ class MathGame(BaseGame):
         return self._create_flex_with_buttons(f"{self.game_name} - جولة {round_num}", flex_content)
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        """فحص الإجابة"""
         if not self.game_active or user_id in self.answered_users:
             return None
         
@@ -274,6 +287,7 @@ class MathGame(BaseGame):
         # فحص الإجابة
         is_correct = False
         try:
+            # إزالة الفواصل والمسافات
             user_num = int(normalized.replace('،', '').replace(',', '').replace(' ', ''))
             correct_num = int(self.current_answer)
             is_correct = user_num == correct_num
@@ -308,21 +322,40 @@ class MathGame(BaseGame):
         }
     
     def get_hint(self):
+        """تلميح ذكي محسن"""
         try:
             answer = int(self.current_answer)
+            hints = []
+            
+            # زوجي أو فردي
             if answer % 2 == 0:
-                return "💡 العدد زوجي"
-            return "💡 العدد فردي"
+                hints.append("💡 العدد زوجي")
+            else:
+                hints.append("💡 العدد فردي")
+            
+            # نطاق العدد
+            if answer < 10:
+                hints.append("📊 العدد أصغر من 10")
+            elif answer < 50:
+                hints.append("📊 العدد بين 10 و 50")
+            elif answer < 100:
+                hints.append("📊 العدد بين 50 و 100")
+            else:
+                hints.append("📊 العدد أكبر من 100")
+            
+            return "\n".join(hints)
         except:
             return "💡 فكر جيداً"
     
     def get_game_info(self) -> Dict[str, Any]:
+        """معلومات اللعبة"""
         return {
             "name": "لعبة الرياضيات",
             "emoji": "🔢",
-            "description": "مسائل رياضية متدرجة",
+            "description": "مسائل رياضية متدرجة الصعوبة",
             "questions_count": self.questions_count,
             "active": self.game_active,
             "current_question": self.current_question,
-            "players_count": len(self.scores)
+            "players_count": len(self.scores),
+            "ai_enabled": self.ai_generate_question is not None
         }
