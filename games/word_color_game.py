@@ -1,168 +1,172 @@
 """
-لعبة الكلمة واللون - Stroop Effect
+Bot Mesh - Word Color Game (Stroop Effect)
 Created by: Abeer Aldosari © 2025
-LINE Compatible - Neumorphism Soft Design
+
+The classic Stroop test - say the color, not the word!
 """
 
-from games.base_game import BaseGame
 import random
-import difflib
-from typing import Dict, Any, Optional
+from games.base_game import BaseGame
+from constants import POINTS_PER_CORRECT_ANSWER
 
 
 class WordColorGame(BaseGame):
-    """لعبة الكلمة واللون - Stroop Effect"""
+    """Word Color Game - Name the color, not the word"""
     
     def __init__(self, line_bot_api):
-        super().__init__(line_bot_api, questions_count=5)
-        self.supports_hint = True
-        self.supports_reveal = True
+        super().__init__(line_bot_api)
+        self.game_name = "لون الكلمة"
+        self.game_icon = "🎨"
         
+        # Color mappings
         self.colors = {
-            "أحمر": "🔴",
-            "أزرق": "🔵",
-            "أخضر": "🟢",
-            "أصفر": "🟡",
-            "برتقالي": "🟠",
-            "أرجواني": "🟣",
-            "بني": "🟤",
-            "أسود": "⚫",
-            "أبيض": "⚪"
+            "أحمر": "#E53E3E",
+            "أزرق": "#3182CE",
+            "أخضر": "#38A169",
+            "أصفر": "#D69E2E",
+            "برتقالي": "#DD6B20",
+            "بنفسجي": "#805AD5",
+            "وردي": "#D53F8C",
+            "بني": "#8B4513"
         }
         
         self.color_names = list(self.colors.keys())
-        self.word_color = None
-        self.display_color = None
-        self.last_correct_answer = None
-
-    def start_game(self) -> Any:
-        self.current_question = 0
-        self.game_active = True
-        self.last_correct_answer = None
-        return self.get_question()
-
-    def get_progress_bar(self) -> Dict:
-        """شريط تقدم احترافي"""
-        colors = self.get_theme_colors()
-        progress_boxes = []
+    
+    def next_question(self):
+        """Generate next color question"""
+        if self.current_round > self.total_rounds:
+            return None
         
-        for i in range(self.questions_count):
-            if i < self.current_question:
-                bg_color = "#10B981"
-            elif i == self.current_question:
-                bg_color = colors["primary"]
-            else:
-                bg_color = "#E5E7EB"
-            
-            progress_boxes.append({
+        # Pick word and color (usually different)
+        word = random.choice(self.color_names)
+        
+        # 70% chance of mismatch to make it challenging
+        if random.random() < 0.7:
+            color_name = random.choice([c for c in self.color_names if c != word])
+        else:
+            color_name = word
+        
+        self.current_question = word
+        self.current_answer = color_name
+        color_hex = self.colors[color_name]
+        
+        colors = self.get_colors()
+        
+        # Build special card with colored text
+        contents = [
+            # Game Header
+            {
                 "type": "box",
-                "layout": "vertical",
-                "contents": [],
-                "width": f"{100//self.questions_count}%",
-                "height": "6px",
-                "backgroundColor": bg_color,
-                "cornerRadius": "3px"
-            })
-        
-        return {
-            "type": "box",
-            "layout": "horizontal",
-            "contents": progress_boxes,
-            "spacing": "xs"
-        }
-
-    def get_question(self) -> Any:
-        self.word_color = random.choice(self.color_names)
-        self.display_color = random.choice(self.color_names)
-        
-        if random.random() < 0.3:
-            self.display_color = self.word_color
-        
-        self.current_answer = self.display_color
-        color_emoji = self.colors[self.display_color]
-        
-        colors = self.get_theme_colors()
-        progress_bar = self.get_progress_bar()
-        
-        flex_content = {
-            "type": "bubble",
-            "size": "kilo",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
+                "layout": "horizontal",
                 "contents": [
                     {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "🎨 كلمة ولون",
-                                "weight": "bold",
-                                "size": "lg",
-                                "color": "#FFFFFF",
-                                "flex": 0
-                            },
-                            {
-                                "type": "text",
-                                "text": f"{self.current_question + 1}/{self.questions_count}",
-                                "size": "sm",
-                                "color": "#FFFFFF",
-                                "align": "end"
-                            }
-                        ]
+                        "type": "text",
+                        "text": f"{self.game_icon} {self.game_name}",
+                        "weight": "bold",
+                        "size": "lg",
+                        "color": colors["primary"],
+                        "flex": 3
                     },
-                    progress_bar
-                ],
-                "backgroundColor": colors["primary"],
-                "paddingAll": "20px"
+                    {
+                        "type": "text",
+                        "text": f"سؤال {self.current_round} من {self.total_rounds}",
+                        "size": "sm",
+                        "color": colors["text2"],
+                        "align": "end",
+                        "flex": 2
+                    }
+                ]
             },
+            {"type": "separator", "color": colors["shadow1"]},
+            
+            # Instruction
+            {
+                "type": "text",
+                "text": "📝 ما لون هذه الكلمة؟",
+                "size": "md",
+                "color": colors["text"],
+                "weight": "bold",
+                "align": "center"
+            },
+            
+            # Colored Word (BIG!)
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": word,
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": color_hex,
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": colors["card"],
+                "cornerRadius": "20px",
+                "paddingAll": "30px"
+            },
+            
+            # Warning
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "⚠️ اكتب اسم اللون، وليس الكلمة!",
+                        "size": "sm",
+                        "color": "#FF5555",
+                        "wrap": True,
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": colors["card"],
+                "cornerRadius": "15px",
+                "paddingAll": "15px"
+            },
+            
+            # Score
+            {
+                "type": "text",
+                "text": f"⭐ النقاط: {self.score}",
+                "size": "sm",
+                "color": colors["primary"],
+                "weight": "bold",
+                "align": "center"
+            }
+        ]
+        
+        # Footer
+        footer = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                        "style": "primary",
+                        "height": "sm",
+                        "color": "#FF5555"
+                    }
+                ]
+            }
+        ]
+        
+        from linebot.v3.messaging import FlexMessage, FlexContainer
+        from constants import BOT_RIGHTS
+        
+        card = {
+            "type": "bubble",
+            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "lg",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "ما لون الدائرة؟",
-                        "size": "md",
-                        "color": colors["text"],
-                        "align": "center",
-                        "weight": "bold"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "spacing": "md",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": f"الكلمة: {self.word_color}",
-                                "size": "sm",
-                                "color": colors["text"],
-                                "align": "center"
-                            },
-                            {
-                                "type": "text",
-                                "text": color_emoji,
-                                "size": "xxl",
-                                "align": "center"
-                            }
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "15px",
-                        "paddingAll": "25px"
-                    },
-                    {
-                        "type": "text",
-                        "text": "⚠️ اكتب لون الدائرة وليس الكلمة!",
-                        "size": "xs",
-                        "color": "#FF6B6B",
-                        "align": "center",
-                        "wrap": True
-                    }
-                ],
+                "contents": contents,
                 "backgroundColor": colors["bg"],
                 "paddingAll": "20px"
             },
@@ -170,167 +174,67 @@ class WordColorGame(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "spacing": "xs",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "✅ الإجابة السابقة:",
-                                "size": "xxs",
-                                "color": colors["text2"],
-                                "weight": "bold"
-                            },
-                            {
-                                "type": "text",
-                                "text": self.last_correct_answer if self.last_correct_answer else "لا يوجد بعد",
-                                "size": "xs",
-                                "color": colors["text"]
-                            }
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "10px",
-                        "paddingAll": "10px"
-                    },
-                    {
-                        "type": "separator",
-                        "color": colors["shadow1"]
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "spacing": "xs",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "💡 لمح", "text": "لمح"},
-                                "style": "secondary",
-                                "height": "sm",
-                                "color": colors["shadow1"]
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "📝 جاوب", "text": "جاوب"},
-                                "style": "secondary",
-                                "height": "sm",
-                                "color": colors["shadow1"]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "spacing": "xs",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
-                                "style": "primary",
-                                "color": "#FF5555",
-                                "height": "sm"
-                            }
-                        ]
-                    },
-                    {
-                        "type": "separator",
-                        "color": colors["shadow1"]
-                    },
-                    {
-                        "type": "text",
-                        "text": "تم إنشاؤه بواسطة عبير الدوسري © 2025",
-                        "size": "xxs",
-                        "color": colors["text2"],
-                        "align": "center"
-                    }
-                ],
+                "contents": footer,
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
             "styles": {
                 "body": {"backgroundColor": colors["bg"]},
-                "header": {"backgroundColor": colors["primary"]},
                 "footer": {"backgroundColor": colors["bg"]}
             }
         }
         
-        return self._create_flex_message("كلمة ولون", flex_content)
-
-    def get_hint(self) -> str:
-        if not self.current_answer:
-            return "💡 لا يوجد تلميح متاح"
+        return FlexMessage(
+            alt_text=f"{self.game_name} - {self.current_round}/{self.total_rounds}",
+            contents=FlexContainer.from_dict(card)
+        )
+    
+    def check_answer(self, user_answer, user_id, username):
+        """Check color answer"""
+        text = user_answer.strip()
         
-        first_char = self.current_answer[0]
-        length = len(self.current_answer)
-        
-        hint = f"💡 أول حرف '{first_char}' وعدد الحروف {length}"
-        hint += f"\n🎨 ركز على لون الدائرة {self.colors[self.display_color]} وليس الكلمة!"
-        
-        return hint
-
-    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        if not self.game_active:
-            return None
-
-        normalized_answer = self.normalize_text(user_answer)
-
-        if normalized_answer == "لمح":
-            hint = self.get_hint()
-            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
-
-        if normalized_answer == "جاوب":
-            self.last_correct_answer = self.current_answer
-            reveal = f"🎨 اللون الصحيح: {self.current_answer}"
-            next_question = self.next_question()
-            
-            if isinstance(next_question, dict) and next_question.get('game_over'):
-                next_question['message'] = f"{reveal}\n\n{next_question.get('message','')}"
-                return next_question
-            
-            return {'message': reveal, 'response': next_question, 'points': 0}
-
-        normalized_correct = self.normalize_text(self.current_answer)
-        is_valid = False
-
-        if normalized_answer == normalized_correct:
-            is_valid = True
-        elif difflib.SequenceMatcher(None, normalized_answer, normalized_correct).ratio() > 0.75:
-            is_valid = True
-
-        if not is_valid:
+        # Handle special commands
+        if text == "جاوب":
             return {
-                "message": "❌ إجابة غير صحيحة",
-                "response": self._create_text_message("❌ إجابة غير صحيحة، حاول مرة أخرى"),
-                "points": 0
+                'response': self.build_result_card(
+                    False,
+                    self.current_answer,
+                    "تم كشف الإجابة"
+                ),
+                'points': 0,
+                'game_over': False
             }
-
-        self.last_correct_answer = self.current_answer
-        points = self.add_score(user_id, display_name, 10)
-        next_question = self.next_question()
         
-        if isinstance(next_question, dict) and next_question.get('game_over'):
-            next_question['points'] = points
-            return next_question
+        # Check answer
+        normalized_answer = self.normalize_answer(self.current_answer)
+        normalized_user = self.normalize_answer(text)
         
-        success_message = f"✅ إجابة صحيحة يا {display_name}!\n🎨 اللون: {self.current_answer}\n+{points} نقطة"
+        is_correct = normalized_user == normalized_answer
+        
+        # Update score
+        if is_correct:
+            self.score += POINTS_PER_CORRECT_ANSWER
+        
+        # Move to next round
+        self.current_round += 1
+        
+        # Check if game over
+        if self.current_round > self.total_rounds:
+            return {
+                'response': self.build_game_over_card(username, self.score),
+                'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
+                'game_over': True
+            }
+        
+        # Continue game
+        next_q = self.next_question()
         
         return {
-            "message": success_message,
-            "response": next_question,
-            "points": points
+            'response': next_q,
+            'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
+            'game_over': False
         }
-
-    def get_game_info(self) -> Dict[str, Any]:
-        return {
-            "name": "لعبة الكلمة واللون",
-            "emoji": "🎨",
-            "description": "اختبار Stroop Effect - ركز على اللون!",
-            "questions_count": self.questions_count,
-            "colors_count": len(self.colors),
-            "supports_hint": self.supports_hint,
-            "supports_reveal": self.supports_reveal,
-            "active": self.game_active,
-            "current_question": self.current_question,
-            "players_count": len(self.scores)
-        }
+    
+    def get_hint(self):
+        """No hints for this game"""
+        return "ركز على اللون، وليس الكلمة!"
