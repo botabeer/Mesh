@@ -1,9 +1,17 @@
 services:
   - type: web
     name: bot-mesh
-    env: docker
-    dockerfilePath: ./Dockerfile
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    healthCheckPath: /
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: PORT
+        value: 10000
       - key: LINE_CHANNEL_SECRET
         sync: false
       - key: LINE_CHANNEL_ACCESS_TOKEN
@@ -14,5 +22,3 @@ services:
         sync: false
       - key: GEMINI_API_KEY_3
         sync: false
-      - key: PORT
-        value: 10000
