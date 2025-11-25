@@ -1,23 +1,25 @@
 """
-Bot Mesh - IQ Game with AI Support
+لعبة الذكاء - نسخة محسّنة مع AI ذكي
 Created by: Abeer Aldosari © 2025
 
-Features:
-- Gemini AI question generation
-- Fallback to static questions
-- Smart answer validation
+التحسينات:
+- AI أولاً مع Fallback تلقائي
+- قبول إجابات منطقية ومتشابهة
+- 5 جولات مع إعلان فوري للفائز
+- واجهة Flex احترافية
+- عرض السؤال السابق والجواب
 """
 
-import random
 from games.base_game import BaseGame
-from constants import POINTS_PER_CORRECT_ANSWER
-
+import random
+import difflib
+from typing import Dict, Any, Optional
 
 class IqGame(BaseGame):
-    """IQ/Logic puzzles game"""
+    """لعبة الذكاء المحسّنة"""
     
     def __init__(self, line_bot_api):
-        super().__init__(line_bot_api)
+        super().__init__(line_bot_api, questions_count=5)
         self.game_name = "IQ"
         self.game_icon = "🧠"
         
@@ -25,149 +27,366 @@ class IqGame(BaseGame):
         self.ai_generate_question = None
         self.ai_check_answer = None
         
-        # Fallback questions
+        # Fallback questions (محسّنة)
         self.fallback_questions = [
-            {"q": "ما هو الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "a": "السحاب"},
-            {"q": "له رأس ولا عين له؟", "a": "الدبوس"},
-            {"q": "ما هو الشيء الذي إذا أكلته كله تستفيد وإذا أكلت نصفه تموت؟", "a": "السمسم"},
-            {"q": "شيء موجود في السماء إذا أضفت إليه حرفا أصبح في الأرض؟", "a": "نجم"},
-            {"q": "ما هو الشيء الذي كلما زاد نقص؟", "a": "العمر"},
-            {"q": "ما هو الشيء الذي يكتب ولا يقرأ؟", "a": "القلم"},
-            {"q": "ما هو الشيء الذي له أسنان ولا يعض؟", "a": "المشط"},
-            {"q": "أنا في الماء ولكن إذا لمسني الماء أموت، من أنا؟", "a": "الملح"},
-            {"q": "ما هو الشيء الذي يتحدث جميع لغات العالم؟", "a": "صدى الصوت"},
-            {"q": "شيء يؤخذ منك قبل أن تعطيه؟", "a": "الصورة"},
-            {"q": "ما هو الشيء الذي إذا دخل الماء لم يبتل؟", "a": "الضوء"},
-            {"q": "رجل معه ست بنات لكل بنت أخ واحد، كم عدد أولاد الرجل؟", "a": "7"},
-            {"q": "ما هو الشيء الذي يقرصك ولا تراه؟", "a": "الجوع"},
-            {"q": "ما الذي يحترق دون أن يحترق؟", "a": "الشمعة"},
-            {"q": "ما هو الشيء الذي كلما أخذت منه كبر؟", "a": "الحفرة"}
+            {"q": "ما هو الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "السحابة", "الغيم"]},
+            {"q": "له رأس ولا عين له؟", "a": ["الدبوس", "الدبابيس", "المسمار"]},
+            {"q": "ما هو الشيء الذي إذا أكلته كله تستفيد وإذا أكلت نصفه تموت؟", "a": ["السمسم", "سمسم"]},
+            {"q": "شيء موجود في السماء إذا أضفت إليه حرفا أصبح في الأرض؟", "a": ["نجم", "نجمة"]},
+            {"q": "ما هو الشيء الذي كلما زاد نقص؟", "a": ["العمر", "الوقت", "الزمن"]},
+            {"q": "ما هو الشيء الذي يكتب ولا يقرأ؟", "a": ["القلم", "الاقلام"]},
+            {"q": "ما هو الشيء الذي له أسنان ولا يعض؟", "a": ["المشط", "الامشاط", "المسطرة"]},
+            {"q": "أنا في الماء ولكن إذا لمسني الماء أموت، من أنا؟", "a": ["الملح", "ملح"]},
+            {"q": "ما هو الشيء الذي يتحدث جميع لغات العالم؟", "a": ["صدى الصوت", "الصدى", "صدى"]},
+            {"q": "شيء يؤخذ منك قبل أن تعطيه؟", "a": ["الصورة", "الصوره", "صورة"]},
+            {"q": "ما هو الشيء الذي إذا دخل الماء لم يبتل؟", "a": ["الضوء", "ضوء", "الشعاع"]},
+            {"q": "رجل معه ست بنات لكل بنت أخ واحد، كم عدد أولاد الرجل؟", "a": ["7", "سبعة", "سبعه"]},
+            {"q": "ما هو الشيء الذي يقرصك ولا تراه؟", "a": ["الجوع", "جوع"]},
+            {"q": "ما الذي يحترق دون أن يحترق؟", "a": ["الشمعة", "الشمعه", "شمعة"]},
+            {"q": "ما هو الشيء الذي كلما أخذت منه كبر؟", "a": ["الحفرة", "الحفره", "حفرة"]},
+            {"q": "ما هو الشيء الذي له عين ولا يرى؟", "a": ["الابرة", "الإبرة", "ابرة"]},
+            {"q": "ما هو الشيء الذي تراه في الليل ثلاث مرات وفي النهار مرة واحدة؟", "a": ["حرف اللام", "اللام", "ل"]},
+            {"q": "كلمة من أربعة حروف إذا أكلت نصفها تموت وإذا أكلتها كلها لا تموت؟", "a": ["سمسم", "السمسم"]},
+            {"q": "ما هو الشيء الذي يوجد في وسط باريس؟", "a": ["حرف الراء", "الراء", "ر"]},
+            {"q": "ما هو الشيء الذي ترميه كلما احتجت إليه؟", "a": ["شبكة الصيد", "الشبكة", "شبكه"]}
         ]
         
         self.used_questions = []
+        self.previous_question = None
+        self.previous_answer = None
     
-    def next_question(self):
-        """Generate next question using AI or fallback"""
-        if self.current_round > self.total_rounds:
-            return None
-        
-        # Try AI generation first
+    def generate_question_with_ai(self):
+        """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
         question_data = None
+        
+        # محاولة AI أولاً
         if self.ai_generate_question:
             try:
                 question_data = self.ai_generate_question()
+                if question_data and "q" in question_data and "a" in question_data:
+                    # تأكد من أن الإجابة قائمة
+                    if not isinstance(question_data["a"], list):
+                        question_data["a"] = [str(question_data["a"])]
+                    return question_data
             except Exception as e:
-                print(f"AI generation failed: {e}")
+                print(f"⚠️ AI failed, using fallback: {e}")
         
-        # Fallback to static questions
-        if not question_data:
-            available = [q for q in self.fallback_questions if q not in self.used_questions]
-            if not available:
-                self.used_questions = []
-                available = self.fallback_questions.copy()
-            
-            question_data = random.choice(available)
-            self.used_questions.append(question_data)
+        # Fallback للأسئلة المخزنة
+        available = [q for q in self.fallback_questions if q not in self.used_questions]
+        if not available:
+            self.used_questions = []
+            available = self.fallback_questions.copy()
         
-        # Handle different response formats
-        if "q" in question_data and "a" in question_data:
-            self.current_question = question_data["q"]
-            self.current_answer = question_data["a"]
-        elif "question" in question_data and "answer" in question_data:
-            self.current_question = question_data["question"]
-            self.current_answer = question_data["answer"]
-        else:
-            # Fallback
-            q = random.choice(self.fallback_questions)
-            self.current_question = q["q"]
-            self.current_answer = q["a"]
-        
-        return self.build_question_card(
-            self.current_question,
-            hint_text="فكر جيداً قبل الإجابة"
-        )
+        question_data = random.choice(available)
+        self.used_questions.append(question_data)
+        return question_data
     
-    def check_answer(self, user_answer, user_id, username):
-        """Check user answer with AI or string matching"""
-        text = user_answer.strip()
+    def start_game(self):
+        """بدء اللعبة"""
+        self.current_question = 0
+        self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
+        self.answered_users.clear()
+        return self.get_question()
+    
+    def get_question(self):
+        """إنشاء سؤال مع واجهة Flex محسّنة"""
+        q_data = self.generate_question_with_ai()
+        self.current_answer = q_data["a"]
         
-        # Handle special commands
-        if text == "لمح":
-            hint = self.get_hint()
-            return {
-                'response': self.build_question_card(
-                    self.current_question,
-                    hint_text=f"تلميح: {hint}"
-                ),
-                'points': 0,
-                'game_over': False
+        colors = self.get_theme_colors()
+        
+        # بناء السؤال السابق إن وجد
+        previous_section = []
+        if self.previous_question and self.previous_answer:
+            previous_section = [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "📝 السؤال السابق:",
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": self.previous_question,
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"✅ الجواب: {self.previous_answer}",
+                            "size": "xs",
+                            "color": "#48BB78",
+                            "wrap": True,
+                            "margin": "xs"
+                        }
+                    ],
+                    "backgroundColor": colors["card"],
+                    "cornerRadius": "15px",
+                    "paddingAll": "12px",
+                    "margin": "md"
+                },
+                {"type": "separator", "color": colors["shadow1"], "margin": "md"}
+            ]
+        
+        flex_content = {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"{self.game_icon} {self.game_name}",
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": colors["text"],
+                                "flex": 3
+                            },
+                            {
+                                "type": "text",
+                                "text": f"جولة {self.current_question + 1}/5",
+                                "size": "sm",
+                                "color": colors["text2"],
+                                "align": "end",
+                                "flex": 2
+                            }
+                        ]
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "20px"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": previous_section + [
+                    # السؤال الحالي
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "❓ السؤال:",
+                                "size": "sm",
+                                "color": colors["text2"],
+                                "weight": "bold"
+                            },
+                            {
+                                "type": "text",
+                                "text": q_data["q"],
+                                "size": "md",
+                                "color": colors["text"],
+                                "wrap": True,
+                                "margin": "md",
+                                "weight": "bold"
+                            }
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "20px",
+                        "paddingAll": "20px"
+                    },
+                    # معلومات
+                    {
+                        "type": "text",
+                        "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
+                        "size": "xs",
+                        "color": colors["text2"],
+                        "align": "center",
+                        "wrap": True,
+                        "margin": "md"
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "💡 لمّح", "text": "لمح"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                        "style": "primary",
+                        "height": "sm",
+                        "color": "#FF5555"
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
+            },
+            "styles": {
+                "body": {"backgroundColor": colors["bg"]},
+                "footer": {"backgroundColor": colors["bg"]}
             }
+        }
         
-        if text == "جاوب":
-            return {
-                'response': self.build_result_card(
-                    False,
-                    self.current_answer,
-                    "تم كشف الإجابة"
-                ),
-                'points': 0,
-                'game_over': False
-            }
+        return self._create_flex_with_buttons(f"{self.game_name} - جولة {self.current_question + 1}", flex_content)
+    
+    def check_answer_intelligently(self, user_answer: str) -> bool:
+        """فحص ذكي للإجابة"""
+        normalized_user = self.normalize_text(user_answer)
         
-        # Check answer
-        is_correct = False
+        # فحص مباشر
+        for correct in self.current_answer:
+            normalized_correct = self.normalize_text(correct)
+            
+            # تطابق كامل
+            if normalized_user == normalized_correct:
+                return True
+            
+            # تطابق جزئي (يحتوي على)
+            if normalized_user in normalized_correct or normalized_correct in normalized_user:
+                return True
+            
+            # تشابه نصي (أكثر من 80%)
+            ratio = difflib.SequenceMatcher(None, normalized_user, normalized_correct).ratio()
+            if ratio > 0.80:
+                return True
         
-        # Try AI validation first
+        # محاولة AI للتحقق
         if self.ai_check_answer:
             try:
-                is_correct = self.ai_check_answer(self.current_answer, text)
+                for correct in self.current_answer:
+                    if self.ai_check_answer(correct, user_answer):
+                        return True
             except:
                 pass
         
-        # Fallback to string matching
-        if not is_correct:
-            normalized_answer = self.normalize_answer(self.current_answer)
-            normalized_user = self.normalize_answer(text)
-            is_correct = normalized_user in normalized_answer or normalized_answer in normalized_user
+        return False
+    
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        """فحص الإجابة"""
+        if not self.game_active:
+            return None
         
-        # Update score
-        if is_correct:
-            self.score += POINTS_PER_CORRECT_ANSWER
+        # تجاهل المستخدمين الذين أجابوا
+        if user_id in self.answered_users:
+            return None
         
-        # Prepare response
-        result_msg = "أحسنت! إجابة صحيحة" if is_correct else "حاول مرة أخرى"
+        normalized = self.normalize_text(user_answer)
         
-        # Move to next round
-        self.current_round += 1
-        
-        # Check if game over
-        if self.current_round > self.total_rounds:
+        # أمر التلميح
+        if normalized == "لمح":
+            hint = self.get_hint()
             return {
-                'response': self.build_game_over_card(username, self.score),
-                'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
-                'game_over': True
+                'message': hint,
+                'response': self._create_text_message(hint),
+                'points': 0
             }
         
-        # Continue game
-        next_q = self.next_question()
+        # أمر الإجابة
+        if normalized == "جاوب":
+            answer_text = self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer
+            reveal = f"📝 الإجابة: {answer_text}"
+            
+            # حفظ السؤال والجواب
+            self.previous_question = self.generate_question_with_ai()["q"]
+            self.previous_answer = answer_text
+            
+            # الانتقال للسؤال التالي
+            self.current_question += 1
+            self.answered_users.clear()
+            
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result['message'] = f"{reveal}\n\n{result.get('message', '')}"
+                return result
+            
+            next_q = self.get_question()
+            return {'message': reveal, 'response': next_q, 'points': 0}
+        
+        # فحص الإجابة
+        is_correct = self.check_answer_intelligently(user_answer)
+        
+        if is_correct:
+            points = self.add_score(user_id, display_name, 10)
+            
+            # حفظ السؤال والجواب
+            self.previous_question = self.generate_question_with_ai()["q"]
+            self.previous_answer = self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer
+            
+            # الانتقال للسؤال التالي
+            self.current_question += 1
+            self.answered_users.clear()
+            
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result['points'] = points
+                result['message'] = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
+                return result
+            
+            next_q = self.get_question()
+            success_msg = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة"
+            
+            return {
+                'message': success_msg,
+                'response': next_q,
+                'points': points
+            }
         
         return {
-            'response': next_q,
-            'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
-            'game_over': False
+            'message': "❌ إجابة غير صحيحة",
+            'response': self._create_text_message("❌ إجابة غير صحيحة، حاول مرة أخرى"),
+            'points': 0
         }
     
     def get_hint(self):
-        """Get intelligent hint"""
-        if not self.current_answer:
-            return "لا يوجد تلميح"
+        """تلميح ذكي"""
+        answer = self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer
+        answer_str = str(answer)
         
-        answer = str(self.current_answer)
+        if len(answer_str) <= 3:
+            return f"💡 يبدأ بحرف: {answer_str[0]}"
         
-        # For short answers, show first letter
-        if len(answer) <= 3:
-            return f"يبدأ بـ: {answer[0]}"
-        
-        # For medium answers, show first half
-        hint_length = len(answer) // 2
-        return f"{answer[:hint_length]}..."
+        return f"💡 يبدأ بحرف: {answer_str[0]}\n📏 عدد الحروف: {len(answer_str)}"
+    
+    def get_game_info(self) -> Dict[str, Any]:
+        return {
+            "name": "لعبة الذكاء",
+            "emoji": "🧠",
+            "description": "ألغاز ذكاء ممتعة",
+            "questions_count": self.questions_count,
+            "supports_hint": True,
+            "supports_reveal": True,
+            "active": self.game_active,
+            "current_question": self.current_question,
+            "players_count": len(self.scores)
+        }
