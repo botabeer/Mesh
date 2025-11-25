@@ -1,18 +1,17 @@
 """
-Bot Mesh - Math Game with AI Support
+لعبة الرياضيات - نسخة محسّنة مع AI
 Created by: Abeer Aldosari © 2025
 """
 
-import random
 from games.base_game import BaseGame
-from constants import POINTS_PER_CORRECT_ANSWER
-
+import random
+from typing import Dict, Any, Optional
 
 class MathGame(BaseGame):
-    """Math puzzles game"""
+    """لعبة الرياضيات المحسّنة"""
     
     def __init__(self, line_bot_api):
-        super().__init__(line_bot_api)
+        super().__init__(line_bot_api, questions_count=5)
         self.game_name = "رياضيات"
         self.game_icon = "🔢"
         
@@ -20,161 +19,310 @@ class MathGame(BaseGame):
         self.ai_generate_question = None
         self.ai_check_answer = None
         
-        # Difficulty levels by round
-        self.difficulty = {
-            1: (1, 20),    # Easy
-            2: (10, 50),   # Medium
-            3: (20, 100),  # Hard
-            4: (50, 200),  # Very Hard
-            5: (100, 500)  # Expert
+        # مستويات الصعوبة
+        self.difficulty_levels = {
+            1: {"min": 1, "max": 20, "ops": ['+', '-'], "label": "سهل"},
+            2: {"min": 10, "max": 50, "ops": ['+', '-', '*'], "label": "متوسط"},
+            3: {"min": 20, "max": 100, "ops": ['+', '-', '*'], "label": "صعب"},
+            4: {"min": 50, "max": 200, "ops": ['+', '-', '*'], "label": "صعب جداً"},
+            5: {"min": 100, "max": 500, "ops": ['+', '-', '*'], "label": "خبير"}
         }
+        
+        self.previous_question = None
+        self.previous_answer = None
     
-    def generate_math_question(self):
-        """Generate math question"""
-        min_num, max_num = self.difficulty.get(self.current_round, (1, 50))
-        
-        operations = ['+', '-', '*']
-        weights = [0.4, 0.3, 0.3]  # More addition, less multiplication
-        
-        op = random.choices(operations, weights=weights)[0]
+    def generate_math_question(self, round_num):
+        """توليد سؤال رياضي"""
+        level = self.difficulty_levels[round_num]
+        op = random.choice(level["ops"])
         
         if op == '+':
-            a = random.randint(min_num, max_num)
-            b = random.randint(min_num, max_num)
+            a = random.randint(level["min"], level["max"])
+            b = random.randint(level["min"], level["max"])
             question = f"{a} + {b} = ؟"
             answer = a + b
         
         elif op == '-':
-            a = random.randint(min_num + 10, max_num)
-            b = random.randint(min_num, a - 1)
+            a = random.randint(level["min"] + 10, level["max"])
+            b = random.randint(level["min"], a - 1)
             question = f"{a} - {b} = ؟"
             answer = a - b
         
         else:  # *
-            a = random.randint(2, min(max_num // 10, 20))
-            b = random.randint(2, min(max_num // 10, 20))
+            max_factor = min(20, level["max"] // 10)
+            a = random.randint(2, max_factor)
+            b = random.randint(2, max_factor)
             question = f"{a} × {b} = ؟"
             answer = a * b
         
-        return {"q": question, "a": str(answer)}
+        return {"q": question, "a": str(answer), "level": level["label"]}
     
-    def next_question(self):
-        """Generate next math question"""
-        if self.current_round > self.total_rounds:
-            return None
-        
-        # Try AI generation
+    def generate_question_with_ai(self, round_num):
+        """توليد سؤال بالذكاء الاصطناعي"""
         question_data = None
+        
+        # محاولة AI
         if self.ai_generate_question:
             try:
                 question_data = self.ai_generate_question()
+                if question_data and "q" in question_data and "a" in question_data:
+                    return question_data
             except:
                 pass
         
-        # Fallback to generated questions
-        if not question_data:
-            question_data = self.generate_math_question()
-        
-        # Extract question and answer
-        if "q" in question_data and "a" in question_data:
-            self.current_question = question_data["q"]
-            self.current_answer = str(question_data["a"])
-        elif "question" in question_data and "answer" in question_data:
-            self.current_question = question_data["question"]
-            self.current_answer = str(question_data["answer"])
-        else:
-            q = self.generate_math_question()
-            self.current_question = q["q"]
-            self.current_answer = q["a"]
-        
-        # Build card with difficulty indicator
-        difficulty_text = [
-            "سهل",
-            "متوسط", 
-            "صعب",
-            "صعب جداً",
-            "خبير"
-        ][self.current_round - 1]
-        
-        return self.build_question_card(
-            self.current_question,
-            hint_text=f"المستوى: {difficulty_text}"
-        )
+        # Fallback
+        return self.generate_math_question(round_num)
     
-    def check_answer(self, user_answer, user_id, username):
-        """Check math answer"""
-        text = user_answer.strip()
+    def start_game(self):
+        self.current_question = 0
+        self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
+        self.answered_users.clear()
+        return self.get_question()
+    
+    def get_question(self):
+        """إنشاء سؤال مع واجهة Flex"""
+        round_num = self.current_question + 1
+        q_data = self.generate_question_with_ai(round_num)
+        self.current_answer = q_data["a"]
         
-        # Handle special commands
-        if text == "لمح":
+        colors = self.get_theme_colors()
+        difficulty = q_data.get("level", "متوسط")
+        
+        # السؤال السابق
+        previous_section = []
+        if self.previous_question and self.previous_answer:
+            previous_section = [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "📝 السؤال السابق:",
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"{self.previous_question} = {self.previous_answer}",
+                            "size": "xs",
+                            "color": "#48BB78",
+                            "wrap": True,
+                            "margin": "xs"
+                        }
+                    ],
+                    "backgroundColor": colors["card"],
+                    "cornerRadius": "15px",
+                    "paddingAll": "12px",
+                    "margin": "md"
+                },
+                {"type": "separator", "color": colors["shadow1"], "margin": "md"}
+            ]
+        
+        flex_content = {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"{self.game_icon} {self.game_name}",
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": colors["text"],
+                                "flex": 3
+                            },
+                            {
+                                "type": "text",
+                                "text": f"جولة {round_num}/5",
+                                "size": "sm",
+                                "color": colors["text2"],
+                                "align": "end",
+                                "flex": 2
+                            }
+                        ]
+                    },
+                    {
+                        "type": "text",
+                        "text": f"المستوى: {difficulty}",
+                        "size": "xs",
+                        "color": colors["primary"],
+                        "align": "center",
+                        "margin": "xs"
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "20px"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": previous_section + [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": q_data["q"],
+                                "size": "xxl",
+                                "color": colors["primary"],
+                                "wrap": True,
+                                "align": "center",
+                                "weight": "bold"
+                            }
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "20px",
+                        "paddingAll": "30px"
+                    },
+                    {
+                        "type": "text",
+                        "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
+                        "size": "xs",
+                        "color": colors["text2"],
+                        "align": "center",
+                        "wrap": True
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "💡 لمّح", "text": "لمح"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                        "style": "primary",
+                        "height": "sm",
+                        "color": "#FF5555"
+                    }
+                ],
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
+            },
+            "styles": {
+                "body": {"backgroundColor": colors["bg"]},
+                "footer": {"backgroundColor": colors["bg"]}
+            }
+        }
+        
+        return self._create_flex_with_buttons(f"{self.game_name} - جولة {round_num}", flex_content)
+    
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        if not self.game_active or user_id in self.answered_users:
+            return None
+        
+        normalized = self.normalize_text(user_answer)
+        
+        # لمح
+        if normalized == "لمح":
             hint = self.get_hint()
-            return {
-                'response': self.build_question_card(
-                    self.current_question,
-                    hint_text=f"تلميح: {hint}"
-                ),
-                'points': 0,
-                'game_over': False
-            }
+            return {'message': hint, 'response': self._create_text_message(hint), 'points': 0}
         
-        if text == "جاوب":
-            return {
-                'response': self.build_result_card(
-                    False,
-                    self.current_answer,
-                    "تم كشف الإجابة"
-                ),
-                'points': 0,
-                'game_over': False
-            }
+        # جاوب
+        if normalized == "جاوب":
+            reveal = f"📝 الإجابة: {self.current_answer}"
+            self.previous_question = self.generate_question_with_ai(self.current_question + 1)["q"].replace(" = ؟", "")
+            self.previous_answer = self.current_answer
+            
+            self.current_question += 1
+            self.answered_users.clear()
+            
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result['message'] = f"{reveal}\n\n{result.get('message', '')}"
+                return result
+            
+            next_q = self.get_question()
+            return {'message': reveal, 'response': next_q, 'points': 0}
         
-        # Check if answer is numeric
+        # فحص الإجابة
         is_correct = False
         try:
-            user_num = int(text.replace('،', '').replace(',', ''))
+            user_num = int(normalized.replace('،', '').replace(',', '').replace(' ', ''))
             correct_num = int(self.current_answer)
             is_correct = user_num == correct_num
         except:
-            # Try AI validation
-            if self.ai_check_answer:
-                try:
-                    is_correct = self.ai_check_answer(self.current_answer, text)
-                except:
-                    pass
+            pass
         
-        # Update score
         if is_correct:
-            self.score += POINTS_PER_CORRECT_ANSWER
-        
-        # Move to next round
-        self.current_round += 1
-        
-        # Check if game over
-        if self.current_round > self.total_rounds:
+            points = self.add_score(user_id, display_name, 10)
+            self.previous_question = self.generate_question_with_ai(self.current_question + 1)["q"].replace(" = ؟", "")
+            self.previous_answer = self.current_answer
+            
+            self.current_question += 1
+            self.answered_users.clear()
+            
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result['points'] = points
+                result['message'] = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
+                return result
+            
+            next_q = self.get_question()
             return {
-                'response': self.build_game_over_card(username, self.score),
-                'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
-                'game_over': True
+                'message': f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة",
+                'response': next_q,
+                'points': points
             }
         
-        # Continue game
-        next_q = self.next_question()
-        
         return {
-            'response': next_q,
-            'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
-            'game_over': False
+            'message': "❌ إجابة غير صحيحة",
+            'response': self._create_text_message("❌ إجابة غير صحيحة"),
+            'points': 0
         }
     
     def get_hint(self):
-        """Get math hint"""
         try:
             answer = int(self.current_answer)
-            
-            # Show if even/odd
             if answer % 2 == 0:
-                return "العدد زوجي"
-            else:
-                return "العدد فردي"
+                return "💡 العدد زوجي"
+            return "💡 العدد فردي"
         except:
-            return "فكر جيداً"
+            return "💡 فكر جيداً"
+    
+    def get_game_info(self) -> Dict[str, Any]:
+        return {
+            "name": "لعبة الرياضيات",
+            "emoji": "🔢",
+            "description": "مسائل رياضية متدرجة",
+            "questions_count": self.questions_count,
+            "active": self.game_active,
+            "current_question": self.current_question,
+            "players_count": len(self.scores)
+        }
