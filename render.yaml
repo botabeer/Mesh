@@ -1,0 +1,48 @@
+# ============================================================================
+# Bot Mesh v6.0 - Render Configuration
+# Simple & Production-Ready
+# ============================================================================
+
+services:
+  - type: web
+    name: bot-mesh-v6
+    env: python
+    region: singapore
+    plan: free
+    
+    # Build & Start
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
+    
+    # Health Check
+    healthCheckPath: /health
+    
+    # Auto Deploy
+    autoDeploy: true
+    
+    # Environment Variables
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      
+      - key: PORT
+        value: 10000
+      
+      # LINE Credentials (Set in Dashboard)
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      
+      # Optional: Gemini AI
+      - key: GEMINI_API_KEY
+        sync: false
+      
+      # Flask Settings
+      - key: FLASK_ENV
+        value: production
+      
+      # Timezone
+      - key: TZ
+        value: Asia/Riyadh
