@@ -6,19 +6,124 @@ Simple & Beautiful Flex Messages
 from linebot.v3.messaging import FlexMessage, FlexContainer
 
 # ============================================================================
-# الألوان والثيمات
+# 9 ثيمات جميلة
 # ============================================================================
-THEME = {
-    "primary": "#667EEA",
-    "secondary": "#764BA2",
-    "success": "#48BB78",
-    "error": "#F56565",
-    "bg": "#F7FAFC",
-    "card": "#FFFFFF",
-    "text": "#2D3748",
-    "text2": "#718096",
-    "shadow": "#E2E8F0"
+THEMES = {
+    "💜": {  # Purple Dream
+        "name": "أرجواني حالم",
+        "primary": "#805AD5",
+        "secondary": "#9F7AEA",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#EDF2F7",
+        "card": "#FFFFFF",
+        "text": "#2D3748",
+        "text2": "#718096",
+        "shadow": "#CBD5E0"
+    },
+    "💚": {  # Green Nature
+        "name": "أخضر طبيعي",
+        "primary": "#38A169",
+        "secondary": "#48BB78",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#F0FDF4",
+        "card": "#FFFFFF",
+        "text": "#1C4532",
+        "text2": "#276749",
+        "shadow": "#C6F6D5"
+    },
+    "🤍": {  # Clean White
+        "name": "أبيض نظيف",
+        "primary": "#4299E1",
+        "secondary": "#63B3ED",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#F7FAFC",
+        "card": "#FFFFFF",
+        "text": "#2D3748",
+        "text2": "#718096",
+        "shadow": "#E2E8F0"
+    },
+    "🖤": {  # Dark Elegant
+        "name": "أسود أنيق",
+        "primary": "#667EEA",
+        "secondary": "#7F9CF5",
+        "success": "#48BB78",
+        "error": "#FC8181",
+        "bg": "#1A202C",
+        "card": "#2D3748",
+        "text": "#F7FAFC",
+        "text2": "#CBD5E0",
+        "shadow": "#4A5568"
+    },
+    "💙": {  # Ocean Blue
+        "name": "أزرق المحيط",
+        "primary": "#2B6CB0",
+        "secondary": "#3182CE",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#EBF8FF",
+        "card": "#FFFFFF",
+        "text": "#2C5282",
+        "text2": "#2B6CB0",
+        "shadow": "#BEE3F8"
+    },
+    "🩶": {  # Silver Gray
+        "name": "رمادي فضي",
+        "primary": "#4A5568",
+        "secondary": "#718096",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#F7FAFC",
+        "card": "#FFFFFF",
+        "text": "#2D3748",
+        "text2": "#718096",
+        "shadow": "#E2E8F0"
+    },
+    "🩷": {  # Pink Blossom
+        "name": "وردي زهري",
+        "primary": "#B83280",
+        "secondary": "#D53F8C",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#FFF5F7",
+        "card": "#FFFFFF",
+        "text": "#702459",
+        "text2": "#97266D",
+        "shadow": "#FED7E2"
+    },
+    "🧡": {  # Warm Sunset
+        "name": "برتقالي دافئ",
+        "primary": "#C05621",
+        "secondary": "#DD6B20",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#FFFAF0",
+        "card": "#FFFFFF",
+        "text": "#7C2D12",
+        "text2": "#9C4221",
+        "shadow": "#FEEBC8"
+    },
+    "🤎": {  # Earth Brown
+        "name": "بني ترابي",
+        "primary": "#744210",
+        "secondary": "#8B4513",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#FEFCF9",
+        "card": "#FFFFFF",
+        "text": "#5C2E00",
+        "text2": "#7A4F1D",
+        "shadow": "#E6D5C3"
+    }
 }
+
+DEFAULT_THEME = "💜"
+
+def get_theme(theme_emoji="💜"):
+    """الحصول على ألوان الثيم"""
+    return THEMES.get(theme_emoji, THEMES[DEFAULT_THEME])
 
 # ============================================================================
 # مكونات مساعدة
