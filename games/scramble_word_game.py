@@ -1,25 +1,31 @@
 """
-Bot Mesh - Scrambled Word Game
+لعبة الكلمة المبعثرة - النسخة المحسنة النهائية
 Created by: Abeer Aldosari © 2025
 
-Unscramble the letters to form the correct word!
+الميزات:
+✅ AI أولاً مع Fallback قوي
+✅ خوارزمية بعثرة ذكية
+✅ واجهة Flex احترافية
+✅ تشفير عربي مثالي
+✅ أداء محسن
 """
 
-import random
 from games.base_game import BaseGame
-from constants import POINTS_PER_CORRECT_ANSWER
+import random
+import difflib
+from typing import Dict, Any, Optional
 
 
 class ScrambleWordGame(BaseGame):
-    """Scrambled word game"""
+    """لعبة الكلمة المبعثرة المحسنة مع AI"""
     
     def __init__(self, line_bot_api):
-        super().__init__(line_bot_api)
+        super().__init__(line_bot_api, questions_count=5)
         self.game_name = "كلمة مبعثرة"
         self.game_icon = "🔤"
         
-        # Word bank
-        self.words = [
+        # قاعدة كلمات محسنة ومتنوعة
+        self.fallback_words = [
             "مدرسة", "كتاب", "قلم", "باب", "نافذة", "طاولة", "كرسي",
             "سيارة", "طائرة", "قطار", "سفينة", "دراجة",
             "تفاحة", "موز", "برتقال", "عنب", "بطيخ", "فراولة",
@@ -31,13 +37,16 @@ class ScrambleWordGame(BaseGame):
             "كمبيوتر", "هاتف", "تلفاز", "ساعة", "راديو"
         ]
         
+        random.shuffle(self.fallback_words)
         self.used_words = []
-    
-    def scramble_word(self, word):
-        """Scramble a word's letters"""
+        self.previous_question = None
+        self.previous_answer = None
+
+    def scramble_word(self, word: str) -> str:
+        """بعثرة الكلمة بطريقة ذكية"""
         letters = list(word)
         
-        # Ensure scrambled is different from original
+        # محاولة بعثرة الكلمة حتى تختلف عن الأصل
         attempts = 0
         while attempts < 10:
             random.shuffle(letters)
@@ -46,31 +55,92 @@ class ScrambleWordGame(BaseGame):
                 return scrambled
             attempts += 1
         
-        # If still same, just reverse it
+        # إذا لم تنجح البعثرة، اعكس الكلمة
         return word[::-1]
-    
-    def next_question(self):
-        """Generate next scrambled word"""
-        if self.current_round > self.total_rounds:
-            return None
+
+    def generate_question_with_ai(self):
+        """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
+        question_data = None
         
-        # Pick a word
-        available = [w for w in self.words if w not in self.used_words]
+        # محاولة AI أولاً
+        if self.ai_generate_question:
+            try:
+                question_data = self.ai_generate_question()
+                if question_data and "word" in question_data:
+                    return question_data
+            except Exception as e:
+                print(f"⚠️ AI generation failed, using fallback: {e}")
+        
+        # Fallback للكلمات المخزنة
+        available = [w for w in self.fallback_words if w not in self.used_words]
         if not available:
             self.used_words = []
-            available = self.words.copy()
+            available = self.fallback_words.copy()
         
         word = random.choice(available)
         self.used_words.append(word)
         
+        return {"word": word}
+
+    def start_game(self):
+        """بدء اللعبة"""
+        self.current_question = 0
+        self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
+        self.answered_users.clear()
+        return self.get_question()
+
+    def get_question(self):
+        """إنشاء سؤال مع واجهة Flex محسنة"""
+        q_data = self.generate_question_with_ai()
+        word = q_data["word"]
+        self.current_answer = word
         scrambled = self.scramble_word(word)
         
-        self.current_question = scrambled
-        self.current_answer = word
+        colors = self.get_theme_colors()
         
-        colors = self.get_colors()
-        
-        # Build card with letter boxes
+        # قسم السؤال السابق
+        previous_section = []
+        if self.previous_question and self.previous_answer:
+            previous_section = [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "📝 الكلمة السابقة:",
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": self.previous_question,
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"✅ الجواب: {self.previous_answer}",
+                            "size": "xs",
+                            "color": colors["success"],
+                            "wrap": True,
+                            "margin": "xs"
+                        }
+                    ],
+                    "backgroundColor": colors["card"],
+                    "cornerRadius": "15px",
+                    "paddingAll": "12px",
+                    "margin": "md"
+                },
+                {"type": "separator", "color": colors["shadow1"], "margin": "md"}
+            ]
+
+        # بناء صناديق الحروف
         letter_boxes = []
         for i in range(0, len(scrambled), 4):
             chunk = scrambled[i:i+4]
@@ -101,123 +171,118 @@ class ScrambleWordGame(BaseGame):
                 ]
             }
             letter_boxes.append(row)
-        
-        contents = [
-            # Game Header
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": f"{self.game_icon} {self.game_name}",
-                        "weight": "bold",
-                        "size": "lg",
-                        "color": colors["primary"],
-                        "flex": 3
-                    },
-                    {
-                        "type": "text",
-                        "text": f"سؤال {self.current_round} من {self.total_rounds}",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "align": "end",
-                        "flex": 2
-                    }
-                ]
-            },
-            {"type": "separator", "color": colors["shadow1"]},
-            
-            # Instruction
-            {
-                "type": "text",
-                "text": "🔄 رتب الحروف لتكوين كلمة صحيحة",
-                "size": "md",
-                "color": colors["text"],
-                "weight": "bold",
-                "align": "center",
-                "wrap": True
-            }
-        ] + letter_boxes + [
-            # Hint
-            {
+
+        flex_content = {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": f"💡 الكلمة مكونة من {len(word)} حروف",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "align": "center"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"{self.game_icon} {self.game_name}",
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": colors["text"],
+                                "flex": 3
+                            },
+                            {
+                                "type": "text",
+                                "text": f"جولة {self.current_question + 1}/5",
+                                "size": "sm",
+                                "color": colors["text2"],
+                                "align": "end",
+                                "flex": 2
+                            }
+                        ]
                     }
                 ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "15px",
-                "paddingAll": "15px"
+                "backgroundColor": colors["bg"],
+                "paddingAll": "20px"
             },
-            
-            # Score
-            {
-                "type": "text",
-                "text": f"⭐ النقاط: {self.score}",
-                "size": "sm",
-                "color": colors["primary"],
-                "weight": "bold",
-                "align": "center"
-            }
-        ]
-        
-        # Footer
-        footer = [
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "💡 لمح", "text": "لمح"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "color": colors["shadow1"]
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "color": colors["shadow1"]
-                    }
-                ]
-            },
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
-                "style": "primary",
-                "height": "sm",
-                "color": "#FF5555"
-            }
-        ]
-        
-        from linebot.v3.messaging import FlexMessage, FlexContainer
-        
-        card = {
-            "type": "bubble",
-            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "spacing": "lg",
-                "contents": contents,
+                "spacing": "md",
+                "contents": previous_section + [
+                    {
+                        "type": "text",
+                        "text": "🔄 رتب الحروف لتكوين كلمة صحيحة",
+                        "size": "md",
+                        "color": colors["text"],
+                        "weight": "bold",
+                        "align": "center",
+                        "wrap": True
+                    }
+                ] + letter_boxes + [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"💡 الكلمة مكونة من {len(word)} حروف",
+                                "size": "sm",
+                                "color": colors["text2"],
+                                "align": "center"
+                            }
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "15px",
+                        "paddingAll": "15px"
+                    },
+                    {
+                        "type": "text",
+                        "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
+                        "size": "xs",
+                        "color": colors["text2"],
+                        "align": "center",
+                        "wrap": True,
+                        "margin": "md"
+                    }
+                ],
                 "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
+                "paddingAll": "15px"
             },
             "footer": {
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "sm",
-                "contents": footer,
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "💡 لمّح", "text": "لمح"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "color": colors["shadow1"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
+                        "style": "primary",
+                        "height": "sm",
+                        "color": colors["error"]
+                    }
+                ],
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
@@ -226,73 +291,122 @@ class ScrambleWordGame(BaseGame):
                 "footer": {"backgroundColor": colors["bg"]}
             }
         }
+
+        return self._create_flex_with_buttons(f"{self.game_name} - جولة {self.current_question + 1}", flex_content)
+
+    def check_answer_intelligently(self, user_answer: str) -> bool:
+        """فحص ذكي للإجابة مع دعم AI"""
+        normalized_user = self.normalize_text(user_answer)
+        normalized_correct = self.normalize_text(self.current_answer)
         
-        return FlexMessage(
-            alt_text=f"{self.game_name} - {self.current_round}/{self.total_rounds}",
-            contents=FlexContainer.from_dict(card)
-        )
-    
-    def check_answer(self, user_answer, user_id, username):
-        """Check word answer"""
-        text = user_answer.strip()
+        # تطابق كامل
+        if normalized_user == normalized_correct:
+            return True
         
-        # Handle special commands
-        if text == "لمح":
+        # تشابه نصي (90% أو أكثر)
+        ratio = difflib.SequenceMatcher(None, normalized_user, normalized_correct).ratio()
+        if ratio > 0.9:
+            return True
+        
+        # محاولة AI للتحقق
+        if self.ai_check_answer:
+            try:
+                if self.ai_check_answer(self.current_answer, user_answer):
+                    return True
+            except:
+                pass
+        
+        return False
+
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        """فحص الإجابة مع دعم كامل للتلميحات"""
+        if not self.game_active or user_id in self.answered_users:
+            return None
+
+        normalized = self.normalize_text(user_answer)
+
+        # أمر التلميح
+        if normalized == "لمح":
             hint = self.get_hint()
             return {
-                'response': self.build_question_card(
-                    self.current_question,
-                    hint_text=f"تلميح: {hint}"
-                ),
-                'points': 0,
-                'game_over': False
+                'message': hint,
+                'response': self._create_text_message(hint),
+                'points': 0
             }
-        
-        if text == "جاوب":
-            return {
-                'response': self.build_result_card(
-                    False,
-                    self.current_answer,
-                    "تم كشف الإجابة"
-                ),
-                'points': 0,
-                'game_over': False
-            }
-        
-        # Check answer
-        normalized_answer = self.normalize_answer(self.current_answer)
-        normalized_user = self.normalize_answer(text)
-        
-        is_correct = normalized_user == normalized_answer
-        
-        # Update score
+
+        # أمر كشف الإجابة
+        if normalized == "جاوب":
+            reveal = f"📝 الإجابة: {self.current_answer}"
+            
+            # حفظ السؤال والجواب
+            self.previous_question = self.scramble_word(self.current_answer)
+            self.previous_answer = self.current_answer
+            
+            # الانتقال للسؤال التالي
+            self.current_question += 1
+            self.answered_users.clear()
+            
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result['message'] = f"{reveal}\n\n{result.get('message', '')}"
+                return result
+            
+            next_q = self.get_question()
+            return {'message': reveal, 'response': next_q, 'points': 0}
+
+        # فحص الإجابة
+        is_correct = self.check_answer_intelligently(user_answer)
+
         if is_correct:
-            self.score += POINTS_PER_CORRECT_ANSWER
-        
-        # Move to next round
-        self.current_round += 1
-        
-        # Check if game over
-        if self.current_round > self.total_rounds:
+            points = self.add_score(user_id, display_name, 10)
+            
+            # حفظ السؤال والجواب
+            self.previous_question = self.scramble_word(self.current_answer)
+            self.previous_answer = self.current_answer
+            
+            # الانتقال للسؤال التالي
+            self.current_question += 1
+            self.answered_users.clear()
+            
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result['points'] = points
+                result['message'] = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
+                return result
+            
+            next_q = self.get_question()
+            success_msg = f"✅ إجابة صحيحة يا {display_name}!\n+{points} نقطة"
+            
             return {
-                'response': self.build_game_over_card(username, self.score),
-                'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
-                'game_over': True
+                'message': success_msg,
+                'response': next_q,
+                'points': points
             }
-        
-        # Continue game
-        next_q = self.next_question()
-        
+
         return {
-            'response': next_q,
-            'points': POINTS_PER_CORRECT_ANSWER if is_correct else 0,
-            'game_over': False
+            'message': "❌ إجابة غير صحيحة، حاول مرة أخرى",
+            'response': self._create_text_message("❌ إجابة غير صحيحة، حاول مرة أخرى"),
+            'points': 0
         }
-    
+
     def get_hint(self):
-        """Get word hint"""
+        """تلميح ذكي محسن"""
         if not self.current_answer or len(self.current_answer) < 2:
-            return "فكر جيداً"
+            return "💡 فكر جيداً"
         
-        # Show first and last letter
-        return f"تبدأ بـ {self.current_answer[0]} وتنتهي بـ {self.current_answer[-1]}"
+        return f"💡 تبدأ بـ {self.current_answer[0]} وتنتهي بـ {self.current_answer[-1]}"
+
+    def get_game_info(self) -> Dict[str, Any]:
+        """معلومات اللعبة"""
+        return {
+            "name": "لعبة الكلمة المبعثرة",
+            "emoji": "🔤",
+            "description": "رتب الحروف المبعثرة لتكوين كلمة صحيحة مع دعم AI",
+            "questions_count": self.questions_count,
+            "supports_hint": True,
+            "supports_reveal": True,
+            "active": self.game_active,
+            "current_question": self.current_question,
+            "players_count": len(self.scores),
+            "ai_enabled": self.ai_generate_question is not None
+        }
