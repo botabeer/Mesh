@@ -1,19 +1,18 @@
 # ============================================================================
-# Bot Mesh - Render.com Configuration (Enhanced)
+# Bot Mesh v5.0 - Render.com Configuration
 # Created by: Abeer Aldosari © 2025
 # ============================================================================
 
 services:
-  # Web Service Configuration
   - type: web
-    name: bot-mesh-v3
+    name: bot-mesh-v5
     env: python
     region: singapore
     plan: free
     
     # Build Configuration
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: gunicorn app:app --workers 2 --threads 4 --timeout 120
+    startCommand: gunicorn app:app --workers 2 --threads 4 --timeout 120 --log-level info
     
     # Health Check
     healthCheckPath: /health
@@ -23,11 +22,9 @@ services:
     
     # Environment Variables
     envVars:
-      # Python Version
       - key: PYTHON_VERSION
-        value: 3.9.16
+        value: 3.11
       
-      # Server Port
       - key: PORT
         value: 10000
       
@@ -55,3 +52,7 @@ services:
       # Gunicorn Workers
       - key: WEB_CONCURRENCY
         value: 2
+      
+      # Timezone (اختياري)
+      - key: TZ
+        value: Asia/Riyadh
