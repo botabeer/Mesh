@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: bot-mesh
+
+    ports:
+      - "10000:10000"
+
+    environment:
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      - PORT=10000
+      - FLASK_ENV=production
+      - TZ=Asia/Riyadh
+      - PYTHONUNBUFFERED=1
+
+    restart: unless-stopped
