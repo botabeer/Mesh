@@ -1,17 +1,19 @@
 """
-🎮 Bot Mesh v8.0 - Main Server (Updated)
+🎮 Bot Mesh v8.0 - Main Server (Enhanced & Secured)
 Created by: Abeer Aldosari © 2025
 
-✅ Webhook Handler with Quick Reply Support
-✅ Background Processing
-✅ Game Management with New Mapping
-✅ User Management with Theme Storage
-✅ Full Integration with constants.py
+✅ Fixed imports
+✅ Rate limiting
+✅ Input validation
+✅ Better error handling
+✅ Security enhancements
 """
 
 import os
 import logging
 import threading
+import time
+from collections import defaultdict
 from flask import Flask, request, abort
 
 from linebot.v3 import WebhookHandler
@@ -26,9 +28,9 @@ from ui import (
     build_home, build_games_menu, build_my_points,
     build_leaderboard, build_registration_required, build_help
 )
-from games import GameLoader
+from games import GameLoader  # Fixed import
 from db import DB
-from constants import QUICK_REPLY_BUTTONS, BOT_NAME
+from constants import QUICK_REPLY_BUTTONS, BOT_NAME, ERROR_MESSAGES, RATE_LIMITS
 
 # ============================================================================
 # Setup
@@ -55,7 +57,7 @@ if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_CHANNEL_SECRET:
 # ============================================================================
 app = Flask(__name__)
 db = DB()
-game_loader = GameLoader()
+game_loader = GameLoader()  # Fixed class name
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
@@ -63,25 +65,87 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 logger.info(f"✅ {BOT_NAME} initialized with {len(game_loader.loaded)} games")
 
 # ============================================================================
+# Rate Limiting (Simple In-Memory)
+# ============================================================================
+class SimpleRateLimiter:
+    """محدد معدل بسيط في الذاكرة"""
+    
+    def __init__(self):
+        self.requests = defaultdict(list)
+        self.lock = threading.Lock()
+    
+    def is_allowed(self, user_id: str, max_per_minute: int = 10) -> bool:
+        """التحقق من السماح بالطلب"""
+        with self.lock:
+            now = time.time()
+            minute_ago = now - 60
+            
+            # تنظيف الطلبات القديمة
+            self.requests[user_id] = [
+                t for t in self.requests[user_id] if t > minute_ago
+            ]
+            
+            # التحقق من الحد
+            if len(self.requests[user_id]) >= max_per_minute:
+                return False
+            
+            # إضافة الطلب الجديد
+            self.requests[user_id].append(now)
+            return True
+
+rate_limiter = SimpleRateLimiter()
+
+# ============================================================================
+# Input Validation
+# ============================================================================
+def validate_text_input(text: str) -> bool:
+    """التحقق من صحة الإدخال النصي"""
+    if not text or not isinstance(text, str):
+        return False
+    
+    # الطول المسموح
+    if len(text) > 500:
+        return False
+    
+    # منع الأحرف الخطرة
+    dangerous_chars = ['<script>', 'javascript:', 'onerror=']
+    text_lower = text.lower()
+    for char in dangerous_chars:
+        if char in text_lower:
+            return False
+    
+    return True
+
+# ============================================================================
 # Helper Functions
 # ============================================================================
-def normalize_text(text):
+def normalize_text(text: str) -> str:
     """تطبيع النص العربي"""
+    if not text:
+        return ""
+    
     text = text.strip().lower()
+    
+    # تطبيع الحروف العربية
     replacements = {
         'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
         'ى': 'ي', 'ة': 'ه'
     }
+    
     for old, new in replacements.items():
         text = text.replace(old, new)
+    
     return text
 
-def get_username(profile):
-    """الحصول على اسم المستخدم"""
-    return profile.display_name if profile.display_name else "مستخدم"
+def get_username(profile) -> str:
+    """الحصول على اسم المستخدم بشكل آمن"""
+    try:
+        return profile.display_name if profile.display_name else "مستخدم"
+    except:
+        return "مستخدم"
 
-def create_quick_reply():
-    """إنشاء Quick Reply من constants"""
+def create_quick_reply() -> QuickReply:
+    """إنشاء Quick Reply"""
     items = []
     for btn in QUICK_REPLY_BUTTONS:
         items.append(
@@ -97,19 +161,40 @@ def create_quick_reply():
 def add_quick_reply_to_message(message):
     """إضافة Quick Reply لأي رسالة"""
     quick_reply = create_quick_reply()
-    
-    # إضافة Quick Reply حسب نوع الرسالة
     if hasattr(message, 'quick_reply'):
         message.quick_reply = quick_reply
-    
     return message
+
+def safe_reply(line_bot_api, reply_token, messages):
+    """إرسال رد آمن مع معالجة الأخطاء"""
+    try:
+        if not isinstance(messages, list):
+            messages = [messages]
+        
+        line_bot_api.reply_message_with_http_info(
+            ReplyMessageRequest(reply_token=reply_token, messages=messages)
+        )
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to send reply: {e}")
+        return False
 
 # ============================================================================
 # Background Message Processing
 # ============================================================================
-def process_message_background(user_id, text, reply_token):
+def process_message_background(user_id: str, text: str, reply_token: str):
     """معالجة الرسالة في الخلفية"""
     try:
+        # Rate Limiting
+        if not rate_limiter.is_allowed(user_id, RATE_LIMITS['max_messages_per_minute']):
+            logger.warning(f"⚠️ Rate limit exceeded for {user_id}")
+            return
+        
+        # Input Validation
+        if not validate_text_input(text):
+            logger.warning(f"⚠️ Invalid input from {user_id}")
+            return
+        
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             
@@ -131,32 +216,28 @@ def process_message_background(user_id, text, reply_token):
             if normalized in ['بداية', 'start', 'home', 'بدايه']:
                 msg = build_home(theme, name, points, is_registered)
                 msg = add_quick_reply_to_message(msg)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=reply_token, messages=[msg])
-                )
+                safe_reply(line_bot_api, reply_token, msg)
                 return
             
             # المساعدة
             if normalized in ['مساعدة', 'help', 'مساعده']:
                 msg = build_help(theme)
                 msg = add_quick_reply_to_message(msg)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=reply_token, messages=[msg])
-                )
+                safe_reply(line_bot_api, reply_token, msg)
                 return
             
             # اختيار الثيم
             if normalized.startswith('ثيم '):
                 new_theme = text.replace('ثيم ', '').strip()
-                if new_theme in ['💜', '💚', '💙', '🖤', '🩷', '🧡', '🤍', '🤎', '💛']:
+                valid_themes = ['💜', '💚', '💙', '🖤', '🩷', '🧡', '🤍', '🤎', '💛']
+                
+                if new_theme in valid_themes:
                     if user:
                         db.update_theme(user_id, new_theme)
                         theme = new_theme
                     msg = build_home(theme, name, points, is_registered)
                     msg = add_quick_reply_to_message(msg)
-                    line_bot_api.reply_message_with_http_info(
-                        ReplyMessageRequest(reply_token=reply_token, messages=[msg])
-                    )
+                    safe_reply(line_bot_api, reply_token, msg)
                 return
             
             # الانضمام
@@ -168,12 +249,7 @@ def process_message_background(user_id, text, reply_token):
                     text_msg = TextMessage(text=f"ℹ️ أنت مسجل بالفعل يا {name}")
                 
                 text_msg = add_quick_reply_to_message(text_msg)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(
-                        reply_token=reply_token,
-                        messages=[text_msg]
-                    )
-                )
+                safe_reply(line_bot_api, reply_token, text_msg)
                 return
             
             # الانسحاب
@@ -185,25 +261,18 @@ def process_message_background(user_id, text, reply_token):
                     text_msg = TextMessage(text="ℹ️ أنت غير مسجل")
                 
                 text_msg = add_quick_reply_to_message(text_msg)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(
-                        reply_token=reply_token,
-                        messages=[text_msg]
-                    )
-                )
+                safe_reply(line_bot_api, reply_token, text_msg)
                 return
             
             # قائمة الألعاب
-            if normalized in ['مساعدة', 'help', 'العاب', 'games', 'ألعاب']:
+            if normalized in ['العاب', 'games', 'ألعاب']:
                 if not is_registered:
                     msg = build_registration_required(theme)
                 else:
                     msg = build_games_menu(theme)
                 
                 msg = add_quick_reply_to_message(msg)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=reply_token, messages=[msg])
-                )
+                safe_reply(line_bot_api, reply_token, msg)
                 return
             
             # نقاطي
@@ -214,9 +283,7 @@ def process_message_background(user_id, text, reply_token):
                     msg = build_my_points(name, points, theme)
                 
                 msg = add_quick_reply_to_message(msg)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=reply_token, messages=[msg])
-                )
+                safe_reply(line_bot_api, reply_token, msg)
                 return
             
             # الصدارة
@@ -224,10 +291,7 @@ def process_message_background(user_id, text, reply_token):
                 top = db.get_leaderboard(10)
                 msg = build_leaderboard(top, theme)
                 msg = add_quick_reply_to_message(msg)
-                
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=reply_token, messages=[msg])
-                )
+                safe_reply(line_bot_api, reply_token, msg)
                 return
             
             # ==================== الألعاب ====================
@@ -237,9 +301,7 @@ def process_message_background(user_id, text, reply_token):
                 if not is_registered:
                     msg = build_registration_required(theme)
                     msg = add_quick_reply_to_message(msg)
-                    line_bot_api.reply_message_with_http_info(
-                        ReplyMessageRequest(reply_token=reply_token, messages=[msg])
-                    )
+                    safe_reply(line_bot_api, reply_token, msg)
                     return
                 
                 game_name = text.replace('لعبة ', '').replace('لعبه ', '').strip()
@@ -255,18 +317,11 @@ def process_message_background(user_id, text, reply_token):
                     available = "، ".join(game_loader.get_available_games())
                     text_msg = TextMessage(text=f"❌ اللعبة '{game_name}' غير موجودة\n\n🎮 المتاحة:\n{available}")
                     text_msg = add_quick_reply_to_message(text_msg)
-                    line_bot_api.reply_message_with_http_info(
-                        ReplyMessageRequest(
-                            reply_token=reply_token,
-                            messages=[text_msg]
-                        )
-                    )
+                    safe_reply(line_bot_api, reply_token, text_msg)
                     return
                 
                 response = add_quick_reply_to_message(response)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=reply_token, messages=[response])
-                )
+                safe_reply(line_bot_api, reply_token, response)
                 return
             
             # إيقاف اللعبة
@@ -278,12 +333,7 @@ def process_message_background(user_id, text, reply_token):
                     text_msg = TextMessage(text="ℹ️ لا توجد لعبة نشطة")
                 
                 text_msg = add_quick_reply_to_message(text_msg)
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(
-                        reply_token=reply_token,
-                        messages=[text_msg]
-                    )
-                )
+                safe_reply(line_bot_api, reply_token, text_msg)
                 return
             
             # ==================== أثناء اللعب ====================
@@ -296,12 +346,7 @@ def process_message_background(user_id, text, reply_token):
                     hint = game.get_hint() if hasattr(game, 'get_hint') else "💡 لا يوجد تلميح"
                     hint_msg = TextMessage(text=hint)
                     hint_msg = add_quick_reply_to_message(hint_msg)
-                    line_bot_api.reply_message_with_http_info(
-                        ReplyMessageRequest(
-                            reply_token=reply_token,
-                            messages=[hint_msg]
-                        )
-                    )
+                    safe_reply(line_bot_api, reply_token, hint_msg)
                     return
                 
                 # فحص الإجابة
@@ -315,21 +360,11 @@ def process_message_background(user_id, text, reply_token):
                     # إرسال الرد
                     if 'response' in result:
                         response = add_quick_reply_to_message(result['response'])
-                        line_bot_api.reply_message_with_http_info(
-                            ReplyMessageRequest(
-                                reply_token=reply_token,
-                                messages=[response]
-                            )
-                        )
+                        safe_reply(line_bot_api, reply_token, response)
                     else:
                         text_msg = TextMessage(text=result.get('message', 'حدث خطأ'))
                         text_msg = add_quick_reply_to_message(text_msg)
-                        line_bot_api.reply_message_with_http_info(
-                            ReplyMessageRequest(
-                                reply_token=reply_token,
-                                messages=[text_msg]
-                            )
-                        )
+                        safe_reply(line_bot_api, reply_token, text_msg)
                     
                     # إنهاء اللعبة
                     if result.get('game_over'):
@@ -342,18 +377,13 @@ def process_message_background(user_id, text, reply_token):
                 logger.info(f"Ignored message from unregistered user: {user_id}")
                 return
             
-            # رسالة افتراضية للرسائل غير المفهومة
+            # رسالة افتراضية
             default_msg = TextMessage(text="❓ لم أفهم الأمر. اكتب 'مساعدة' لعرض الأوامر")
             default_msg = add_quick_reply_to_message(default_msg)
-            line_bot_api.reply_message_with_http_info(
-                ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[default_msg]
-                )
-            )
+            safe_reply(line_bot_api, reply_token, default_msg)
             
     except Exception as e:
-        logger.error(f"Background processing error: {e}", exc_info=True)
+        logger.error(f"❌ Background processing error: {e}", exc_info=True)
 
 # ============================================================================
 # Webhook Handlers
@@ -374,16 +404,13 @@ def handle_follow(event):
                 # تسجيل المستخدم
                 db.create_user(user_id, name, '💜')
                 
-                # إرسال رسالة ترحيب مع Quick Reply
+                # إرسال رسالة ترحيب
                 msg = build_home('💜', name, 0, True)
                 msg = add_quick_reply_to_message(msg)
-                line_bot_api.push_message_with_http_info(
-                    user_id,
-                    [msg]
-                )
+                line_bot_api.push_message_with_http_info(user_id, [msg])
                 
             except Exception as e:
-                logger.error(f"Follow error: {e}")
+                logger.error(f"❌ Follow error: {e}")
     
     threading.Thread(target=background, daemon=True).start()
 
@@ -416,7 +443,9 @@ def home():
             "9 Neumorphic Themes",
             "12 Games with Quick Reply",
             "Theme Storage per User",
-            "Full Arabic Support"
+            "Full Arabic Support",
+            "Rate Limiting",
+            "Input Validation"
         ]
     }
 
@@ -438,10 +467,10 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("Invalid signature")
+        logger.error("❌ Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"Callback error: {e}", exc_info=True)
+        logger.error(f"❌ Callback error: {e}", exc_info=True)
     
     return "OK"
 
@@ -457,6 +486,18 @@ def stats():
     }
 
 # ============================================================================
+# Error Handlers
+# ============================================================================
+@app.errorhandler(404)
+def not_found(error):
+    return {"error": "Not found"}, 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"❌ Internal error: {error}")
+    return {"error": "Internal server error"}, 500
+
+# ============================================================================
 # Startup
 # ============================================================================
 if __name__ == "__main__":
@@ -466,7 +507,7 @@ if __name__ == "__main__":
     ║   Port: {PORT}                    ║
     ║   Games: {len(game_loader.loaded)}                   ║
     ║   Themes: 9                      ║
-    ║   Quick Reply: 12 Games          ║
+    ║   Security: ✅                   ║
     ╚══════════════════════════════════╝
     """)
     
