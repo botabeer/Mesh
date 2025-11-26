@@ -1,211 +1,211 @@
-"""
-UI Builder - Bot Mesh v7.0 - 3D FINAL VERSION
-واجهات LINE Flex Messages
-تصميم Neumorphism Soft 3D + Quick Reply ثابت
-"""
-
-from linebot.v3.messaging import (
-    FlexMessage, FlexContainer
+from linebot.models import (
+    FlexSendMessage, BubbleContainer, BoxComponent,
+    TextComponent, ButtonComponent,
+    QuickReply, QuickReplyButton, MessageAction
 )
 
-# محاولة استيراد Quick Reply بأمان
-try:
-    from linebot.v3.messaging import QuickReply, QuickReplyItem, MessageAction
-    QR_AVAILABLE = True
-except:
-    QR_AVAILABLE = False
+BOT_NAME = "Bot Mesh"
+BOT_FOOTER = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
+# =========================================================
+# ✅ أزرار الألعاب الثابتة (Quick Reply دائم)
+# =========================================================
+def games_quick_reply():
+    games = [
+        "ذكاء", "رياضيات", "ألغاز", "كلمات", "سرعة", "ألوان",
+        "أضداد", "سلسلة", "تخمين", "أغنية", "تكوين", "توافق"
+    ]
+    return QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label=g, text=g))
+        for g in games
+    ])
 
-class UI:
+# =========================================================
+# ✅ القالب الثلاثي الأبعاد الموحد لكامل البطاقات
+# =========================================================
+def base_card(title, body_items, footer_buttons=None, note=None):
 
-    THEMES = {
-        "أزرق": {
-            "primary": "#5B8DEF",
-            "secondary": "#9AB8FF",
-            "bg": "#EAF0F9",
-            "card": "#F5F8FC",
-            "shadow": "#C9D4E3",
-            "text": "#1E293B",
-            "text2": "#64748B",
-            "success": "#22C55E",
-            "error": "#EF4444"
-        }
-    }
+    footer = None
+    if footer_buttons:
+        footer = BoxComponent(
+            layout="horizontal",
+            spacing="md",
+            contents=footer_buttons
+        )
 
-    GAMES_ORDERED = [
-        "ذكاء", "رياضيات", "سرعة", "كلمات", "ألوان", "أضداد",
-        "سلسلة", "تخمين", "أغنية", "ترتيب", "تكوين", "إنسان حيوان", "توافق"
+    bubble = BubbleContainer(
+        size="mega",
+        header=BoxComponent(
+            layout="vertical",
+            backgroundColor="#F4F7FB",
+            paddingAll="18px",
+            contents=[
+                TextComponent(
+                    text=title,
+                    weight="bold",
+                    size="xl",
+                    align="center",
+                    color="#2C3E50"
+                ),
+                TextComponent(
+                    text=BOT_NAME,
+                    size="sm",
+                    align="center",
+                    color="#5D6D7E"
+                )
+            ]
+        ),
+        body=BoxComponent(
+            layout="vertical",
+            spacing="md",
+            backgroundColor="#FFFFFF",
+            paddingAll="20px",
+            contents=body_items
+        ),
+        footer=footer
+    )
+
+    if note:
+        body_items.append(
+            TextComponent(
+                text=note,
+                size="xs",
+                color="#7F8C8D",
+                align="center",
+                margin="lg"
+            )
+        )
+
+    return FlexSendMessage(
+        alt_text=title,
+        contents=bubble,
+        quick_reply=games_quick_reply()
+    )
+
+# =========================================================
+# ✅ نافذة البداية (3D فخمة)
+# =========================================================
+def start_ui(user_name, points):
+    body = [
+        TextComponent(text=f"المستخدم: {user_name}", weight="bold"),
+        TextComponent(text="الحالة: نشط", color="#27AE60"),
+        TextComponent(text=f"النقاط: {points}", color="#F39C12"),
+        TextComponent(text="اختر أحد الأقسام التالية:", weight="bold", margin="md")
     ]
 
-    # -----------------------
-    # Quick Reply الثابت
-    # -----------------------
-    def _quick_reply(self):
-        if not QR_AVAILABLE:
-            return None
+    footer = [
+        ButtonComponent(style="primary", action=MessageAction(label="الألعاب", text="الألعاب")),
+        ButtonComponent(style="secondary", action=MessageAction(label="الصدارة", text="الصدارة")),
+        ButtonComponent(style="secondary", action=MessageAction(label="المساعدة", text="مساعدة"))
+    ]
 
-        items = []
-        for game in self.GAMES_ORDERED[:8]:
-            items.append(
-                QuickReplyItem(
-                    action=MessageAction(label=game, text=f"لعبة {game}")
-                )
+    return base_card("الواجهة الرئيسية", body, footer, BOT_FOOTER)
+
+# =========================================================
+# ✅ نافذة المساعدة (نفس ستايل البطاقات المصورة)
+# =========================================================
+def help_ui():
+    body = [
+        TextComponent(text="دليل الاستخدام", weight="bold"),
+        TextComponent(text="اختر لعبة من الأزرار السفلية"),
+        TextComponent(text="أرسل إجابتك كتابةً بدون رموز"),
+        TextComponent(text="للحصول على تلميح اكتب: لمح"),
+        TextComponent(text="لإيقاف اللعب: اكتب إيقاف")
+    ]
+
+    footer = [
+        ButtonComponent(style="primary", action=MessageAction(label="العودة إلى البداية", text="البداية")),
+        ButtonComponent(style="secondary", action=MessageAction(label="الألعاب", text="الألعاب"))
+    ]
+
+    return base_card("المساعدة", body, footer, BOT_FOOTER)
+
+# =========================================================
+# ✅ نافذة الألعاب (شبكة فخمة – ثابتة)
+# =========================================================
+def games_ui():
+    body = [
+        TextComponent(text="جميع الألعاب المتاحة:", weight="bold"),
+        TextComponent(text="ذكاء – رياضيات – ألغاز – كلمات"),
+        TextComponent(text="سرعة – ألوان – أضداد – سلسلة"),
+        TextComponent(text="تخمين – أغنية – تكوين – توافق"),
+        TextComponent(text="اختر لعبة من الأزرار السفلية", size="sm", color="#7F8C8D")
+    ]
+
+    footer = [
+        ButtonComponent(style="primary", action=MessageAction(label="العودة", text="البداية")),
+        ButtonComponent(style="secondary", action=MessageAction(label="المساعدة", text="مساعدة"))
+    ]
+
+    return base_card("الألعاب المتاحة", body, footer, BOT_FOOTER)
+
+# =========================================================
+# ✅ نافذة أثناء اللعب (ستايل جولات)
+# =========================================================
+def in_game_ui(game_name, question, round_num):
+    body = [
+        TextComponent(text=f"اللعبة الحالية: {game_name}", weight="bold"),
+        TextComponent(text=f"الجولة: {round_num}"),
+        TextComponent(text=question, wrap=True, margin="md"),
+        TextComponent(text="اكتب إجابتك أو اكتب لمح للحصول على تلميح", size="sm")
+    ]
+
+    footer = [
+        ButtonComponent(style="secondary", action=MessageAction(label="إيقاف", text="إيقاف")),
+    ]
+
+    return base_card("وضع اللعب", body, footer, BOT_FOOTER)
+
+# =========================================================
+# ✅ نافذة نهاية الجولة + الفائز + زر إعادة
+# =========================================================
+def end_round_ui(winner_name, points):
+    body = [
+        TextComponent(text="انتهت الجولة", weight="bold"),
+        TextComponent(text=f"الفائز: {winner_name}", color="#27AE60"),
+        TextComponent(text=f"النقاط المكتسبة: {points}")
+    ]
+
+    footer = [
+        ButtonComponent(style="primary", action=MessageAction(label="إعادة اللعب", text="إعادة")),
+        ButtonComponent(style="secondary", action=MessageAction(label="العودة", text="البداية"))
+    ]
+
+    return base_card("نهاية الجولة", body, footer, BOT_FOOTER)
+
+# =========================================================
+# ✅ نافذة الصدارة (Leaderboard)
+# =========================================================
+def leaderboard_ui(top_players):
+    body = [TextComponent(text="أفضل اللاعبين", weight="bold")]
+
+    for i, p in enumerate(top_players, 1):
+        body.append(
+            TextComponent(
+                text=f"{i} - {p['name']} : {p['points']} نقطة"
             )
-
-        items += [
-            QuickReplyItem(action=MessageAction(label="الألعاب", text="العاب")),
-            QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
-            QuickReplyItem(action=MessageAction(label="الصدارة", text="صدارة")),
-            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
-            QuickReplyItem(action=MessageAction(label="إيقاف", text="إيقاف")),
-        ]
-
-        return QuickReply(items=items)
-
-    def _separator(self):
-        return {"type": "separator", "margin": "lg", "color": "#CBD5E1"}
-
-    def _card(self, contents, theme):
-        return {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": theme["card"],
-            "cornerRadius": "20px",
-            "paddingAll": "18px",
-            "contents": contents
-        }
-
-    def _button(self, label, text, color):
-        return {
-            "type": "button",
-            "action": {"type": "message", "label": label, "text": text},
-            "style": "primary",
-            "color": color,
-            "height": "sm"
-        }
-
-    # -----------------------
-    # نافذة البداية 3D
-    # -----------------------
-    def build_home(self, username, points):
-        theme = self.THEMES["أزرق"]
-
-        bubble = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": theme["bg"],
-                "paddingAll": "25px",
-                "contents": [
-                    {"type": "text", "text": "Bot Mesh", "weight": "bold", "size": "xl", "align": "center", "color": theme["text"]},
-                    {"type": "text", "text": "بوت الألعاب الترفيهي الذكي", "size": "sm", "align": "center", "color": theme["text2"], "margin": "sm"},
-                    self._separator(),
-
-                    self._card([
-                        {"type": "text", "text": f"المستخدم: {username}", "size": "md", "color": theme["text"]},
-                        {"type": "text", "text": f"النقاط: {points}", "size": "md", "color": theme["primary"], "margin": "sm"}
-                    ], theme),
-
-                    {"type": "box", "layout": "horizontal", "spacing": "md", "margin": "lg", "contents": [
-                        self._button("الألعاب", "العاب", theme["primary"]),
-                        self._button("نقاطي", "نقاطي", theme["secondary"])
-                    ]},
-
-                    {"type": "box", "layout": "horizontal", "spacing": "md", "margin": "sm", "contents": [
-                        self._button("الصدارة", "صدارة", theme["secondary"]),
-                        self._button("مساعدة", "مساعدة", theme["secondary"])
-                    ]},
-
-                    {"type": "text", "text": "© Bot Mesh 2025", "size": "xs", "align": "center", "color": theme["text2"], "margin": "lg"}
-                ]
-            }
-        }
-
-        return FlexMessage(
-            alt_text="البداية",
-            contents=FlexContainer.from_dict(bubble),
-            quick_reply=self._quick_reply()
         )
 
-    # -----------------------
-    # قائمة الألعاب 3D
-    # -----------------------
-    def build_games_menu(self):
-        theme = self.THEMES["أزرق"]
+    footer = [
+        ButtonComponent(style="primary", action=MessageAction(label="العودة", text="البداية"))
+    ]
 
-        rows = []
-        for i in range(0, len(self.GAMES_ORDERED), 3):
-            row = []
-            for g in self.GAMES_ORDERED[i:i+3]:
-                row.append(self._button(g, f"لعبة {g}", theme["primary"]))
-            rows.append({"type": "box", "layout": "horizontal", "spacing": "md", "contents": row})
+    return base_card("الصدارة", body, footer, BOT_FOOTER)
 
-        bubble = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": theme["bg"],
-                "paddingAll": "25px",
-                "contents": [
-                    {"type": "text", "text": "قائمة الألعاب", "size": "xl", "weight": "bold", "align": "center"},
-                    self._separator(),
-                    *rows,
-                    {"type": "box", "layout": "horizontal", "spacing": "md", "margin": "lg", "contents": [
-                        self._button("البداية", "بداية", theme["secondary"]),
-                        self._button("إيقاف", "إيقاف", theme["error"])
-                    ]}
-                ]
-            }
-        }
+# =========================================================
+# ✅ نافذة التوافق (أسلوب مستقل وفخم)
+# =========================================================
+def compatibility_ui(name1, name2, percentage):
+    body = [
+        TextComponent(text="تحليل التوافق", weight="bold"),
+        TextComponent(text=f"الاسم الأول: {name1}"),
+        TextComponent(text=f"الاسم الثاني: {name2}"),
+        TextComponent(text=f"نسبة التوافق: {percentage} %", weight="bold")
+    ]
 
-        return FlexMessage(
-            alt_text="الألعاب",
-            contents=FlexContainer.from_dict(bubble),
-            quick_reply=self._quick_reply()
-        )
+    footer = [
+        ButtonComponent(style="primary", action=MessageAction(label="إعادة الحساب", text="توافق")),
+        ButtonComponent(style="secondary", action=MessageAction(label="العودة", text="البداية"))
+    ]
 
-    # -----------------------
-    # نافذة المساعدة 3D
-    # -----------------------
-    def build_help(self):
-        theme = self.THEMES["أزرق"]
-
-        bubble = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": theme["bg"],
-                "paddingAll": "25px",
-                "contents": [
-                    {"type": "text", "text": "دليل الاستخدام", "size": "xl", "weight": "bold", "align": "center"},
-                    self._separator(),
-
-                    self._card([
-                        {"type": "text", "text": "الأوامر الأساسية", "weight": "bold"},
-                        {"type": "text", "text": "بداية - @Bot Mesh. - نقاطي - الصدارة - مساعدة"}
-                    ], theme),
-
-                    self._card([
-                        {"type": "text", "text": "أثناء اللعب", "weight": "bold"},
-                        {"type": "text", "text": "لمح - جـواب - إيقاف"}
-                    ], theme),
-
-                    {"type": "box", "layout": "horizontal", "spacing": "md", "margin": "lg", "contents": [
-                        self._button("الألعاب", "العاب", theme["secondary"]),
-                        self._button("البداية", "بداية", theme["primary"])
-                    ]}
-                ]
-            }
-        }
-
-        return FlexMessage(
-            alt_text="مساعدة",
-            contents=FlexContainer.from_dict(bubble),
-            quick_reply=self._quick_reply()
-        )
+    return base_card("نظام التوافق", body, footer, BOT_FOOTER)
