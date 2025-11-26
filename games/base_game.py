@@ -1,102 +1,148 @@
-# games/base_game.py
-# تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
+"""
+القاعدة الأساسية لجميع الألعاب
+تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
+"""
 
-import time
-from abc import ABC, abstractmethod
+import re
+from collections import defaultdict
+from datetime import datetime
 
 
-class BaseGame(ABC):
-    """
-    الكلاس الأساسي لجميع الألعاب
-    يجب أن ترث منه كل لعبة داخل مجلد games
-    """
+class BaseGame:
+    """الفئة الأساسية لجميع الألعاب"""
 
-    def __init__(self, name: str, total_rounds: int = 5, timeout_minutes: int = 10):
+    def __init__(self, name, total_rounds=10, time_limit_minutes=10):
         self.name = name
         self.total_rounds = total_rounds
-        self.timeout_minutes = timeout_minutes
-
         self.current_round = 0
-        self.points = 0
-        self.start_time = None
-        self.finished = False
+        self.scores = defaultdict(int)
+        self.answered_users = set()
+        self.current_answer = None
+        self.game_active = False
+        self.started_at = None
+        self.time_limit_minutes = time_limit_minutes
 
-    # بدء اللعبة
-    def start(self):
-        self.start_time = time.time()
-        self.current_round = 1
-        self.finished = False
-        self.points = 0
+    # ==========================
+    # أدوات مساعدة
+    # ==========================
 
-    # التحقق من انتهاء الوقت
-    def is_expired(self, minutes: int = None):
-        if not self.start_time:
+    def is_expired(self, minutes=None):
+        limit = minutes or self.time_limit_minutes
+        if not self.started_at:
             return False
+        return (datetime.now() - self.started_at).total_seconds() > limit * 60
 
-        limit = minutes if minutes else self.timeout_minutes
-        return (time.time() - self.start_time) > (limit * 60)
+    def normalize_text(self, text):
+        if not text:
+            return ""
+        text = text.strip().lower()
+        text = re.sub(r'^ال', '', text)
 
-    # جلب السؤال الحالي
-    def get_question(self):
-        if self.finished:
-            return None
-
-        question_data = self.generate_question()
-
-        return {
-            "text": question_data["question"],
-            "round": self.current_round,
-            "total_rounds": self.total_rounds,
-            "answer": question_data.get("answer")
+        replacements = {
+            'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
+            'ة': 'ه', 'ى': 'ي', 'ؤ': 'و', 'ئ': 'ي'
         }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
 
-    # فحص الإجابة
-    def check_answer(self, user_answer: str, user_id: str, username: str):
-        if self.finished:
-            return {"game_over": True, "points": self.points}
+        text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
+        return text
 
-        result = self.evaluate_answer(user_answer)
+    # ==========================
+    # دورة اللعبة
+    # ==========================
 
-        if result.get("correct"):
-            self.points += result.get("points", 1)
+    def start(self):
+        self.current_round = 1
+        self.scores.clear()
+        self.answered_users.clear()
+        self.game_active = True
+        self.started_at = datetime.now()
 
+    def get_question(self):
+        """
+        يجب أن تعيد:
+        {
+            'text': نص السؤال,
+            'round': رقم الجولة,
+            'total_rounds': إجمالي الجولات
+        }
+        """
+        raise NotImplementedError
+
+    def check_answer(self, user_answer, user_id, display_name):
+        if not self.game_active:
+            return {'game_over': True}
+
+        if user_id in self.answered_users:
+            return {'ignored': True}
+
+        normalized_user = self.normalize_text(user_answer)
+        normalized_correct = self.normalize_text(str(self.current_answer))
+
+        if normalized_user == normalized_correct:
+            self.add_score(user_id, display_name, 10)
+            return self._next_step(correct=True)
+        else:
+            self.answered_users.add(user_id)
+            return {'correct': False}
+
+    def _next_step(self, correct=False):
         if self.current_round >= self.total_rounds:
-            self.finished = True
-            return {
-                "game_over": True,
-                "points": self.points
-            }
+            return self.end_game()
 
         self.current_round += 1
-        next_question = self.get_question()
+        self.answered_users.clear()
+        return {
+            'game_over': False,
+            'next_question': self.get_question()
+        }
+
+    # ==========================
+    # النتائج
+    # ==========================
+
+    def add_score(self, user_id, display_name, points=10):
+        self.scores[display_name] += points
+        self.answered_users.add(user_id)
+
+    def end_game(self):
+        self.game_active = False
+
+        if not self.scores:
+            return {
+                'game_over': True,
+                'points': 0,
+                'summary': "انتهت اللعبة بدون مشاركات"
+            }
+
+        sorted_scores = sorted(
+            self.scores.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        winner_name, winner_score = sorted_scores[0]
 
         return {
-            "game_over": False,
-            "next_question": next_question
+            'game_over': True,
+            'winner': winner_name,
+            'points': winner_score,
+            'leaderboard': sorted_scores
         }
 
-    # ===============================
-    # الدوال التي يجب تنفيذها في كل لعبة
-    # ===============================
+    # ==========================
+    # أدوات اختيارية
+    # ==========================
 
-    @abstractmethod
-    def generate_question(self) -> dict:
-        """
-        يجب أن ترجع:
-        {
-            "question": "نص السؤال",
-            "answer": "الإجابة الصحيحة"
-        }
-        """
-        pass
+    def get_hint(self):
+        if not self.current_answer:
+            return None
+        answer = str(self.current_answer)
+        part = len(answer) // 3
+        return answer[:part] + "..."
 
-    @abstractmethod
-    def evaluate_answer(self, user_answer: str) -> dict:
-        """
-        يجب أن ترجع:
-        {
-            "correct": True أو False,
-            "points": عدد النقاط (اختياري)
-        }
-        """
-        pass
+    def reveal_answer(self):
+        if not self.current_answer:
+            return None
+        return str(self.current_answer)
