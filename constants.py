@@ -1,405 +1,290 @@
 """
-Bot Mesh - Enhanced Constants & Configuration
+🎨 Bot Mesh v7.0 - Constants & Themes
+الإعدادات الثابتة والثيمات الاحترافية
 Created by: Abeer Aldosari © 2025
-Version: 4.0.0 - Production Ready
 """
 
-import os
-import re
-from functools import lru_cache
-from typing import Dict, Any, Optional
+# =====================================================
+# معلومات البوت
+# =====================================================
 
-# ============================================================================
-# Bot Information
-# ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "4.0.0"
-BOT_RIGHTS = "Bot Mesh © 2025 by Abeer Aldosari"
-BOT_DESCRIPTION = "بوت ألعاب ذكي مع تصميم احترافي"
+BOT_VERSION = "7.0"
+BOT_RIGHTS = "© 2025 Abeer Aldosari"
+BOT_DESCRIPTION = "بوت الألعاب الترفيهية الذكي"
 
-# ============================================================================
-# LINE Credentials
-# ============================================================================
-LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
+# =====================================================
+# الثيمات الاحترافية مع تأثير 3D
+# =====================================================
 
-# ============================================================================
-# Gemini AI Keys
-# ============================================================================
-GEMINI_API_KEY_1 = os.getenv('GEMINI_API_KEY_1')
-GEMINI_API_KEY_2 = os.getenv('GEMINI_API_KEY_2')
-GEMINI_API_KEY_3 = os.getenv('GEMINI_API_KEY_3')
-
-GEMINI_KEYS = [k for k in [GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3] if k]
-
-# ============================================================================
-# Game Settings
-# ============================================================================
-ROUNDS_PER_GAME = 5
-POINTS_PER_CORRECT_ANSWER = 10
-INACTIVITY_DAYS = 7
-MAX_LEADERBOARD_USERS = 10
-
-# Security Limits
-MAX_MESSAGE_LENGTH = 500
-RATE_LIMIT_MESSAGES = 20  # رسائل في الدقيقة
-MAX_CACHE_SIZE = 100
-MAX_CONCURRENT_GAMES = 50
-
-# ============================================================================
-# Neumorphism Themes - LINE Compatible
-# ============================================================================
 THEMES = {
-    "💜": {
-        "name": "Purple Dream",
-        "bg": "#EDF2F7",
-        "card": "#E8EEF4",
-        "primary": "#805AD5",
-        "secondary": "#9F7AEA",
-        "text": "#2D3748",
-        "text2": "#718096",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#805AD5",
-        "success": "#48BB78",
-        "error": "#F56565"
+    "💜": {  # بنفسجي (الافتراضي)
+        "name": "بنفسجي",
+        "primary": "#8B5CF6",
+        "secondary": "#A78BFA",
+        "bg": "#FAF5FF",
+        "card": "#F3E8FF",
+        "text": "#5B21B6",
+        "text2": "#7C3AED",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "button": "#8B5CF6",
+        "shadow1": "#DDD6FE",
+        "shadow2": "#E9D5FF"
     },
-    "💚": {
-        "name": "Green Nature",
+    "💙": {  # أزرق
+        "name": "أزرق",
+        "primary": "#3B82F6",
+        "secondary": "#60A5FA",
+        "bg": "#EFF6FF",
+        "card": "#DBEAFE",
+        "text": "#1E3A8A",
+        "text2": "#1D4ED8",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "button": "#3B82F6",
+        "shadow1": "#BFDBFE",
+        "shadow2": "#DBEAFE"
+    },
+    "💚": {  # أخضر
+        "name": "أخضر",
+        "primary": "#10B981",
+        "secondary": "#34D399",
         "bg": "#F0FDF4",
-        "card": "#ECFDF5",
-        "primary": "#38A169",
-        "secondary": "#48BB78",
-        "text": "#1C4532",
-        "text2": "#276749",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#38A169",
-        "success": "#48BB78",
-        "error": "#F56565"
+        "card": "#D1FAE5",
+        "text": "#064E3B",
+        "text2": "#065F46",
+        "success": "#059669",
+        "error": "#EF4444",
+        "button": "#10B981",
+        "shadow1": "#A7F3D0",
+        "shadow2": "#BBF7D0"
     },
-    "🤍": {
-        "name": "Clean White",
-        "bg": "#F7FAFC",
-        "card": "#EDF2F7",
-        "primary": "#4299E1",
-        "secondary": "#63B3ED",
-        "text": "#2D3748",
-        "text2": "#718096",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#4299E1",
-        "success": "#48BB78",
-        "error": "#F56565"
+    "🖤": {  # أسود/داكن
+        "name": "أسود",
+        "primary": "#60A5FA",
+        "secondary": "#818CF8",
+        "bg": "#0F172A",
+        "card": "#1E293B",
+        "text": "#F1F5F9",
+        "text2": "#CBD5E1",
+        "success": "#34D399",
+        "error": "#F87171",
+        "button": "#60A5FA",
+        "shadow1": "#334155",
+        "shadow2": "#475569"
     },
-    "🖤": {
-        "name": "Dark Elegant",
-        "bg": "#1A202C",
-        "card": "#2D3748",
-        "primary": "#667EEA",
-        "secondary": "#7F9CF5",
-        "text": "#F7FAFC",
-        "text2": "#CBD5E0",
-        "shadow1": "#171923",
-        "shadow2": "#374151",
-        "button": "#667EEA",
-        "success": "#48BB78",
-        "error": "#FC8181"
+    "🩷": {  # وردي
+        "name": "وردي",
+        "primary": "#EC4899",
+        "secondary": "#F472B6",
+        "bg": "#FFF1F2",
+        "card": "#FFE4E6",
+        "text": "#831843",
+        "text2": "#9D174D",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "button": "#EC4899",
+        "shadow1": "#FBCFE8",
+        "shadow2": "#FCE7F3"
     },
-    "💙": {
-        "name": "Ocean Blue",
-        "bg": "#EBF8FF",
-        "card": "#E6F6FF",
-        "primary": "#2B6CB0",
-        "secondary": "#3182CE",
-        "text": "#2C5282",
-        "text2": "#2B6CB0",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#2B6CB0",
-        "success": "#48BB78",
-        "error": "#F56565"
-    },
-    "🩶": {
-        "name": "Silver Gray",
-        "bg": "#F7FAFC",
-        "card": "#EDF2F7",
-        "primary": "#4A5568",
-        "secondary": "#718096",
-        "text": "#2D3748",
-        "text2": "#718096",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#4A5568",
-        "success": "#48BB78",
-        "error": "#F56565"
-    },
-    "🩷": {
-        "name": "Pink Blossom",
-        "bg": "#FFF5F7",
-        "card": "#FED7E2",
-        "primary": "#B83280",
-        "secondary": "#D53F8C",
-        "text": "#702459",
-        "text2": "#97266D",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#B83280",
-        "success": "#48BB78",
-        "error": "#F56565"
-    },
-    "🧡": {
-        "name": "Warm Sunset",
-        "bg": "#FFFAF0",
-        "card": "#FEF5E7",
-        "primary": "#C05621",
-        "secondary": "#DD6B20",
+    "🧡": {  # برتقالي
+        "name": "برتقالي",
+        "primary": "#F97316",
+        "secondary": "#FB923C",
+        "bg": "#FFF7ED",
+        "card": "#FFEDD5",
         "text": "#7C2D12",
-        "text2": "#9C4221",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#C05621",
-        "success": "#48BB78",
-        "error": "#F56565"
-    },
-    "🤎": {
-        "name": "Earth Brown",
-        "bg": "#FEFCF9",
-        "card": "#F5F0E8",
-        "primary": "#744210",
-        "secondary": "#8B4513",
-        "text": "#5C2E00",
-        "text2": "#7A4F1D",
-        "shadow1": "#CBD5E0",
-        "shadow2": "#FFFFFF",
-        "button": "#744210",
-        "success": "#48BB78",
-        "error": "#F56565"
+        "text2": "#9A3412",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "button": "#F97316",
+        "shadow1": "#FED7AA",
+        "shadow2": "#FFEDD5"
     }
 }
 
 DEFAULT_THEME = "💜"
 
-# ============================================================================
-# Game List
-# ============================================================================
+# =====================================================
+# قائمة الألعاب
+# =====================================================
+
 GAME_LIST = {
-    "IQ": {
-        "icon": "🧠",
+    "ذكاء": {
         "label": "ذكاء",
-        "ai_enabled": True,
-        "difficulty": "متوسط",
-        "category": "عقلية"
+        "icon": "🧠",
+        "description": "ألغاز ذكية ومتنوعة"
     },
     "رياضيات": {
-        "icon": "🔢",
         "label": "رياضيات",
-        "ai_enabled": True,
-        "difficulty": "متغير",
-        "category": "عقلية"
+        "icon": "🔢",
+        "description": "أسئلة حسابية مع صعوبة متدرجة"
     },
-    "لون الكلمة": {
-        "icon": "🎨",
-        "label": "لون",
-        "ai_enabled": False,
-        "difficulty": "صعب",
-        "category": "تركيز"
-    },
-    "كلمة مبعثرة": {
-        "icon": "🔤",
-        "label": "ترتيب",
-        "ai_enabled": False,
-        "difficulty": "سهل",
-        "category": "لغوية"
-    },
-    "كتابة سريعة": {
-        "icon": "⚡",
+    "سرعة": {
         "label": "سرعة",
-        "ai_enabled": False,
-        "difficulty": "متوسط",
-        "category": "مهارة"
+        "icon": "⚡",
+        "description": "اختبر سرعة كتابتك"
     },
-    "عكس": {
+    "كلمات": {
+        "label": "كلمات",
+        "icon": "🔤",
+        "description": "رتب الحروف المبعثرة"
+    },
+    "ألوان": {
+        "label": "ألوان",
+        "icon": "🎨",
+        "description": "لعبة لون الكلمة (Stroop)"
+    },
+    "أضداد": {
+        "label": "أضداد",
         "icon": "↔️",
-        "label": "ضد",
-        "ai_enabled": True,
-        "difficulty": "سهل",
-        "category": "لغوية"
+        "description": "اكتشف عكس الكلمة"
     },
-    "حروف وكلمات": {
-        "icon": "🔠",
-        "label": "تكوين",
-        "ai_enabled": False,
-        "difficulty": "متوسط",
-        "category": "لغوية"
-    },
-    "أغنية": {
-        "icon": "🎵",
-        "label": "أغنية",
-        "ai_enabled": False,
-        "difficulty": "متوسط",
-        "category": "ثقافية"
-    },
-    "إنسان حيوان نبات": {
-        "icon": "🌍",
-        "label": "تنوع",
-        "ai_enabled": False,
-        "difficulty": "متوسط",
-        "category": "معرفة"
-    },
-    "سلسلة كلمات": {
-        "icon": "🔗",
+    "سلسلة": {
         "label": "سلسلة",
-        "ai_enabled": False,
-        "difficulty": "سهل",
-        "category": "لغوية"
+        "icon": "🔗",
+        "description": "سلسلة الكلمات"
     },
     "تخمين": {
+        "label": "تخمين",
         "icon": "🔮",
-        "label": "خمّن",
-        "ai_enabled": False,
-        "difficulty": "سهل",
-        "category": "عقلية"
+        "description": "خمّن الكلمة من الفئة"
+    },
+    "أغنية": {
+        "label": "أغنية",
+        "icon": "🎵",
+        "description": "خمّن المغني من الكلمات"
+    },
+    "تكوين": {
+        "label": "تكوين",
+        "icon": "📝",
+        "description": "كوّن كلمات من الحروف"
+    },
+    "إنسان حيوان": {
+        "label": "إنسان حيوان",
+        "icon": "🎯",
+        "description": "إنسان حيوان نبات جماد بلاد"
     },
     "توافق": {
-        "icon": "💕",
         "label": "توافق",
-        "ai_enabled": False,
-        "difficulty": "ترفيهي",
-        "category": "تسلية"
+        "icon": "💖",
+        "description": "اختبار التوافق بين اسمين"
     }
 }
 
-# ============================================================================
-# Fixed Buttons
-# ============================================================================
+# =====================================================
+# الأزرار الثابتة
+# =====================================================
+
 FIXED_BUTTONS = {
-    "home": {"label": "🏠 البداية", "text": "بداية"},
-    "games": {"label": "🎮 الألعاب", "text": "مساعدة"},
-    "points": {"label": "⭐ نقاطي", "text": "نقاطي"},
-    "leaderboard": {"label": "🏆 الصدارة", "text": "صدارة"},
-    "stop": {"label": "⛔ إيقاف", "text": "إيقاف"},
-    "hint": {"label": "💡 تلميح", "text": "لمح"},
-    "reveal": {"label": "👁️ الجواب", "text": "جاوب"}
+    "home": {
+        "label": "🏠 البداية",
+        "text": "بداية"
+    },
+    "games": {
+        "label": "🎮 الألعاب",
+        "text": "العاب"
+    },
+    "points": {
+        "label": "⭐ نقاطي",
+        "text": "نقاطي"
+    },
+    "leaderboard": {
+        "label": "🏆 الصدارة",
+        "text": "صدارة"
+    },
+    "help": {
+        "label": "❓ مساعدة",
+        "text": "مساعدة"
+    },
+    "stop": {
+        "label": "⛔ إيقاف",
+        "text": "إيقاف"
+    }
 }
 
-# ============================================================================
-# Arabic Normalization with LRU Cache
-# ============================================================================
-ARABIC_NORMALIZE = {
-    'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ء': 'ا',
-    'ى': 'ي', 'ة': 'ه', 'ؤ': 'و', 'ئ': 'ي'
+# =====================================================
+# رسائل النظام
+# =====================================================
+
+SYSTEM_MESSAGES = {
+    "welcome": "🎮 مرحباً بك في {bot_name}!\n\n{description}\n\nاكتب 'انضم' للتسجيل والبدء باللعب",
+    "registration_success": "✅ تم تسجيلك بنجاح!\n\n🎮 يمكنك الآن البدء باللعب\nاكتب 'العاب' لعرض القائمة",
+    "withdrawal_success": "👋 تم انسحابك بنجاح\n\nسيتم حذف بياناتك خلال 7 أيام\nيمكنك التسجيل مجدداً في أي وقت",
+    "already_registered": "✅ أنت مسجل بالفعل!",
+    "not_registered": "⚠️ يجب التسجيل أولاً\nاكتب 'انضم' للتسجيل",
+    "game_started": "🎮 اللعبة بدأت!\n\nجاهز؟",
+    "game_ended": "🎮 انتهت اللعبة!",
+    "invalid_command": "❌ أمر غير صحيح\n\nاكتب 'مساعدة' لعرض الأوامر المتاحة"
 }
 
-@lru_cache(maxsize=1000)
-def normalize_arabic(text: str) -> str:
-    """
-    تطبيع النصوص العربية مع Cache
-    
-    Args:
-        text: النص المدخل
-        
-    Returns:
-        النص المطبع
-    """
-    if not text:
-        return ""
-    
-    text = text.strip().lower()
-    
-    # تطبيع الأحرف العربية
-    for old, new in ARABIC_NORMALIZE.items():
-        text = text.replace(old, new)
-    
-    # إزالة التشكيل
-    text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
-    
-    # إزالة المسافات الزائدة
-    text = ' '.join(text.split())
-    
-    return text
+# =====================================================
+# إعدادات اللعبة
+# =====================================================
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
+GAME_SETTINGS = {
+    "questions_per_game": 5,
+    "points_per_correct": 10,
+    "timeout_minutes": 30,
+    "max_hint_uses": 3
+}
 
-def get_username(profile) -> str:
-    """استخراج اسم المستخدم بأمان"""
-    try:
-        if hasattr(profile, 'display_name'):
-            name = profile.display_name
-            if name and name.strip():
-                name = re.sub(r'[<>"\'\\]', '', name)
-                return name.strip()[:50]
-        return "مستخدم"
-    except Exception:
-        return "مستخدم"
+# =====================================================
+# الرموز التعبيرية
+# =====================================================
 
-def validate_env() -> bool:
-    """التحقق من المتغيرات البيئية"""
-    required = ['LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN']
-    missing = [var for var in required if not os.getenv(var)]
-    
-    if missing:
-        raise ValueError(f"❌ متغيرات ناقصة: {', '.join(missing)}")
-    
-    if not GEMINI_KEYS:
-        print("⚠️ لا توجد مفاتيح Gemini AI - وضع Fallback")
-    else:
-        print(f"✅ {len(GEMINI_KEYS)} مفتاح AI متاح")
-    
-    return True
+EMOJIS = {
+    "trophy": "🏆",
+    "star": "⭐",
+    "fire": "🔥",
+    "crown": "👑",
+    "medal": "🥇",
+    "confetti": "🎉",
+    "check": "✅",
+    "cross": "❌",
+    "warning": "⚠️",
+    "info": "ℹ️",
+    "brain": "🧠",
+    "heart": "❤️",
+    "target": "🎯",
+    "rocket": "🚀"
+}
 
-@lru_cache(maxsize=10)
-def get_theme_colors(theme_emoji: str) -> Dict[str, str]:
-    """الحصول على ألوان الثيم مع Cache"""
-    return THEMES.get(theme_emoji, THEMES[DEFAULT_THEME])
+# =====================================================
+# مستويات اللاعبين
+# =====================================================
 
-def is_valid_theme(theme_emoji: str) -> bool:
-    """التحقق من صحة الثيم"""
-    return theme_emoji in THEMES
+PLAYER_LEVELS = {
+    "beginner": {
+        "name": "🌱 مبتدئ",
+        "min_points": 0,
+        "max_points": 49,
+        "color": "#10B981"
+    },
+    "intermediate": {
+        "name": "⭐ متوسط",
+        "min_points": 50,
+        "max_points": 149,
+        "color": "#667EEA"
+    },
+    "advanced": {
+        "name": "🔥 متقدم",
+        "min_points": 150,
+        "max_points": 299,
+        "color": "#DD6B20"
+    },
+    "expert": {
+        "name": "👑 محترف",
+        "min_points": 300,
+        "max_points": float('inf'),
+        "color": "#D53F8C"
+    }
+}
 
-# ============================================================================
-# User Levels
-# ============================================================================
-USER_LEVELS = [
-    {"min": 0, "max": 49, "name": "🌱 مبتدئ", "color": "#48BB78"},
-    {"min": 50, "max": 149, "name": "⭐ متوسط", "color": "#667EEA"},
-    {"min": 150, "max": 299, "name": "🔥 متقدم", "color": "#DD6B20"},
-    {"min": 300, "max": 999999, "name": "👑 محترف", "color": "#D53F8C"}
-]
-
-@lru_cache(maxsize=100)
-def get_user_level(points: int) -> Dict[str, Any]:
-    """تحديد مستوى المستخدم مع Cache"""
-    for level in USER_LEVELS:
-        if level["min"] <= points <= level["max"]:
-            return level
-    return USER_LEVELS[0]
-
-# ============================================================================
-# Input Sanitization
-# ============================================================================
-
-def sanitize_user_input(text: str, max_length: int = MAX_MESSAGE_LENGTH) -> str:
-    """تنظيف مدخلات المستخدم بشكل آمن"""
-    if not text:
-        return ""
-    
-    # إزالة الأحرف الخطيرة
-    text = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
-    text = re.sub(r'[<>"\'\\]', '', text)
-    
-    # تحديد الطول
-    text = text[:max_length]
-    
-    return text.strip()
-
-# ============================================================================
-# Validation
-# ============================================================================
-if __name__ != "__main__":
-    try:
-        validate_env()
-    except ValueError as e:
-        print(f"⚠️ تحذير: {e}")
+def get_player_level(points: int) -> dict:
+    """الحصول على مستوى اللاعب حسب النقاط"""
+    for level_data in PLAYER_LEVELS.values():
+        if level_data["min_points"] <= points <= level_data["max_points"]:
+            return level_data
+    return PLAYER_LEVELS["beginner"]
