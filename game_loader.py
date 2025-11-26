@@ -1,6 +1,7 @@
 """
-🎮 Bot Mesh v7.0 - Game Loader
+🎮 Bot Mesh v7.0 - Game Loader (النسخة المحسّنة)
 تحميل الألعاب تلقائياً من مجلد games/
+Created by: Abeer Aldosari © 2025
 """
 
 import os
@@ -25,7 +26,13 @@ class GameLoader:
         # التحقق من وجود المجلد
         if not os.path.exists(self.games_dir):
             logger.error(f"❌ مجلد games/ غير موجود في: {self.games_dir}")
-            return
+            # محاولة إنشاء المجلد
+            try:
+                os.makedirs(self.games_dir)
+                logger.info(f"✅ تم إنشاء مجلد games/ في: {self.games_dir}")
+            except Exception as e:
+                logger.error(f"❌ فشل إنشاء المجلد: {e}")
+                return
 
         # إضافة مجلد games للمسار
         if self.games_dir not in sys.path:
@@ -34,7 +41,10 @@ class GameLoader:
         # تحميل الألعاب
         self._load_games()
 
-        logger.info(f"✅ تم تحميل {len(self.games)} لعبة")
+        if len(self.games) > 0:
+            logger.info(f"✅ تم تحميل {len(self.games)} لعبة بنجاح")
+        else:
+            logger.warning("⚠️ لم يتم تحميل أي لعبة!")
 
     def _load_games(self):
         """تحميل جميع الألعاب من مجلد games/"""
@@ -61,18 +71,25 @@ class GameLoader:
                 module = importlib.import_module(file_name)
 
                 # البحث عن كلاس اللعبة
+                game_class_found = False
                 for name, obj in inspect.getmembers(module, inspect.isclass):
                     # تحقق من أن الكلاس يحتوي على الميثودات المطلوبة
-                    if (hasattr(obj, 'start_game') and 
-                        hasattr(obj, 'check_answer') and
-                        'Game' in name):
+                    if (hasattr(obj, 'start_game') or hasattr(obj, 'start')) and \
+                       (hasattr(obj, 'check_answer')) and \
+                       ('Game' in name):
                         
                         self.games[game_name] = obj
-                        logger.info(f"  ✓ {game_name}")
+                        logger.info(f"  ✓ {game_name} ({name})")
+                        game_class_found = True
                         break
+                
+                if not game_class_found:
+                    logger.warning(f"  ⚠️ {game_name}: لم يتم العثور على كلاس مناسب")
 
+            except ModuleNotFoundError:
+                logger.warning(f"  ⚠️ {game_name}: الملف {file_name}.py غير موجود")
             except Exception as e:
-                logger.error(f"  ✗ فشل تحميل {game_name}: {e}")
+                logger.error(f"  ✗ فشل تحميل {game_name}: {type(e).__name__}: {e}")
 
     def create_game(self, game_name: str, line_bot_api=None):
         """
@@ -81,22 +98,34 @@ class GameLoader:
         Args:
             game_name: اسم اللعبة (مثل "ذكاء")
             line_bot_api: واجهة LINE Bot API (اختياري)
+        
+        Returns:
+            game_instance أو None
         """
         if game_name not in self.games:
             logger.warning(f"⚠️ لعبة '{game_name}' غير موجودة")
+            logger.info(f"الألعاب المتاحة: {', '.join(self.games.keys())}")
             return None
         
         try:
             GameClass = self.games[game_name]
             
-            # إنشاء اللعبة مع تمرير line_bot_api إذا كانت تحتاجه
-            if line_bot_api:
-                return GameClass(line_bot_api)
-            else:
-                return GameClass()
+            # محاولة إنشاء اللعبة مع line_bot_api
+            try:
+                if line_bot_api:
+                    return GameClass(line_bot_api)
+                else:
+                    return GameClass()
+            except TypeError:
+                # إذا فشل، حاول بدون معاملات
+                try:
+                    return GameClass()
+                except:
+                    logger.error(f"❌ فشل إنشاء {game_name} بدون معاملات")
+                    return None
                 
         except Exception as e:
-            logger.error(f"❌ خطأ في إنشاء لعبة {game_name}: {e}")
+            logger.error(f"❌ خطأ في إنشاء لعبة {game_name}: {type(e).__name__}: {e}")
             return None
 
     def get_available_games(self) -> list:
@@ -112,117 +141,28 @@ class GameLoader:
             GameClass = self.games[game_name]
             # محاولة الحصول على معلومات من الكلاس
             if hasattr(GameClass, 'get_game_info'):
-                temp_game = GameClass()
-                return temp_game.get_game_info()
-            else:
-                return {
-                    "name": game_name,
-                    "available": True
-                }
-        except:
+                try:
+                    temp_game = GameClass()
+                    return temp_game.get_game_info()
+                except:
+                    pass
+            
             return {
                 "name": game_name,
-                "available": True
+                "available": True,
+                "class": GameClass.__name__
             }
-```
+        except Exception as e:
+            logger.error(f"❌ خطأ في الحصول على معلومات {game_name}: {e}")
+            return {
+                "name": game_name,
+                "available": False,
+                "error": str(e)
+            }
 
----
-
-## 3️⃣ هيكل المشروع الصحيح
-```
-Bot-Mesh/
-│
-├── app.py                      ← الملف الرئيسي
-├── config.py                   ← الإعدادات
-├── ui.py                       ← واجهة المستخدم
-├── game_loader.py              ← محمّل الألعاب (في الجذر!)
-│
-├── requirements.txt
-├── Procfile
-├── Dockerfile
-├── docker-compose.yml
-├── .env                        ← للتطوير المحلي فقط (لا ترفعه لـ Git)
-├── .gitignore
-│
-└── games/                      ← مجلد الألعاب
-    ├── __init__.py
-    ├── base_game.py
-    ├── iq_game.py
-    ├── math_game.py
-    ├── fast_typing_game.py
-    ├── opposite_game.py
-    ├── word_color_game.py
-    ├── chain_words_game.py
-    ├── guess_game.py
-    ├── song_game.py
-    ├── human_animal_plant_game.py
-    ├── compatibility_game.py
-    ├── scramble_word_game.py
-    └── letters_words_game.py
-```
-
----
-
-## 4️⃣ خطوات الربط مع LINE (بالتفصيل)
-
-### 🔧 الخطوة 1: إعداد LINE Developers Console
-
-1. **الدخول إلى Console:**
-   - اذهب إلى: https://developers.line.biz/console/
-   - سجّل دخول بحساب LINE الخاص بك
-
-2. **إنشاء Provider (إذا لم يكن موجود):**
-   - اضغط "Create a new provider"
-   - أدخل اسم الـ Provider (مثل: "Bot Mesh Games")
-
-3. **إنشاء Channel:**
-   - اختر نوع القناة: **Messaging API**
-   - املأ المعلومات المطلوبة:
-     * Channel name: "Bot Mesh"
-     * Channel description: "بوت ألعاب تفاعلي"
-     * Category: اختر المناسب
-     * Subcategory: اختر المناسب
-
-4. **الحصول على المفاتيح:**
-   - **Channel Secret:**
-     * اذهب إلى تبويب "Basic settings"
-     * انسخ "Channel secret"
-   
-   - **Channel Access Token:**
-     * اذهب إلى تبويب "Messaging API"
-     * في قسم "Channel access token (long-lived)"
-     * اضغط "Issue" لإنشاء token جديد
-     * انسخ الـ Token (لن تتمكن من رؤيته مرة أخرى!)
-
----
-
-### 🔧 الخطوة 2: ضبط المتغيرات في Render
-
-1. **الدخول إلى Render Dashboard:**
-   - اذهب إلى خدمتك (Service)
-
-2. **إضافة Environment Variables:**
-   - اذهب إلى "Environment"
-   - اضغط "Add Environment Variable"
-   - أضف:
-```
-LINE_CHANNEL_ACCESS_TOKEN = <الصق الـ Token هنا>
-LINE_CHANNEL_SECRET = <الصق الـ Secret هنا>
-PORT = 10000  (اختياري - Render يحدده تلقائياً)
-```
-
-3. **حفظ وإعادة النشر:**
-   - اضغط "Save Changes"
-   - سيتم إعادة نشر الخدمة تلقائياً
-
----
-
-### 🔧 الخطوة 3: ضبط Webhook في LINE
-
-1. **في LINE Console:**
-   - اذهب إلى قناتك → "Messaging API"
-   - ابحث عن "Webhook settings"
-
-2. **ضبط Webhook URL:**
-```
-   https://mesh-k3ca.onrender.com/callback
+    def reload_games(self):
+        """إعادة تحميل جميع الألعاب"""
+        logger.info("🔄 إعادة تحميل الألعاب...")
+        self.games.clear()
+        self._load_games()
+        logger.info(f"✅ تم إعادة تحميل {len(self.games)} لعبة")
