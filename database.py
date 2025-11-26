@@ -1,7 +1,10 @@
 """
-Bot Mesh v7.0 - Database System (FIXED)
-نظام قاعدة بيانات محسّن مع حل مشكلة Database Locked
+Bot Mesh v7.0 - In-Memory Database (Render-Compatible)
 Created by: Abeer Aldosari © 2025
+
+✅ يعمل على Render بدون مشاكل
+✅ أداء فائق السرعة
+⚠️ البيانات تُحذف عند إعادة التشغيل
 """
 
 import sqlite3
@@ -11,67 +14,34 @@ from datetime import datetime
 from threading import Lock
 from contextlib import contextmanager
 from typing import Optional, Dict, Any, List
-import time
 
 logger = logging.getLogger(__name__)
 
 class Database:
-    """نظام قاعدة بيانات محسّن مع حل مشكلة القفل"""
+    """نظام قاعدة بيانات في الذاكرة - متوافق مع Render"""
     
-    def __init__(self, db_path: str = "data/botmesh.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = ":memory:"):
+        """
+        التهيئة - db_path يُتجاهل، دائماً in-memory
+        """
+        self.db_path = ":memory:"
         self.lock = Lock()
+        self.conn = None
         self._init_database()
-        logger.info("✅ تم تهيئة قاعدة البيانات")
+        logger.info("✅ تم تهيئة قاعدة البيانات في الذاكرة")
     
     @contextmanager
-    def get_connection(self, retries=5, retry_delay=0.1):
-        """
-        Context manager للاتصال الآمن بقاعدة البيانات
-        مع إعادة المحاولة في حالة القفل
-        """
-        conn = None
-        for attempt in range(retries):
-            try:
-                # تفعيل WAL mode لتحسين التزامن
-                conn = sqlite3.connect(
-                    self.db_path,
-                    timeout=30.0,  # انتظار 30 ثانية قبل رفع خطأ القفل
-                    check_same_thread=False,
-                    isolation_level=None  # autocommit mode
-                )
-                conn.row_factory = sqlite3.Row
-                
-                # تفعيل WAL mode
-                conn.execute("PRAGMA journal_mode=WAL")
-                conn.execute("PRAGMA busy_timeout=30000")  # 30 ثانية
-                
-                yield conn
-                return
-                
-            except sqlite3.OperationalError as e:
-                if "locked" in str(e).lower() and attempt < retries - 1:
-                    logger.warning(f"⚠️ Database locked, retry {attempt + 1}/{retries}")
-                    if conn:
-                        conn.close()
-                    time.sleep(retry_delay * (attempt + 1))
-                    continue
-                else:
-                    logger.error(f"Database error: {e}")
-                    if conn:
-                        conn.close()
-                    raise
-            except Exception as e:
-                logger.error(f"Database error: {e}")
-                if conn:
-                    conn.close()
-                raise
-            finally:
-                if conn:
-                    try:
-                        conn.close()
-                    except:
-                        pass
+    def get_connection(self):
+        """الحصول على اتصال آمن"""
+        if self.conn is None:
+            self.conn = sqlite3.connect(
+                self.db_path,
+                check_same_thread=False,
+                isolation_level=None
+            )
+            self.conn.row_factory = sqlite3.Row
+        
+        yield self.conn
     
     def _init_database(self):
         """إنشاء جداول قاعدة البيانات"""
@@ -118,23 +88,12 @@ class Database:
                     )
                 """)
                 
-                # جدول الإحصائيات
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS statistics (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        stat_key TEXT UNIQUE NOT NULL,
-                        stat_value TEXT,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                
                 # إنشاء الفهارس
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active DESC)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_game_history_user ON game_history(user_id)")
                 
                 conn.commit()
-                logger.info("✅ تم إنشاء جداول قاعدة البيانات")
     
     # ==================== إدارة المستخدمين ====================
     
@@ -170,7 +129,6 @@ class Database:
                     return self.get_user(user_id)
             except Exception as e:
                 logger.error(f"Error creating user {user_id}: {e}")
-                # إرجاع مستخدم افتراضي في حالة الفشل
                 return {
                     'user_id': user_id,
                     'display_name': display_name,
@@ -193,11 +151,7 @@ class Database:
                         WHERE user_id = ?
                     """, (display_name, user_id))
                     conn.commit()
-                    
-                    if cursor.rowcount > 0:
-                        logger.info(f"✅ تم تحديث الاسم: {display_name} ({user_id})")
-                        return True
-                    return False
+                    return cursor.rowcount > 0
             except Exception as e:
                 logger.error(f"Error updating user name: {e}")
                 return False
@@ -314,67 +268,6 @@ class Database:
                 logger.error(f"Error getting user rank: {e}")
                 return 0
     
-    # ==================== إدارة الألعاب ====================
-    
-    def save_active_game(self, user_id: str, game_name: str, game_data: Dict[str, Any]):
-        """حفظ لعبة نشطة"""
-        with self.lock:
-            try:
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO active_games 
-                        (user_id, game_name, game_data, started_at)
-                        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                    """, (user_id, game_name, json.dumps(game_data, ensure_ascii=False)))
-                    conn.commit()
-            except Exception as e:
-                logger.error(f"Error saving active game: {e}")
-    
-    def get_active_game(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """جلب لعبة نشطة"""
-        with self.lock:
-            try:
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT * FROM active_games WHERE user_id = ?", (user_id,))
-                    
-                    row = cursor.fetchone()
-                    if row:
-                        data = dict(row)
-                        data['game_data'] = json.loads(data['game_data'])
-                        return data
-                    return None
-            except Exception as e:
-                logger.error(f"Error getting active game: {e}")
-                return None
-    
-    def delete_active_game(self, user_id: str):
-        """حذف لعبة نشطة"""
-        with self.lock:
-            try:
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("DELETE FROM active_games WHERE user_id = ?", (user_id,))
-                    conn.commit()
-            except Exception as e:
-                logger.error(f"Error deleting active game: {e}")
-    
-    def log_game_history(self, user_id: str, game_name: str, points: int, completed: bool):
-        """تسجيل سجل اللعبة"""
-        with self.lock:
-            try:
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        INSERT INTO game_history 
-                        (user_id, game_name, points_earned, completed)
-                        VALUES (?, ?, ?, ?)
-                    """, (user_id, game_name, points, completed))
-                    conn.commit()
-            except Exception as e:
-                logger.error(f"Error logging game history: {e}")
-    
     # ==================== الإحصائيات ====================
     
     def get_total_users(self) -> int:
@@ -402,33 +295,28 @@ class Database:
                 logger.error(f"Error getting total games: {e}")
                 return 0
     
-    # ==================== الصيانة ====================
+    # ==================== Placeholder Methods ====================
+    
+    def save_active_game(self, user_id: str, game_name: str, game_data: Dict[str, Any]):
+        """حفظ لعبة نشطة (غير مستخدم حالياً)"""
+        pass
+    
+    def get_active_game(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """جلب لعبة نشطة (غير مستخدم حالياً)"""
+        return None
+    
+    def delete_active_game(self, user_id: str):
+        """حذف لعبة نشطة (غير مستخدم حالياً)"""
+        pass
+    
+    def log_game_history(self, user_id: str, game_name: str, points: int, completed: bool):
+        """تسجيل سجل اللعبة (غير مستخدم حالياً)"""
+        pass
     
     def cleanup_old_games(self, hours: int = 24):
-        """حذف الألعاب القديمة"""
-        with self.lock:
-            try:
-                with self.get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        DELETE FROM active_games
-                        WHERE datetime(started_at) < datetime('now', '-' || ? || ' hours')
-                    """, (hours,))
-                    conn.commit()
-                    
-                    deleted = cursor.rowcount
-                    if deleted > 0:
-                        logger.info(f"🧹 تم حذف {deleted} لعبة قديمة")
-            except Exception as e:
-                logger.error(f"Error cleaning old games: {e}")
+        """حذف الألعاب القديمة (غير مستخدم حالياً)"""
+        pass
     
     def optimize_database(self):
-        """تحسين قاعدة البيانات"""
-        with self.lock:
-            try:
-                with self.get_connection() as conn:
-                    conn.execute("VACUUM")
-                    conn.execute("ANALYZE")
-                    logger.info("✅ تم تحسين قاعدة البيانات")
-            except Exception as e:
-                logger.error(f"Error optimizing database: {e}")
+        """تحسين قاعدة البيانات (غير مستخدم حالياً)"""
+        pass
