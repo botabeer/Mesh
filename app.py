@@ -340,29 +340,37 @@ def handle_message(event):
                     active_games.pop(user_id, None)
                 db.delete_active_game(user_id)
                 
-                # إنشاء لعبة جديدة
-game = game_loader.create_game(game_name)
+               try:
+    # إنشاء لعبة جديدة
+    game = game_loader.create_game(game_name)
 
-if not game:
-    available = ", ".join(game_loader.get_available_games())
+    if not game:
+        available = ", ".join(game_loader.get_available_games())
+        response = TextMessage(
+            text=f"اللعبة '{game_name}' غير موجودة\n\n"
+                 f"الألعاب المتاحة:\n{available}"
+        )
+    else:
+        with games_lock:
+            active_games[user_id] = game
+
+        game.start()
+        q = game.get_question()
+
+        response = ui.build_game_question(
+            game_name=getattr(game, "name", game.__class__.__name__),
+            question_text=q['text'],
+            round_num=q['round'],
+            total_rounds=q['total_rounds'],
+            theme=theme
+        )
+
+except Exception as e:
     response = TextMessage(
-        text=f"اللعبة '{game_name}' غير موجودة\n\n"
-             f"الألعاب المتاحة:\n{available}"
+        text="حدث خطأ أثناء تشغيل اللعبة.\n"
+             "يرجى المحاولة مرة أخرى لاحقًا."
     )
-else:
-    with games_lock:
-        active_games[user_id] = game
-
-    game.start()
-    q = game.get_question()
-
-    response = ui.build_game_question(
-        game_name=getattr(game, "name", game.__class__.__name__),
-        q['text'],
-        q['round'],
-        q['total_rounds'],
-        theme
-    )
+    print("GAME ERROR:", e)
             
             # إجابة داخل لعبة
             elif user_id in active_games:
