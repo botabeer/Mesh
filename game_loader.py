@@ -1,7 +1,5 @@
-# game_loader.py
 """
 🎮 Bot Mesh v7.0 - Game Loader (PRODUCTION FIXED)
-Created by: Abeer Aldosari © 2025
 """
 
 import os
@@ -13,8 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class GameLoader:
-    """محمّل الألعاب"""
-
     GAME_MAPPING = {
         "ذكاء": "iq_game",
         "رياضيات": "math_game",
@@ -30,7 +26,7 @@ class GameLoader:
         "إنسان حيوان": "human_animal_plant_game"
     }
 
-    def __init__(self, games_path="games"):
+    def __init__(self, games_path: str = "games"):
         self.games_path = games_path
         self.loaded_games: Dict[str, type] = {}
         self.failed_games: List[str] = []
@@ -44,50 +40,57 @@ class GameLoader:
             logger.error(f"❌ مجلد الألعاب غير موجود: {self.games_path}")
             return
 
+        success = 0
+
         for arabic_name, file_name in self.GAME_MAPPING.items():
             try:
                 module_path = f"{self.games_path}.{file_name}"
                 module = importlib.import_module(module_path)
 
                 game_class = None
+
                 if hasattr(module, "Game"):
-                    game_class = module.Game
-                else:
+                    game_class = getattr(module, "Game")
+
+                if not game_class:
                     for attr in dir(module):
                         if attr.endswith("Game"):
-                            game_class = getattr(module, attr)
-                            break
+                            obj = getattr(module, attr)
+                            if callable(obj):
+                                game_class = obj
+                                break
 
                 if game_class:
                     self.loaded_games[arabic_name] = game_class
+                    success += 1
                     logger.info(f"✅ تم تحميل: {arabic_name}")
                 else:
                     self.failed_games.append(arabic_name)
+                    logger.warning(f"⚠️ لا يوجد كلاس في {file_name}.py")
 
             except Exception as e:
                 logger.error(f"❌ فشل تحميل {arabic_name}: {e}")
                 self.failed_games.append(arabic_name)
 
-        logger.info(f"🎮 تم تحميل {len(self.loaded_games)}/{len(self.GAME_MAPPING)}")
+        logger.info(f"🎮 تم تحميل {success}/{len(self.GAME_MAPPING)}")
 
     def create_game(self, arabic_name: str):
         if arabic_name not in self.loaded_games:
             return None
 
         try:
-            return self.loaded_games[arabic_name]()
-        except TypeError:
+            game_class = self.loaded_games[arabic_name]
             try:
-                return self.loaded_games[arabic_name](line_bot_api=None)
-            except:
-                return None
+                return game_class()
+            except TypeError:
+                return game_class(line_bot_api=None)
+        except Exception as e:
+            logger.error(f"❌ خطأ إنشاء اللعبة {arabic_name}: {e}")
+            return None
 
-    def get_available_games(self) -> List[str]:
+    def get_available_games(self):
         return list(self.loaded_games.keys())
 
-    def get_loader_stats(self):
-        return {
-            "total": len(self.GAME_MAPPING),
-            "loaded": len(self.loaded_games),
-            "failed": len(self.failed_games)
-        }
+
+# ✅ كائن جاهز للاستيراد من app.py
+game_loader = GameLoader()
