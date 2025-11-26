@@ -1,9 +1,8 @@
 """
-لعبة تكوين الكلمات - النسخة المحسنة النهائية
+لعبة تكوين الكلمات - النسخة المحسنة النهائية v7.0
 Created by: Abeer Aldosari © 2025
 
 الميزات:
-✅ AI أولاً مع Fallback قوي
 ✅ مجموعات حروف متنوعة
 ✅ واجهة Flex احترافية
 ✅ تشفير عربي مثالي
@@ -12,51 +11,34 @@ Created by: Abeer Aldosari © 2025
 
 from games.base_game import BaseGame
 import random
-import difflib
 from typing import Dict, Any, Optional
 
 
 class LettersWordsGame(BaseGame):
-    """لعبة تكوين الكلمات المحسنة مع AI"""
+    """لعبة تكوين الكلمات المحسنة"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "تكوين كلمات"
-        self.game_icon = "🔤"
+        self.game_name = "تكوين"
+        self.game_icon = "📝"
 
-        self.fallback_letter_sets = [
-            {"letters": ["ق", "ل", "م", "ع", "ر", "ب"], "words": ["قلم", "عمل", "علم", "قلب", "رقم", "مقر"]},
-            {"letters": ["س", "ا", "ر", "ة", "ي", "م"], "words": ["سيارة", "سارية", "رئيس", "سير", "مسار"]},
-            {"letters": ["ك", "ت", "ا", "ب", "م", "ل"], "words": ["كتاب", "كتب", "مكتب", "كلام", "ملك"]},
-            {"letters": ["د", "ر", "س", "ة", "م", "ا"], "words": ["مدرسة", "درس", "مدرس", "سادر"]},
+        self.letter_sets = [
+            {"letters": ["ق", "ل", "م", "ع", "ر", "ب"], "words": ["قلم", "عمل", "علم", "قلب", "رقم"]},
+            {"letters": ["س", "ا", "ر", "ة", "ي", "م"], "words": ["سيارة", "سير", "مسار", "سارية"]},
+            {"letters": ["ك", "ت", "ا", "ب", "م", "ل"], "words": ["كتاب", "كتب", "مكتب", "ملك"]},
+            {"letters": ["د", "ر", "س", "ة", "م", "ا"], "words": ["مدرسة", "درس", "مدرس"]},
             {"letters": ["ح", "د", "ي", "ق", "ة", "ر"], "words": ["حديقة", "حديد", "قرد", "دقيق"]},
             {"letters": ["ب", "ي", "ت", "ك", "م", "ن"], "words": ["بيت", "كتب", "نبت", "بنت"]},
             {"letters": ["ش", "م", "س", "ي", "ر", "ع"], "words": ["شمس", "مسير", "عرش", "سير"]},
             {"letters": ["ن", "ج", "م", "ا", "ل", "ر"], "words": ["نجم", "جمال", "رجل", "نمر"]}
         ]
 
-        random.shuffle(self.fallback_letter_sets)
+        random.shuffle(self.letter_sets)
         self.current_set = None
         self.found_words = set()
         self.required_words = 3
         self.previous_question = None
         self.previous_answer = None
-
-    def generate_question_with_ai(self):
-        """توليد سؤال بالذكاء الاصطناعي مع Fallback"""
-        question_data = None
-
-        # محاولة AI أولاً
-        if self.ai_generate_question:
-            try:
-                question_data = self.ai_generate_question()
-                if question_data and "letters" in question_data and "words" in question_data:
-                    return question_data
-            except Exception as e:
-                print(f"⚠️ AI generation failed, using fallback: {e}")
-
-        # Fallback
-        return self.fallback_letter_sets[self.current_question % len(self.fallback_letter_sets)]
 
     def start_game(self):
         """بدء اللعبة"""
@@ -68,9 +50,13 @@ class LettersWordsGame(BaseGame):
         self.answered_users.clear()
         return self.get_question()
 
+    def start(self):
+        """Alias"""
+        return self.start_game()
+
     def get_question(self):
         """إنشاء سؤال مع واجهة Flex محسنة"""
-        q_data = self.generate_question_with_ai()
+        q_data = self.letter_sets[self.current_question % len(self.letter_sets)]
         self.current_set = q_data
         self.current_answer = q_data["words"]
         self.found_words.clear()
@@ -285,16 +271,7 @@ class LettersWordsGame(BaseGame):
 
         # التحقق من الإجابة
         valid_words = [self.normalize_text(w) for w in self.current_answer]
-        is_valid = False
-
-        if normalized in valid_words and normalized not in self.found_words:
-            is_valid = True
-        else:
-            for w in valid_words:
-                if difflib.SequenceMatcher(None, normalized, w).ratio() > 0.8:
-                    if normalized not in self.found_words:
-                        is_valid = True
-                    break
+        is_valid = normalized in valid_words and normalized not in self.found_words
 
         if not is_valid:
             return {
@@ -342,8 +319,8 @@ class LettersWordsGame(BaseGame):
         """معلومات اللعبة"""
         return {
             "name": "لعبة تكوين الكلمات",
-            "emoji": "🔤",
-            "description": "كوّن كلمات من الحروف المعطاة مع دعم AI",
+            "emoji": "📝",
+            "description": "كوّن كلمات من الحروف المعطاة",
             "questions_count": self.questions_count,
             "required_words": self.required_words,
             "found_words_count": len(self.found_words),
@@ -351,6 +328,5 @@ class LettersWordsGame(BaseGame):
             "supports_reveal": True,
             "active": self.game_active,
             "current_question": self.current_question,
-            "players_count": len(self.scores),
-            "ai_enabled": self.ai_generate_question is not None
+            "players_count": len(self.scores)
         }
