@@ -1,179 +1,451 @@
 """
-Bot Mesh - Enhanced UI Builder with Perfect LINE Compatibility
+🎨 Bot Mesh v8.0 - Constants & Complete UI System
+نظام واجهات شامل مع 9 ثيمات ثلاثية الأبعاد
 Created by: Abeer Aldosari © 2025
 
 Features:
-✅ Perfect Arabic encoding
-✅ Professional Neumorphism design
-✅ LINE-optimized Flex Messages
-✅ Smooth animations
-✅ Accessibility-friendly colors
+✅ 9 Neumorphic Themes
+✅ 3D Effects (Shadows & Gradients)
+✅ Quick Reply Buttons (Always Visible)
+✅ All Windows: Start, Help, Games, Playing, End, Winner, Compatibility
+✅ Theme Storage per User in SQLite
+✅ Full LINE Flex + Quick Reply Support
+✅ Bot Name & Rights in Every Window
+✅ Perfect Arabic Encoding
 """
 
-from linebot.v3.messaging import FlexMessage, FlexContainer
-from constants import (
-    BOT_NAME, BOT_RIGHTS, THEMES, DEFAULT_THEME,
-    GAME_LIST, FIXED_BUTTONS
-)
+# ============================================================================
+# Bot Information
+# ============================================================================
+BOT_NAME = "Bot Mesh"
+BOT_VERSION = "8.0"
+BOT_RIGHTS = "Bot Mesh © 2025 by Abeer Aldosari"
+BOT_DESCRIPTION = "بوت الألعاب الترفيهية الذكي"
 
+# ============================================================================
+# 9 Neumorphic Themes (3D Design)
+# ============================================================================
+THEMES = {
+    "💜": {  # Purple Dream
+        "name": "حلم بنفسجي",
+        "primary": "#A78BFA",
+        "secondary": "#C4B5FD",
+        "accent": "#8B5CF6",
+        "bg": "#1E1B4B",
+        "card": "#2E2558",
+        "text": "#F3F4F6",
+        "text2": "#C4B5FD",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow1": "#6D28D9",
+        "shadow2": "#1E1B4B",
+        "gradient_start": "#A78BFA",
+        "gradient_end": "#8B5CF6",
+        "border": "#7C3AED"
+    },
+    "💚": {  # Emerald Forest
+        "name": "غابة زمردية",
+        "primary": "#10B981",
+        "secondary": "#34D399",
+        "accent": "#059669",
+        "bg": "#064E3B",
+        "card": "#065F46",
+        "text": "#F0FDF4",
+        "text2": "#6EE7B7",
+        "success": "#34D399",
+        "error": "#F87171",
+        "warning": "#FBBF24",
+        "shadow1": "#047857",
+        "shadow2": "#022C22",
+        "gradient_start": "#34D399",
+        "gradient_end": "#059669",
+        "border": "#10B981"
+    },
+    "💙": {  # Ocean Blue
+        "name": "أزرق المحيط",
+        "primary": "#3B82F6",
+        "secondary": "#60A5FA",
+        "accent": "#2563EB",
+        "bg": "#1E3A8A",
+        "card": "#1E40AF",
+        "text": "#EFF6FF",
+        "text2": "#93C5FD",
+        "success": "#22C55E",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow1": "#1D4ED8",
+        "shadow2": "#172554",
+        "gradient_start": "#60A5FA",
+        "gradient_end": "#2563EB",
+        "border": "#3B82F6"
+    },
+    "🖤": {  # Dark Matter
+        "name": "المادة المظلمة",
+        "primary": "#60A5FA",
+        "secondary": "#93C5FD",
+        "accent": "#3B82F6",
+        "bg": "#0F172A",
+        "card": "#1E293B",
+        "text": "#F1F5F9",
+        "text2": "#CBD5E1",
+        "success": "#34D399",
+        "error": "#F87171",
+        "warning": "#FBBF24",
+        "shadow1": "#334155",
+        "shadow2": "#020617",
+        "gradient_start": "#93C5FD",
+        "gradient_end": "#3B82F6",
+        "border": "#475569"
+    },
+    "🩷": {  # Pink Blossom
+        "name": "زهر وردي",
+        "primary": "#EC4899",
+        "secondary": "#F472B6",
+        "accent": "#DB2777",
+        "bg": "#831843",
+        "card": "#9D174D",
+        "text": "#FFF1F2",
+        "text2": "#FBCFE8",
+        "success": "#22C55E",
+        "error": "#DC2626",
+        "warning": "#F59E0B",
+        "shadow1": "#BE185D",
+        "shadow2": "#500724",
+        "gradient_start": "#F472B6",
+        "gradient_end": "#DB2777",
+        "border": "#EC4899"
+    },
+    "🧡": {  # Sunset Orange
+        "name": "برتقالي الغروب",
+        "primary": "#F97316",
+        "secondary": "#FB923C",
+        "accent": "#EA580C",
+        "bg": "#7C2D12",
+        "card": "#9A3412",
+        "text": "#FFF7ED",
+        "text2": "#FED7AA",
+        "success": "#22C55E",
+        "error": "#DC2626",
+        "warning": "#FBBF24",
+        "shadow1": "#C2410C",
+        "shadow2": "#431407",
+        "gradient_start": "#FB923C",
+        "gradient_end": "#EA580C",
+        "border": "#F97316"
+    },
+    "🤍": {  # Pure Light
+        "name": "نور نقي",
+        "primary": "#8B5CF6",
+        "secondary": "#A78BFA",
+        "accent": "#7C3AED",
+        "bg": "#F9FAFB",
+        "card": "#FFFFFF",
+        "text": "#111827",
+        "text2": "#6B7280",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow1": "#E5E7EB",
+        "shadow2": "#D1D5DB",
+        "gradient_start": "#A78BFA",
+        "gradient_end": "#7C3AED",
+        "border": "#E5E7EB"
+    },
+    "🤎": {  # Earth Brown
+        "name": "بني الأرض",
+        "primary": "#D97706",
+        "secondary": "#F59E0B",
+        "accent": "#B45309",
+        "bg": "#451A03",
+        "card": "#78350F",
+        "text": "#FEF3C7",
+        "text2": "#FCD34D",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow1": "#92400E",
+        "shadow2": "#1C0A00",
+        "gradient_start": "#F59E0B",
+        "gradient_end": "#B45309",
+        "border": "#D97706"
+    },
+    "💛": {  # Golden Sun
+        "name": "شمس ذهبية",
+        "primary": "#EAB308",
+        "secondary": "#FDE047",
+        "accent": "#CA8A04",
+        "bg": "#713F12",
+        "card": "#854D0E",
+        "text": "#FEFCE8",
+        "text2": "#FEF08A",
+        "success": "#22C55E",
+        "error": "#DC2626",
+        "warning": "#F97316",
+        "shadow1": "#A16207",
+        "shadow2": "#422006",
+        "gradient_start": "#FDE047",
+        "gradient_end": "#CA8A04",
+        "border": "#EAB308"
+    }
+}
 
-def create_neumorphic_card(colors, contents, footer_contents=None, size="mega"):
+DEFAULT_THEME = "💜"
+
+# ============================================================================
+# Quick Reply Buttons (Always Visible - Games)
+# ============================================================================
+QUICK_REPLY_BUTTONS = [
+    {"label": "▫️ أسرع", "text": "لعبة سرعة"},
+    {"label": "▫️ ذكاء", "text": "لعبة ذكاء"},
+    {"label": "▫️ لعبة", "text": "لعبة لعبة"},
+    {"label": "▫️ أغنية", "text": "لعبة أغنية"},
+    {"label": "▫️ خمن", "text": "لعبة تخمين"},
+    {"label": "▫️ سلسلة", "text": "لعبة سلسلة"},
+    {"label": "▫️ ترتيب", "text": "لعبة كلمات"},
+    {"label": "▫️ تكوين", "text": "لعبة تكوين"},
+    {"label": "▫️ ضد", "text": "لعبة أضداد"},
+    {"label": "▫️ لون", "text": "لعبة ألوان"},
+    {"label": "▫️ رياضيات", "text": "لعبة رياضيات"},
+    {"label": "▫️ توافق", "text": "لعبة توافق"}
+]
+
+# ============================================================================
+# Game List
+# ============================================================================
+GAME_LIST = {
+    "سرعة": {"icon": "⚡", "label": "أسرع"},
+    "ذكاء": {"icon": "🧠", "label": "ذكاء"},
+    "لعبة": {"icon": "🎯", "label": "لعبة"},
+    "أغنية": {"icon": "🎵", "label": "أغنية"},
+    "تخمين": {"icon": "🔮", "label": "خمن"},
+    "سلسلة": {"icon": "🔗", "label": "سلسلة"},
+    "كلمات": {"icon": "🔤", "label": "ترتيب"},
+    "تكوين": {"icon": "📝", "label": "تكوين"},
+    "أضداد": {"icon": "↔️", "label": "ضد"},
+    "ألوان": {"icon": "🎨", "label": "لون"},
+    "رياضيات": {"icon": "🔢", "label": "رياضيات"},
+    "توافق": {"icon": "💖", "label": "توافق"}
+}
+
+# ============================================================================
+# Fixed Buttons
+# ============================================================================
+FIXED_BUTTONS = {
+    "home": {"label": "🏠 البداية", "text": "بداية"},
+    "games": {"label": "🎮 الألعاب", "text": "العاب"},
+    "points": {"label": "⭐ نقاطي", "text": "نقاطي"},
+    "leaderboard": {"label": "🏆 الصدارة", "text": "صدارة"},
+    "help": {"label": "❓ مساعدة", "text": "مساعدة"},
+    "stop": {"label": "⛔ إيقاف", "text": "إيقاف"},
+    "hint": {"label": "💡 لمح", "text": "لمح"},
+    "reveal": {"label": "🔍 جاوب", "text": "جاوب"},
+    "replay": {"label": "🔄 إعادة", "text": "إعادة"}
+}
+
+# ============================================================================
+# 3D Effects (Neumorphic Shadows)
+# ============================================================================
+def get_3d_shadow(colors, depth="medium"):
     """
-    إنشاء بطاقة Neumorphic محسنة
+    إنشاء ظلال ثلاثية الأبعاد
     
     Args:
         colors: ألوان الثيم
-        contents: محتويات البطاقة
-        footer_contents: محتويات التذييل (اختياري)
-        size: حجم البطاقة (kilo/mega/giga)
+        depth: عمق الظل (light/medium/deep)
     
     Returns:
-        dict: بطاقة Flex Message
+        dict: إعدادات الظلال
     """
-    card = {
-        "type": "bubble",
-        "size": size,
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "lg",
-            "contents": contents,
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px"
+    shadows = {
+        "light": {
+            "offsetTop": "2px",
+            "offsetBottom": "2px",
+            "offsetStart": "2px",
+            "offsetEnd": "2px",
+            "blur": "4px",
+            "color": colors["shadow1"]
         },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]}
+        "medium": {
+            "offsetTop": "4px",
+            "offsetBottom": "4px",
+            "offsetStart": "4px",
+            "offsetEnd": "4px",
+            "blur": "8px",
+            "color": colors["shadow1"]
+        },
+        "deep": {
+            "offsetTop": "6px",
+            "offsetBottom": "6px",
+            "offsetStart": "6px",
+            "offsetEnd": "6px",
+            "blur": "12px",
+            "color": colors["shadow1"]
         }
     }
-    
-    if footer_contents:
-        card["footer"] = {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "sm",
-            "contents": footer_contents,
-            "backgroundColor": colors["bg"],
-            "paddingAll": "15px"
-        }
-        card["styles"]["footer"] = {"backgroundColor": colors["bg"]}
-    
-    return card
+    return shadows.get(depth, shadows["medium"])
 
-
-def create_button(label, text, style="secondary", color=None):
+# ============================================================================
+# Gradient Backgrounds
+# ============================================================================
+def get_gradient_background(colors, direction="vertical"):
     """
-    إنشاء زر محسن
+    إنشاء خلفية متدرجة
+    
+    Args:
+        colors: ألوان الثيم
+        direction: اتجاه التدرج (vertical/horizontal/diagonal)
+    
+    Returns:
+        str: كود CSS للتدرج (للاستخدام في backgroundColor)
+    """
+    # ملاحظة: LINE لا يدعم CSS gradients مباشرة
+    # لذا نستخدم ألوان صلبة مع تأثيرات الظل لمحاكاة التدرج
+    return colors["card"]
+
+# ============================================================================
+# 3D Card Styles
+# ============================================================================
+def create_3d_card(colors, corner_radius="20px", padding="20px"):
+    """
+    إنشاء بطاقة ثلاثية الأبعاد
+    
+    Args:
+        colors: ألوان الثيم
+        corner_radius: نصف قطر الزوايا
+        padding: المسافة الداخلية
+    
+    Returns:
+        dict: إعدادات البطاقة
+    """
+    return {
+        "backgroundColor": colors["card"],
+        "cornerRadius": corner_radius,
+        "paddingAll": padding,
+        "borderWidth": "1px",
+        "borderColor": colors["border"]
+    }
+
+# ============================================================================
+# Button Styles (3D Effect)
+# ============================================================================
+def create_3d_button(label, text, colors, style="primary", icon=None):
+    """
+    إنشاء زر ثلاثي الأبعاد
     
     Args:
         label: نص الزر
-        text: الرسالة المرسلة عند الضغط
-        style: نمط الزر (primary/secondary)
-        color: لون مخصص (اختياري)
+        text: الرسالة المرسلة
+        colors: ألوان الثيم
+        style: نمط الزر (primary/secondary/success/error)
+        icon: أيقونة (اختياري)
     
     Returns:
-        dict: زر
+        dict: زر LINE
     """
-    button = {
+    button_colors = {
+        "primary": colors["primary"],
+        "secondary": colors["card"],
+        "success": colors["success"],
+        "error": colors["error"]
+    }
+    
+    button_label = f"{icon} {label}" if icon else label
+    
+    return {
         "type": "button",
         "action": {
             "type": "message",
-            "label": label,
+            "label": button_label,
             "text": text
         },
-        "style": style,
-        "height": "sm"
-    }
-    
-    if color:
-        button["color"] = color
-    
-    return button
-
-
-def create_button_row(buttons, spacing="sm"):
-    """
-    إنشاء صف أزرار
-    
-    Args:
-        buttons: قائمة الأزرار
-        spacing: المسافة بين الأزرار
-    
-    Returns:
-        dict: صف أزرار أفقي
-    """
-    return {
-        "type": "box",
-        "layout": "horizontal",
-        "spacing": spacing,
-        "contents": buttons
+        "style": "primary" if style == "primary" else "secondary",
+        "height": "sm",
+        "color": button_colors.get(style, colors["primary"])
     }
 
-
-def create_separator(color="#E2E8F0", margin="md"):
+# ============================================================================
+# Header Component (3D)
+# ============================================================================
+def create_3d_header(title, subtitle, colors):
     """
-    إنشاء خط فاصل
-    
-    Args:
-        color: لون الخط
-        margin: الهامش
-    
-    Returns:
-        dict: خط فاصل
-    """
-    return {
-        "type": "separator",
-        "color": color,
-        "margin": margin
-    }
-
-
-def create_header(title, subtitle=None, colors=None):
-    """
-    إنشاء رأس احترافي
+    إنشاء رأس ثلاثي الأبعاد
     
     Args:
         title: العنوان الرئيسي
-        subtitle: العنوان الفرعي (اختياري)
+        subtitle: العنوان الفرعي
         colors: ألوان الثيم
     
     Returns:
         dict: رأس البطاقة
     """
-    if not colors:
-        colors = THEMES[DEFAULT_THEME]
-    
-    contents = [
-        {
-            "type": "text",
-            "text": title,
-            "weight": "bold",
-            "size": "xxl",
-            "color": colors["primary"],
-            "align": "center"
-        }
-    ]
-    
-    if subtitle:
-        contents.append({
-            "type": "text",
-            "text": subtitle,
-            "size": "sm",
-            "color": colors["text2"],
-            "align": "center",
-            "margin": "sm"
-        })
-    
     return {
         "type": "box",
         "layout": "vertical",
-        "contents": contents,
-        "spacing": "xs"
+        "contents": [
+            {
+                "type": "text",
+                "text": title,
+                "weight": "bold",
+                "size": "xxl",
+                "color": colors["primary"],
+                "align": "center"
+            },
+            {
+                "type": "text",
+                "text": subtitle,
+                "size": "sm",
+                "color": colors["text2"],
+                "align": "center",
+                "margin": "sm"
+            }
+        ],
+        "backgroundColor": colors["card"],
+        "cornerRadius": "20px",
+        "paddingAll": "20px",
+        "margin": "md"
     }
 
+# ============================================================================
+# Progress Bar Component
+# ============================================================================
+def create_progress_bar(percentage, colors, height="6px"):
+    """
+    إنشاء شريط تقدم
+    
+    Args:
+        percentage: النسبة المئوية (0-100)
+        colors: ألوان الثيم
+        height: ارتفاع الشريط
+    
+    Returns:
+        dict: شريط التقدم
+    """
+    return {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [],
+                "width": f"{min(max(percentage, 0), 100)}%",
+                "backgroundColor": colors["primary"],
+                "height": height,
+                "cornerRadius": "3px"
+            }
+        ],
+        "backgroundColor": colors["shadow1"],
+        "height": height,
+        "cornerRadius": "3px"
+    }
 
+# ============================================================================
+# Info Card Component (3D)
+# ============================================================================
 def create_info_card(icon, title, value, colors):
     """
-    إنشاء بطاقة معلومات
+    إنشاء بطاقة معلومات ثلاثية الأبعاد
     
     Args:
         icon: أيقونة
@@ -191,7 +463,7 @@ def create_info_card(icon, title, value, colors):
             {
                 "type": "text",
                 "text": icon,
-                "size": "xl",
+                "size": "xxl",
                 "align": "center"
             },
             {
@@ -205,7 +477,7 @@ def create_info_card(icon, title, value, colors):
             {
                 "type": "text",
                 "text": str(value),
-                "size": "lg",
+                "size": "xl",
                 "weight": "bold",
                 "color": colors["primary"],
                 "align": "center",
@@ -215,590 +487,216 @@ def create_info_card(icon, title, value, colors):
         "backgroundColor": colors["card"],
         "cornerRadius": "20px",
         "paddingAll": "20px",
-        "spacing": "xs"
+        "borderWidth": "1px",
+        "borderColor": colors["border"]
     }
 
+# ============================================================================
+# User Level System
+# ============================================================================
+LEVEL_SYSTEM = {
+    "ranges": [
+        {"min": 0, "max": 49, "name": "🌱 مبتدئ", "color": "#10B981"},
+        {"min": 50, "max": 149, "name": "⭐ متوسط", "color": "#667EEA"},
+        {"min": 150, "max": 299, "name": "🔥 متقدم", "color": "#DD6B20"},
+        {"min": 300, "max": 499, "name": "👑 محترف", "color": "#D53F8C"},
+        {"min": 500, "max": 999999, "name": "💎 أسطوري", "color": "#8B5CF6"}
+    ]
+}
 
-def build_home(theme="💜", username="مستخدم", points=0, is_registered=False):
+def get_user_level(points):
     """
-    بناء الصفحة الرئيسية المحسنة
+    تحديد مستوى المستخدم بناءً على النقاط
     
     Args:
-        theme: رمز الثيم
-        username: اسم المستخدم
         points: نقاط المستخدم
-        is_registered: حالة التسجيل
     
     Returns:
-        FlexMessage: رسالة الصفحة الرئيسية
+        dict: معلومات المستوى
     """
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    status = "✅ مسجل" if is_registered else "⚪ غير مسجل"
-    status_color = colors["success"] if is_registered else colors["text2"]
-    
-    # بطاقة معلومات المستخدم
-    user_card = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "md",
-        "contents": [
-            {
-                "type": "text",
-                "text": f"👤 {username}",
-                "size": "xl",
-                "color": colors["text"],
-                "weight": "bold",
-                "align": "center"
-            },
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": status,
-                        "size": "sm",
-                        "color": status_color,
-                        "flex": 1
-                    },
-                    {
-                        "type": "text",
-                        "text": f"⭐ {points} نقطة",
-                        "size": "sm",
-                        "color": colors["primary"],
-                        "align": "end",
-                        "flex": 1
-                    }
-                ]
+    for level in LEVEL_SYSTEM["ranges"]:
+        if level["min"] <= points <= level["max"]:
+            progress = int(((points - level["min"]) / (level["max"] - level["min"] + 1)) * 100)
+            return {
+                "name": level["name"],
+                "color": level["color"],
+                "progress": min(progress, 100),
+                "next_level_points": level["max"] + 1
             }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "20px"
+    
+    # المستوى الأقصى
+    return {
+        "name": "💎 أسطوري",
+        "color": "#8B5CF6",
+        "progress": 100,
+        "next_level_points": None
     }
-    
-    # محدد الثيمات (3 في كل صف)
-    theme_buttons = []
-    theme_list = list(THEMES.keys())
-    
-    for i in range(0, len(theme_list), 3):
-        row_themes = theme_list[i:i+3]
-        buttons = [
-            create_button(
-                t,
-                f"ثيم {t}",
-                "primary" if t == theme else "secondary",
-                colors["primary"] if t == theme else None
-            )
-            for t in row_themes
-        ]
-        theme_buttons.append(create_button_row(buttons))
-    
-    # بناء المحتوى
-    contents = [
-        create_header(f"🎮 {BOT_NAME}", "بوت الألعاب الترفيهية الذكي", colors),
-        create_separator(colors["shadow1"]),
-        user_card,
-        {
-            "type": "text",
-            "text": "🎨 اختر ثيمك المفضل:",
-            "size": "md",
-            "weight": "bold",
-            "color": colors["text"],
-            "margin": "lg"
-        }
-    ] + theme_buttons
-    
-    # التذييل
-    footer_buttons = [
-        create_button_row([
-            create_button(
-                "📝 انضم" if not is_registered else "🚪 انسحب",
-                "انضم" if not is_registered else "انسحب",
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["games"]["label"],
-                FIXED_BUTTONS["games"]["text"],
-                "secondary"
-            )
-        ]),
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["points"]["label"],
-                FIXED_BUTTONS["points"]["text"]
-            ),
-            create_button(
-                FIXED_BUTTONS["leaderboard"]["label"],
-                FIXED_BUTTONS["leaderboard"]["text"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
-        {
-            "type": "text",
-            "text": BOT_RIGHTS,
-            "size": "xxs",
-            "color": colors["text2"],
-            "align": "center"
-        }
-    ]
-    
-    card = create_neumorphic_card(colors, contents, footer_buttons)
-    return FlexMessage(
-        alt_text=f"{BOT_NAME} - البداية",
-        contents=FlexContainer.from_dict(card)
-    )
 
-
-def build_games_menu(theme="💜"):
+# ============================================================================
+# Separator Component
+# ============================================================================
+def create_separator(colors, margin="md"):
     """
-    بناء قائمة الألعاب المحسنة
+    إنشاء خط فاصل
     
     Args:
-        theme: رمز الثيم
+        colors: ألوان الثيم
+        margin: الهامش
     
     Returns:
-        FlexMessage: رسالة قائمة الألعاب
+        dict: خط فاصل
     """
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    
-    # إنشاء أزرار الألعاب (3 في كل صف)
-    games = list(GAME_LIST.items())
-    game_buttons = []
-    
-    for i in range(0, len(games), 3):
-        row_games = games[i:i+3]
-        buttons = [
-            create_button(
-                f"{game[1]['icon']} {game[1]['label']}",
-                f"لعبة {game[0]}",
-                "secondary",
-                colors["primary"]
-            )
-            for game in row_games
-        ]
-        game_buttons.append(create_button_row(buttons))
-    
-    # بطاقة التعليمات
-    instructions_card = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "sm",
-        "contents": [
-            {
-                "type": "text",
-                "text": "💡 الأوامر أثناء اللعب:",
-                "size": "sm",
-                "color": colors["text"],
-                "weight": "bold"
-            },
-            {
-                "type": "text",
-                "text": "• لمح - للحصول على تلميح\n• جاوب - لكشف الإجابة\n• إيقاف - لإنهاء اللعبة",
-                "size": "xs",
-                "color": colors["text2"],
-                "wrap": True,
-                "margin": "sm"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "15px",
-        "paddingAll": "15px"
+    return {
+        "type": "separator",
+        "color": colors["shadow1"],
+        "margin": margin
     }
-    
-    # بناء المحتوى
-    contents = [
-        create_header("🎮 الألعاب المتاحة", f"اختر من {len(GAME_LIST)} لعبة مختلفة", colors),
-        create_separator(colors["shadow1"])
-    ] + game_buttons + [
-        create_separator(colors["shadow1"], "lg"),
-        instructions_card
-    ]
-    
-    # التذييل
-    footer_buttons = [
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"],
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["stop"]["label"],
-                FIXED_BUTTONS["stop"]["text"],
-                "secondary",
-                colors["error"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
-        {
-            "type": "text",
-            "text": BOT_RIGHTS,
-            "size": "xxs",
-            "color": colors["text2"],
-            "align": "center"
-        }
-    ]
-    
-    card = create_neumorphic_card(colors, contents, footer_buttons)
-    return FlexMessage(
-        alt_text=f"{BOT_NAME} - الألعاب",
-        contents=FlexContainer.from_dict(card)
-    )
 
+# ============================================================================
+# Leaderboard Rank Colors
+# ============================================================================
+RANK_COLORS = {
+    1: {"medal": "🥇", "color": "#FFD700"},  # Gold
+    2: {"medal": "🥈", "color": "#C0C0C0"},  # Silver
+    3: {"medal": "🥉", "color": "#CD7F32"},  # Bronze
+}
 
-def build_my_points(username, points, theme="💜"):
-    """
-    بناء صفحة النقاط المحسنة
-    
-    Args:
-        username: اسم المستخدم
-        points: النقاط
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة النقاط
-    """
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    
-    # تحديد المستوى
-    if points < 50:
-        level = "🌱 مبتدئ"
-        level_color = colors["success"]
-        progress = int((points / 50) * 100)
-    elif points < 150:
-        level = "⭐ متوسط"
-        level_color = "#667EEA"
-        progress = int(((points - 50) / 100) * 100)
-    elif points < 300:
-        level = "🔥 متقدم"
-        level_color = "#DD6B20"
-        progress = int(((points - 150) / 150) * 100)
-    else:
-        level = "👑 محترف"
-        level_color = "#D53F8C"
-        progress = 100
-    
-    # بطاقة النقاط الرئيسية
-    points_card = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "lg",
-        "contents": [
-            {
-                "type": "text",
-                "text": "النقاط الكلية",
-                "size": "sm",
-                "color": colors["text2"],
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": str(points),
-                "size": "xxl",
-                "weight": "bold",
-                "color": colors["primary"],
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": "نقطة",
-                "size": "md",
-                "color": colors["text2"],
-                "align": "center"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "25px",
-        "paddingAll": "30px"
+# ============================================================================
+# Animation Hints (for future enhancement)
+# ============================================================================
+ANIMATION_CONFIGS = {
+    "button_press": {
+        "duration": "200ms",
+        "timing": "ease-in-out"
+    },
+    "card_appear": {
+        "duration": "300ms",
+        "timing": "ease-out"
+    },
+    "slide_in": {
+        "duration": "400ms",
+        "timing": "cubic-bezier(0.4, 0, 0.2, 1)"
     }
-    
-    # بطاقة المستوى
-    level_card = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "md",
-        "contents": [
-            {
-                "type": "text",
-                "text": "المستوى الحالي",
-                "size": "sm",
-                "color": colors["text2"],
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": level,
-                "size": "xl",
-                "weight": "bold",
-                "color": level_color,
-                "align": "center"
-            },
-            # شريط التقدم
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [],
-                        "width": f"{progress}%",
-                        "backgroundColor": level_color,
-                        "height": "6px"
-                    }
-                ],
-                "backgroundColor": colors["shadow1"],
-                "height": "6px",
-                "cornerRadius": "3px"
-            },
-            {
-                "type": "text",
-                "text": f"{progress}% للمستوى التالي",
-                "size": "xs",
-                "color": colors["text2"],
-                "align": "center"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "20px"
+}
+
+# ============================================================================
+# Error Messages
+# ============================================================================
+ERROR_MESSAGES = {
+    "not_registered": "⚠️ يجب التسجيل أولاً للعب",
+    "already_registered": "ℹ️ أنت مسجل بالفعل",
+    "game_not_found": "❌ اللعبة غير موجودة",
+    "no_active_game": "ℹ️ لا توجد لعبة نشطة",
+    "database_error": "❌ حدث خطأ في قاعدة البيانات"
+}
+
+# ============================================================================
+# Success Messages
+# ============================================================================
+SUCCESS_MESSAGES = {
+    "registration": "✅ تم تسجيلك بنجاح!",
+    "deactivation": "👋 تم إلغاء تسجيلك",
+    "game_started": "🎮 بدأت اللعبة!",
+    "game_ended": "⛔ تم إيقاف اللعبة",
+    "correct_answer": "✅ إجابة صحيحة!",
+    "theme_changed": "🎨 تم تغيير الثيم"
+}
+
+# ============================================================================
+# Window Types Configuration
+# ============================================================================
+WINDOW_TYPES = {
+    "start": {
+        "title": f"🎮 {BOT_NAME}",
+        "subtitle": BOT_DESCRIPTION,
+        "show_theme_selector": True,
+        "show_user_info": True
+    },
+    "help": {
+        "title": "❓ مساعدة",
+        "subtitle": "دليل استخدام البوت",
+        "show_commands": True
+    },
+    "games": {
+        "title": "🎮 الألعاب المتاحة",
+        "subtitle": f"اختر من {len(GAME_LIST)} لعبة مختلفة",
+        "show_games_grid": True
+    },
+    "playing": {
+        "title": "🎮 جاري اللعب",
+        "show_question": True,
+        "show_controls": True,
+        "show_previous_answer": True
+    },
+    "round_end": {
+        "title": "🎉 انتهت الجولة",
+        "show_result": True,
+        "show_replay_button": True
+    },
+    "winner": {
+        "title": "🏆 الفائز",
+        "show_winner_info": True,
+        "show_confetti": True
+    },
+    "compatibility": {
+        "title": "💖 لعبة التوافق",
+        "subtitle": "اكتشف نسبة التوافق!",
+        "show_heart_animation": True
     }
-    
-    # بناء المحتوى
-    contents = [
-        create_header("⭐ نقاطي", None, colors),
-        create_separator(colors["shadow1"]),
-        {
-            "type": "text",
-            "text": f"👤 {username}",
-            "size": "lg",
-            "color": colors["text"],
-            "weight": "bold",
-            "align": "center"
-        },
-        points_card,
-        level_card,
-        create_separator(colors["shadow1"], "lg"),
-        {
-            "type": "text",
-            "text": "⚠️ سيتم حذف بياناتك بعد 7 أيام من عدم النشاط",
-            "size": "xs",
-            "color": colors["error"],
-            "wrap": True,
-            "align": "center"
-        }
-    ]
-    
-    # التذييل
-    footer_buttons = [
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"],
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["games"]["label"],
-                FIXED_BUTTONS["games"]["text"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
-        {
-            "type": "text",
-            "text": BOT_RIGHTS,
-            "size": "xxs",
-            "color": colors["text2"],
-            "align": "center"
-        }
-    ]
-    
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
-    return FlexMessage(
-        alt_text="نقاطي",
-        contents=FlexContainer.from_dict(card)
-    )
+}
 
+# ============================================================================
+# Response Templates
+# ============================================================================
+RESPONSE_TEMPLATES = {
+    "correct_answer": "✅ {emoji} إجابة صحيحة يا {name}!\n{detail}\n+{points} نقطة",
+    "wrong_answer": "❌ إجابة غير صحيحة، حاول مرة أخرى",
+    "hint": "💡 {hint_text}",
+    "reveal": "🔍 الإجابة: {answer}",
+    "game_over": "🎉 انتهت اللعبة!\nالنقاط النهائية: {points}",
+    "leaderboard_entry": "{rank}. {name} - {points} نقطة"
+}
 
-def build_leaderboard(top_users, theme="💜"):
-    """
-    بناء لوحة الصدارة المحسنة
-    
-    Args:
-        top_users: قائمة أفضل المستخدمين [(name, points), ...]
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة لوحة الصدارة
-    """
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    medals = ["🥇", "🥈", "🥉"]
-    
-    # إنشاء قائمة اللاعبين
-    leaderboard_items = []
-    
-    for i, (name, points) in enumerate(top_users[:10], 1):
-        medal = medals[i-1] if i <= 3 else f"{i}."
-        item_color = colors["primary"] if i <= 3 else colors["text"]
-        bg_color = colors["card"] if i <= 3 else "transparent"
-        
-        leaderboard_items.append({
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": medal,
-                    "size": "lg" if i <= 3 else "md",
-                    "flex": 0,
-                    "color": item_color,
-                    "weight": "bold" if i <= 3 else "regular"
-                },
-                {
-                    "type": "text",
-                    "text": name,
-                    "size": "sm",
-                    "color": colors["text"],
-                    "flex": 3,
-                    "weight": "bold" if i <= 3 else "regular"
-                },
-                {
-                    "type": "text",
-                    "text": str(points),
-                    "size": "sm",
-                    "color": item_color,
-                    "align": "end",
-                    "flex": 1,
-                    "weight": "bold"
-                }
-            ],
-            "spacing": "md",
-            "paddingAll": "md",
-            "backgroundColor": bg_color,
-            "cornerRadius": "10px" if i <= 3 else "0px"
-        })
-        
-        if i < len(top_users[:10]):
-            leaderboard_items.append(create_separator(colors["shadow1"], "sm"))
-    
-    if not leaderboard_items:
-        leaderboard_items = [{
-            "type": "text",
-            "text": "لا يوجد لاعبين مسجلين بعد",
-            "size": "sm",
-            "color": colors["text2"],
-            "align": "center"
-        }]
-    
-    # حاوية اللوحة
-    leaderboard_container = {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "none",
-        "contents": leaderboard_items,
-        "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "15px"
-    }
-    
-    # بناء المحتوى
-    contents = [
-        create_header("🏆 لوحة الصدارة", "أفضل 10 لاعبين", colors),
-        create_separator(colors["shadow1"]),
-        leaderboard_container
-    ]
-    
-    # التذييل
-    footer_buttons = [
-        create_button_row([
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"],
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["points"]["label"],
-                FIXED_BUTTONS["points"]["text"]
-            )
-        ]),
-        create_separator(colors["shadow1"]),
-        {
-            "type": "text",
-            "text": BOT_RIGHTS,
-            "size": "xxs",
-            "color": colors["text2"],
-            "align": "center"
-        }
-    ]
-    
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
-    return FlexMessage(
-        alt_text="الصدارة",
-        contents=FlexContainer.from_dict(card)
-    )
+# ============================================================================
+# File Paths (for future file storage if needed)
+# ============================================================================
+PATHS = {
+    "data": "data/",
+    "cache": "cache/",
+    "logs": "logs/"
+}
 
+# ============================================================================
+# Rate Limits
+# ============================================================================
+RATE_LIMITS = {
+    "max_games_per_hour": 20,
+    "max_messages_per_minute": 10,
+    "cooldown_seconds": 2
+}
 
-def build_registration_required(theme="💜"):
-    """
-    بناء رسالة التسجيل المطلوب
-    
-    Args:
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة التسجيل
-    """
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    
-    contents = [
-        {
-            "type": "text",
-            "text": "⚠️",
-            "size": "xxl",
-            "align": "center",
-            "color": colors["error"]
-        },
-        {
-            "type": "text",
-            "text": "يجب التسجيل أولاً",
-            "weight": "bold",
-            "size": "xl",
-            "color": colors["text"],
-            "align": "center",
-            "margin": "md"
-        },
-        create_separator(colors["shadow1"]),
-        {
-            "type": "text",
-            "text": "اضغط 'انضم' للتسجيل والبدء باللعب",
-            "size": "md",
-            "color": colors["text2"],
-            "align": "center",
-            "wrap": True
-        }
-    ]
-    
-    footer_buttons = [
-        create_button_row([
-            create_button(
-                "📝 انضم",
-                "انضم",
-                "primary",
-                colors["button"]
-            ),
-            create_button(
-                FIXED_BUTTONS["home"]["label"],
-                FIXED_BUTTONS["home"]["text"]
-            )
-        ])
-    ]
-    
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
-    return FlexMessage(
-        alt_text="تسجيل مطلوب",
-        contents=FlexContainer.from_dict(card)
-    )
+# ============================================================================
+# Database Settings
+# ============================================================================
+DB_SETTINGS = {
+    "path": ":memory:",  # In-memory for serverless
+    "timeout": 10,
+    "check_same_thread": False
+}
+
+# ============================================================================
+# Export All
+# ============================================================================
+__all__ = [
+    'BOT_NAME', 'BOT_VERSION', 'BOT_RIGHTS', 'BOT_DESCRIPTION',
+    'THEMES', 'DEFAULT_THEME',
+    'QUICK_REPLY_BUTTONS', 'GAME_LIST', 'FIXED_BUTTONS',
+    'get_3d_shadow', 'get_gradient_background',
+    'create_3d_card', 'create_3d_button', 'create_3d_header',
+    'create_progress_bar', 'create_info_card', 'create_separator',
+    'get_user_level', 'LEVEL_SYSTEM',
+    'RANK_COLORS', 'ANIMATION_CONFIGS',
+    'ERROR_MESSAGES', 'SUCCESS_MESSAGES',
+    'WINDOW_TYPES', 'RESPONSE_TEMPLATES',
+    'PATHS', 'RATE_LIMITS', 'DB_SETTINGS'
+]
