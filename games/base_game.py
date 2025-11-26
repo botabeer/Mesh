@@ -1,133 +1,208 @@
 """
-Bot Mesh - Base Game
+Bot Mesh - Base Game Engine
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 """
 
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from linebot.v3.messaging import FlexMessage, FlexContainer, MessageAction
+from collections import defaultdict
+import re
+import time
 
 
 class BaseGame:
     """
-    القاعدة العامة لجميع الألعاب
-    مطابقة لجميع الشروط المتفق عليها
+    القاعدة الأساسية لجميع الألعاب
+    متوافقة مع جميع شروط مشروع Bot Mesh
     """
 
-    def __init__(self, game_name="لعبة", questions_count=5,
-                 supports_hint=True, supports_answer=True,
-                 supports_timer=False):
+    def __init__(self, game_name="لعبة", questions_count=5):
         self.game_name = game_name
         self.questions_count = questions_count
-        self.supports_hint = supports_hint
-        self.supports_answer = supports_answer
-        self.supports_timer = supports_timer
 
         self.current_question = 0
         self.current_answer = None
         self.previous_answer = None
 
+        self.scores = defaultdict(int)
+        self.answered_users = set()
+
         self.game_active = True
-        self.first_correct_user = None
+        self.start_time = time.time()
 
-        self.scores = {}
-        self.answered_this_round = False
+        # دعم الميزات حسب نوع اللعبة
+        self.supports_hint = True
+        self.supports_reveal = True
+        self.supports_timer = False  # للألعاب السريعة فقط
 
-    # =====================================================
-    # تحكم اللعبة
-    # =====================================================
+    # ======================================================
+    # أدوات مساعدة
+    # ======================================================
+
+    def normalize_text(self, text):
+        if not text:
+            return ""
+        text = text.strip().lower()
+        text = re.sub(r'^ال', '', text)
+        text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+        text = text.replace('ة', 'ه').replace('ى', 'ي')
+        text = re.sub(r'[\u064B-\u065F]', '', text)
+        return text
+
+    def visual_progress(self):
+        filled = "▪️" * self.current_question
+        empty = "▫️" * (self.questions_count - self.current_question)
+        return filled + empty
+
+    # ======================================================
+    # التحكم بالجولات
+    # ======================================================
 
     def start(self):
         self.current_question = 1
-        self.scores.clear()
-        self.first_correct_user = None
-        self.answered_this_round = False
-        self.previous_answer = None
+        self.game_active = True
+        self.answered_users.clear()
         return self.get_question()
-
-    def stop(self):
-        return self.build_game_over_message()
-
-    def is_expired(self, minutes: int) -> bool:
-        return False
-
-    # =====================================================
-    # الإجابات
-    # =====================================================
-
-    def check_answer(self, user_answer: str, user_id: str, user_name: str):
-        if not self.game_active or self.answered_this_round:
-            return None
-
-        if self.normalize(user_answer) == self.normalize(self.current_answer):
-            self.answered_this_round = True
-            self.first_correct_user = user_name
-            self.scores[user_name] = self.scores.get(user_name, 0) + 1
-            self.previous_answer = self.current_answer
-            return self.next_question()
-
-        return None
-
-    # =====================================================
-    # الأسئلة
-    # =====================================================
-
-    def get_question(self):
-        raise NotImplementedError("يجب تنفيذ get_question داخل كل لعبة")
 
     def next_question(self):
-        if self.current_question >= self.questions_count:
-            return self.build_game_over_message()
-
         self.current_question += 1
-        self.answered_this_round = False
+        self.answered_users.clear()
+
+        if self.current_question > self.questions_count:
+            return self.end_game()
+
         return self.get_question()
 
-    # =====================================================
-    # اللمح
-    # =====================================================
+    # ======================================================
+    # التحقق من الإجابة
+    # ======================================================
+
+    def check_answer(self, user_answer, user_id, display_name):
+
+        if not self.game_active:
+            return None
+
+        if user_id in self.answered_users:
+            return None
+
+        normalized_user = self.normalize_text(user_answer)
+        normalized_correct = self.normalize_text(self.current_answer)
+
+        if normalized_user == normalized_correct:
+            self.answered_users.add(user_id)
+            self.scores[display_name] += 1
+
+            self.previous_answer = self.current_answer
+
+            return {
+                "correct": True,
+                "next_question": self.next_question()
+            }
+
+        return {
+            "correct": False,
+            "message": "إجابة غير صحيحة"
+        }
+
+    # ======================================================
+    # اللمح والجواب
+    # ======================================================
 
     def get_hint(self):
         if not self.supports_hint or not self.current_answer:
-            return TextMessage(text="لا يوجد لمح في هذه اللعبة")
+            return None
 
         answer = str(self.current_answer)
         first_letter = answer[0]
         length = len(answer)
+        return f"أول حرف: {first_letter}\nعدد الحروف: {length}"
 
-        return TextMessage(
-            text=f"أول حرف: {first_letter}\nعدد الحروف: {length}"
-        )
+    def reveal_answer(self):
+        if not self.supports_reveal or not self.current_answer:
+            return None
+        return f"الجواب الصحيح: {self.current_answer}"
 
-    # =====================================================
+    # ======================================================
+    # إنهاء اللعبة
+    # ======================================================
+
+    def end_game(self):
+        self.game_active = False
+
+        if not self.scores:
+            winner_name = "لا يوجد"
+            winner_score = 0
+        else:
+            winner_name = max(self.scores, key=self.scores.get)
+            winner_score = self.scores[winner_name]
+
+        flex = self.build_game_over_flex(winner_name, winner_score)
+
+        return {
+            "game_over": True,
+            "winner": winner_name,
+            "points": winner_score,
+            "response": flex
+        }
+
+    # ======================================================
     # بناء واجهة السؤال
-    # =====================================================
+    # ======================================================
 
-    def build_question_flex(self, question_text: str):
+    def build_question_flex(self, question_text):
+        contents = []
+
+        if self.previous_answer:
+            contents.append({
+                "type": "text",
+                "text": f"الجواب السابق: {self.previous_answer}",
+                "size": "sm",
+                "color": "#6B7280"
+            })
+
+        contents.append({
+            "type": "text",
+            "text": f"الجولة {self.current_question} من {self.questions_count}",
+            "weight": "bold"
+        })
+
+        contents.append({
+            "type": "text",
+            "text": self.visual_progress()
+        })
+
+        contents.append({
+            "type": "separator"
+        })
+
+        contents.append({
+            "type": "text",
+            "text": question_text,
+            "wrap": True,
+            "size": "lg"
+        })
+
         buttons = []
 
         if self.supports_hint:
-            buttons.append(self._button("لمح", "لمح"))
+            buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                "style": "secondary"
+            })
 
-        if self.supports_answer:
-            buttons.append(self._button("جاوب", "جاوب"))
+        if self.supports_reveal:
+            buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                "style": "secondary"
+            })
 
-        buttons.append(self._button("إيقاف", "إيقاف"))
-
-        progress_bar = "".join(["▪️" if i < self.current_question else "▫️"
-                                 for i in range(self.questions_count)])
-
-        body_contents = [
-            self._text(self.game_name, "xl", True),
-            self._text(f"جولة {self.current_question} من {self.questions_count}", "sm"),
-            self._text(progress_bar, "md"),
-        ]
-
-        if self.previous_answer:
-            body_contents.append(
-                self._text(f"جواب سابق: {self.previous_answer}", "sm")
-            )
-
-        body_contents.append(self._text(question_text, "lg", True))
+        buttons.append({
+            "type": "button",
+            "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"},
+            "style": "primary"
+        })
 
         bubble = {
             "type": "bubble",
@@ -135,7 +210,7 @@ class BaseGame:
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "md",
-                "contents": body_contents
+                "contents": contents
             },
             "footer": {
                 "type": "box",
@@ -146,73 +221,73 @@ class BaseGame:
         }
 
         return FlexMessage(
-            alt_text=self.game_name,
+            alt_text=f"سؤال {self.current_question}",
             contents=FlexContainer.from_dict(bubble)
         )
 
-    # =====================================================
-    # نهاية اللعبة
-    # =====================================================
+    # ======================================================
+    # واجهة نهاية اللعبة
+    # ======================================================
 
-    def build_game_over_message(self):
-        self.game_active = False
-
-        if not self.scores:
-            winner = "لا يوجد"
-            points = 0
-        else:
-            winner, points = max(self.scores.items(), key=lambda x: x[1])
+    def build_game_over_flex(self, winner_name, winner_score):
 
         bubble = {
             "type": "bubble",
             "body": {
                 "type": "box",
                 "layout": "vertical",
+                "spacing": "md",
                 "contents": [
-                    self._text("انتهت اللعبة", "xl", True),
-                    self._text(f"الفائز: {winner}", "lg"),
-                    self._text(f"النقاط: {points}", "lg"),
+                    {
+                        "type": "text",
+                        "text": "انتهت اللعبة",
+                        "weight": "bold",
+                        "size": "xl",
+                        "align": "center"
+                    },
+                    {
+                        "type": "separator"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"الفائز: {winner_name}",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"النقاط: {winner_score}",
+                        "align": "center"
+                    }
                 ]
             },
             "footer": {
                 "type": "box",
-                "layout": "horizontal",
+                "layout": "vertical",
                 "spacing": "sm",
                 "contents": [
-                    self._button("إعادة", f"لعبة {self.game_name}"),
-                    self._button("بداية", "بداية")
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "إعادة",
+                            "text": f"لعبة {self.game_name}"
+                        },
+                        "style": "primary"
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "بداية",
+                            "text": "بداية"
+                        },
+                        "style": "secondary"
+                    }
                 ]
             }
         }
 
         return FlexMessage(
-            alt_text="نتيجة اللعبة",
+            alt_text="انتهاء اللعبة",
             contents=FlexContainer.from_dict(bubble)
         )
-
-    # =====================================================
-    # أدوات مساعدة
-    # =====================================================
-
-    def normalize(self, text):
-        if not text:
-            return ""
-        text = text.strip().lower()
-        text = text.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
-        text = text.replace("ة", "ه").replace("ى", "ي")
-        return text
-
-    def _button(self, label, text):
-        return {
-            "type": "button",
-            "action": {"type": "message", "label": label, "text": text}
-        }
-
-    def _text(self, text, size="md", bold=False):
-        return {
-            "type": "text",
-            "text": text,
-            "size": size,
-            "weight": "bold" if bold else "regular",
-            "wrap": True
-        }
