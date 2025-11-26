@@ -1,5 +1,5 @@
 """
-🎮 Bot Mesh v7.0 - Enhanced Base Game System
+🎮 Bot Mesh v7.0 - Enhanced Base Game System (FIXED)
 نظام الألعاب الأساسي المحسّن مع تصميم احترافي
 Created by: Abeer Aldosari © 2025
 """
@@ -86,7 +86,15 @@ class BaseGame:
         }
     }
 
-    def __init__(self, questions_count: int = 5):
+    def __init__(self, line_bot_api=None, questions_count: int = 5):
+        """
+        تهيئة اللعبة
+        
+        Args:
+            line_bot_api: LINE Bot API (اختياري، للتوافق مع الإصدارات القديمة)
+            questions_count: عدد الأسئلة
+        """
+        self.line_bot_api = line_bot_api  # للتوافق مع الإصدارات القديمة
         self.questions_count = questions_count
         self.current_question = 0
         self.current_answer = None
@@ -117,12 +125,29 @@ class BaseGame:
         return self.get_question()
 
     def get_question(self) -> Dict[str, Any]:
-        """يجب تنفيذه في الألعاب الفرعية"""
-        raise NotImplementedError("يجب تنفيذ get_question")
+        """
+        يجب تنفيذه في الألعاب الفرعية
+        
+        Returns:
+            dict مع مفاتيح: text, round, total_rounds
+        """
+        return {
+            "text": "سؤال تجريبي",
+            "round": self.current_question + 1,
+            "total_rounds": self.questions_count
+        }
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Dict[str, Any]:
-        """يجب تنفيذه في الألعاب الفرعية"""
-        raise NotImplementedError("يجب تنفيذ check_answer")
+        """
+        يجب تنفيذه في الألعاب الفرعية
+        
+        Returns:
+            dict مع مفاتيح: message, points, game_over (optional), next_question (optional)
+        """
+        return {
+            "message": "يجب تنفيذ check_answer",
+            "points": 0
+        }
 
     def end_game(self) -> Dict[str, Any]:
         """إنهاء اللعبة وإرجاع النتائج"""
