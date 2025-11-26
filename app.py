@@ -1,17 +1,12 @@
 """
-Bot Mesh v7.0 - Production Ready (FIXED)
-نسخة الإنتاج المُصلحة مع معالجة أخطاء محسّنة
-Created by: Abeer Aldosari © 2025
+Bot Mesh v6.1 - Main Application
+Simple, Clean & Production-Ready
+محدث: تغيير "جماعي" إلى "مجموعة"
 """
 
 import os
-import sys
 import logging
 from datetime import datetime, timedelta
-from collections import defaultdict
-from threading import Lock
-import traceback
-
 from flask import Flask, request, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -19,488 +14,442 @@ from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
     ReplyMessageRequest, TextMessage
 )
-from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, JoinEvent
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-# استيراد مكونات البوت
-try:
-    from config import Config
-    from database import Database
-    from ui import UI
-    from game_loader import GameLoader
-    
-    logger = logging.getLogger(__name__)
-    logger.info("✅ تم استيراد جميع المكونات بنجاح")
-except Exception as e:
-    print(f"❌ فشل استيراد المكونات: {e}")
-    print(traceback.format_exc())
-    sys.exit(1)
+# استيراد الوحدات
+import ui
+from games.game_loader import load_games
 
-# =====================================================
+# تحميل الألعاب من مجلد games/
+GAMES = load_games()
+
+# ============================================================================
 # إعداد التطبيق
-# =====================================================
-
-app = Flask(__name__)
+# ============================================================================
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger(__name__)
 
-# التحقق من الإعدادات
-try:
-    config_valid, config_errors = Config.validate()
-    if not config_valid:
-        logger.error("❌ إعدادات غير صحيحة:")
-        for error in config_errors:
-            logger.error(f"   {error}")
-        sys.exit(1)
-    
-    logger.info("✅ تم التحقق من الإعدادات")
-    
-    configuration = Configuration(access_token=Config.LINE_CHANNEL_ACCESS_TOKEN)
-    handler = WebhookHandler(Config.LINE_CHANNEL_SECRET)
-    
-    logger.info("✅ تم تهيئة LINE Bot API")
-    
-except Exception as e:
-    logger.error(f"❌ فشلت تهيئة LINE API: {e}")
-    sys.exit(1)
+app = Flask(__name__)
 
-# تهيئة الأنظمة
-try:
-    db = Database()
-    logger.info("✅ تم تهيئة قاعدة البيانات")
-    
-    ui = UI()
-    logger.info("✅ تم تهيئة واجهة المستخدم")
-    
-    game_loader = GameLoader()
-    stats = game_loader.get_loader_stats()
-    logger.info(f"✅ تم تحميل الألعاب: {stats['loaded_games']}/{stats['total_games']}")
-    
-    if stats['failed_games'] > 0:
-        logger.warning(f"⚠️ فشل تحميل {stats['failed_games']} لعبة")
-        logger.warning(f"   الألعاب الفاشلة: {', '.join(stats['failed_list'])}")
-    
-except Exception as e:
-    logger.error(f"❌ فشلت تهيئة الأنظمة: {e}")
-    logger.error(traceback.format_exc())
-    sys.exit(1)
+# LINE Configuration
+LINE_SECRET = os.getenv('LINE_CHANNEL_SECRET')
+LINE_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 
-# =====================================================
-# ذاكرة مؤقتة للأداء
-# =====================================================
+if not LINE_SECRET or LINE_TOKEN:
+    logger.error("❌ LINE credentials missing!")
+    exit(1)
 
-user_cache = {}
-cache_lock = Lock()
-CACHE_TIMEOUT = 300
+configuration = Configuration(access_token=LINE_TOKEN)
+handler = WebhookHandler(LINE_SECRET)
 
-active_games = {}
-games_lock = Lock()
+# ============================================================================
+# قاعدة البيانات البسيطة (في الذاكرة)
+# ============================================================================
 
-rate_limiter = defaultdict(list)
-rate_lock = Lock()
+# المستخدمون
+users = {}  # {user_id: {"name": str, "points": int, "mode": str, "theme": str}}
 
-# =====================================================
-# أدوات مساعدة
-# =====================================================
+# الألعاب النشطة
+active_games = {}  # {room_id: Game}
 
-def get_cached_user(user_id: str):
-    """جلب مستخدم من الذاكرة المؤقتة أو قاعدة البيانات"""
-    with cache_lock:
-        if user_id in user_cache:
-            cached_data, cached_time = user_cache[user_id]
-            if (datetime.now() - cached_time).seconds < CACHE_TIMEOUT:
-                return cached_data
-        
-        user_data = db.get_user(user_id)
-        if user_data:
-            user_cache[user_id] = (user_data, datetime.now())
-            return user_data
-        
-        return None
+# الإحصائيات
+stats = {
+    "total_users": 0,
+    "total_games": 0,
+    "total_messages": 0,
+    "start_time": datetime.now()
+}
 
-def update_user_cache(user_id: str, user_data: dict):
-    """تحديث الذاكرة المؤقتة"""
-    with cache_lock:
-        user_cache[user_id] = (user_data, datetime.now())
+# ============================================================================
+# دوال مساعدة
+# ============================================================================
 
-def get_or_create_user(user_id: str, display_name: str = None):
-    """جلب أو إنشاء مستخدم مع التحديث التلقائي للاسم"""
-    user_data = get_cached_user(user_id)
-    
-    if not user_data:
-        name = display_name or "مستخدم"
-        user_data = db.create_user(user_id, name)
-        update_user_cache(user_id, user_data)
-        logger.info(f"✅ مستخدم جديد: {name}")
+def get_room_id(event):
+    """الحصول على معرف الغرفة (للدردشات المجموعة)"""
+    if hasattr(event.source, 'group_id'):
+        return f"group_{event.source.group_id}"
+    elif hasattr(event.source, 'room_id'):
+        return f"room_{event.source.room_id}"
     else:
-        if display_name and display_name != user_data['display_name']:
-            db.update_user_name(user_id, display_name)
-            user_data['display_name'] = display_name
-            update_user_cache(user_id, user_data)
-            logger.info(f"✅ تم تحديث الاسم: {display_name}")
-        
-        db.update_last_active(user_id)
-    
-    return user_data
+        return f"user_{event.source.user_id}"
 
-def get_user_display_name(event):
-    """جلب اسم المستخدم من LINE API"""
+def get_or_create_user(user_id, username):
+    """الحصول على المستخدم أو إنشاءه"""
+    if user_id not in users:
+        users[user_id] = {
+            "name": username,
+            "points": 0,
+            "mode": "فردي",
+            "theme": "💜",  # الثيم الافتراضي
+            "last_active": datetime.now()
+        }
+        stats["total_users"] += 1
+    
+    users[user_id]["last_active"] = datetime.now()
+    return users[user_id]
+
+def cleanup_old_games():
+    """تنظيف الألعاب القديمة"""
+    to_remove = []
+    for room_id, game in active_games.items():
+        if game.is_expired(max_minutes=30):
+            to_remove.append(room_id)
+    
+    for room_id in to_remove:
+        active_games.pop(room_id, None)
+    
+    if to_remove:
+        logger.info(f"🧹 تم حذف {len(to_remove)}ألعاب منتهية")
+
+def get_top_players(limit=10):
+    """أفضل اللاعبين"""
+    sorted_users = sorted(
+        users.values(),
+        key=lambda x: x["points"],
+        reverse=True
+    )
+    return [(u["name"], u["points"]) for u in sorted_users[:limit]]
+
+# ============================================================================
+# معالج الرسائل الرئيسي
+# ============================================================================
+
+@handler.add(MessageEvent, message=TextMessageContent)
+def handle_message(event):
+    """معالج الرسائل"""
     try:
+        stats["total_messages"] += 1
+        
+        user_id = event.source.user_id
+        room_id = get_room_id(event)
+        text = event.message.text.strip()
+        
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
-            profile = line_api.get_profile(event.source.user_id)
-            return profile.display_name
-    except:
-        return None
-
-def check_rate_limit(user_id: str) -> bool:
-    """فحص معدل الرسائل"""
-    with rate_lock:
-        now = datetime.now()
-        cutoff = now - timedelta(seconds=60)
-        
-        rate_limiter[user_id] = [
-            t for t in rate_limiter[user_id] if t > cutoff
-        ]
-        
-        if len(rate_limiter[user_id]) >= Config.MAX_MESSAGES_PER_MINUTE:
-            return False
-        
-        rate_limiter[user_id].append(now)
-        return True
-
-def normalize_text(text: str) -> str:
-    """تطبيع النص العربي"""
-    import re
-    text = text.strip().lower()
+            
+            # الحصول على اسم المستخدم
+            try:
+                profile = line_api.get_profile(user_id)
+                username = profile.display_name or "لاعب"
+            except:
+                username = "لاعب"
+            
+            # تسجيل/تحديث المستخدم
+            user = get_or_create_user(user_id, username)
+            
+            # تنظيف الألعاب القديمة
+            if stats["total_messages"] % 10 == 0:
+                cleanup_old_games()
+            
+            # ============================================================
+            # الأوامر الأساسية
+            # ============================================================
+            
+            if text in ["بداية", "البداية", "start", "@"]:
+                # الشاشة الرئيسية
+                reply = ui.home_screen(username, user["points"], user["theme"])
+            
+            elif text in ["مجموعة", "لعب مجموعة"]:
+                # تغيير الوضع إلى مجموعة
+                user["mode"] = "مجموعة"
+                reply = ui.games_menu(mode="مجموعة", theme=user["theme"])
+            
+            elif text in ["فردي", "لعب فردي"]:
+                # تغيير الوضع إلى فردي
+                user["mode"] = "فردي"
+                reply = ui.games_menu(mode="فردي", theme=user["theme"])
+            
+            elif text in ["العاب", "الألعاب", "ألعاب"]:
+                # قائمة الألعاب
+                reply = ui.games_menu(mode=user["mode"], theme=user["theme"])
+            
+            elif text in ["ثيمات", "الثيمات", "themes"]:
+                # شاشة اختيار الثيمات
+                reply = ui.themes_selector(current_theme=user["theme"])
+            
+            elif text.startswith("ثيم "):
+                # تغيير الثيم
+                theme_emoji = text.replace("ثيم ", "").strip()
+                if theme_emoji in ui.THEMES:
+                    user["theme"] = theme_emoji
+                    reply = TextMessage(text=f"✅ تم تغيير الثيم إلى {ui.THEMES[theme_emoji]['name']}")
+                else:
+                    reply = TextMessage(text="❌ ثيم غير موجود!")
+            
+            elif text in ["صدارة", "الصدارة", "leaderboard"]:
+                # لوحة الصدارة
+                top = get_top_players()
+                reply = ui.leaderboard(top, theme=user["theme"])
+            
+            # ============================================================
+            # بدء لعبة جديدة
+            # ============================================================
+            
+            elif text.startswith("لعبة "):
+                game_name = text.replace("لعبة ", "").strip()
+                
+                # إنشاء اللعبة من مجلد games/
+                if game_name in GAMES:
+                    game = GAMES[game_name](mode=user["mode"])
+                    
+                    # حفظ اللعبة
+                    active_games[room_id] = game
+                    stats["total_games"] += 1
+                    
+                    # بدء اللعبة
+                    q_data = game.start()
+                    reply = ui.game_question(
+                        q_data["game"],
+                        q_data["question"],
+                        q_data["round"],
+                        q_data["total_rounds"],
+                        q_data["mode"],
+                        user["theme"]
+                    )
+                else:
+                    reply = TextMessage(text="❌ لعبة غير موجودة!")
+            
+            # ============================================================
+            # التعامل مع الألعاب النشطة
+            # ============================================================
+            
+            elif room_id in active_games:
+                game = active_games[room_id]
+                
+                # أوامر خاصة
+                if text in ["تلميح", "لمح", "hint"]:
+                    hint = game.get_hint()
+                    reply = TextMessage(text=hint)
+                
+                elif text in ["اجابة", "إجابة", "جاوب", "reveal"]:
+                    result = game.reveal_answer()
+                    
+                    if result.get("game_over"):
+                        # انتهت اللعبة
+                        del active_games[room_id]
+                        results = result["results"]
+                        reply = ui.game_result(
+                            results["winner_name"],
+                            results["winner_points"],
+                            results["all_players"],
+                            results["mode"],
+                            user["theme"]
+                        )
+                        
+                        # تحديث نقاط اللاعبين
+                        for uid, data in game.scores.items():
+                            if uid in users:
+                                users[uid]["points"] += data["points"]
+                    else:
+                        # السؤال التالي
+                        q_data = result["next_question"]
+                        answer_msg = f"📝 الإجابة: {result['answer']}\n\n"
+                        reply = ui.game_question(
+                            q_data["game"],
+                            q_data["question"],
+                            q_data["round"],
+                            q_data["total_rounds"],
+                            q_data["mode"],
+                            user["theme"]
+                        )
+                
+                elif text in ["ايقاف", "إيقاف", "stop", "خروج"]:
+                    # إيقاف اللعبة
+                    del active_games[room_id]
+                    reply = TextMessage(text="⛔ تم إيقاف اللعبة")
+                
+                else:
+                    # فحص الإجابة
+                    result = game.check_answer(user_id, username, text)
+                    
+                    if not result["valid"]:
+                        reply = TextMessage(text=result["message"])
+                    
+                    elif result["correct"]:
+                        if result.get("game_over"):
+                            # انتهت اللعبة
+                            del active_games[room_id]
+                            results = result["results"]
+                            reply = ui.game_result(
+                                results["winner_name"],
+                                results["winner_points"],
+                                results["all_players"],
+                                results["mode"],
+                                user["theme"]
+                            )
+                            
+                            # تحديث نقاط اللاعبين
+                            for uid, data in game.scores.items():
+                                if uid in users:
+                                    users[uid]["points"] += data["points"]
+                        else:
+                            # السؤال التالي
+                            q_data = result["next_question"]
+                            success_msg = f"✅ إجابة صحيحة يا {username}!\n+{result['points']} نقطة\n\n"
+                            reply = ui.game_question(
+                                q_data["game"],
+                                q_data["question"],
+                                q_data["round"],
+                                q_data["total_rounds"],
+                                q_data["mode"],
+                                user["theme"]
+                            )
+                    else:
+                        reply = TextMessage(text=result["message"])
+            
+            else:
+                # رسالة افتراضية
+                reply = ui.home_screen(username, user["points"], user["theme"])
+            
+            # إرسال الرد
+            line_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[reply]
+                )
+            )
     
-    replacements = {
-        'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
-        'ى': 'ي', 'ة': 'ه', 'ؤ': 'و', 'ئ': 'ي'
-    }
-    
-    for old, new in replacements.items():
-        text = text.replace(old, new)
-    
-    return re.sub(r'[\u064B-\u065F\u0670]', '', text)
+    except Exception as e:
+        logger.error(f"❌ خطأ: {e}", exc_info=True)
 
-def cleanup_expired_games():
-    """تنظيف الألعاب المنتهية"""
-    with games_lock:
-        expired = []
-        for user_id, game in active_games.items():
-            # افحص إذا كانت اللعبة قديمة (أكثر من 30 دقيقة)
-            pass
-        
-        for user_id in expired:
-            del active_games[user_id]
-            db.delete_active_game(user_id)
-
-# =====================================================
-# Webhook Events
-# =====================================================
+# ============================================================================
+# Flask Routes
+# ============================================================================
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    """معالج الـ Webhook"""
-    signature = request.headers.get('X-Line-Signature')
+    """LINE Webhook"""
+    signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("Invalid signature")
+        logger.error("❌ توقيع خاطئ")
         abort(400)
     except Exception as e:
-        logger.error(f"Webhook error: {traceback.format_exc()}")
+        logger.error(f"❌ خطأ: {e}")
         abort(500)
     
-    return "OK"
-
-@handler.add(FollowEvent)
-def handle_follow(event):
-    """معالج الإضافة (Follow)"""
-    try:
-        user_id = event.source.user_id
-        display_name = get_user_display_name(event)
-        
-        user_data = get_or_create_user(user_id, display_name)
-        
-        with ApiClient(configuration) as api_client:
-            line_api = MessagingApi(api_client)
-            welcome_msg = TextMessage(
-                text=f"مرحباً {user_data['display_name']}! 🎮\n\n"
-                     f"أهلاً بك في Bot Mesh\n"
-                     f"اكتب 'بداية' للبدء"
-            )
-            line_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[welcome_msg]
-                )
-            )
-    except Exception as e:
-        logger.error(f"Follow error: {e}")
-
-@handler.add(JoinEvent)
-def handle_join(event):
-    """معالج الانضمام للمجموعة"""
-    try:
-        logger.info("✅ تم إضافة البوت لمجموعة")
-        
-        with ApiClient(configuration) as api_client:
-            line_api = MessagingApi(api_client)
-            welcome_msg = TextMessage(
-                text="مرحباً! 🎮\n\n"
-                     "أنا Bot Mesh - بوت الألعاب الترفيهي\n"
-                     "اكتب 'بداية' للبدء"
-            )
-            line_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[welcome_msg]
-                )
-            )
-    except Exception as e:
-        logger.error(f"Join error: {e}")
-
-# =====================================================
-# معالج الرسائل
-# =====================================================
-
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event):
-    """معالج الرسائل الرئيسي"""
-    user_id = event.source.user_id
-    text = event.message.text.strip()
-    
-    if not check_rate_limit(user_id):
-        return
-    
-    try:
-        with ApiClient(configuration) as api_client:
-            line_api = MessagingApi(api_client)
-            
-            display_name = get_user_display_name(event)
-            user_data = get_or_create_user(user_id, display_name)
-            username = user_data['display_name']
-            theme = user_data['theme']
-            
-            normalized = normalize_text(text)
-            response = None
-            
-            # الصفحة الرئيسية
-            if normalized in ['بدايه', 'ابدا', 'البدايه', 'بداية']:
-                response = ui.build_home(username, user_data['points'], theme)
-            
-            # قائمة الألعاب
-            elif normalized in ['العاب', 'الالعاب']:
-                response = ui.build_games_menu(theme)
-            
-            # نقاط المستخدم
-            elif normalized in ['نقاطي']:
-                rank = db.get_user_rank(user_id)
-                response = ui.build_user_stats(username, user_data, rank, theme)
-            
-            # لوحة الصدارة
-            elif normalized in ['صداره', 'الصدارة', 'صدارة']:
-                leaderboard = db.get_leaderboard(10)
-                response = ui.build_leaderboard(leaderboard, theme)
-            
-            # المساعدة
-            elif normalized in ['مساعده', 'مساعدة', 'help']:
-                response = ui.build_help(theme)
-            
-            # تغيير الثيم
-            elif text.startswith('ثيم '):
-                new_theme = text.replace('ثيم ', '').strip()
-                
-                if new_theme in ui.THEMES:
-                    db.update_theme(user_id, new_theme)
-                    user_data['theme'] = new_theme
-                    update_user_cache(user_id, user_data)
-                    
-                    response = ui.build_home(username, user_data['points'], new_theme)
-                else:
-                    available_themes = ", ".join(ui.THEMES.keys())
-                    response = TextMessage(
-                        text=f"الثيمات المتاحة:\n{available_themes}"
-                    )
-            
-            # بدء لعبة
-            elif normalized.startswith('لعبة ') or normalized.startswith('لعبه '):
-                game_name = text.replace('لعبة ', '').replace('لعبه ', '').strip()
-                
-                # حذف اللعبة القديمة
-                with games_lock:
-                    active_games.pop(user_id, None)
-                db.delete_active_game(user_id)
-                
-                try:
-                    # إنشاء لعبة جديدة
-                    game = game_loader.create_game(game_name)
-                    
-                    if not game:
-                        available = ", ".join(game_loader.get_available_games())
-                        response = TextMessage(
-                            text=f"اللعبة '{game_name}' غير موجودة\n\n"
-                                 f"الألعاب المتاحة:\n{available}"
-                        )
-                    else:
-                        with games_lock:
-                            active_games[user_id] = game
-                        
-                        game.start()
-                        q = game.get_question()
-                        
-                        response = ui.build_game_question(
-                            game_name=getattr(game, "name", game.__class__.__name__),
-                            question_text=q['text'],
-                            round_num=q['round'],
-                            total_rounds=q['total_rounds'],
-                            theme=theme
-                        )
-                
-                except Exception as e:
-                    response = TextMessage(
-                        text="حدث خطأ أثناء تشغيل اللعبة.\n"
-                             "يرجى المحاولة مرة أخرى لاحقًا."
-                    )
-                    logger.error(f"GAME ERROR: {e}")
-                    logger.error(traceback.format_exc())
-            
-            # إجابة داخل لعبة
-            elif user_id in active_games:
-                game = active_games[user_id]
-                result = game.check_answer(text, user_id, username)
-                
-                if result and result.get('game_over'):
-                    with games_lock:
-                        active_games.pop(user_id, None)
-                    db.delete_active_game(user_id)
-                    
-                    points = result.get('points', 0)
-                    
-                    if points > 0:
-                        db.add_points(user_id, points)
-                        db.increment_games(user_id, won=True)
-                    else:
-                        db.increment_games(user_id, won=False)
-                    
-                    db.log_game_history(user_id, game.game_name, points, True)
-                    
-                    user_data['points'] += points
-                    user_data['games_played'] += 1
-                    if points > 0:
-                        user_data['wins'] += 1
-                    update_user_cache(user_id, user_data)
-                    
-                    response = ui.build_game_result(game.game_name, points, theme)
-                
-                elif result:
-                    q = result.get('next_question')
-                    if q:
-                        response = ui.build_game_question(
-                            game.game_name,
-                            q['text'],
-                            q['round'],
-                            q['total_rounds'],
-                            theme
-                        )
-                    else:
-                        response = TextMessage(text=result.get('message', 'حاول مرة أخرى'))
-            
-            # رسالة افتراضية
-            else:
-                response = TextMessage(
-                    text="اكتب 'بداية' للبدء\n"
-                         "أو 'العاب' لعرض قائمة الألعاب"
-                )
-            
-            # إرسال الرد
-            if response:
-                line_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[response]
-                    )
-                )
-    
-    except Exception as e:
-        logger.error(f"Message handling error: {traceback.format_exc()}")
-        try:
-            with ApiClient(configuration) as api_client:
-                line_api = MessagingApi(api_client)
-                error_msg = TextMessage(text="حدث خطأ، حاول مرة أخرى")
-                line_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[error_msg]
-                    )
-                )
-        except:
-            pass
-
-# =====================================================
-# تنظيف دوري
-# =====================================================
-
-@app.before_request
-def before_request():
-    """تنفيذ قبل كل طلب"""
-    cleanup_expired_games()
-
-# =====================================================
-# مسارات إضافية
-# =====================================================
-
-@app.route("/health", methods=['GET'])
-def health_check():
-    """فحص صحة البوت"""
-    try:
-        stats = {
-            "status": "healthy",
-            "total_users": db.get_total_users(),
-            "total_games": db.get_total_games_played(),
-            "active_games": len(active_games),
-            "loaded_games": game_loader.get_game_count(),
-            "timestamp": datetime.now().isoformat()
-        }
-        return stats, 200
-    except Exception as e:
-        logger.error(f"Health check error: {e}")
-        return {"status": "error", "message": str(e)}, 500
+    return 'OK'
 
 @app.route("/", methods=['GET'])
-def index():
+def home():
     """الصفحة الرئيسية"""
-    return """
-    <html>
-        <head><title>Bot Mesh v7.0</title></head>
-        <body style="font-family: Arial; text-align: center; padding: 50px;">
-            <h1>🎮 Bot Mesh v7.0</h1>
-            <p>بوت LINE للألعاب الترفيهية</p>
-            <p>Created by: Abeer Aldosari © 2025</p>
-            <hr>
-            <p>Status: <strong style="color: green;">Active</strong></p>
-        </body>
+    uptime = datetime.now() - stats["start_time"]
+    hours = uptime.total_seconds() / 3600
+    
+    return f"""
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>🎮 Bot Mesh v6.1</title>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{
+                font-family: 'Segoe UI', Arial, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }}
+            .container {{
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(20px);
+                border-radius: 30px;
+                padding: 50px;
+                max-width: 800px;
+                text-align: center;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            }}
+            h1 {{ font-size: 3.5em; margin-bottom: 20px; }}
+            .version {{ font-size: 1.2em; opacity: 0.9; margin-bottom: 40px; }}
+            .status {{
+                background: rgba(72, 187, 120, 0.2);
+                padding: 25px;
+                border-radius: 20px;
+                font-size: 1.3em;
+                margin: 30px 0;
+            }}
+            .stats {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 20px;
+                margin: 40px 0;
+            }}
+            .stat {{
+                background: rgba(255, 255, 255, 0.15);
+                padding: 25px;
+                border-radius: 20px;
+            }}
+            .stat-value {{ font-size: 2.5em; font-weight: bold; margin: 15px 0; }}
+            .stat-label {{ font-size: 1em; opacity: 0.8; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎮 Bot Mesh</h1>
+            <div class="version">v6.1 - محدث ومحسن</div>
+            
+            <div class="status">✅ البوت يعمل بكفاءة عالية</div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">{stats['total_users']}</div>
+                    <div class="stat-label">👥 المستخدمون</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">{len(active_games)}</div>
+                    <div class="stat-label">🎮 ألعاب نشطة</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">{stats['total_games']}</div>
+                    <div class="stat-label">🏆 ألعاب منتهية</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">{hours:.1f}h</div>
+                    <div class="stat-label">⏱️ وقت التشغيل</div>
+                </div>
+            </div>
+        </div>
+    </body>
     </html>
-    """, 200
+    """
 
-# =====================================================
+@app.route("/health", methods=['GET'])
+def health():
+    """Health Check"""
+    return {
+        "status": "healthy",
+        "version": "6.1",
+        "uptime": (datetime.now() - stats["start_time"]).total_seconds(),
+        "users": stats["total_users"],
+        "active_games": len(active_games),
+        "total_games": stats["total_games"]
+    }, 200
+
+# ============================================================================
 # تشغيل التطبيق
-# =====================================================
+# ============================================================================
 
 if __name__ == "__main__":
-    try:
-        db.optimize_database()
-        port = int(os.getenv("PORT", 10000))
-        logger.info(f"🚀 Bot Mesh v7.0 يعمل على المنفذ {port}")
-        app.run(host="0.0.0.0", port=port, debug=False)
-    except Exception as e:
-        logger.error(f"❌ فشل بدء التطبيق: {e}")
-        logger.error(traceback.format_exc())
-        sys.exit(1)
+    port = int(os.getenv("PORT", 10000))
+    
+    logger.info("=" * 60)
+    logger.info("🎮 Bot Mesh v6.1 - محدث")
+    logger.info(f"📦 {len(GAMES)} ألعاب متاحة")
+    logger.info("🎨 9 ثيمات جميلة")
+    logger.info("👥 يدعم اللعب الفردي والمجموعة")
+    logger.info(f"🌐 Port {port}")
+    logger.info("=" * 60)
+    
+    app.run(host="0.0.0.0", port=port, debug=False)
