@@ -1,21 +1,24 @@
 """
-🎮 Bot Mesh v8.0 - Game Loader
+🎮 Bot Mesh v8.0 - Game Loader (Fixed & Enhanced)
+محمّل الألعاب الديناميكي المحسّن
 Created by: Abeer Aldosari © 2025
 
-✅ تحميل ديناميكي للألعاب
-✅ إدارة الجلسات النشطة
-✅ دعم 12 لعبة
+✅ Fixed class name: GameLoader
+✅ Better error handling
+✅ Session management
+✅ Memory optimization
 """
 
 import os
 import importlib
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 logger = logging.getLogger(__name__)
 
-class Games:
-    """محمّل الألعاب الديناميكي"""
+
+class GameLoader:
+    """محمّل الألعاب الديناميكي المحسّن"""
     
     # ربط الأسماء العربية بملفات الألعاب
     GAME_MAPPING = {
@@ -29,11 +32,11 @@ class Games:
         "تخمين": "guess_game",
         "أغنية": "song_game",
         "تكوين": "letters_words_game",
-        "إنسان حيوان": "human_animal_plant_game",
+        "لعبة": "general_game",
         "توافق": "compatibility_game"
     }
     
-    def __init__(self, games_path="games"):
+    def __init__(self, games_path: str = "games"):
         """
         تهيئة المحمّل
         
@@ -43,12 +46,12 @@ class Games:
         self.games_path = games_path
         self.loaded: Dict[str, type] = {}
         self.active_sessions: Dict[str, object] = {}
-        self.failed: list = []
+        self.failed: List[str] = []
         
         # تحميل جميع الألعاب
-        self.load_all()
+        self._load_all_games()
     
-    def load_all(self):
+    def _load_all_games(self):
         """تحميل جميع الألعاب من المجلد"""
         logger.info("🎮 Loading games...")
         
@@ -59,20 +62,11 @@ class Games:
                 module = importlib.import_module(module_path)
                 
                 # البحث عن كلاس Game
-                game_class = None
-                
-                if hasattr(module, "Game"):
-                    game_class = module.Game
-                else:
-                    # البحث عن أي كلاس ينتهي بـ Game
-                    for attr in dir(module):
-                        if attr.endswith("Game") and not attr.startswith("_"):
-                            game_class = getattr(module, attr)
-                            break
+                game_class = self._find_game_class(module)
                 
                 if game_class:
                     self.loaded[arabic_name] = game_class
-                    logger.info(f"  ✅ {arabic_name}")
+                    logger.info(f"  ✅ {arabic_name} ({game_class.__name__})")
                 else:
                     self.failed.append(arabic_name)
                     logger.warning(f"  ⚠️ {arabic_name} - No Game class found")
@@ -84,7 +78,22 @@ class Games:
         logger.info(f"✅ Loaded {len(self.loaded)}/{len(self.GAME_MAPPING)} games")
         
         if self.failed:
-            logger.warning(f"⚠️ Failed: {', '.join(self.failed)}")
+            logger.warning(f"⚠️ Failed to load: {', '.join(self.failed)}")
+    
+    def _find_game_class(self, module):
+        """البحث عن كلاس اللعبة في الموديول"""
+        # محاولة 1: كلاس "Game"
+        if hasattr(module, "Game"):
+            return module.Game
+        
+        # محاولة 2: البحث عن أي كلاس ينتهي بـ "Game"
+        for attr_name in dir(module):
+            if attr_name.endswith("Game") and not attr_name.startswith("_"):
+                attr = getattr(module, attr_name)
+                if isinstance(attr, type):  # تأكد أنه كلاس
+                    return attr
+        
+        return None
     
     def start_game(self, user_id: str, game_name: str):
         """
@@ -99,7 +108,7 @@ class Games:
         """
         # التحقق من وجود اللعبة
         if game_name not in self.loaded:
-            logger.warning(f"Game not found: {game_name}")
+            logger.warning(f"❌ Game not found: {game_name}")
             return None
         
         try:
@@ -128,6 +137,9 @@ class Games:
             
         except Exception as e:
             logger.error(f"❌ Error starting game {game_name}: {e}", exc_info=True)
+            # حذف الجلسة الفاشلة
+            if user_id in self.active_sessions:
+                del self.active_sessions[user_id]
             return None
     
     def get_game(self, user_id: str) -> Optional[object]:
@@ -163,12 +175,12 @@ class Games:
         """
         if user_id in self.active_sessions:
             game = self.active_sessions[user_id]
-            game_name = game.game_name if hasattr(game, 'game_name') else 'Unknown'
+            game_name = getattr(game, 'game_name', 'Unknown')
             
             del self.active_sessions[user_id]
             logger.info(f"🛑 {user_id} ended {game_name}")
     
-    def get_available_games(self) -> list:
+    def get_available_games(self) -> List[str]:
         """
         الحصول على قائمة الألعاب المتاحة
         
@@ -176,6 +188,16 @@ class Games:
             قائمة أسماء الألعاب بالعربي
         """
         return list(self.loaded.keys())
+    
+    def cleanup_inactive_sessions(self, timeout_minutes: int = 30):
+        """
+        تنظيف الجلسات غير النشطة (للاستخدام المستقبلي)
+        
+        Args:
+            timeout_minutes: مدة عدم النشاط بالدقائق
+        """
+        # TODO: إضافة timestamp لكل جلسة وحذف القديمة
+        pass
     
     def get_stats(self) -> dict:
         """
