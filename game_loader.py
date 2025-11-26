@@ -1,80 +1,82 @@
 """
 Bot Mesh v7.0 - Game Loader
-تحميل الألعاب تلقائياً بأسماء عربية رسمية
+تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 """
 
 import os
-import sys
 import importlib
-import inspect
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 class GameLoader:
+    """
+    مدير تحميل الألعاب من مجلد games/
+    مع ربط الأسماء العربية بالملفات البرمجية
+    """
 
-    def __init__(self):
+    # خريطة الأسماء العربية -> أسماء الملفات داخل مجلد games
+    GAME_MAP = {
+        "تخمين": "guess_game",
+        "ذكاء": "iq_game",
+        "رياضيات": "math_game",
+        "سرعة": "speed_game",
+        "سلسلة": "sequence_game",
+        "ترتيب": "order_game",
+        "تكوين": "build_game",
+        "كلمة ولون": "word_color_game",
+        "أضداد": "opposites_game",
+        "أغنية": "song_game",
+        "لعبة": "general_game",
+        "توافق": "match_game"
+    }
+
+    def __init__(self, games_folder="games"):
+        self.games_folder = games_folder
         self.games = {}
+        self.load_games()
 
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.games_dir = os.path.join(current_dir, 'games')
-
-        if not os.path.exists(self.games_dir):
-            logger.error("مجلد games غير موجود")
+    # --------------------------------------------------
+    # تحميل جميع الألعاب عند بدء التشغيل
+    # --------------------------------------------------
+    def load_games(self):
+        if not os.path.exists(self.games_folder):
+            logger.warning(f"مجلد الألعاب غير موجود: {self.games_folder}")
             return
 
-        if self.games_dir not in sys.path:
-            sys.path.insert(0, self.games_dir)
-
-        self._load_games()
-
-        if not self.games:
-            logger.warning("لم يتم تحميل أي لعبة")
-
-    def _load_games(self):
-
-        game_mapping = {
-            "iq_game": "ذكاء",
-            "math_game": "رياضيات",
-            "fast_typing_game": "سرعة",
-            "letters_words_game": "تكوين",
-            "word_color_game": "ألوان",
-            "opposite_game": "أضداد",
-            "chain_words_game": "سلسلة",
-            "guess_game": "تخمين",
-            "song_game": "أغنية",
-            "scramble_word_game": "كلمات",
-            "human_animal_plant_game": "لعبة",
-            "compatibility_game": "توافق"
-        }
-
-        for file_name, game_name in game_mapping.items():
+        for arabic_name, file_name in self.GAME_MAP.items():
             try:
-                module = importlib.import_module(file_name)
+                module_path = f"{self.games_folder}.{file_name}"
+                module = importlib.import_module(module_path)
 
-                for name, obj in inspect.getmembers(module, inspect.isclass):
-
-                    if (
-                        hasattr(obj, 'start') and
-                        hasattr(obj, 'get_question') and
-                        hasattr(obj, 'check_answer')
-                    ):
-                        self.games[game_name] = obj
-                        logger.info(f"تم تحميل اللعبة: {game_name}")
-                        break
+                if hasattr(module, "Game"):
+                    self.games[arabic_name] = module.Game
+                    logger.info(f"تم تحميل اللعبة: {arabic_name}")
+                else:
+                    logger.warning(f"الملف {file_name} لا يحتوي على Game class")
 
             except Exception as e:
-                logger.warning(f"{game_name}: الملف غير موجود أو به خطأ")
+                logger.error(f"فشل تحميل اللعبة {arabic_name}: {e}")
 
-    def create_game(self, game_name):
+    # --------------------------------------------------
+    # إنشاء كائن لعبة جديد حسب الاسم العربي
+    # --------------------------------------------------
+    def create_game(self, arabic_name):
+        game_class = self.games.get(arabic_name)
 
-        if game_name not in self.games:
-            logger.warning(f"اللعبة غير موجودة: {game_name}")
+        if not game_class:
+            logger.warning(f"لعبة غير مسجلة: {arabic_name}")
             return None
 
         try:
-            GameClass = self.games[game_name]
-            return GameClass()
+            return game_class()
         except Exception as e:
-            logger.error(f"خطأ في إنشاء اللعبة {game_name}")
+            logger.error(f"خطأ في إنشاء اللعبة {arabic_name}: {e}")
             return None
+
+    # --------------------------------------------------
+    # إرجاع قائمة الألعاب المتاحة
+    # --------------------------------------------------
+    def list_games(self):
+        return list(self.games.keys())
