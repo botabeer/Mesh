@@ -4,10 +4,8 @@ services:
   bot:
     build: .
     container_name: bot-mesh
-
     ports:
       - "10000:10000"
-
     environment:
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
@@ -15,5 +13,21 @@ services:
       - FLASK_ENV=production
       - TZ=Asia/Riyadh
       - PYTHONUNBUFFERED=1
-
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - bot-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  bot-network:
+    driver: bridge
