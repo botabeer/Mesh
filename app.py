@@ -341,28 +341,28 @@ def handle_message(event):
                 db.delete_active_game(user_id)
                 
                 # إنشاء لعبة جديدة
-                game = game_loader.create_game(game_name)
-                
-                if not game:
-                    available = ", ".join(game_loader.get_available_games())
-                    response = TextMessage(
-                        text=f"اللعبة '{game_name}' غير موجودة\n\n"
-                             f"الألعاب المتاحة:\n{available}"
-                    )
-                else:
-                    with games_lock:
-                        active_games[user_id] = game
-                    
-                    game.start()
-                    q = game.get_question()
-                    
-                    response = ui.build_game_question(
-                        game_name = getattr(game, "name", game.__class__.__name__)
-                        q['text'],
-                        q['round'],
-                        q['total_rounds'],
-                        theme
-                    )
+game = game_loader.create_game(game_name)
+
+if not game:
+    available = ", ".join(game_loader.get_available_games())
+    response = TextMessage(
+        text=f"اللعبة '{game_name}' غير موجودة\n\n"
+             f"الألعاب المتاحة:\n{available}"
+    )
+else:
+    with games_lock:
+        active_games[user_id] = game
+
+    game.start()
+    q = game.get_question()
+
+    response = ui.build_game_question(
+        game_name=getattr(game, "name", game.__class__.__name__),
+        q['text'],
+        q['round'],
+        q['total_rounds'],
+        theme
+    )
             
             # إجابة داخل لعبة
             elif user_id in active_games:
