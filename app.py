@@ -73,8 +73,11 @@ handler = WebhookHandler(Config.LINE_CHANNEL_SECRET)
 # ============================================================================
 # Initialize Database
 # ============================================================================
-db = Database("data/botmesh.db")
-logger.info("✅ Database initialized")
+# استخدام /tmp على Render (ephemeral لكن يعمل)
+import tempfile
+DB_PATH = os.path.join(tempfile.gettempdir(), "botmesh.db")
+db = Database(DB_PATH)
+logger.info(f"✅ Database initialized at {DB_PATH}")
 
 # ============================================================================
 # Initialize Game Loader
