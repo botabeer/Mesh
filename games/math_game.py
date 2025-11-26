@@ -1,6 +1,6 @@
 """
-🔢 لعبة الرياضيات - Bot Mesh v7.0
-أسئلة حسابية ذكية مع صعوبة متدرجة
+🔢 لعبة الرياضيات - Bot Mesh v7.0 Enhanced
+أسئلة حسابية ذكية مع صعوبة متدرجة وتصميم احترافي
 Created by: Abeer Aldosari © 2025
 """
 
@@ -9,28 +9,52 @@ import random
 from typing import Dict, Any, Optional
 
 
-class MathGame(BaseGame):
-    """لعبة الرياضيات المحسنة"""
+class Game(BaseGame):
+    """لعبة الرياضيات المحسّنة"""
 
-    def __init__(self, line_bot_api=None):
-        super().__init__(line_bot_api, questions_count=5)
+    def __init__(self):
+        super().__init__(questions_count=5)
         self.game_name = "رياضيات"
         self.game_icon = "🔢"
         
-        # مستويات الصعوبة
+        # مستويات الصعوبة المتدرجة
         self.difficulty_levels = {
-            1: {"min": 1, "max": 20, "ops": ['+', '-']},
-            2: {"min": 10, "max": 50, "ops": ['+', '-', '×']},
-            3: {"min": 20, "max": 100, "ops": ['+', '-', '×']},
-            4: {"min": 50, "max": 200, "ops": ['+', '-', '×']},
-            5: {"min": 100, "max": 500, "ops": ['+', '-', '×', '÷']}
+            1: {
+                "name": "سهل",
+                "min": 1,
+                "max": 20,
+                "ops": ['+', '-']
+            },
+            2: {
+                "name": "متوسط",
+                "min": 10,
+                "max": 50,
+                "ops": ['+', '-', '×']
+            },
+            3: {
+                "name": "صعب",
+                "min": 20,
+                "max": 100,
+                "ops": ['+', '-', '×']
+            },
+            4: {
+                "name": "صعب جداً",
+                "min": 50,
+                "max": 200,
+                "ops": ['+', '-', '×']
+            },
+            5: {
+                "name": "خبير",
+                "min": 100,
+                "max": 500,
+                "ops": ['+', '-', '×', '÷']
+            }
         }
         
-        self.previous_question = None
-        self.previous_answer = None
+        self.current_question_data = None
 
     def generate_math_question(self):
-        """توليد سؤال رياضي"""
+        """توليد سؤال رياضي حسب المستوى"""
         level = min(self.current_question + 1, 5)
         config = self.difficulty_levels[level]
         
@@ -65,10 +89,11 @@ class MathGame(BaseGame):
         return {
             "question": question,
             "answer": str(answer),
-            "level": level
+            "level": level,
+            "level_name": config["name"]
         }
 
-    def start_game(self):
+    def start(self):
         """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
@@ -76,22 +101,21 @@ class MathGame(BaseGame):
         self.previous_answer = None
         self.answered_users.clear()
         return self.get_question()
-    
-    def start(self):
-        """Alias"""
-        return self.start_game()
 
     def get_question(self):
-        """إنشاء سؤال مع واجهة Flex"""
+        """إنشاء سؤال مع واجهة Flex احترافية"""
         q_data = self.generate_math_question()
+        self.current_question_data = q_data
         self.current_answer = q_data["answer"]
         
-        colors = self.get_theme_colors()
+        colors = self.get_theme_colors("أزرق")
+        
+        # محتوى الـ body
+        body_contents = []
         
         # قسم السؤال السابق
-        previous_section = []
         if self.previous_question and self.previous_answer:
-            previous_section = [
+            body_contents.extend([
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -126,8 +150,50 @@ class MathGame(BaseGame):
                     "margin": "md"
                 },
                 {"type": "separator", "color": colors["shadow1"], "margin": "md"}
-            ]
+            ])
         
+        # مستوى الصعوبة
+        body_contents.append({
+            "type": "text",
+            "text": f"📊 المستوى: {q_data['level_name']}",
+            "size": "sm",
+            "color": colors["primary"],
+            "weight": "bold",
+            "align": "center"
+        })
+        
+        # السؤال
+        body_contents.append({
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": q_data["question"],
+                    "size": "xxl",
+                    "color": colors["text"],
+                    "weight": "bold",
+                    "align": "center"
+                }
+            ],
+            "backgroundColor": colors["card"],
+            "cornerRadius": "20px",
+            "paddingAll": "30px",
+            "margin": "md"
+        })
+        
+        # معلومة إضافية
+        body_contents.append({
+            "type": "text",
+            "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
+            "size": "xs",
+            "color": colors["text2"],
+            "align": "center",
+            "wrap": True,
+            "margin": "md"
+        })
+        
+        # بناء الـ Flex
         flex_content = {
             "type": "bubble",
             "size": "mega",
@@ -149,7 +215,7 @@ class MathGame(BaseGame):
                             },
                             {
                                 "type": "text",
-                                "text": f"جولة {self.current_question + 1}/5",
+                                "text": f"جولة {self.current_question + 1}/{self.questions_count}",
                                 "size": "sm",
                                 "color": colors["text2"],
                                 "align": "end",
@@ -165,41 +231,7 @@ class MathGame(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "md",
-                "contents": previous_section + [
-                    {
-                        "type": "text",
-                        "text": f"📊 المستوى {q_data['level']}",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "align": "center"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": q_data["question"],
-                                "size": "xxl",
-                                "color": colors["primary"],
-                                "weight": "bold",
-                                "align": "center"
-                            }
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "30px"
-                    },
-                    {
-                        "type": "text",
-                        "text": "💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة",
-                        "size": "xs",
-                        "color": colors["text2"],
-                        "align": "center",
-                        "wrap": True,
-                        "margin": "md"
-                    }
-                ],
+                "contents": body_contents,
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
@@ -215,14 +247,14 @@ class MathGame(BaseGame):
                         "contents": [
                             {
                                 "type": "button",
-                                "action": {"type": "message", "label": "💡 لمّح", "text": "لمح"},
+                                "action": {"type": "message", "label": "💡 تلميح", "text": "لمح"},
                                 "style": "secondary",
                                 "height": "sm",
                                 "color": colors["shadow1"]
                             },
                             {
                                 "type": "button",
-                                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
+                                "action": {"type": "message", "label": "🔍 إجابة", "text": "جاوب"},
                                 "style": "secondary",
                                 "height": "sm",
                                 "color": colors["shadow1"]
@@ -246,7 +278,10 @@ class MathGame(BaseGame):
             }
         }
         
-        return self._create_flex_with_buttons(f"{self.game_name} - جولة {self.current_question + 1}", flex_content)
+        return self._create_flex_with_buttons(
+            f"{self.game_name} - جولة {self.current_question + 1}",
+            flex_content
+        )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         """فحص الإجابة"""
@@ -256,7 +291,7 @@ class MathGame(BaseGame):
         answer = user_answer.strip().replace(',', '').replace('،', '').replace(' ', '')
         normalized = self.normalize_text(answer)
         
-        # التلميح
+        # معالجة التلميح
         if normalized == "لمح":
             hint = f"💡 الإجابة عدد من {len(self.current_answer)} خانات"
             return {
@@ -265,13 +300,14 @@ class MathGame(BaseGame):
                 'points': 0
             }
         
-        # كشف الإجابة
+        # معالجة كشف الإجابة
         if normalized == "جاوب":
             reveal = f"🔢 الإجابة: {self.current_answer}"
             
-            # حفظ السؤال والجواب
-            self.previous_question = "السؤال السابق"
-            self.previous_answer = self.current_answer
+            # حفظ السؤال والإجابة
+            if self.current_question_data:
+                self.previous_question = self.current_question_data["question"]
+                self.previous_answer = self.current_answer
             
             # الانتقال للسؤال التالي
             self.current_question += 1
@@ -283,7 +319,11 @@ class MathGame(BaseGame):
                 return result
             
             next_q = self.get_question()
-            return {'message': reveal, 'response': next_q, 'points': 0}
+            return {
+                'message': reveal,
+                'response': next_q,
+                'points': 0
+            }
         
         # التحقق من أن الإجابة رقم
         try:
@@ -291,8 +331,8 @@ class MathGame(BaseGame):
             correct_num = int(self.current_answer)
         except ValueError:
             return {
-                'message': "❌ الرجاء إدخال رقم صحيح",
-                'response': self._create_text_message("❌ الرجاء إدخال رقم صحيح"),
+                'message': "❌ الرجاء إدخال رقم صحيح فقط",
+                'response': self._create_text_message("❌ الرجاء إدخال رقم صحيح فقط"),
                 'points': 0
             }
         
@@ -300,9 +340,10 @@ class MathGame(BaseGame):
         if user_num == correct_num:
             points = self.add_score(user_id, display_name, 10)
             
-            # حفظ السؤال والجواب
-            self.previous_question = "السؤال السابق"
-            self.previous_answer = self.current_answer
+            # حفظ السؤال والإجابة
+            if self.current_question_data:
+                self.previous_question = self.current_question_data["question"]
+                self.previous_answer = self.current_answer
             
             # الانتقال للسؤال التالي
             self.current_question += 1
@@ -311,11 +352,11 @@ class MathGame(BaseGame):
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result['points'] = points
-                result['message'] = f"✅ صحيح يا {display_name}!\n+{points} نقطة\n\n{result.get('message', '')}"
+                result['message'] = f"✅ صحيح يا {display_name}!\n🔢 {self.current_answer}\n+{points} نقطة\n\n{result.get('message', '')}"
                 return result
             
             next_q = self.get_question()
-            success_msg = f"✅ صحيح يا {display_name}!\n+{points} نقطة"
+            success_msg = f"✅ صحيح يا {display_name}!\n🔢 {self.current_answer}\n+{points} نقطة"
             
             return {
                 'message': success_msg,
@@ -323,6 +364,7 @@ class MathGame(BaseGame):
                 'points': points
             }
         
+        # إجابة خاطئة
         return {
             'message': "❌ إجابة غير صحيحة، حاول مرة أخرى",
             'response': self._create_text_message("❌ إجابة غير صحيحة، حاول مرة أخرى"),
@@ -331,14 +373,9 @@ class MathGame(BaseGame):
 
     def get_game_info(self) -> Dict[str, Any]:
         """معلومات اللعبة"""
-        return {
-            "name": "لعبة الرياضيات",
-            "emoji": "🔢",
+        info = super().get_game_info()
+        info.update({
             "description": "أسئلة حسابية مع صعوبة متدرجة",
-            "questions_count": self.questions_count,
-            "supports_hint": True,
-            "supports_reveal": True,
-            "active": self.game_active,
-            "current_question": self.current_question,
-            "players_count": len(self.scores)
-        }
+            "levels": len(self.difficulty_levels)
+        })
+        return info
