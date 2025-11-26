@@ -14,7 +14,7 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-class GameLoader:
+class Games:
     """محمّل الألعاب الديناميكي"""
     
     # ربط الأسماء العربية بملفات الألعاب
