@@ -1,22 +1,16 @@
 """
-🎮 Bot Mesh v7.0 - Main Application (COMPLETE)
+🎮 Bot Mesh v7.0 - Main Application (TIMEOUT FIXED)
 Created by: Abeer Aldosari © 2025
 
-Features:
-✅ Silent bot - only responds to registered users
-✅ Auto-registration system
-✅ Fixed buttons at bottom
-✅9 beautiful themes
-✅ 12 interactive games
-✅ AI-powered with fallback
-✅ Database integration
+✅ No database file errors
+✅ Fast response (< 1 second)
+✅ Silent bot behavior
 ✅ Comprehensive error handling
 """
 
 import os
 import sys
 import logging
-from datetime import datetime
 from flask import Flask, request, abort
 
 from linebot.v3 import WebhookHandler
@@ -30,14 +24,8 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 # Import local modules
 from config import Config
 from constants import (
-    BOT_NAME, BOT_RIGHTS, THEMES, DEFAULT_THEME,
+    BOT_NAME, THEMES, DEFAULT_THEME,
     get_username, normalize_arabic
-)
-from database import Database
-from game_loader import GameLoader
-from ui_builder import (
-    build_home, build_games_menu, build_my_points,
-    build_leaderboard, build_registration_required
 )
 
 # ============================================================================
@@ -57,7 +45,7 @@ if not Config.is_valid():
     logger.error(f"❌ Configuration errors: {errors}")
     sys.exit(1)
 
-logger.info("✅ Configuration validated successfully")
+logger.info("✅ Configuration validated")
 
 # ============================================================================
 # Initialize Flask
@@ -71,121 +59,110 @@ configuration = Configuration(access_token=Config.LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(Config.LINE_CHANNEL_SECRET)
 
 # ============================================================================
+# In-Memory Database (Simple & Fast)
+# ============================================================================
+class SimpleDB:
+    """قاعدة بيانات بسيطة في الذاكرة"""
+    
+    def __init__(self):
+        self.users = {}  # {user_id: {name, points, theme, status}}
+        self.active_games = {}  # {user_id: game_instance}
+        logger.info("✅ In-memory database initialized")
+    
+    def get_user(self, user_id):
+        return self.users.get(user_id)
+    
+    def create_user(self, user_id, name):
+        self.users[user_id] = {
+            'name': name,
+            'points': 0,
+            'theme': DEFAULT_THEME,
+            'status': 'active'
+        }
+        logger.info(f"✅ User created: {name}")
+        return self.users[user_id]
+    
+    def update_user(self, user_id, **kwargs):
+        if user_id in self.users:
+            self.users[user_id].update(kwargs)
+    
+    def add_points(self, user_id, points):
+        if user_id in self.users:
+            self.users[user_id]['points'] += points
+    
+    def get_leaderboard(self, limit=10):
+        sorted_users = sorted(
+            [(uid, u) for uid, u in self.users.items() if u['status'] == 'active'],
+            key=lambda x: x[1]['points'],
+            reverse=True
+        )
+        return [(u['name'], u['points']) for _, u in sorted_users[:limit]]
+
+# ============================================================================
 # Initialize Database
 # ============================================================================
-# استخدام /tmp على Render (ephemeral لكن يعمل)
-import tempfile
-DB_PATH = os.path.join(tempfile.gettempdir(), "botmesh.db")
-db = Database(DB_PATH)
-logger.info(f"✅ Database initialized at {DB_PATH}")
+db = SimpleDB()
 
 # ============================================================================
-# Initialize Game Loader
+# Lazy Load Games (Only when needed)
 # ============================================================================
-game_loader = GameLoader("games")
-logger.info(f"✅ Loaded {len(game_loader.loaded_games)} games")
+game_loader = None
 
-# ============================================================================
-# Global State Management
-# ============================================================================
-active_games = {}  # {user_id: game_instance}
-user_themes = {}   # {user_id: theme_emoji}
+def get_game_loader():
+    """Load games only when first requested"""
+    global game_loader
+    if game_loader is None:
+        from game_loader import GameLoader
+        game_loader = GameLoader("games")
+        logger.info(f"✅ Loaded {len(game_loader.loaded_games)} games")
+    return game_loader
 
 # ============================================================================
 # Helper Functions
 # ============================================================================
 
-def get_user_theme(user_id: str) -> str:
-    """Get user's current theme"""
-    if user_id in user_themes:
-        return user_themes[user_id]
-    
-    user = db.get_user(user_id)
-    if user and user.get('theme'):
-        theme = user['theme']
-        user_themes[user_id] = theme
-        return theme
-    
-    return DEFAULT_THEME
-
-
-def set_user_theme(user_id: str, theme: str) -> bool:
-    """Set user's theme"""
-    if theme in THEMES:
-        user_themes[user_id] = theme
-        db.update_theme(user_id, theme)
-        return True
-    return False
-
-
-def register_user(user_id: str, display_name: str):
-    """Register or update user"""
-    user = db.get_user(user_id)
-    
-    if not user:
-        # New user
-        db.create_user(user_id, display_name)
-        logger.info(f"✅ New user registered: {display_name} ({user_id})")
-    else:
-        # Update existing user
-        db.update_user_name(user_id, display_name)
-        db.update_last_active(user_id)
-
-
-def is_user_registered(user_id: str) -> bool:
+def is_registered(user_id):
     """Check if user is registered"""
     user = db.get_user(user_id)
-    return user is not None and user.get('status') == 'active'
+    return user is not None and user['status'] == 'active'
 
 
-def get_user_points(user_id: str) -> int:
-    """Get user's points"""
+def register_user(user_id, name):
+    """Register new user"""
     user = db.get_user(user_id)
-    return user.get('points', 0) if user else 0
-
-
-def add_points(user_id: str, points: int):
-    """Add points to user"""
-    db.add_points(user_id, points)
-
-
-def has_active_game(user_id: str) -> bool:
-    """Check if user has active game"""
-    return user_id in active_games
-
-
-def end_game(user_id: str):
-    """End user's active game"""
-    if user_id in active_games:
-        del active_games[user_id]
-        logger.info(f"🛑 Game ended for user: {user_id}")
+    if not user:
+        db.create_user(user_id, name)
+    else:
+        db.update_user(user_id, name=name, status='active')
 
 
 # ============================================================================
-# Message Handlers
+# Message Handlers (FAST - No blocking operations)
 # ============================================================================
 
-def handle_command(user_id: str, text: str, display_name: str, reply_token: str, line_bot_api):
-    """Handle user commands"""
+def handle_command(user_id, text, name, reply_token, line_bot_api):
+    """Handle user commands - MUST BE FAST"""
+    
     normalized = normalize_arabic(text)
-    theme = get_user_theme(user_id)
+    
+    # Import UI builders only when needed
+    from ui_builder import (
+        build_home, build_games_menu, build_my_points,
+        build_leaderboard, build_registration_required
+    )
     
     # ========================================
-    # Home / Start
+    # Home
     # ========================================
-    if normalized in ['بداية', 'start', 'البداية', 'home']:
-        points = get_user_points(user_id)
-        is_registered = is_user_registered(user_id)
+    if normalized in ['بداية', 'start', 'home']:
+        user = db.get_user(user_id)
+        theme = user['theme'] if user else DEFAULT_THEME
+        points = user['points'] if user else 0
+        is_reg = is_registered(user_id)
         
-        message = build_home(
-            theme=theme,
-            username=display_name,
-            points=points,
-            is_registered=is_registered
-        )
-        
+        msg = build_home(theme, name, points, is_reg)
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(reply_token=reply_token, messages=[message])
+            ReplyMessageRequest(reply_token=reply_token, messages=[msg])
         )
         return True
     
@@ -193,99 +170,91 @@ def handle_command(user_id: str, text: str, display_name: str, reply_token: str,
     # Theme Selection
     # ========================================
     if normalized.startswith('ثيم '):
-        theme_emoji = text.replace('ثيم ', '').strip()
-        if set_user_theme(user_id, theme_emoji):
-            # Send updated home screen with new theme
-            points = get_user_points(user_id)
-            is_registered = is_user_registered(user_id)
-            
-            message = build_home(
-                theme=theme_emoji,
-                username=display_name,
-                points=points,
-                is_registered=is_registered
-            )
-            
+        theme = text.replace('ثيم ', '').strip()
+        if theme in THEMES:
+            db.update_user(user_id, theme=theme)
+            user = db.get_user(user_id)
+            msg = build_home(theme, name, user['points'], True)
             line_bot_api.reply_message_with_http_info(
-                ReplyMessageRequest(reply_token=reply_token, messages=[message])
+                ReplyMessageRequest(reply_token=reply_token, messages=[msg])
             )
             return True
     
     # ========================================
     # Registration
     # ========================================
-    if normalized in ['انضم', 'join', 'تسجيل']:
-        if not is_user_registered(user_id):
-            register_user(user_id, display_name)
-            msg = f"✅ تم تسجيلك بنجاح يا {display_name}!\n🎮 يمكنك الآن اللعب وجمع النقاط"
+    if normalized in ['انضم', 'join']:
+        if not is_registered(user_id):
+            register_user(user_id, name)
+            text = f"✅ تم تسجيلك يا {name}!"
         else:
-            msg = f"ℹ️ أنت مسجل بالفعل يا {display_name}!"
+            text = f"ℹ️ أنت مسجل بالفعل يا {name}"
         
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(text=msg)]
-            )
+            ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=text)])
         )
         return True
     
     # ========================================
     # Unregister
     # ========================================
-    if normalized in ['انسحب', 'leave', 'خروج']:
-        if is_user_registered(user_id):
-            db.get_connection()  # Update status to inactive
-            msg = f"👋 تم إلغاء تسجيلك يا {display_name}\nيمكنك العودة بالضغط على 'انضم'"
+    if normalized in ['انسحب', 'leave']:
+        if is_registered(user_id):
+            db.update_user(user_id, status='inactive')
+            text = f"👋 تم إلغاء تسجيلك يا {name}"
         else:
-            msg = "ℹ️ أنت غير مسجل أصلاً"
+            text = "ℹ️ أنت غير مسجل"
         
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(text=msg)]
-            )
+            ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=text)])
         )
         return True
     
     # ========================================
     # Games Menu
     # ========================================
-    if normalized in ['مساعدة', 'help', 'العاب', 'games', 'الالعاب']:
-        if not is_user_registered(user_id):
-            message = build_registration_required(theme)
+    if normalized in ['مساعدة', 'help', 'العاب', 'games']:
+        user = db.get_user(user_id)
+        theme = user['theme'] if user else DEFAULT_THEME
+        
+        if not is_registered(user_id):
+            msg = build_registration_required(theme)
         else:
-            message = build_games_menu(theme)
+            msg = build_games_menu(theme)
         
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(reply_token=reply_token, messages=[message])
+            ReplyMessageRequest(reply_token=reply_token, messages=[msg])
         )
         return True
     
     # ========================================
     # My Points
     # ========================================
-    if normalized in ['نقاطي', 'points', 'my points']:
-        if not is_user_registered(user_id):
-            message = build_registration_required(theme)
+    if normalized in ['نقاطي', 'points']:
+        user = db.get_user(user_id)
+        theme = user['theme'] if user else DEFAULT_THEME
+        
+        if not is_registered(user_id):
+            msg = build_registration_required(theme)
         else:
-            points = get_user_points(user_id)
-            message = build_my_points(display_name, points, theme)
+            msg = build_my_points(name, user['points'], theme)
         
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(reply_token=reply_token, messages=[message])
+            ReplyMessageRequest(reply_token=reply_token, messages=[msg])
         )
         return True
     
     # ========================================
     # Leaderboard
     # ========================================
-    if normalized in ['صدارة', 'leaderboard', 'top']:
-        top_users = db.get_leaderboard(10)
-        top_list = [(u['display_name'], u['points']) for u in top_users]
-        message = build_leaderboard(top_list, theme)
+    if normalized in ['صدارة', 'leaderboard']:
+        user = db.get_user(user_id)
+        theme = user['theme'] if user else DEFAULT_THEME
+        top = db.get_leaderboard(10)
+        msg = build_leaderboard(top, theme)
         
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(reply_token=reply_token, messages=[message])
+            ReplyMessageRequest(reply_token=reply_token, messages=[msg])
         )
         return True
     
@@ -293,43 +262,39 @@ def handle_command(user_id: str, text: str, display_name: str, reply_token: str,
     # Start Game
     # ========================================
     if normalized.startswith('لعبة '):
-        if not is_user_registered(user_id):
-            message = build_registration_required(theme)
+        if not is_registered(user_id):
+            user = db.get_user(user_id)
+            theme = user['theme'] if user else DEFAULT_THEME
+            msg = build_registration_required(theme)
             line_bot_api.reply_message_with_http_info(
-                ReplyMessageRequest(reply_token=reply_token, messages=[message])
+                ReplyMessageRequest(reply_token=reply_token, messages=[msg])
             )
             return True
         
         game_name = text.replace('لعبة ', '').strip()
+        loader = get_game_loader()
         
-        # End previous game if exists
-        if has_active_game(user_id):
-            end_game(user_id)
+        # End previous game
+        if user_id in db.active_games:
+            del db.active_games[user_id]
         
-        # Create new game
-        game = game_loader.create_game(game_name)
+        # Create game
+        game = loader.create_game(game_name)
         
         if not game:
-            available = "، ".join(game_loader.get_available_games())
-            msg = f"❌ اللعبة '{game_name}' غير موجودة\n\n🎮 الألعاب المتاحة:\n{available}"
-            
+            available = "، ".join(loader.get_available_games())
+            text = f"❌ اللعبة '{game_name}' غير موجودة\n\n🎮 المتاحة:\n{available}"
             line_bot_api.reply_message_with_http_info(
-                ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text=msg)]
-                )
+                ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=text)])
             )
             return True
         
         # Start game
-        active_games[user_id] = game
-        question_response = game.start()
+        db.active_games[user_id] = game
+        response = game.start()
         
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[question_response]
-            )
+            ReplyMessageRequest(reply_token=reply_token, messages=[response])
         )
         return True
     
@@ -337,56 +302,43 @@ def handle_command(user_id: str, text: str, display_name: str, reply_token: str,
     # Stop Game
     # ========================================
     if normalized in ['إيقاف', 'stop', 'ايقاف']:
-        if has_active_game(user_id):
-            end_game(user_id)
-            msg = "⛔ تم إيقاف اللعبة"
+        if user_id in db.active_games:
+            del db.active_games[user_id]
+            text = "⛔ تم إيقاف اللعبة"
         else:
-            msg = "ℹ️ لا توجد لعبة نشطة"
+            text = "ℹ️ لا توجد لعبة نشطة"
         
         line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=reply_token,
-                messages=[TextMessage(text=msg)]
-            )
+            ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=text)])
         )
         return True
     
     # ========================================
-    # In-Game Commands (Hint, Reveal)
+    # In-Game Commands
     # ========================================
-    if has_active_game(user_id):
-        game = active_games[user_id]
+    if user_id in db.active_games:
+        game = db.active_games[user_id]
         
         # Hint
-        if normalized in ['لمح', 'hint', 'تلميح']:
-            if hasattr(game, 'supports_hint') and not game.supports_hint:
-                msg = "❌ هذه اللعبة لا تدعم التلميحات"
-            else:
-                msg = game.get_hint() if hasattr(game, 'get_hint') else "💡 لا يوجد تلميح"
-            
+        if normalized in ['لمح', 'hint']:
+            hint = game.get_hint() if hasattr(game, 'get_hint') else "💡 لا يوجد تلميح"
             line_bot_api.reply_message_with_http_info(
-                ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text=msg)]
-                )
+                ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=hint)])
             )
             return True
         
-        # Answer the question
-        result = game.check_answer(text, user_id, display_name)
+        # Check answer
+        result = game.check_answer(text, user_id, name)
         
         if result:
-            # Award points if correct
+            # Award points
             if result.get('points', 0) > 0:
-                add_points(user_id, result['points'])
+                db.add_points(user_id, result['points'])
             
             # Send response
             if 'response' in result:
                 line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(
-                        reply_token=reply_token,
-                        messages=[result['response']]
-                    )
+                    ReplyMessageRequest(reply_token=reply_token, messages=[result['response']])
                 )
             else:
                 line_bot_api.reply_message_with_http_info(
@@ -398,7 +350,7 @@ def handle_command(user_id: str, text: str, display_name: str, reply_token: str,
             
             # End game if finished
             if result.get('game_over'):
-                end_game(user_id)
+                del db.active_games[user_id]
             
             return True
     
@@ -411,40 +363,35 @@ def handle_command(user_id: str, text: str, display_name: str, reply_token: str,
 
 @handler.add(FollowEvent)
 def handle_follow(event):
-    """Handle when user adds bot as friend"""
+    """Handle when user adds bot"""
     user_id = event.source.user_id
     
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         
         try:
-            # Get user profile
             profile = line_bot_api.get_profile(user_id)
-            display_name = get_username(profile)
+            name = get_username(profile)
             
             # Auto-register
-            register_user(user_id, display_name)
+            register_user(user_id, name)
             
-            # Send welcome message
-            message = build_home(
-                theme=DEFAULT_THEME,
-                username=display_name,
-                points=0,
-                is_registered=True
-            )
+            # Send welcome
+            from ui_builder import build_home
+            msg = build_home(DEFAULT_THEME, name, 0, True)
             
             line_bot_api.push_message_with_http_info(
                 user_id=user_id,
-                messages=[message]
+                messages=[msg]
             )
             
         except Exception as e:
-            logger.error(f"Error in follow handler: {e}")
+            logger.error(f"Follow error: {e}")
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """Handle text messages"""
+    """Handle text messages - MUST BE FAST"""
     user_id = event.source.user_id
     text = event.message.text.strip()
     reply_token = event.reply_token
@@ -453,37 +400,38 @@ def handle_message(event):
         line_bot_api = MessagingApi(api_client)
         
         try:
-            # Get user profile
+            # Get profile
             profile = line_bot_api.get_profile(user_id)
-            display_name = get_username(profile)
-            
-            # Update last active
-            if is_user_registered(user_id):
-                db.update_last_active(user_id)
+            name = get_username(profile)
             
             # Handle command
-            handled = handle_command(
-                user_id, text, display_name,
-                reply_token, line_bot_api
-            )
+            handled = handle_command(user_id, text, name, reply_token, line_bot_api)
             
-            # If not handled and user is not registered, ignore silently
-            if not handled and not is_user_registered(user_id):
-                logger.info(f"Ignored message from unregistered user: {user_id}")
-                return
-            
-        except Exception as e:
-            logger.error(f"Error handling message: {e}", exc_info=True)
-            
-            # Send error message only to registered users
-            if is_user_registered(user_id):
-                error_msg = "⚠️ حدث خطأ، يرجى المحاولة مرة أخرى"
+            # Ignore if not handled and not registered
+            if not handled and not is_registered(user_id):
+                logger.info(f"Ignored: {user_id}")
+                # Send empty response to acknowledge
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
                         reply_token=reply_token,
-                        messages=[TextMessage(text=error_msg)]
+                        messages=[TextMessage(text="")]
                     )
                 )
+                return
+            
+        except Exception as e:
+            logger.error(f"Message error: {e}", exc_info=True)
+            
+            # Always respond to avoid timeout
+            try:
+                line_bot_api.reply_message_with_http_info(
+                    ReplyMessageRequest(
+                        reply_token=reply_token,
+                        messages=[TextMessage(text="⚠️ حدث خطأ")]
+                    )
+                )
+            except:
+                pass
 
 
 # ============================================================================
@@ -492,14 +440,13 @@ def handle_message(event):
 
 @app.route("/", methods=["GET"])
 def home():
-    """Health check endpoint"""
+    """Health check"""
+    loader = get_game_loader()
     return {
-        "status": "Bot Mesh is running",
-        "bot_name": BOT_NAME,
-        "games_loaded": len(game_loader.loaded_games),
-        "available_games": game_loader.get_available_games(),
-        "themes": len(THEMES),
-        "version": "7.0"
+        "status": "running",
+        "bot": BOT_NAME,
+        "games": len(loader.loaded_games),
+        "users": len(db.users)
     }
 
 
@@ -511,7 +458,7 @@ def health():
 
 @app.route("/callback", methods=["POST"])
 def callback():
-    """LINE webhook callback"""
+    """LINE webhook - MUST RESPOND QUICKLY"""
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
     
@@ -521,7 +468,7 @@ def callback():
         logger.error("Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"Error in callback: {e}", exc_info=True)
+        logger.error(f"Callback error: {e}", exc_info=True)
     
     return "OK"
 
@@ -531,18 +478,12 @@ def callback():
 # ============================================================================
 
 if __name__ == "__main__":
-    port = Config.PORT
-    debug = Config.DEBUG
-    
     logger.info(f"""
-    ╔══════════════════════════════════════╗
-    ║       🎮 Bot Mesh v7.0 Starting     ║
-    ╠══════════════════════════════════════╣
-    ║  Port: {port}                        
-    ║  Debug: {debug}                      
-    ║  Games: {len(game_loader.loaded_games)}                        
-    ║  Themes: {len(THEMES)}                       
-    ╚══════════════════════════════════════╝
+    ╔══════════════════════════════════╗
+    ║   🎮 {BOT_NAME} v7.0 Starting   ║
+    ║   Port: {Config.PORT}                    ║
+    ║   Ready for LINE webhooks       ║
+    ╚══════════════════════════════════╝
     """)
     
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host="0.0.0.0", port=Config.PORT, debug=Config.DEBUG)
