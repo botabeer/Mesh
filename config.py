@@ -4,10 +4,14 @@
 """
 
 import os
+import sys
+import logging
 from dotenv import load_dotenv
 
 # تحميل متغيرات البيئة
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 class Config:
     """إعدادات التطبيق"""
@@ -62,3 +66,15 @@ class Config:
         """التحقق السريع من الصحة"""
         valid, _ = cls.validate()
         return valid
+
+# ============================================================================
+# التحقق عند الاستيراد (يوقف التطبيق إذا كانت الإعدادات خاطئة)
+# ============================================================================
+if __name__ != "__main__":  # فقط عند الاستيراد، ليس عند التشغيل المباشر
+    config_valid, config_errors = Config.validate()
+    if not config_valid:
+        logger.error("❌ إعدادات LINE غير صحيحة:")
+        for error in config_errors:
+            logger.error(f"   - {error}")
+        logger.error("💡 تأكد من ضبط المتغيرات في Render Environment Variables")
+        # لا توقف التطبيق هنا، دع app.py يتعامل مع الخطأ
