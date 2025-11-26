@@ -1,5 +1,5 @@
 """
-لعبة إنسان حيوان نبات جماد بلاد - النسخة المحسنة النهائية
+لعبة عامة (إنسان حيوان نبات جماد بلاد) - النسخة المحسنة النهائية
 Created by: Abeer Aldosari © 2025
 
 الميزات:
@@ -15,12 +15,12 @@ import random
 from typing import Dict, Any, Optional
 
 
-class HumanAnimalPlantGame(BaseGame):
-    """لعبة إنسان حيوان نبات جماد بلاد المحسنة مع AI"""
+class Game(BaseGame):
+    """لعبة عامة المحسنة مع AI"""
 
-    def __init__(self, line_bot_api):
-        super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "إنسان حيوان نبات"
+    def __init__(self):
+        super().__init__(questions_count=5)
+        self.game_name = "لعبة"
         self.game_icon = "🎯"
 
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
@@ -143,7 +143,7 @@ class HumanAnimalPlantGame(BaseGame):
             "letter": self.current_letter
         }
 
-    def start_game(self):
+    def start(self):
         """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
@@ -297,7 +297,7 @@ class HumanAnimalPlantGame(BaseGame):
             }
         }
 
-        return self._create_flex_with_buttons("إنسان حيوان نبات جماد بلاد", flex_content)
+        return self._create_flex_with_buttons("لعبة عامة", flex_content)
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         """فحص الإجابة"""
@@ -394,7 +394,7 @@ class HumanAnimalPlantGame(BaseGame):
     def get_game_info(self) -> Dict[str, Any]:
         """معلومات اللعبة"""
         return {
-            "name": "لعبة إنسان حيوان نبات جماد بلاد",
+            "name": "لعبة عامة",
             "emoji": "🎯",
             "description": "اكتب كلمة تبدأ بالحرف المحدد في الفئة المختارة مع دعم AI",
             "questions_count": self.questions_count,
