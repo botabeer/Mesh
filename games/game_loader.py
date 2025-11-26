@@ -1,6 +1,6 @@
 """
-Bot Mesh v6.1 - Game Loader
-Automatic game loading from games/ folder
+🎮 Bot Mesh v7.0 - Game Loader
+تحميل الألعاب تلقائياً من ملفاتها الصحيحة
 """
 
 import os
@@ -11,71 +11,72 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# إضافة مجلد games للمسار
-games_dir = os.path.dirname(os.path.abspath(__file__))
-if games_dir not in sys.path:
-    sys.path.insert(0, games_dir)
 
-def load_games():
-    """تحميل جميع الألعاب من مجلد games/"""
-    games = {}
-    
-    # البحث عن جميع ملفات Python في المجلد
-    for filename in os.listdir(games_dir):
-        if filename.endswith('.py') and filename not in ['__init__.py', 'game_loader.py', 'base_game.py']:
-            module_name = filename[:-3]
-            
+class GameLoader:
+    """محمّل الألعاب التلقائي"""
+
+    def __init__(self):
+        """تهيئة المحمّل"""
+        self.games = {}
+        self.games_dir = os.path.dirname(__file__)
+
+        # إضافة مجلد games للمسار
+        if self.games_dir not in sys.path:
+            sys.path.insert(0, self.games_dir)
+
+        # تحميل الألعاب
+        self._load_games()
+
+        logger.info(f"✅ تم تحميل {len(self.games)} لعبة")
+
+    def _load_games(self):
+        """تحميل جميع الألعاب من مجلد games/"""
+        if not os.path.exists(self.games_dir):
+            logger.warning(f"❌ مجلد {self.games_dir} غير موجود")
+            return
+
+        # ✅ ربط مباشر مع ملفاتك الحقيقية
+        game_mapping = {
+            "iq_game": "ذكاء",
+            "math_game": "رياضيات",
+            "fast_typing_game": "سرعة",
+            "letters_words_game": "كلمات",
+            "word_color_game": "ألوان",
+            "opposite_game": "أضداد",
+            "chain_words_game": "سلسلة",
+            "guess_game": "تخمين",
+            "song_game": "أغنية",
+            "human_animal_plant_game": "إنسان حيوان",
+            "compatibility_game": "توافق",
+            "scramble_word_game": "تكوين"
+        }
+
+        for file_name, game_name in game_mapping.items():
             try:
-                # استيراد الوحدة
-                module = importlib.import_module(module_name)
-                
-                # البحث عن class اللعبة
-                for name, obj in inspect.getmembers(module, inspect.isclass):
-                    # تحقق من أن الكلاس يحتوي على الدوال المطلوبة
-                    if (hasattr(obj, 'start') and 
-                        hasattr(obj, 'check_answer') and
-                        hasattr(obj, 'generate_question') and
-                        obj.__module__ == module.__name__):
-                        
-                        # استخراج اسم اللعبة من اسم الكلاس
-                        game_name = extract_game_name(name)
-                        games[game_name] = obj
-                        logger.info(f"✅ تم تحميل: {game_name} ({name})")
-                        break
-            
-            except Exception as e:
-                logger.error(f"❌ فشل تحميل {module_name}: {e}")
-    
-    logger.info(f"📦 إجمالي الألعاب المحملة: {len(games)}")
-    return games
+                module = importlib.import_module(file_name)
 
-def extract_game_name(class_name):
-    """استخراج اسم اللعبة من اسم الكلاس"""
-    # خريطة أسماء الكلاسات إلى أسماء الألعاب
-    name_map = {
-        'IqGame': 'ذكاء',
-        'IQGame': 'ذكاء',
-        'MathGame': 'رياضيات',
-        'ColorGame': 'ألوان',
-        'WordColorGame': 'ألوان',
-        'SpeedGame': 'سرعة',
-        'FastTypingGame': 'سرعة',
-        'WordsGame': 'كلمات',
-        'ScrambleWordGame': 'كلمات',
-        'LettersWordsGame': 'كلمات',
-        'SongGame': 'أغاني',
-        'OppositeGame': 'أضداد',
-        'GuessGame': 'تخمين',
-        'ChainWordsGame': 'سلسلة',
-        'HumanAnimalPlantGame': 'إنسان حيوان',
-        'CompatibilityGame': 'توافق'
-    }
-    
-    # إذا كان الاسم في الخريطة
-    if class_name in name_map:
-        return name_map[class_name]
-    
-    # محاولة استخراج الاسم تلقائياً
-    # IqGame -> iq
-    name = class_name.replace('Game', '').lower()
-    return name
+                for name, obj in inspect.getmembers(module, inspect.isclass):
+                    if hasattr(obj, "start") and hasattr(obj, "check_answer"):
+                        self.games[game_name] = obj
+                        logger.info(f"  ✓ {game_name}")
+                        break
+
+            except Exception as e:
+                logger.error(f"  ✗ فشل تحميل {game_name}: {e}")
+
+    def create_game(self, game_name: str):
+        """إنشاء نسخة من اللعبة"""
+        if game_name in self.games:
+            try:
+                GameClass = self.games[game_name]
+                return GameClass()
+            except Exception as e:
+                logger.error(f"❌ خطأ في إنشاء لعبة {game_name}: {e}")
+                return None
+
+        logger.warning(f"⚠️ لعبة '{game_name}' غير موجودة")
+        return None
+
+    def get_available_games(self) -> list:
+        """الحصول على قائمة الألعاب المتاحة"""
+        return list(self.games.keys())
