@@ -357,7 +357,7 @@ def handle_message(event):
                     q = game.get_question()
                     
                     response = ui.build_game_question(
-                        game.name,
+                        game_name = getattr(game, "name", game.__class__.__name__)
                         q['text'],
                         q['round'],
                         q['total_rounds'],
