@@ -12,6 +12,7 @@ COPY . .
 
 RUN mkdir -p /app/data
 
-EXPOSE 10000
+EXPOSE 5000
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000", "--workers", "2", "--threads", "4", "--timeout", "120"]
+# نستخدم الصيغة الشل لتوسيع متغير PORT
+CMD gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 120
