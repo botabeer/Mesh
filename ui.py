@@ -1,272 +1,260 @@
-import sqlite3
-from linebot.models import (
-    FlexSendMessage, BubbleContainer, BoxComponent, TextComponent,
-    ButtonComponent, URIAction, QuickReply, QuickReplyButton,
-    MessageAction
-)
+"""
+🎨 Bot Mesh v7.0 - UI System
+نظام الواجهات المحسّن مع دعم الثيمات
+Created by: Abeer Aldosari © 2025
+"""
 
-# =========================
-# قاعدة بيانات الثيمات
-# =========================
-DB_PATH = "themes.db"
+from linebot.v3.messaging import TextMessage
+from typing import Dict, Any, List
 
-def init_theme_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS user_themes (
-            user_id TEXT PRIMARY KEY,
-            theme TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
 
-def set_user_theme(user_id, theme):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("REPLACE INTO user_themes VALUES (?, ?)", (user_id, theme))
-    conn.commit()
-    conn.close()
-
-def get_user_theme(user_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT theme FROM user_themes WHERE user_id = ?", (user_id,))
-    row = c.fetchone()
-    conn.close()
-    return row[0] if row else "default"
-
-# =========================
-# الثيمات
-# =========================
-THEMES = {
-    "default": {
-        "bg": "#F5F7FA",
-        "card": "#FFFFFF",
-        "title": "#2C3E50",
-        "accent": "#4A90E2"
-    },
-    "dark": {
-        "bg": "#1E1E2E",
-        "card": "#2A2A40",
-        "title": "#FFFFFF",
-        "accent": "#9B59B6"
-    },
-    "gold": {
-        "bg": "#FBF3D1",
-        "card": "#FFF5CC",
-        "title": "#8E6E00",
-        "accent": "#D4AF37"
+class UI:
+    """نظام الواجهات المحسّن"""
+    
+    # ثيمات احترافية
+    THEMES = {
+        "أزرق": {
+            "primary": "#0EA5E9",
+            "secondary": "#38BDF8",
+            "bg": "#F0F9FF",
+            "card": "#E0F2FE",
+            "text": "#0C4A6E",
+            "text2": "#075985",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "أسود": {
+            "primary": "#60A5FA",
+            "secondary": "#818CF8",
+            "bg": "#0F172A",
+            "card": "#1E293B",
+            "text": "#F1F5F9",
+            "text2": "#CBD5E1",
+            "success": "#34D399",
+            "error": "#F87171"
+        },
+        "بنفسجي": {
+            "primary": "#A78BFA",
+            "secondary": "#C4B5FD",
+            "bg": "#FAF5FF",
+            "card": "#F3E8FF",
+            "text": "#5B21B6",
+            "text2": "#7C3AED",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "وردي": {
+            "primary": "#EC4899",
+            "secondary": "#F472B6",
+            "bg": "#FFF1F2",
+            "card": "#FFE4EC",
+            "text": "#831843",
+            "text2": "#9D174D",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "أخضر": {
+            "primary": "#10B981",
+            "secondary": "#34D399",
+            "bg": "#F0FDF4",
+            "card": "#D1FAE5",
+            "text": "#064E3B",
+            "text2": "#065F46",
+            "success": "#059669",
+            "error": "#EF4444"
+        }
     }
-}
+    
+    def __init__(self):
+        """تهيئة نظام الواجهات"""
+        pass
+    
+    def get_theme_colors(self, theme_name: str = "أزرق") -> Dict[str, str]:
+        """الحصول على ألوان الثيم"""
+        return self.THEMES.get(theme_name, self.THEMES["أزرق"])
+    
+    def build_home(self, username: str, points: int, theme: str = "أزرق") -> TextMessage:
+        """بناء الصفحة الرئيسية"""
+        text = f"""🎮 مرحباً {username}!
 
-# =========================
-# أزرار الألعاب الثابتة
-# =========================
-def games_quick_reply():
-    games = ["ذكاء", "رياضيات", "ألغاز", "كلمات", "سرعة", "ألوان", "أضداد", "سلسلة", "تخمين", "أغنية", "تكوين", "توافق"]
-    return QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label=g, text=g))
-        for g in games
-    ])
+📊 إحصائياتك:
+• النقاط: {points}
+• الحالة: نشط
 
-# =========================
-# القالب الثلاثي الأبعاد العام
-# =========================
-def base_card(title, body_items, footer_buttons=None, user_id=None):
+📝 القوائم المتاحة:
+• العاب - لعرض قائمة الألعاب
+• نقاطي - لعرض إحصائياتك
+• صدارة - لعرض لوحة الصدارة
+• مساعدة - للمساعدة
 
-    theme = THEMES.get(get_user_theme(user_id), THEMES["default"])
+🎯 لبدء لعبة:
+اكتب: لعبة [اسم اللعبة]
+مثال: لعبة ذكاء
 
-    footer = None
-    if footer_buttons:
-        footer = BoxComponent(
-            layout="horizontal",
-            spacing="md",
-            contents=footer_buttons
-        )
+✨ Bot Mesh v7.0
+Created by: Abeer Aldosari © 2025"""
+        
+        return TextMessage(text=text)
+    
+    def build_games_menu(self, theme: str = "أزرق") -> TextMessage:
+        """بناء قائمة الألعاب"""
+        text = """🎮 الألعاب المتاحة:
 
-    bubble = BubbleContainer(
-        size="mega",
-        header=BoxComponent(
-            layout="vertical",
-            backgroundColor=theme["accent"],
-            paddingAll="12px",
-            contents=[
-                TextComponent(
-                    text=title,
-                    weight="bold",
-                    size="xl",
-                    align="center",
-                    color="#FFFFFF"
-                ),
-                TextComponent(
-                    text="Bot Mesh",
-                    size="sm",
-                    align="center",
-                    color="#ECF0F1"
-                )
-            ]
-        ),
-        body=BoxComponent(
-            layout="vertical",
-            spacing="md",
-            backgroundColor=theme["card"],
-            paddingAll="18px",
-            contents=body_items + [
-                TextComponent(
-                    text="تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025",
-                    size="xs",
-                    align="center",
-                    color="#95A5A6"
-                )
-            ]
-        ),
-        footer=footer
-    )
+🧠 لعبة ذكاء - ألغاز ذكية
+🔢 لعبة رياضيات - أسئلة حسابية
+⚡ لعبة سرعة - كتابة سريعة
+🔤 لعبة كلمات - كلمات مبعثرة
+🎨 لعبة ألوان - لون الكلمة
+↔️ لعبة أضداد - أضداد الكلمات
+🔗 لعبة سلسلة - سلسلة كلمات
+🔮 لعبة تخمين - تخمين الكلمات
+🎵 لعبة أغنية - تخمين الأغاني
+📝 لعبة تكوين - تكوين الكلمات
+🎯 لعبة إنسان حيوان - إنسان حيوان نبات
+🖤 لعبة توافق - اختبار التوافق
 
-    return FlexSendMessage(
-        alt_text=title,
-        contents=bubble,
-        quick_reply=games_quick_reply()
-    )
+📝 للعب:
+اكتب: لعبة [اسم اللعبة]
+مثال: لعبة ذكاء"""
+        
+        return TextMessage(text=text)
+    
+    def build_user_stats(self, username: str, user_data: Dict, rank: int, theme: str = "أزرق") -> TextMessage:
+        """بناء إحصائيات المستخدم"""
+        win_rate = 0
+        if user_data.get('games_played', 0) > 0:
+            win_rate = (user_data.get('wins', 0) / user_data['games_played']) * 100
+        
+        text = f"""📊 إحصائيات {username}
 
-# =========================
-# نافذة البداية
-# =========================
-def start_ui(user_name, points, user_id=None):
-    body = [
-        TextComponent(text=f"مرحباً بك {user_name}", weight="bold", size="lg"),
-        TextComponent(text="الحالة: مستخدم نشط"),
-        TextComponent(text=f"النقاط: {points}"),
-        TextComponent(text="اختر الخدمة المطلوبة:")
-    ]
+🏆 الترتيب: #{rank}
+⭐ النقاط: {user_data.get('points', 0)}
+🎮 الألعاب: {user_data.get('games_played', 0)}
+✅ الانتصارات: {user_data.get('wins', 0)}
+📈 نسبة الفوز: {win_rate:.1f}%
+🎨 الثيم: {user_data.get('theme', 'أزرق')}
 
-    footer = [
-        ButtonComponent(style="primary", action=MessageAction(label="الألعاب", text="الألعاب")),
-        ButtonComponent(style="secondary", action=MessageAction(label="الصدارة", text="الصدارة")),
-        ButtonComponent(style="secondary", action=MessageAction(label="المساعدة", text="مساعدة")),
-        ButtonComponent(style="secondary", action=MessageAction(label="الثيمات", text="توافق"))
-    ]
+💪 استمر في اللعب لزيادة نقاطك!"""
+        
+        return TextMessage(text=text)
+    
+    def build_leaderboard(self, leaderboard: List[Dict], theme: str = "أزرق") -> TextMessage:
+        """بناء لوحة الصدارة"""
+        if not leaderboard:
+            return TextMessage(text="📊 لوحة الصدارة فارغة حالياً")
+        
+        text = "🏆 لوحة الصدارة\n\n"
+        
+        medals = ["🥇", "🥈", "🥉"]
+        
+        for i, player in enumerate(leaderboard, 1):
+            medal = medals[i-1] if i <= 3 else f"{i}."
+            name = player.get('display_name', 'مستخدم')
+            points = player.get('points', 0)
+            games = player.get('games_played', 0)
+            wins = player.get('wins', 0)
+            
+            text += f"{medal} {name}\n"
+            text += f"   • النقاط: {points}\n"
+            text += f"   • الألعاب: {games} | الفوز: {wins}\n\n"
+        
+        return TextMessage(text=text)
+    
+    def build_help(self, theme: str = "أزرق") -> TextMessage:
+        """بناء صفحة المساعدة"""
+        text = """📖 دليل استخدام Bot Mesh
 
-    return base_card("الواجهة الرئيسية", body, footer, user_id)
+🎮 كيفية اللعب:
+1️⃣ اكتب 'العاب' لعرض قائمة الألعاب
+2️⃣ اكتب 'لعبة [اسم]' لبدء لعبة
+   مثال: لعبة ذكاء
+3️⃣ أجب على الأسئلة
 
-# =========================
-# نافذة المساعدة
-# =========================
-def help_ui(user_id=None):
-    body = [
-        TextComponent(text="دليل استخدام البوت", weight="bold"),
-        TextComponent(text="• اختر لعبة من الأزرار السفلية"),
-        TextComponent(text="• أجب بكتابة النص فقط"),
-        TextComponent(text="• للإيقاف اكتب: إيقاف"),
-        TextComponent(text="• يمكنك تغيير الثيم من نافذة التوافق")
-    ]
+⌨️ الأوامر المتاحة:
+• بداية - الصفحة الرئيسية
+• العاب - قائمة الألعاب
+• نقاطي - إحصائياتك
+• صدارة - لوحة الصدارة
+• مساعدة - هذه الصفحة
 
-    footer = [
-        ButtonComponent(style="primary", action=MessageAction(label="الألعاب", text="الألعاب")),
-        ButtonComponent(style="secondary", action=MessageAction(label="العودة", text="البداية"))
-    ]
+🎯 أثناء اللعب:
+• لمح - للحصول على تلميح
+• جاوب - لكشف الإجابة
+• إيقاف - لإيقاف اللعبة
 
-    return base_card("المساعدة", body, footer, user_id)
+🎨 تغيير الثيم:
+اكتب: ثيم [اسم]
+الثيمات: أزرق، أسود، بنفسجي، وردي، أخضر
 
-# =========================
-# نافذة الألعاب
-# =========================
-def games_ui(user_id=None):
-    body = [
-        TextComponent(text="الألعاب المتاحة", weight="bold"),
-        TextComponent(text="ذكاء - رياضيات - ألغاز - سرعة"),
-        TextComponent(text="ألوان - أضداد - تخمين - توافق")
-    ]
+💡 نصائح:
+• كل إجابة صحيحة = 10 نقاط
+• حاول الإجابة بسرعة
+• تنافس مع الأصدقاء
 
-    footer = [
-        ButtonComponent(style="primary", action=MessageAction(label="العودة", text="البداية"))
-    ]
+✨ Bot Mesh v7.0
+Created by: Abeer Aldosari © 2025"""
+        
+        return TextMessage(text=text)
+    
+    def build_game_question(
+        self, 
+        game_name: str, 
+        question_text: str, 
+        round_num: int, 
+        total_rounds: int, 
+        theme: str = "أزرق"
+    ) -> TextMessage:
+        """بناء سؤال اللعبة"""
+        text = f"""🎮 {game_name}
 
-    return base_card("الألعاب", body, footer, user_id)
+📝 جولة {round_num}/{total_rounds}
 
-# =========================
-# نافذة أثناء اللعب
-# =========================
-def in_game_ui(game_name, question, round_num, user_id=None):
-    body = [
-        TextComponent(text=f"اللعبة الحالية: {game_name}", weight="bold"),
-        TextComponent(text=f"الجولة رقم: {round_num}"),
-        TextComponent(text=question, wrap=True)
-    ]
+{question_text}
 
-    footer = [
-        ButtonComponent(style="secondary", action=MessageAction(label="إيقاف", text="إيقاف"))
-    ]
+💡 أوامر متاحة:
+• لمح - للحصول على تلميح
+• جاوب - لكشف الإجابة
+• إيقاف - لإيقاف اللعبة"""
+        
+        return TextMessage(text=text)
+    
+    def build_game_result(self, game_name: str, points: int, theme: str = "أزرق") -> TextMessage:
+        """بناء نتيجة اللعبة"""
+        if points > 40:
+            emoji = "🏆"
+            status = "ممتاز!"
+        elif points > 20:
+            emoji = "⭐"
+            status = "جيد!"
+        elif points > 0:
+            emoji = "👍"
+            status = "حاول مرة أخرى"
+        else:
+            emoji = "💪"
+            status = "لا تستسلم!"
+        
+        text = f"""🎮 انتهت اللعبة!
 
-    return base_card("وضع اللعب", body, footer, user_id)
+{emoji} {status}
 
-# =========================
-# نافذة الصدارة
-# =========================
-def leaderboard_ui(top_players, user_id=None):
-    body = [TextComponent(text="أفضل اللاعبين", weight="bold")]
+📊 النتيجة:
+• اللعبة: {game_name}
+• النقاط: {points}
 
-    for i, p in enumerate(top_players, 1):
-        body.append(TextComponent(text=f"{i} - {p['name']} : {p['points']} نقطة"))
+🎯 لعب مرة أخرى:
+اكتب: لعبة {game_name}
 
-    footer = [
-        ButtonComponent(style="primary", action=MessageAction(label="العودة", text="البداية"))
-    ]
+📝 لقائمة الألعاب:
+اكتب: العاب"""
+        
+        return TextMessage(text=text)
+    
+    def build_error_message(self, error_text: str) -> TextMessage:
+        """بناء رسالة خطأ"""
+        text = f"""❌ خطأ
 
-    return base_card("الصدارة", body, footer, user_id)
+{error_text}
 
-# =========================
-# نافذة التوافق (الثيمات)
-# =========================
-def theme_ui(user_id=None):
-    body = [
-        TextComponent(text="اختر الثيم المفضل", weight="bold"),
-        TextComponent(text="الاختيار يتم حفظه تلقائياً")
-    ]
-
-    footer = [
-        ButtonComponent(style="primary", action=MessageAction(label="افتراضي", text="ثيم افتراضي")),
-        ButtonComponent(style="secondary", action=MessageAction(label="داكن", text="ثيم داكن")),
-        ButtonComponent(style="secondary", action=MessageAction(label="ذهبي", text="ثيم ذهبي")),
-        ButtonComponent(style="secondary", action=MessageAction(label="العودة", text="البداية"))
-    ]
-
-    return base_card("التوافق والثيمات", body, footer, user_id)
-
-# =========================
-# نافذة نهاية الجولة
-# =========================
-def end_round_ui(winner_name, points, user_id=None):
-    body = [
-        TextComponent(text="نهاية الجولة", weight="bold", size="lg"),
-        TextComponent(text=f"الفائز: {winner_name}"),
-        TextComponent(text=f"النقاط المكتسبة: {points}")
-    ]
-
-    footer = [
-        ButtonComponent(style="primary", action=MessageAction(label="إعادة اللعب", text="إعادة")),
-        ButtonComponent(style="secondary", action=MessageAction(label="العودة", text="البداية"))
-    ]
-
-    return base_card("نتيجة الجولة", body, footer, user_id)
-
-# =========================
-# نافذة الفائز المتعدد
-# =========================
-def multi_winner_ui(winners, user_id=None):
-    body = [TextComponent(text="الفائزون في هذه الجولة", weight="bold")]
-
-    for w in winners:
-        body.append(TextComponent(text=f"{w['name']} - {w['points']} نقطة"))
-
-    footer = [
-        ButtonComponent(style="primary", action=MessageAction(label="جولة جديدة", text="إعادة")),
-        ButtonComponent(style="secondary", action=MessageAction(label="العودة", text="البداية"))
-    ]
-
-    return base_card("الفائزون", body, footer, user_id)
-
-# تهيئة قاعدة البيانات تلقائياً
-init_theme_db()
+💡 للمساعدة اكتب: مساعدة"""
+        
+        return TextMessage(text=text)
