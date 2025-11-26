@@ -1,134 +1,88 @@
-"""
-Bot Mesh v7.0 - Base Game Engine
-تم إنشاء هذا النظام بواسطة عبير الدوسري © 2025
-
-هذا الملف هو الأساس الذي ترث منه جميع الألعاب
-"""
-
 from datetime import datetime
 
 
 class BaseGame:
     """
-    الفئة الأساسية لجميع الألعاب
+    الكلاس الأساسي لجميع الألعاب
+    يجب أن ترث منه كل لعبة
     """
 
     name = "لعبة"
     total_rounds = 5
-    points_per_correct = 10
-    timeout_minutes = 10
+    time_limit_seconds = 60
 
     def __init__(self):
-        self.started_at = None
         self.current_round = 0
-        self.score = 0
-        self.questions = []
+        self.start_time = None
+        self.points = 0
         self.finished = False
 
-    # ---------------------------------------------------------
-    # دورة حياة اللعبة
-    # ---------------------------------------------------------
+    # ============================================================
+    # تشغيل اللعبة
+    # ============================================================
 
     def start(self):
-        """
-        بدء اللعبة
-        """
-        self.started_at = datetime.now()
+        self.start_time = datetime.now()
         self.current_round = 1
-        self.score = 0
+        self.points = 0
         self.finished = False
-        self.prepare_questions()
 
-    def prepare_questions(self):
-        """
-        يجب إعادة تعريفها في كل لعبة
-        تقوم بتحميل الأسئلة في self.questions
-        """
-        raise NotImplementedError("يجب تعريف prepare_questions داخل اللعبة")
+    # ============================================================
+    # إرجاع السؤال الحالي
+    # ============================================================
 
     def get_question(self):
         """
-        جلب السؤال الحالي
+        يجب إعادة قاموس بهذا الشكل:
+        {
+            "text": "نص السؤال",
+            "round": رقم الجولة,
+            "total_rounds": عدد الجولات
+        }
         """
-        if self.current_round > self.total_rounds:
-            self.finished = True
-            return None
+        raise NotImplementedError("يجب تنفيذ دالة get_question في الكلاس الابن")
 
-        index = self.current_round - 1
-        if index < len(self.questions):
-            return {
-                "text": self.questions[index],
-                "round": self.current_round,
-                "total_rounds": self.total_rounds
-            }
+    # ============================================================
+    # فحص الإجابة
+    # ============================================================
 
-        self.finished = True
-        return None
-
-    # ---------------------------------------------------------
-    # التحقق من الإجابة
-    # ---------------------------------------------------------
-
-    def check_answer(self, user_text, user_id=None, username=None):
+    def check_answer(self, answer: str, user_id: str, username: str):
         """
-        التحقق من إجابة اللاعب
-        يجب إعادة تعريفها في كل لعبة
-        """
-        raise NotImplementedError("يجب تعريف check_answer داخل اللعبة")
+        يجب إعادة قاموس بهذا الشكل:
 
-    def correct(self):
-        """
-        عند الإجابة الصحيحة
-        """
-        self.score += self.points_per_correct
-        self.current_round += 1
-
-        if self.current_round > self.total_rounds:
-            self.finished = True
-            return {
-                "correct": True,
-                "game_over": True,
-                "points": self.score
-            }
-
-        return {
-            "correct": True,
-            "next_question": self.get_question(),
-            "points": self.points_per_correct
+        عند استمرار اللعبة:
+        {
+            "correct": True أو False,
+            "next_question": {...},
+            "points": عدد النقاط
         }
 
-    def wrong(self, message="إجابة غير صحيحة"):
-        """
-        عند الخطأ
-        """
-        return {
-            "correct": False,
-            "message": message
+        عند نهاية اللعبة:
+        {
+            "game_over": True,
+            "points": مجموع النقاط
         }
-
-    # ---------------------------------------------------------
-    # انتهاء اللعبة
-    # ---------------------------------------------------------
-
-    def is_expired(self, timeout_minutes=None):
         """
-        التحقق من انتهاء المهلة
-        """
-        if not self.started_at:
+        raise NotImplementedError("يجب تنفيذ دالة check_answer في الكلاس الابن")
+
+    # ============================================================
+    # التحقق من انتهاء الوقت
+    # ============================================================
+
+    def is_expired(self, timeout_minutes: int):
+        if not self.start_time:
             return False
 
-        if timeout_minutes is None:
-            timeout_minutes = self.timeout_minutes
+        delta = datetime.now() - self.start_time
+        return delta.total_seconds() > (timeout_minutes * 60)
 
-        diff = datetime.now() - self.started_at
-        return diff.total_seconds() > timeout_minutes * 60
+    # ============================================================
+    # إنهاء اللعبة
+    # ============================================================
 
-    def end(self):
-        """
-        إنهاء اللعبة يدويًا
-        """
+    def end_game(self):
         self.finished = True
         return {
             "game_over": True,
-            "points": self.score
+            "points": self.points
         }
