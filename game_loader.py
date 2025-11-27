@@ -1,168 +1,152 @@
 """
-🎮 Bot Mesh v7.0 - Game Loader (النسخة المحسّنة)
-تحميل الألعاب تلقائياً من مجلد games/
+🎮 Bot Mesh v7.0 - Game Loader (PRODUCTION FIXED)
+نظام تحميل الألعاب - نسخة مُصلحة للإنتاج
 Created by: Abeer Aldosari © 2025
 """
 
 import os
-import sys
 import importlib
-import inspect
 import logging
+from typing import Dict, Optional, List
 
 logger = logging.getLogger(__name__)
 
+
 class GameLoader:
-    """محمّل الألعاب التلقائي"""
+    """محمّل الألعاب - نسخة الإنتاج المُصلحة"""
 
-    def __init__(self):
-        """تهيئة المحمّل"""
-        self.games = {}
+    # خريطة الأسماء العربية إلى ملفات الألعاب
+    GAME_MAPPING = {
+        "ذكاء": "iq_game",
+        "رياضيات": "math_game",
+        "سرعة": "fast_typing_game",
+        "كلمات": "scramble_word_game",
+        "ألوان": "word_color_game",
+        "أضداد": "opposite_game",
+        "سلسلة": "chain_words_game",
+        "تخمين": "guess_game",
+        "أغنية": "song_game",
+        "تكوين": "letters_words_game",
+        "توافق": "compatibility_game",
+        "إنسان حيوان": "human_animal_plant_game"
+    }
+
+    def __init__(self, games_path: str = "games"):
+        self.games_path = games_path
+        self.loaded_games: Dict[str, type] = {}
+        self.failed_games: List[str] = []
         
-        # تحديد مسار مجلد games
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.games_dir = os.path.join(current_dir, 'games')
+        # تحميل الألعاب عند التهيئة
+        self.load_all_games()
+
+    def load_all_games(self):
+        """تحميل جميع الألعاب المتاحة"""
+        self.loaded_games.clear()
+        self.failed_games.clear()
         
-        # التحقق من وجود المجلد
-        if not os.path.exists(self.games_dir):
-            logger.error(f"❌ مجلد games/ غير موجود في: {self.games_dir}")
-            # محاولة إنشاء المجلد
+        if not os.path.exists(self.games_path):
+            logger.error(f"❌ مجلد الألعاب غير موجود: {self.games_path}")
+            return
+        
+        success_count = 0
+        
+        for arabic_name, file_name in self.GAME_MAPPING.items():
             try:
-                os.makedirs(self.games_dir)
-                logger.info(f"✅ تم إنشاء مجلد games/ في: {self.games_dir}")
-            except Exception as e:
-                logger.error(f"❌ فشل إنشاء المجلد: {e}")
-                return
-
-        # إضافة مجلد games للمسار
-        if self.games_dir not in sys.path:
-            sys.path.insert(0, self.games_dir)
-
-        # تحميل الألعاب
-        self._load_games()
-
-        if len(self.games) > 0:
-            logger.info(f"✅ تم تحميل {len(self.games)} لعبة بنجاح")
-        else:
-            logger.warning("⚠️ لم يتم تحميل أي لعبة!")
-
-    def _load_games(self):
-        """تحميل جميع الألعاب من مجلد games/"""
-        
-        # خريطة الألعاب (اسم الملف ← اسم اللعبة في القائمة)
-        game_mapping = {
-            "iq_game": "ذكاء",
-            "math_game": "رياضيات",
-            "fast_typing_game": "سرعة",
-            "letters_words_game": "تكوين",
-            "word_color_game": "ألوان",
-            "opposite_game": "أضداد",
-            "chain_words_game": "سلسلة",
-            "guess_game": "تخمين",
-            "song_game": "أغنية",
-            "human_animal_plant_game": "إنسان حيوان",
-            "compatibility_game": "توافق",
-            "scramble_word_game": "كلمات"
-        }
-
-        for file_name, game_name in game_mapping.items():
-            try:
-                # استيراد الوحدة
-                module = importlib.import_module(file_name)
-
-                # البحث عن كلاس اللعبة
-                game_class_found = False
-                for name, obj in inspect.getmembers(module, inspect.isclass):
-                    # تحقق من أن الكلاس يحتوي على الميثودات المطلوبة
-                    if (hasattr(obj, 'start_game') or hasattr(obj, 'start')) and \
-                       (hasattr(obj, 'check_answer')) and \
-                       ('Game' in name):
-                        
-                        self.games[game_name] = obj
-                        logger.info(f"  ✓ {game_name} ({name})")
-                        game_class_found = True
-                        break
+                # محاولة تحميل الوحدة
+                module_path = f"{self.games_path}.{file_name}"
+                module = importlib.import_module(module_path)
                 
-                if not game_class_found:
-                    logger.warning(f"  ⚠️ {game_name}: لم يتم العثور على كلاس مناسب")
-
-            except ModuleNotFoundError:
-                logger.warning(f"  ⚠️ {game_name}: الملف {file_name}.py غير موجود")
+                # البحث عن كلاس Game (النمط الموحد)
+                game_class = None
+                
+                # محاولة 1: البحث عن "Game"
+                if hasattr(module, "Game"):
+                    game_class = getattr(module, "Game")
+                
+                # محاولة 2: البحث عن أي كلاس ينتهي بـ "Game"
+                if not game_class:
+                    for attr_name in dir(module):
+                        if attr_name.endswith("Game") and not attr_name.startswith("_"):
+                            potential_class = getattr(module, attr_name)
+                            if callable(potential_class):
+                                game_class = potential_class
+                                break
+                
+                if game_class and callable(game_class):
+                    self.loaded_games[arabic_name] = game_class
+                    success_count += 1
+                    logger.info(f"✅ تم تحميل لعبة: {arabic_name}")
+                else:
+                    logger.warning(f"⚠️ لا يوجد كلاس Game في {file_name}.py")
+                    self.failed_games.append(arabic_name)
+                    
+            except ImportError as e:
+                logger.error(f"❌ فشل استيراد لعبة {arabic_name}: {e}")
+                self.failed_games.append(arabic_name)
             except Exception as e:
-                logger.error(f"  ✗ فشل تحميل {game_name}: {type(e).__name__}: {e}")
+                logger.error(f"❌ خطأ غير متوقع في تحميل {arabic_name}: {e}")
+                self.failed_games.append(arabic_name)
+        
+        logger.info(f"🎮 تم تحميل {success_count}/{len(self.GAME_MAPPING)} لعبة بنجاح")
+        
+        if self.failed_games:
+            logger.warning(f"⚠️ فشل تحميل: {', '.join(self.failed_games)}")
 
-    def create_game(self, game_name: str, line_bot_api=None):
+    def create_game(self, arabic_name: str):
         """
         إنشاء نسخة من اللعبة
         
         Args:
-            game_name: اسم اللعبة (مثل "ذكاء")
-            line_bot_api: واجهة LINE Bot API (اختياري)
-        
+            arabic_name: الاسم العربي للعبة
+            
         Returns:
-            game_instance أو None
+            نسخة من اللعبة أو None في حالة الفشل
         """
-        if game_name not in self.games:
-            logger.warning(f"⚠️ لعبة '{game_name}' غير موجودة")
-            logger.info(f"الألعاب المتاحة: {', '.join(self.games.keys())}")
+        if arabic_name not in self.loaded_games:
+            logger.warning(f"⚠️ اللعبة '{arabic_name}' غير متاحة")
             return None
         
         try:
-            GameClass = self.games[game_name]
+            game_class = self.loaded_games[arabic_name]
             
-            # محاولة إنشاء اللعبة مع line_bot_api
+            # إنشاء اللعبة بدون معاملات (النظام الجديد)
             try:
-                if line_bot_api:
-                    return GameClass(line_bot_api)
-                else:
-                    return GameClass()
+                game_instance = game_class()
+                logger.info(f"🎮 تم إنشاء نسخة من لعبة: {arabic_name}")
+                return game_instance
             except TypeError:
-                # إذا فشل، حاول بدون معاملات
+                # محاولة مع line_bot_api=None (للتوافق مع الألعاب القديمة)
                 try:
-                    return GameClass()
+                    game_instance = game_class(line_bot_api=None)
+                    logger.info(f"🎮 تم إنشاء نسخة من لعبة (وضع التوافق): {arabic_name}")
+                    return game_instance
                 except:
-                    logger.error(f"❌ فشل إنشاء {game_name} بدون معاملات")
+                    logger.error(f"❌ فشل إنشاء لعبة {arabic_name}")
                     return None
-                
-        except Exception as e:
-            logger.error(f"❌ خطأ في إنشاء لعبة {game_name}: {type(e).__name__}: {e}")
-            return None
-
-    def get_available_games(self) -> list:
-        """الحصول على قائمة الألعاب المتاحة"""
-        return list(self.games.keys())
-    
-    def get_game_info(self, game_name: str) -> dict:
-        """الحصول على معلومات اللعبة"""
-        if game_name not in self.games:
-            return None
-        
-        try:
-            GameClass = self.games[game_name]
-            # محاولة الحصول على معلومات من الكلاس
-            if hasattr(GameClass, 'get_game_info'):
-                try:
-                    temp_game = GameClass()
-                    return temp_game.get_game_info()
-                except:
-                    pass
             
-            return {
-                "name": game_name,
-                "available": True,
-                "class": GameClass.__name__
-            }
         except Exception as e:
-            logger.error(f"❌ خطأ في الحصول على معلومات {game_name}: {e}")
-            return {
-                "name": game_name,
-                "available": False,
-                "error": str(e)
-            }
+            logger.error(f"❌ خطأ في إنشاء لعبة {arabic_name}: {e}")
+            return None
 
-    def reload_games(self):
-        """إعادة تحميل جميع الألعاب"""
-        logger.info("🔄 إعادة تحميل الألعاب...")
-        self.games.clear()
-        self._load_games()
-        logger.info(f"✅ تم إعادة تحميل {len(self.games)} لعبة")
+    def get_available_games(self) -> List[str]:
+        """الحصول على قائمة الألعاب المتاحة"""
+        return list(self.loaded_games.keys())
+
+    def get_game_count(self) -> int:
+        """عدد الألعاب المحملة"""
+        return len(self.loaded_games)
+
+    def is_game_available(self, arabic_name: str) -> bool:
+        """التحقق من توفر لعبة معينة"""
+        return arabic_name in self.loaded_games
+
+    def get_loader_stats(self) -> Dict:
+        """إحصائيات محمّل الألعاب"""
+        return {
+            "total_games": len(self.GAME_MAPPING),
+            "loaded_games": len(self.loaded_games),
+            "failed_games": len(self.failed_games),
+            "success_rate": f"{(len(self.loaded_games) / len(self.GAME_MAPPING) * 100):.1f}%",
+            "available_games": self.get_available_games(),
+            "failed_list": self.failed_games
+        }
