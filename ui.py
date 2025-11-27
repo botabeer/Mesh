@@ -762,212 +762,576 @@ def build_my_points(username, points, theme="💜"):
     
     card = {
         "type": "bubble",
-        "
-    size": "mega",
-"body": {
-"type": "box",
-"layout": "vertical",
-"spacing": "lg",
-"contents": body_contents,
-"backgroundColor": colors["bg"],
-"paddingAll": "20px"
-},
-"footer": create_footer_with_rights(footer_buttons, colors),
-"styles": {
-"body": {"backgroundColor": colors["bg"]},
-"footer": {"backgroundColor": colors["bg"]}
-}
-}
-return FlexMessage(
-    alt_text="نقاطي",
-    contents=FlexContainer.from_dict(card)
-)
-============================================================================
-Build Leaderboard Window
-============================================================================
-def build_leaderboard(top_players, theme="💜"):
-"""بناء لوحة الصدارة المحسّنة"""
-colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-# قائمة اللاعبين
-players_list = []
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": body_contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": create_footer_with_rights(footer_buttons, colors),
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
+    return FlexMessage(
+        alt_text="نقاطي",
+        contents=FlexContainer.from_dict(card)
+    )
 
-for i, (name, points) in enumerate(top_players[:10], 1):
-    # ميدالية للمراكز الثلاثة الأولى
-    medal = ""
-    rank_color = colors["text"]
+# ============================================================================
+# Build Leaderboard Window
+# ============================================================================
+def build_leaderboard(top_players, theme="💜"):
+    """بناء لوحة الصدارة المحسّنة"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
-    if i == 1:
-        medal = "🥇"
-        rank_color = "#FFD700"
-    elif i == 2:
-        medal = "🥈"
-        rank_color = "#C0C0C0"
-    elif i == 3:
-        medal = "🥉"
-        rank_color = "#CD7F32"
+    # قائمة اللاعبين
+    players_list = []
+    
+    for i, (name, points) in enumerate(top_players[:10], 1):
+        # ميدالية للمراكز الثلاثة الأولى
+        medal = ""
+        rank_color = colors["text"]
+        
+        if i == 1:
+            medal = "🥇"
+            rank_color = "#FFD700"
+        elif i == 2:
+            medal = "🥈"
+            rank_color = "#C0C0C0"
+        elif i == 3:
+            medal = "🥉"
+            rank_color = "#CD7F32"
+        else:
+            medal = f"{i}."
+        
+        player_row = create_3d_card([
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": medal,
+                        "size": "lg",
+                        "color": rank_color,
+                        "weight": "bold",
+                        "flex": 0,
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": name[:15] + "..." if len(name) > 15 else name,
+                        "size": "sm",
+                        "color": colors["text"],
+                        "flex": 3,
+                        "margin": "md"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"⭐ {points}",
+                        "size": "sm",
+                        "color": colors["primary"],
+                        "align": "end",
+                        "weight": "bold",
+                        "flex": 2
+                    }
+                ]
+            }
+        ], colors, "15px", "15px")
+        
+        players_list.append(player_row)
+    
+    # رسالة إذا لم يكن هناك لاعبين
+    if not top_players:
+        players_list = [
+            create_3d_card([
+                {
+                    "type": "text",
+                    "text": "لا يوجد لاعبون بعد",
+                    "size": "md",
+                    "color": colors["text2"],
+                    "align": "center"
+                }
+            ], colors, "15px", "15px")
+        ]
+    
+    # المحتوى
+    body_contents = [
+        create_header("🏆 لوحة الصدارة", f"أفضل {len(top_players)} لاعب", colors),
+        create_separator(colors)
+    ] + players_list
+    
+    # التذييل
+    footer_buttons = [
+        create_button_row([
+            create_3d_button("⭐ نقاطي", "نقاطي", colors, "primary", colors["primary"]),
+            create_3d_button("🎮 ألعاب", "العاب", colors)
+        ]),
+        create_button_row([
+            create_3d_button("🏠 البداية", "بداية", colors)
+        ])
+    ]
+    
+    card = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": body_contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": create_footer_with_rights(footer_buttons, colors),
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
+    return FlexMessage(
+        alt_text="لوحة الصدارة",
+        contents=FlexContainer.from_dict(card)
+    )
+
+# ============================================================================
+# Build Registration Required Window
+# ============================================================================
+def build_registration_required(theme="💜"):
+    """بناء نافذة طلب التسجيل"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    # رسالة التنبيه
+    alert_card = create_3d_card([
+        {
+            "type": "text",
+            "text": "⚠️",
+            "size": "xxl",
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": "يجب التسجيل أولاً",
+            "size": "xl",
+            "weight": "bold",
+            "color": colors["warning"],
+            "align": "center",
+            "margin": "md"
+        },
+        {
+            "type": "text",
+            "text": "للعب الألعاب وجمع النقاط، يرجى التسجيل أولاً",
+            "size": "sm",
+            "color": colors["text2"],
+            "align": "center",
+            "wrap": True,
+            "margin": "md"
+        }
+    ], colors, "25px", "30px")
+    
+    # المحتوى
+    body_contents = [
+        create_header("📝 تسجيل مطلوب", "انضم إلينا الآن!", colors),
+        create_separator(colors),
+        alert_card
+    ]
+    
+    # التذييل
+    footer_buttons = [
+        create_button_row([
+            create_3d_button("✅ انضم الآن", "انضم", colors, "primary", colors["success"])
+        ]),
+        create_button_row([
+            create_3d_button("🏠 البداية", "بداية", colors)
+        ])
+    ]
+    
+    card = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": body_contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": create_footer_with_rights(footer_buttons, colors),
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
+    return FlexMessage(
+        alt_text="تسجيل مطلوب",
+        contents=FlexContainer.from_dict(card)
+    )
+
+# ============================================================================
+# Build Game Window (During Play)
+# ============================================================================
+def build_game_window(game_name, question, theme="💜", hint=None, timer=None):
+    """بناء نافذة اللعب الحالية"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    game_info = GAME_LIST.get(game_name, {})
+    
+    # بطاقة السؤال
+    question_card = create_3d_card([
+        {
+            "type": "text",
+            "text": f"{game_info.get('icon', '🎮')} {game_info.get('label', game_name)}",
+            "size": "lg",
+            "color": colors["primary"],
+            "weight": "bold",
+            "align": "center"
+        },
+        create_separator(colors, "sm"),
+        {
+            "type": "text",
+            "text": question,
+            "size": "md",
+            "color": colors["text"],
+            "wrap": True,
+            "align": "center",
+            "margin": "md"
+        }
+    ], colors, "20px", "25px")
+    
+    # معلومات إضافية (Timer & Hint)
+    info_elements = []
+    if timer:
+        info_elements.append(create_info_box("⏱️", "الوقت", f"{timer}s", colors))
+    if hint:
+        info_elements.append(create_info_box("💡", "تلميح", hint, colors))
+    
+    info_box = None
+    if info_elements:
+        info_box = {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "md",
+            "contents": info_elements
+        }
+    
+    # المحتوى
+    body_contents = [
+        create_header("🎮 جارٍ اللعب", game_info.get('description', ''), colors),
+        create_separator(colors),
+        question_card
+    ]
+    
+    if info_box:
+        body_contents.append(info_box)
+    
+    # أزرار التحكم
+    footer_buttons = [
+        create_button_row([
+            create_3d_button("💡 تلميح", "لمح", colors, "secondary"),
+            create_3d_button("🔍 الجواب", "جاوب", colors, "secondary")
+        ]),
+        create_button_row([
+            create_3d_button("🛑 إيقاف", "إيقاف", colors, "secondary", colors["error"])
+        ])
+    ]
+    
+    card = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": body_contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": create_footer_with_rights(footer_buttons, colors),
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
+    return FlexMessage(
+        alt_text=f"لعبة {game_name}",
+        contents=FlexContainer.from_dict(card)
+    )
+
+# ============================================================================
+# Build Game Result Window (Win/Lose)
+# ============================================================================
+def build_game_result(is_winner, points_earned, correct_answer, game_name, theme="💜"):
+    """بناء نافذة نتيجة اللعبة"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    game_info = GAME_LIST.get(game_name, {})
+    
+    # رسالة النتيجة
+    if is_winner:
+        result_emoji = "🎉"
+        result_title = "أحسنت!"
+        result_color = colors["success"]
+        result_msg = f"لقد ربحت {points_earned} نقطة"
     else:
-        medal = f"{i}."
+        result_emoji = "😔"
+        result_title = "للأسف!"
+        result_color = colors["error"]
+        result_msg = "حاول مرة أخرى"
     
-    player_row = create_3d_card([
+    # بطاقة النتيجة
+    result_card = create_3d_card([
+        {
+            "type": "text",
+            "text": result_emoji,
+            "size": "xxl",
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": result_title,
+            "size": "xl",
+            "weight": "bold",
+            "color": result_color,
+            "align": "center",
+            "margin": "md"
+        },
+        {
+            "type": "text",
+            "text": result_msg,
+            "size": "md",
+            "color": colors["text2"],
+            "align": "center",
+            "margin": "sm"
+        }
+    ], colors, "25px", "30px")
+    
+    # الإجابة الصحيحة
+    answer_card = create_3d_card([
+        {
+            "type": "text",
+            "text": "✅ الإجابة الصحيحة:",
+            "size": "sm",
+            "color": colors["text"],
+            "weight": "bold"
+        },
+        {
+            "type": "text",
+            "text": correct_answer,
+            "size": "lg",
+            "color": colors["primary"],
+            "wrap": True,
+            "margin": "sm",
+            "weight": "bold",
+            "align": "center"
+        }
+    ], colors, "15px", "15px")
+    
+    # المحتوى
+    body_contents = [
+        create_header(f"{game_info.get('icon', '🎮')} نتيجة اللعبة", game_info.get('label', game_name), colors),
+        create_separator(colors),
+        result_card,
+        answer_card
+    ]
+    
+    # التذييل
+    footer_buttons = [
+        create_button_row([
+            create_3d_button(f"🔄 {game_info.get('label', 'لعب مرة أخرى')}", f"لعبة {game_name}", colors, "primary", colors["primary"]),
+        ]),
+        create_button_row([
+            create_3d_button("🎮 ألعاب أخرى", "العاب", colors),
+            create_3d_button("🏠 البداية", "بداية", colors)
+        ])
+    ]
+    
+    card = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": body_contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": create_footer_with_rights(footer_buttons, colors),
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
+    }
+    
+    return FlexMessage(
+        alt_text="نتيجة اللعبة",
+        contents=FlexContainer.from_dict(card)
+    )
+
+# ============================================================================
+# Build Compatibility Result Window (Special for توافق game)
+# ============================================================================
+def build_compatibility_result(name1, name2, percentage, theme="💜"):
+    """بناء نافذة نتيجة لعبة التوافق"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    # تحديد الرمز والرسالة بناءً على النسبة
+    if percentage >= 80:
+        emoji = "💖"
+        message = "توافق رائع جداً!"
+        color = colors["success"]
+    elif percentage >= 60:
+        emoji = "💕"
+        message = "توافق جيد"
+        color = colors["primary"]
+    elif percentage >= 40:
+        emoji = "💛"
+        message = "توافق متوسط"
+        color = colors["warning"]
+    else:
+        emoji = "💔"
+        message = "توافق ضعيف"
+        color = colors["error"]
+    
+    # بطاقة النتيجة
+    result_card = create_3d_card([
+        {
+            "type": "text",
+            "text": emoji,
+            "size": "xxl",
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": f"{percentage}%",
+            "size": "xxl",
+            "weight": "bold",
+            "color": color,
+            "align": "center",
+            "margin": "md"
+        },
+        {
+            "type": "text",
+            "text": message,
+            "size": "md",
+            "color": colors["text2"],
+            "align": "center",
+            "margin": "sm"
+        }
+    ], colors, "25px", "30px")
+    
+    # بطاقة الأسماء
+    names_card = create_3d_card([
         {
             "type": "box",
             "layout": "horizontal",
             "contents": [
                 {
                     "type": "text",
-                    "text": medal,
-                    "size": "lg",
-                    "color": rank_color,
-                    "weight": "bold",
+                    "text": name1,
+                    "size": "sm",
+                    "color": colors["text"],
+                    "flex": 1,
+                    "align": "start",
+                    "weight": "bold"
+                },
+                {
+                    "type": "text",
+                    "text": "💖",
+                    "size": "md",
                     "flex": 0,
                     "align": "center"
                 },
                 {
                     "type": "text",
-                    "text": name[:15] + "..." if len(name) > 15 else name,
+                    "text": name2,
                     "size": "sm",
                     "color": colors["text"],
-                    "flex": 3,
-                    "margin": "md"
-                },
-                {
-                    "type": "text",
-                    "text": f"⭐ {points}",
-                    "size": "sm",
-                    "color": colors["primary"],
+                    "flex": 1,
                     "align": "end",
-                    "weight": "bold",
-                    "flex": 2
+                    "weight": "bold"
                 }
             ]
         }
     ], colors, "15px", "15px")
     
-    players_list.append(player_row)
-
-# رسالة إذا لم يكن هناك لاعبين
-if not top_players:
-    players_list = [
-        create_3d_card([
-            {
-                "type": "text",
-                "text": "لا يوجد لاعبون بعد",
-                "size": "md",
-                "color": colors["text2"],
-                "align": "center"
-            }
-        ], colors, "15px", "15px")
+    # المحتوى
+    body_contents = [
+        create_header("💖 نتيجة التوافق", "لعبة التوافق", colors),
+        create_separator(colors),
+        names_card,
+        result_card
     ]
-
-# المحتوى
-body_contents = [
-    create_header("🏆 لوحة الصدارة", f"أفضل {len(top_players)} لاعب", colors),
-    create_separator(colors)
-] + players_list
-
-# التذييل
-footer_buttons = [
-    create_button_row([
-        create_3d_button("⭐ نقاطي", "نقاطي", colors, "primary", colors["primary"]),
-        create_3d_button("🎮 ألعاب", "العاب", colors)
-    ]),
-    create_button_row([
-        create_3d_button("🏠 البداية", "بداية", colors)
-    ])
-]
-
-card = {
-    "type": "bubble",
-    "size": "mega",
-    "body": {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "md",
-        "contents": body_contents,
-        "backgroundColor": colors["bg"],
-        "paddingAll": "20px"
-    },
-    "footer": create_footer_with_rights(footer_buttons, colors),
-    "styles": {
-        "body": {"backgroundColor": colors["bg"]},
-        "footer": {"backgroundColor": colors["bg"]}
+    
+    # التذييل
+    footer_buttons = [
+        create_button_row([
+            create_3d_button("🔄 لعبة أخرى", "لعبة توافق", colors, "primary", colors["primary"])
+        ]),
+        create_button_row([
+            create_3d_button("🎮 ألعاب", "العاب", colors),
+            create_3d_button("🏠 البداية", "بداية", colors)
+        ])
+    ]
+    
+    card = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": body_contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "footer": create_footer_with_rights(footer_buttons, colors),
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]},
+            "footer": {"backgroundColor": colors["bg"]}
+        }
     }
-}
+    
+    return FlexMessage(
+        alt_text="نتيجة التوافق",
+        contents=FlexContainer.from_dict(card)
+    )
 
-return FlexMessage(
-    alt_text="لوحة الصدارة",
-    contents=FlexContainer.from_dict(card)
-)
-============================================================================
-Build Registration Required Window
-============================================================================
-def build_registration_required(theme="💜"):
-"""بناء نافذة طلب التسجيل"""
-colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-# رسالة التنبيه
-alert_card = create_3d_card([
-    {
-        "type": "text",
-        "text": "⚠️",
-        "size": "xxl",
-        "align": "center"
-    },
-    {
-        "type": "text",
-        "text": "يجب التسجيل أولاً",
-        "size": "xl",
-        "weight": "bold",
-        "color": colors["warning"],
-        "align": "center",
-        "margin": "md"
-    },
-    {
-        "type": "text",
-        "text": "للعب الألعاب وجمع النقاط، يرجى التسجيل أولاً",
-        "size": "sm",
-        "color": colors["text2"],
-        "align": "center",
-        "wrap": True,
-        "margin": "md"
-    }
-], colors, "25px", "30px")
+# ============================================================================
+# Quick Reply Generator
+# ============================================================================
+def get_quick_reply_buttons():
+    """إنشاء أزرار Quick Reply الثابتة"""
+    items = []
+    for btn in QUICK_REPLY_BUTTONS:
+        items.append(
+            QuickReplyItem(
+                action=MessageAction(
+                    label=btn["label"],
+                    text=btn["text"]
+                )
+            )
+        )
+    return QuickReply(items=items)
 
-# المحتوى
-body_contents = [
-    create_header("📝 تسجيل مطلوب", "انضم إلينا الآن!", colors),
-    create_separator(colors),
-    alert_card
-]
+# ============================================================================
+# Main Text Message with Quick Reply
+# ============================================================================
+def send_text_with_quick_reply(text):
+    """إرسال رسالة نصية مع أزرار سريعة"""
+    return TextMessage(
+        text=text,
+        quick_reply=get_quick_reply_buttons()
+    )
 
-# التذييل
-footer_buttons = [
-    create_button_row([
-        create_3d_button("✅ انضم الآن", "انضم", colors, "primary", colors["success"])
-    ]),
-    create_button_row([
-        create_3d_button("🏠 البداية", "بداية", colors)
-    ])
-]
-
-card = {
-    "type": "bubble",
-    "size": "mega",
-    "body": {
-        "type": "box",
-        "layout": "vertical",
-        "spacing": "lg",
-        "contents": body_contents,
-        "backgroundColor": colors["bg"],
-        "paddingAll": "20px"
-    },
-    "footer": create_footer_with_rights(footer_buttons, colors),
-    "styles": {
-        "body": {"backgroundColor": colors["bg"]},
-        "footer": {"backgroundColor": colors["bg"]}
-    }
-}
-
-return FlexMessage(
-    alt_text="تسجيل مطلوب",
-    contents=FlexContainer.from_dict(card)
-)
+# ============================================================================
+# End of ui.py - Bot Mesh v8.0
+# ============================================================================
