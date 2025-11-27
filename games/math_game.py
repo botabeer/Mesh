@@ -1,6 +1,6 @@
 """
-🔢 لعبة الرياضيات - Bot Mesh v7.0 Enhanced
-أسئلة حسابية ذكية مع صعوبة متدرجة وتصميم احترافي
+🔢 لعبة الرياضيات - Bot Mesh v3.2
+أسئلة حسابية ذكية مع صعوبة متدرجة
 Created by: Abeer Aldosari © 2025
 """
 
@@ -9,11 +9,11 @@ import random
 from typing import Dict, Any, Optional
 
 
-class Game(BaseGame):
+class MathGame(BaseGame):
     """لعبة الرياضيات المحسّنة"""
 
-    def __init__(self):
-        super().__init__(questions_count=5)
+    def __init__(self, line_bot_api):
+        super().__init__(line_bot_api, questions_count=5)
         self.game_name = "رياضيات"
         self.game_icon = "🔢"
         
@@ -93,7 +93,7 @@ class Game(BaseGame):
             "level_name": config["name"]
         }
 
-    def start(self):
+    def start_game(self):
         """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
@@ -108,7 +108,7 @@ class Game(BaseGame):
         self.current_question_data = q_data
         self.current_answer = q_data["answer"]
         
-        colors = self.get_theme_colors("أزرق")
+        colors = self.get_theme_colors()
         
         # محتوى الـ body
         body_contents = []
@@ -247,14 +247,14 @@ class Game(BaseGame):
                         "contents": [
                             {
                                 "type": "button",
-                                "action": {"type": "message", "label": "💡 تلميح", "text": "لمح"},
+                                "action": {"type": "message", "label": "💡 لمح", "text": "لمح"},
                                 "style": "secondary",
                                 "height": "sm",
                                 "color": colors["shadow1"]
                             },
                             {
                                 "type": "button",
-                                "action": {"type": "message", "label": "🔍 إجابة", "text": "جاوب"},
+                                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
                                 "style": "secondary",
                                 "height": "sm",
                                 "color": colors["shadow1"]
@@ -285,7 +285,11 @@ class Game(BaseGame):
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         """فحص الإجابة"""
-        if not self.game_active or user_id in self.answered_users:
+        if not self.game_active:
+            return None
+        
+        # التحقق من أن المستخدم لم يجب على هذا السؤال
+        if user_id in self.answered_users:
             return None
         
         answer = user_answer.strip().replace(',', '').replace('،', '').replace(' ', '')
@@ -339,6 +343,9 @@ class Game(BaseGame):
         # فحص الإجابة
         if user_num == correct_num:
             points = self.add_score(user_id, display_name, 10)
+            
+            if points == 0:  # المستخدم أجاب من قبل
+                return None
             
             # حفظ السؤال والإجابة
             if self.current_question_data:
