@@ -1,7 +1,6 @@
 """
-Bot Mesh v6.1 - Main Application
+Bot Mesh v6.0 - Main Application
 Simple, Clean & Production-Ready
-محدث: تغيير "جماعي" إلى "مجموعة"
 """
 
 import os
@@ -39,7 +38,7 @@ app = Flask(__name__)
 LINE_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 LINE_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 
-if not LINE_SECRET or LINE_TOKEN:
+if not LINE_SECRET or not LINE_TOKEN:
     logger.error("❌ LINE credentials missing!")
     exit(1)
 
@@ -69,7 +68,7 @@ stats = {
 # ============================================================================
 
 def get_room_id(event):
-    """الحصول على معرف الغرفة (للدردشات المجموعة)"""
+    """الحصول على معرف الغرفة (للدردشات الجماعية)"""
     if hasattr(event.source, 'group_id'):
         return f"group_{event.source.group_id}"
     elif hasattr(event.source, 'room_id'):
@@ -78,7 +77,7 @@ def get_room_id(event):
         return f"user_{event.source.user_id}"
 
 def get_or_create_user(user_id, username):
-    """الحصول على المستخدم أو إنشاءه"""
+    """الحصول على المستخدم أو إنشاؤه"""
     if user_id not in users:
         users[user_id] = {
             "name": username,
@@ -103,7 +102,7 @@ def cleanup_old_games():
         active_games.pop(room_id, None)
     
     if to_remove:
-        logger.info(f"🧹 تم حذف {len(to_remove)}ألعاب منتهية")
+        logger.info(f"🧹 تم حذف {len(to_remove)} ألعاب منتهية")
 
 def get_top_players(limit=10):
     """أفضل اللاعبين"""
@@ -153,19 +152,19 @@ def handle_message(event):
                 # الشاشة الرئيسية
                 reply = ui.home_screen(username, user["points"], user["theme"])
             
-            elif text in ["مجموعة", "لعب مجموعة"]:
-                # تغيير الوضع إلى مجموعة
-                user["mode"] = "مجموعة"
-                reply = ui.games_menu(mode="مجموعة", theme=user["theme"])
+            elif text in ["جماعي", "لعب جماعي"]:
+                # تغيير الوضع إلى جماعي
+                user["mode"] = "جماعي"
+                reply = ui.games_menu(mode="جماعي", current_theme=user["theme"])
             
             elif text in ["فردي", "لعب فردي"]:
                 # تغيير الوضع إلى فردي
                 user["mode"] = "فردي"
-                reply = ui.games_menu(mode="فردي", theme=user["theme"])
+                reply = ui.games_menu(mode="فردي", current_theme=user["theme"])
             
             elif text in ["العاب", "الألعاب", "ألعاب"]:
                 # قائمة الألعاب
-                reply = ui.games_menu(mode=user["mode"], theme=user["theme"])
+                reply = ui.games_menu(mode=user["mode"], current_theme=user["theme"])
             
             elif text in ["ثيمات", "الثيمات", "themes"]:
                 # شاشة اختيار الثيمات
@@ -183,7 +182,7 @@ def handle_message(event):
             elif text in ["صدارة", "الصدارة", "leaderboard"]:
                 # لوحة الصدارة
                 top = get_top_players()
-                reply = ui.leaderboard(top, theme=user["theme"])
+                reply = ui.leaderboard(top, current_theme=user["theme"])
             
             # ============================================================
             # بدء لعبة جديدة
@@ -349,7 +348,7 @@ def home():
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🎮 Bot Mesh v6.1</title>
+        <title>🎮 Bot Mesh v6.0</title>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{
@@ -398,7 +397,7 @@ def home():
     <body>
         <div class="container">
             <h1>🎮 Bot Mesh</h1>
-            <div class="version">v6.1 - محدث ومحسن</div>
+            <div class="version">v6.0 - Simple & Clean</div>
             
             <div class="status">✅ البوت يعمل بكفاءة عالية</div>
             
@@ -430,7 +429,7 @@ def health():
     """Health Check"""
     return {
         "status": "healthy",
-        "version": "6.1",
+        "version": "6.0",
         "uptime": (datetime.now() - stats["start_time"]).total_seconds(),
         "users": stats["total_users"],
         "active_games": len(active_games),
@@ -445,10 +444,10 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     
     logger.info("=" * 60)
-    logger.info("🎮 Bot Mesh v6.1 - محدث")
+    logger.info("🎮 Bot Mesh v6.1 - Themes + Games Folder")
     logger.info(f"📦 {len(GAMES)} ألعاب متاحة")
     logger.info("🎨 9 ثيمات جميلة")
-    logger.info("👥 يدعم اللعب الفردي والمجموعة")
+    logger.info("👥 يدعم اللعب الفردي والجماعي")
     logger.info(f"🌐 Port {port}")
     logger.info("=" * 60)
     
