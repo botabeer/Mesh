@@ -1,43 +1,9 @@
-# Bot Mesh - Requirements for Render (Python 3.11)
-# Created by: Abeer Aldosari © 2025
-
-# Flask Framework
 Flask
 Werkzeug
-
-# LINE Bot SDK
 line-bot-sdk
-
-# Environment Variables
-python-dotenv
-
-# HTTP Client (for API calls)
-requests
-python-multipart
-
-# Gemini AI (Optional)
-google-generativeai
-
-# Production Server
 gunicorn
-
-# Scheduling & Caching
-APScheduler
-redis
-
-# Image Processing
-pillow
-
-# Data & Visualization
-pandas
-matplotlib
-numpy
-scipy
-
-# Utilities
+requests
+google-generativeai
 python-dateutil
-python-slugify
-json5
-beautifulsoup4
-lxml
-markdown
+python-dotenv
+gevent
