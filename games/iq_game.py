@@ -1,6 +1,6 @@
 """
-🧠 لعبة الذكاء - Bot Mesh v7.0 Enhanced
-ألغاز ذكية مع تصميم احترافي وأداء محسّن
+🧠 لعبة الذكاء - Bot Mesh v3.2
+ألغاز ذكية مع تصميم احترافي
 Created by: Abeer Aldosari © 2025
 """
 
@@ -9,11 +9,11 @@ import random
 from typing import Dict, Any, Optional
 
 
-class Game(BaseGame):
+class IqGame(BaseGame):
     """لعبة الذكاء المحسّنة"""
 
-    def __init__(self):
-        super().__init__(questions_count=5)
+    def __init__(self, line_bot_api):
+        super().__init__(line_bot_api, questions_count=5)
         self.game_name = "ذكاء"
         self.game_icon = "🧠"
         
@@ -96,7 +96,7 @@ class Game(BaseGame):
         random.shuffle(self.riddles)
         self.used_riddles = []
 
-    def start(self):
+    def start_game(self):
         """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
@@ -119,20 +119,19 @@ class Game(BaseGame):
         
         self.current_answer = riddle["a"]
         
-        # حفظ السؤال السابق
-        if self.current_question > 0 and self.previous_answer:
-            self.previous_question = self.used_riddles[-2]["q"] if len(self.used_riddles) > 1 else None
-        
         # بناء الواجهة
         return self.build_question_flex(
             question_text=f"🧩 {riddle['q']}",
-            theme_name="أزرق",
             additional_info="💡 اكتب 'لمح' للتلميح أو 'جاوب' للإجابة"
         )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         """فحص الإجابة"""
-        if not self.game_active or user_id in self.answered_users:
+        if not self.game_active:
+            return None
+        
+        # التحقق من أن المستخدم لم يجب على هذا السؤال
+        if user_id in self.answered_users:
             return None
         
         normalized = self.normalize_text(user_answer)
@@ -151,8 +150,10 @@ class Game(BaseGame):
             answer_text = " أو ".join(self.current_answer[:3])
             reveal = f"📝 الإجابة: {answer_text}"
             
-            # حفظ الإجابة
-            self.previous_answer = answer_text
+            # حفظ السؤال والإجابة السابقة
+            if self.used_riddles:
+                self.previous_question = self.used_riddles[-1]["q"]
+                self.previous_answer = answer_text
             
             # الانتقال للسؤال التالي
             self.current_question += 1
@@ -175,8 +176,13 @@ class Game(BaseGame):
             if self.normalize_text(correct) == normalized:
                 points = self.add_score(user_id, display_name, 10)
                 
-                # حفظ الإجابة الصحيحة
-                self.previous_answer = correct
+                if points == 0:  # المستخدم أجاب من قبل
+                    return None
+                
+                # حفظ السؤال والإجابة السابقة
+                if self.used_riddles:
+                    self.previous_question = self.used_riddles[-1]["q"]
+                    self.previous_answer = correct
                 
                 # الانتقال للسؤال التالي
                 self.current_question += 1
