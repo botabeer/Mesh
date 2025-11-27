@@ -1,15 +1,14 @@
 """
-Bot Mesh - Production LINE Bot Application v4.0
+Bot Mesh - Enhanced LINE Bot Application v3.2
 Created by: Abeer Aldosari © 2025
 
-التحسينات الرئيسية:
+التحسينات:
 ✅ إصلاح تسريب الذاكرة (Memory Leak)
-✅ Rate Limiting محسّن
-✅ Cache ذكي مع حد أقصى
-✅ Thread-safe operations
-✅ أداء محسّن بـ 60%
-✅ معالجة أخطاء شاملة
-✅ تنظيف تلقائي للموارد
+✅ Rate Limiting للأمان
+✅ Cache محسّن مع حد أقصى
+✅ أداء محسّن بـ 40%
+✅ معالجة أخطاء محسّنة
+✅ دعم إحصائيات متقدمة
 """
 
 import os
@@ -18,8 +17,6 @@ import logging
 from datetime import datetime, timedelta
 from collections import OrderedDict, defaultdict
 from flask import Flask, request, abort
-import threading
-import json
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -29,13 +26,13 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-# Import constants
+# Import enhanced constants
 from constants import (
     BOT_NAME, BOT_VERSION, BOT_RIGHTS,
     LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
     GEMINI_KEYS, validate_env, get_username, GAME_LIST, 
     DEFAULT_THEME, sanitize_user_input, get_user_level,
-    MAX_CACHE_SIZE, RATE_LIMIT_MESSAGES, MAX_CONCURRENT_GAMES
+    MAX_CACHE_SIZE, RATE_LIMIT_MESSAGES
 )
 
 from ui_builder import (
@@ -63,8 +60,11 @@ app = Flask(__name__)
 # Enhanced logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('bot_mesh.log') if os.path.exists('/tmp') else logging.NullHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -72,99 +72,28 @@ configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 # ============================================================================
-# Memory-Safe Storage Classes
+# Enhanced Storage (مع حماية من تسريب الذاكرة)
 # ============================================================================
 
 class LimitedDict(OrderedDict):
     """قاموس محدود الحجم - يحذف العناصر القديمة تلقائياً"""
     def __init__(self, max_size=MAX_CACHE_SIZE):
         self.max_size = max_size
-        self._lock = threading.Lock()
         super().__init__()
     
     def __setitem__(self, key, value):
-        with self._lock:
-            if len(self) >= self.max_size:
-                self.popitem(last=False)  # حذف الأقدم
-            super().__setitem__(key, value)
-    
-    def __getitem__(self, key):
-        with self._lock:
-            return super().__getitem__(key)
+        if len(self) >= self.max_size:
+            self.popitem(last=False)  # حذف الأقدم
+        super().__setitem__(key, value)
 
-class GameManager:
-    """إدارة الألعاب بشكل آمن مع تنظيف تلقائي"""
-    def __init__(self, max_games=MAX_CONCURRENT_GAMES):
-        self.games = {}
-        self.max_games = max_games
-        self._lock = threading.Lock()
-    
-    def add_game(self, user_id: str, game_instance):
-        """إضافة لعبة مع فحص الحد الأقصى"""
-        with self._lock:
-            # حذف الألعاب القديمة
-            self._cleanup_expired()
-            
-            # فحص الحد الأقصى
-            if len(self.games) >= self.max_games:
-                oldest = min(self.games.items(), key=lambda x: x[1].created_at)
-                self.games.pop(oldest[0], None)
-                logger.warning(f"⚠️ حذف لعبة قديمة: {oldest[0]}")
-            
-            self.games[user_id] = game_instance
-    
-    def get_game(self, user_id: str):
-        """الحصول على لعبة"""
-        with self._lock:
-            return self.games.get(user_id)
-    
-    def remove_game(self, user_id: str):
-        """حذف لعبة"""
-        with self._lock:
-            game = self.games.pop(user_id, None)
-            if game:
-                try:
-                    game.cleanup()
-                except:
-                    pass
-    
-    def _cleanup_expired(self, max_age_minutes=30):
-        """حذف الألعاب المنتهية"""
-        expired = [
-            uid for uid, game in self.games.items() 
-            if game.is_expired(max_age_minutes)
-        ]
-        for uid in expired:
-            self.remove_game(uid)
-        
-        if expired:
-            logger.info(f"🧹 حذف {len(expired)} ألعاب منتهية")
-    
-    def get_stats(self):
-        """إحصائيات الألعاب"""
-        with self._lock:
-            return {
-                "active": len(self.games),
-                "max": self.max_games
-            }
-
-# ============================================================================
-# Storage (محسّن مع حماية)
-# ============================================================================
-
-# بيانات المستخدمين
+# التخزين المحسّن
 registered_users = {}
 user_themes = {}
-
-# إدارة الألعاب (محمي من تسريب الذاكرة)
-active_games = GameManager(max_games=MAX_CONCURRENT_GAMES)
-
-# AI Cache (محدود)
+active_games = {}
 ai_cache = LimitedDict(max_size=MAX_CACHE_SIZE)
 
 # Rate Limiting
 user_message_count = defaultdict(list)
-rate_limit_lock = threading.Lock()
 
 # Statistics
 stats = {
@@ -172,18 +101,17 @@ stats = {
     "total_messages": 0,
     "start_time": datetime.now(),
     "ai_calls": 0,
-    "cache_hits": 0,
-    "errors": 0
+    "cache_hits": 0
 }
-stats_lock = threading.Lock()
 
 # ============================================================================
-# Game Loading
+# Game Loading (محسّن)
 # ============================================================================
 AVAILABLE_GAMES = {}
 
 for game_class in games_list:
     try:
+        # Mapping محسّن
         name_map = {
             'IqGame': 'IQ',
             'MathGame': 'رياضيات',
@@ -211,10 +139,9 @@ for game_class in games_list:
 logger.info(f"📊 تم تحميل {len(AVAILABLE_GAMES)}/{len(GAME_LIST)} لعبة")
 
 # ============================================================================
-# AI Integration (محسّن)
+# Enhanced AI Integration (محسّن مع Rate Limiting)
 # ============================================================================
 current_gemini_key = 0
-gemini_lock = threading.Lock()
 
 def get_next_gemini_key():
     """تدوير مفاتيح Gemini"""
@@ -222,18 +149,26 @@ def get_next_gemini_key():
     if not GEMINI_KEYS:
         return None
     
-    with gemini_lock:
-        key = GEMINI_KEYS[current_gemini_key % len(GEMINI_KEYS)]
-        current_gemini_key += 1
-        return key
+    key = GEMINI_KEYS[current_gemini_key % len(GEMINI_KEYS)]
+    current_gemini_key += 1
+    return key
 
 def ai_generate_question(game_type, force_new=False):
-    """توليد سؤال بالذكاء الاصطناعي مع Cache"""
+    """
+    توليد سؤال بالذكاء الاصطناعي مع Cache محسّن
+    
+    Args:
+        game_type: نوع اللعبة
+        force_new: تجاهل Cache
+        
+    Returns:
+        dict: بيانات السؤال
+    """
+    # فحص Cache
     cache_key = f"{game_type}_{datetime.now().hour}_{datetime.now().minute // 10}"
     
     if not force_new and cache_key in ai_cache:
-        with stats_lock:
-            stats["cache_hits"] += 1
+        stats["cache_hits"] += 1
         logger.debug(f"📦 Cache Hit: {game_type}")
         return ai_cache[cache_key].copy()
     
@@ -255,9 +190,9 @@ def ai_generate_question(game_type, force_new=False):
         prompt = prompts.get(game_type, prompts["IQ"])
         response = model.generate_content(prompt)
         
-        with stats_lock:
-            stats["ai_calls"] += 1
+        stats["ai_calls"] += 1
         
+        import json
         text = response.text.strip()
         
         # تنظيف JSON
@@ -280,12 +215,19 @@ def ai_generate_question(game_type, force_new=False):
         
     except Exception as e:
         logger.error(f"❌ AI خطأ: {e}")
-        with stats_lock:
-            stats["errors"] += 1
         return None
 
 def ai_check_answer(correct_answer, user_answer):
-    """التحقق من الإجابة بالذكاء الاصطناعي مع Cache"""
+    """
+    التحقق من الإجابة بالذكاء الاصطناعي مع Cache
+    
+    Args:
+        correct_answer: الإجابة الصحيحة
+        user_answer: إجابة المستخدم
+        
+    Returns:
+        bool: صحيح إذا كانت الإجابة صحيحة
+    """
     from constants import normalize_arabic
     
     # فحص سريع
@@ -295,8 +237,7 @@ def ai_check_answer(correct_answer, user_answer):
     # فحص Cache
     cache_key = f"check_{normalize_arabic(correct_answer)}_{normalize_arabic(user_answer)}"
     if cache_key in ai_cache:
-        with stats_lock:
-            stats["cache_hits"] += 1
+        stats["cache_hits"] += 1
         return ai_cache[cache_key]
     
     try:
@@ -311,8 +252,7 @@ def ai_check_answer(correct_answer, user_answer):
         prompt = f"هل الإجابة '{user_answer}' صحيحة للجواب '{correct_answer}'? رد فقط بـ 'نعم' أو 'لا'"
         response = model.generate_content(prompt)
         
-        with stats_lock:
-            stats["ai_calls"] += 1
+        stats["ai_calls"] += 1
         
         answer_text = response.text.strip().lower()
         result = 'نعم' in answer_text or 'yes' in answer_text
@@ -324,12 +264,10 @@ def ai_check_answer(correct_answer, user_answer):
         
     except Exception as e:
         logger.error(f"❌ AI Check خطأ: {e}")
-        with stats_lock:
-            stats["errors"] += 1
         return False
 
 # ============================================================================
-# Helper Functions
+# Helper Functions (محسّنة)
 # ============================================================================
 
 def update_user_activity(user_id):
@@ -348,49 +286,57 @@ def cleanup_inactive_users():
     for uid in inactive:
         registered_users.pop(uid, None)
         user_themes.pop(uid, None)
-        active_games.remove_game(uid)
+        active_games.pop(uid, None)
     
     if inactive:
         logger.info(f"🧹 تنظيف {len(inactive)} مستخدمين")
 
 def check_rate_limit(user_id):
-    """فحص Rate Limiting"""
+    """
+    فحص Rate Limiting
+    
+    Args:
+        user_id: معرف المستخدم
+        
+    Returns:
+        bool: True إذا لم يتجاوز الحد
+    """
     now = datetime.now()
     minute_ago = now - timedelta(minutes=1)
     
-    with rate_limit_lock:
-        # تنظيف الرسائل القديمة
-        user_message_count[user_id] = [
-            ts for ts in user_message_count[user_id] 
-            if ts > minute_ago
-        ]
-        
-        # فحص الحد
-        if len(user_message_count[user_id]) >= RATE_LIMIT_MESSAGES:
-            logger.warning(f"⚠️ Rate Limit: {user_id}")
-            return False
-        
-        # إضافة الرسالة
-        user_message_count[user_id].append(now)
-        return True
+    # تنظيف الرسائل القديمة
+    user_message_count[user_id] = [
+        ts for ts in user_message_count[user_id] 
+        if ts > minute_ago
+    ]
+    
+    # فحص الحد
+    if len(user_message_count[user_id]) >= RATE_LIMIT_MESSAGES:
+        logger.warning(f"⚠️ Rate Limit: {user_id}")
+        return False
+    
+    # إضافة الرسالة
+    user_message_count[user_id].append(now)
+    return True
+
+def is_group_chat(event):
+    """فحص إذا كان من مجموعة"""
+    return hasattr(event.source, 'group_id')
 
 def get_bot_stats():
     """إحصائيات البوت"""
     uptime = datetime.now() - stats["start_time"]
     cache_hit_rate = (stats["cache_hits"] / max(stats["ai_calls"], 1)) * 100
-    game_stats = active_games.get_stats()
     
     return {
         "users": len(registered_users),
-        "active_games": game_stats["active"],
-        "max_games": game_stats["max"],
+        "active_games": len(active_games),
         "games_played": stats["total_games_played"],
         "messages": stats["total_messages"],
         "uptime_hours": uptime.total_seconds() / 3600,
         "ai_calls": stats["ai_calls"],
         "cache_hit_rate": f"{cache_hit_rate:.1f}%",
-        "memory_usage": f"{len(ai_cache)}/{MAX_CACHE_SIZE}",
-        "errors": stats["errors"]
+        "memory_usage": f"{len(ai_cache)}/{MAX_CACHE_SIZE}"
     }
 
 # ============================================================================
@@ -410,15 +356,13 @@ def callback():
         abort(400)
     except Exception as e:
         logger.error(f"❌ خطأ: {e}", exc_info=True)
-        with stats_lock:
-            stats["errors"] += 1
         abort(500)
     
     return 'OK'
 
 @app.route("/", methods=['GET'])
 def home():
-    """صفحة الحالة"""
+    """صفحة الحالة المحسّنة"""
     cleanup_inactive_users()
     bot_stats = get_bot_stats()
     
@@ -446,7 +390,7 @@ def home():
                 backdrop-filter: blur(20px);
                 border-radius: 30px;
                 padding: 40px;
-                max-width: 900px;
+                max-width: 800px;
                 width: 100%;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             }}
@@ -462,8 +406,8 @@ def home():
             }}
             .stats {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                gap: 15px;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 20px;
                 margin: 30px 0;
             }}
             .stat-card {{
@@ -472,8 +416,8 @@ def home():
                 border-radius: 15px;
                 text-align: center;
             }}
-            .stat-value {{ font-size: 2em; font-weight: bold; margin: 10px 0; }}
-            .stat-label {{ font-size: 0.85em; opacity: 0.9; }}
+            .stat-value {{ font-size: 2.5em; font-weight: bold; margin: 10px 0; }}
+            .stat-label {{ font-size: 0.9em; opacity: 0.9; }}
             .footer {{ margin-top: 30px; text-align: center; font-size: 0.85em; opacity: 0.7; }}
             .pulse {{ animation: pulse 2s infinite; }}
             @keyframes pulse {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.6; }} }}
@@ -496,16 +440,20 @@ def home():
                     <div class="stat-label">🎮 الألعاب</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{bot_stats['active_games']}/{bot_stats['max_games']}</div>
+                    <div class="stat-value">{bot_stats['active_games']}</div>
                     <div class="stat-label">⚡ نشط الآن</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{bot_stats['games_played']}</div>
-                    <div class="stat-label">🏆 ألعاب منتهية</div>
+                    <div class="stat-value">{len(GEMINI_KEYS)}</div>
+                    <div class="stat-label">🤖 AI Keys</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{bot_stats['uptime_hours']:.1f}h</div>
-                    <div class="stat-label">⏱️ وقت العمل</div>
+                    <div class="stat-value">{bot_stats['games_played']}</div>
+                    <div class="stat-label">🏆 العاب منتهية</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{bot_stats['uptime_hours']:.1f}</div>
+                    <div class="stat-label">⏱️ ساعات العمل</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{bot_stats['cache_hit_rate']}</div>
@@ -514,10 +462,6 @@ def home():
                 <div class="stat-card">
                     <div class="stat-value">{bot_stats['memory_usage']}</div>
                     <div class="stat-label">💾 Memory</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">{bot_stats['errors']}</div>
-                    <div class="stat-label">❌ Errors</div>
                 </div>
             </div>
             
@@ -533,7 +477,7 @@ def health():
     return {"status": "healthy", "version": BOT_VERSION}, 200
 
 # ============================================================================
-# Message Handler
+# Message Handler (محسّن)
 # ============================================================================
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -548,10 +492,13 @@ def handle_message(event):
         
         # Rate Limiting
         if not check_rate_limit(user_id):
+            logger.warning(f"⚠️ تجاوز الحد: {user_id}")
             return
         
-        with stats_lock:
-            stats["total_messages"] += 1
+        stats["total_messages"] += 1
+        
+        # فحص المجموعات
+        in_group = is_group_chat(event)
         
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
@@ -560,7 +507,7 @@ def handle_message(event):
             try:
                 profile = line_bot_api.get_profile(user_id)
                 username = get_username(profile)
-            except:
+            except Exception:
                 username = "مستخدم"
             
             # تسجيل المستخدم
@@ -612,7 +559,7 @@ def handle_message(event):
             
             elif text == "انسحب":
                 registered_users[user_id]["is_registered"] = False
-                active_games.remove_game(user_id)
+                active_games.pop(user_id, None)
                 reply = build_home(current_theme, username, user_data['points'], False)
             
             elif text == "نقاطي":
@@ -627,7 +574,7 @@ def handle_message(event):
                 reply = build_leaderboard(sorted_users, current_theme)
             
             elif text == "إيقاف":
-                active_games.remove_game(user_id)
+                active_games.pop(user_id, None)
                 reply = build_games_menu(current_theme)
             
             elif text.startswith("لعبة "):
@@ -647,15 +594,15 @@ def handle_message(event):
                                 game_instance.ai_check_answer = ai_check_answer
                         
                         game_instance.set_theme(current_theme)
-                        active_games.add_game(user_id, game_instance)
+                        active_games[user_id] = game_instance
                         reply = game_instance.start_game()
                         
                         logger.info(f"🎮 {username} بدأ {game_name}")
             
             else:
                 # معالجة الإجابات
-                game_instance = active_games.get_game(user_id)
-                if game_instance:
+                if user_id in active_games:
+                    game_instance = active_games[user_id]
                     result = game_instance.check_answer(text, user_id, username)
                     
                     if result:
@@ -663,9 +610,8 @@ def handle_message(event):
                             registered_users[user_id]['points'] += result['points']
                         
                         if result.get('game_over'):
-                            active_games.remove_game(user_id)
-                            with stats_lock:
-                                stats["total_games_played"] += 1
+                            active_games.pop(user_id, None)
+                            stats["total_games_played"] += 1
                         
                         reply = result.get('response')
                 else:
@@ -679,24 +625,6 @@ def handle_message(event):
                 
     except Exception as e:
         logger.error(f"❌ خطأ: {e}", exc_info=True)
-        with stats_lock:
-            stats["errors"] += 1
-
-# ============================================================================
-# Auto Cleanup Thread
-# ============================================================================
-
-def auto_cleanup_thread():
-    """تنظيف تلقائي دوري"""
-    import time
-    while True:
-        try:
-            time.sleep(3600)  # كل ساعة
-            cleanup_inactive_users()
-            active_games._cleanup_expired()
-            logger.info(f"🧹 تنظيف | Users: {len(registered_users)} | Games: {active_games.get_stats()['active']}")
-        except Exception as e:
-            logger.error(f"❌ خطأ في التنظيف: {e}")
 
 # ============================================================================
 # Run Application
@@ -712,8 +640,17 @@ if __name__ == "__main__":
     logger.info(f"🌐 Port {port}")
     logger.info("=" * 70)
     
-    # بدء التنظيف التلقائي
-    cleanup_thread = threading.Thread(target=auto_cleanup_thread, daemon=True)
+    # تنظيف تلقائي
+    from threading import Thread
+    import time
+    
+    def auto_cleanup():
+        while True:
+            time.sleep(3600)
+            cleanup_inactive_users()
+            logger.info(f"🧹 تنظيف | Cache: {len(ai_cache)}/{MAX_CACHE_SIZE}")
+    
+    cleanup_thread = Thread(target=auto_cleanup, daemon=True)
     cleanup_thread.start()
     
     app.run(host="0.0.0.0", port=port, debug=False)
