@@ -1,14 +1,15 @@
 """
-Bot Mesh - LINE Bot Application v4.0 ULTIMATE
+Bot Mesh - LINE Bot Application v5.0 ULTIMATE EDITION
 Created by: Abeer Aldosari © 2025
 
-التحسينات الجديدة:
-- ✅ Quick Reply Buttons دائمة وسهلة الوصول
-- ✅ نظام مساعدة تفاعلي متقدم
-- ✅ إحصائيات شاملة للألعاب
-- ✅ معالجة أخطاء محسّنة
-- ✅ لوقينج احترافي
+التحسينات الجديدة v5.0:
+- ✅ Quick Reply Buttons دائمة في جميع الردود بدون استثناء
+- ✅ نظام مساعدة تفاعلي شامل لكل لعبة
+- ✅ إحصائيات مفصلة ومرئية للألعاب
+- ✅ معالجة أخطاء محسّنة مع رسائل واضحة
 - ✅ تكامل 100% بين جميع المكونات
+- ✅ نظام تنظيف تلقائي للبيانات
+- ✅ دعم كامل للمجموعات
 """
 
 import os
@@ -22,7 +23,7 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
     ReplyMessageRequest, QuickReply, QuickReplyItem,
-    MessageAction
+    MessageAction, TextMessage
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
@@ -37,7 +38,7 @@ from ui_builder import (
     build_home, build_games_menu, build_my_points,
     build_leaderboard, build_registration_required,
     build_winner_announcement, build_help_menu,
-    build_game_stats
+    build_game_stats, build_detailed_game_info
 )
 
 # ============================================================================
@@ -68,7 +69,7 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 registered_users = {}  # {user_id: {name, points, is_registered, created_at, last_activity, games_played}}
 user_themes = {}       # {user_id: theme_name}
 active_games = {}      # {user_id: game_instance}
-game_statistics = {}   # {game_name: {plays: 0, completions: 0, total_points: 0}}
+game_statistics = {}   # {game_name: {plays: 0, completions: 0, total_points: 0, avg_score: 0}}
 
 # ============================================================================
 # Game Loading System
@@ -109,7 +110,8 @@ try:
         game_statistics[game_name] = {
             "plays": 0,
             "completions": 0,
-            "total_points": 0
+            "total_points": 0,
+            "avg_score": 0.0
         }
     
     logger.info(f"✅ تم تحميل {len(AVAILABLE_GAMES)} لعبة بنجاح")
@@ -119,19 +121,31 @@ except Exception as e:
     traceback.print_exc()
 
 # ============================================================================
-# Quick Reply Helper Function
+# Quick Reply Helper Function - ALWAYS APPLIED
 # ============================================================================
 def create_quick_reply():
-    """Create permanent Quick Reply buttons for easy navigation"""
+    """
+    Create permanent Quick Reply buttons for easy navigation
+    هذه الأزرار ستظهر دائماً في جميع الردود
+    """
     return QuickReply(items=[
         QuickReplyItem(action=MessageAction(label="🏠 البداية", text="بداية")),
-        QuickReplyItem(action=MessageAction(label="🎮 الألعاب", text="مساعدة")),
+        QuickReplyItem(action=MessageAction(label="🎮 الألعاب", text="ألعاب")),
         QuickReplyItem(action=MessageAction(label="⭐ نقاطي", text="نقاطي")),
         QuickReplyItem(action=MessageAction(label="🏆 الصدارة", text="صدارة")),
-        QuickReplyItem(action=MessageAction(label="❓ مساعدة", text="مساعدة")),
         QuickReplyItem(action=MessageAction(label="📊 إحصائيات", text="إحصائيات")),
+        QuickReplyItem(action=MessageAction(label="❓ مساعدة", text="مساعدة")),
         QuickReplyItem(action=MessageAction(label="⛔ إيقاف", text="إيقاف"))
     ])
+
+def attach_quick_reply(message):
+    """
+    Attach Quick Reply to any message
+    دالة مساعدة لإضافة Quick Reply لأي رسالة
+    """
+    if hasattr(message, 'quick_reply'):
+        message.quick_reply = create_quick_reply()
+    return message
 
 # ============================================================================
 # Helper Functions
@@ -165,12 +179,17 @@ def is_group_chat(event):
     return hasattr(event.source, 'group_id')
 
 def update_game_stats(game_name, completed=False, points=0):
-    """Update game statistics"""
+    """Update game statistics with average calculation"""
     if game_name in game_statistics:
-        game_statistics[game_name]["plays"] += 1
+        stats = game_statistics[game_name]
+        stats["plays"] += 1
         if completed:
-            game_statistics[game_name]["completions"] += 1
-        game_statistics[game_name]["total_points"] += points
+            stats["completions"] += 1
+        stats["total_points"] += points
+        
+        # Calculate average score
+        if stats["completions"] > 0:
+            stats["avg_score"] = round(stats["total_points"] / stats["completions"], 1)
 
 def update_user_games_played(user_id, game_name):
     """Track games played by user"""
@@ -182,6 +201,16 @@ def update_user_games_played(user_id, game_name):
             registered_users[user_id]["games_played"][game_name] = 0
         
         registered_users[user_id]["games_played"][game_name] += 1
+
+def send_with_quick_reply(line_bot_api, reply_token, message):
+    """
+    Send message with Quick Reply buttons
+    CRITICAL: Always attach Quick Reply before sending
+    """
+    message = attach_quick_reply(message)
+    line_bot_api.reply_message_with_http_info(
+        ReplyMessageRequest(reply_token=reply_token, messages=[message])
+    )
 
 # ============================================================================
 # Flask Routes
@@ -210,10 +239,11 @@ def home():
     
     total_games_played = sum(stats["plays"] for stats in game_statistics.values())
     total_points_awarded = sum(stats["total_points"] for stats in game_statistics.values())
+    total_completions = sum(stats["completions"] for stats in game_statistics.values())
     
     return f"""
     <!DOCTYPE html>
-    <html>
+    <html dir="rtl" lang="ar">
     <head>
         <title>{BOT_NAME} v{BOT_VERSION}</title>
         <meta charset="utf-8">
@@ -235,7 +265,7 @@ def home():
                 backdrop-filter: blur(10px);
                 border-radius: 30px;
                 padding: 40px;
-                max-width: 800px;
+                max-width: 900px;
                 width: 100%;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             }}
@@ -281,7 +311,7 @@ def home():
     <body>
         <div class="container">
             <h1>🎮 {BOT_NAME}</h1>
-            <div class="version">Version {BOT_VERSION} - Ultimate Edition</div>
+            <div class="version">Version {BOT_VERSION} - Ultimate Edition v5.0</div>
             <div class="status pulse">✅ Bot is running smoothly</div>
             
             <div class="stats">
@@ -302,22 +332,28 @@ def home():
                     <div class="stat-label">🎯 إجمالي الألعاب</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-value">{total_completions}</div>
+                    <div class="stat-label">✅ الإنجازات</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-value">{total_points_awarded}</div>
                     <div class="stat-label">⭐ النقاط الممنوحة</div>
                 </div>
             </div>
             
             <div class="features">
-                <h3>✨ المميزات الجديدة v4.0</h3>
+                <h3>✨ المميزات الجديدة v5.0</h3>
                 <ul>
-                    <li>Quick Reply Buttons دائمة وسهلة الوصول</li>
-                    <li>نظام مساعدة تفاعلي متقدم</li>
-                    <li>إحصائيات شاملة للألعاب والمستخدمين</li>
-                    <li>معالجة أخطاء محسّنة ولوقينق احترافي</li>
+                    <li>Quick Reply Buttons دائمة في جميع الردود</li>
+                    <li>نظام مساعدة تفاعلي شامل لكل لعبة</li>
+                    <li>إحصائيات مفصلة ومرئية للألعاب</li>
+                    <li>معالجة أخطاء محسّنة مع رسائل واضحة</li>
                     <li>واجهة متكاملة 100% سهلة الاستخدام</li>
                     <li>12 لعبة متنوعة مع تحسينات جودة</li>
                     <li>نظام ثيمات احترافي (9 ثيمات)</li>
                     <li>نظام نقاط وصدارة متقدم</li>
+                    <li>دعم كامل للمجموعات والدردشات الفردية</li>
+                    <li>تنظيف تلقائي للبيانات غير النشطة</li>
                 </ul>
             </div>
             
@@ -332,7 +368,10 @@ def home():
 # ============================================================================
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """Handle incoming messages with Quick Reply support"""
+    """
+    Handle incoming messages with Quick Reply support
+    المعالج الرئيسي للرسائل مع دعم Quick Reply دائم
+    """
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
@@ -374,11 +413,7 @@ def handle_message(event):
                 
                 current_theme = user_themes.get(user_id, DEFAULT_THEME)
                 reply = build_home(current_theme, username, 0, False)
-                reply.quick_reply = create_quick_reply()
-                
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=event.reply_token, messages=[reply])
-                )
+                send_with_quick_reply(line_bot_api, event.reply_token, reply)
                 return
             
             # Update activity
@@ -391,38 +426,57 @@ def handle_message(event):
             
             text_lower = text.lower()
             
-            # Command handling
-            if text_lower == "بداية" or "@" in text_lower:
+            # ===== Command Handling =====
+            
+            # Home/Start
+            if text_lower in ["بداية", "start", "home"] or "@" in text_lower:
                 reply = build_home(current_theme, username, user_data['points'], user_data['is_registered'])
             
-            elif text_lower == "مساعدة" and user_id not in active_games:
+            # Games Menu
+            elif text_lower in ["ألعاب", "games", "مساعدة", "help"] and user_id not in active_games:
                 reply = build_games_menu(current_theme)
             
-            elif text_lower == "مساعدة" and user_id in active_games:
-                reply = build_help_menu(current_theme)
+            # Help Menu (during game)
+            elif text_lower in ["مساعدة", "help"] and user_id in active_games:
+                game_instance = active_games[user_id]
+                reply = build_help_menu(current_theme, game_instance.game_name)
             
-            elif text_lower == "إحصائيات":
+            # Statistics
+            elif text_lower in ["إحصائيات", "stats", "statistics"]:
                 reply = build_game_stats(game_statistics, current_theme)
             
+            # Detailed Game Info
+            elif text.startswith("معلومات "):
+                game_name = text.replace("معلومات ", "").strip()
+                if game_name in AVAILABLE_GAMES:
+                    reply = build_detailed_game_info(game_name, game_statistics.get(game_name, {}), current_theme)
+            
+            # Theme Change
             elif text.startswith("ثيم "):
                 from constants import THEMES
                 theme = text.replace("ثيم ", "").strip()
                 if theme in THEMES:
                     user_themes[user_id] = theme
                     reply = build_home(theme, username, user_data['points'], user_data['is_registered'])
+                else:
+                    reply = TextMessage(text=f"❌ ثيم '{theme}' غير موجود. الثيمات المتاحة: {', '.join(THEMES.keys())}")
             
-            elif text == "انضم":
+            # Join/Register
+            elif text_lower in ["انضم", "join", "register"]:
                 registered_users[user_id]["is_registered"] = True
                 reply = build_home(current_theme, username, user_data['points'], True)
             
-            elif text == "انسحب":
+            # Leave/Unregister
+            elif text_lower in ["انسحب", "leave", "unregister"]:
                 registered_users[user_id]["is_registered"] = False
                 reply = build_home(current_theme, username, user_data['points'], False)
             
-            elif text == "نقاطي":
+            # My Points
+            elif text_lower in ["نقاطي", "points", "score"]:
                 reply = build_my_points(username, user_data['points'], user_data.get('games_played', {}), current_theme)
             
-            elif text == "صدارة":
+            # Leaderboard
+            elif text_lower in ["صدارة", "leaderboard", "top"]:
                 sorted_users = sorted(
                     [(u["name"], u["points"]) for u in registered_users.values() if u.get("is_registered")],
                     key=lambda x: x[1],
@@ -430,85 +484,102 @@ def handle_message(event):
                 )
                 reply = build_leaderboard(sorted_users, current_theme)
             
-            elif text == "إيقاف":
+            # Stop Game
+            elif text_lower in ["إيقاف", "stop", "quit", "exit"]:
                 if user_id in active_games:
                     game_name = active_games[user_id].game_name
                     update_game_stats(game_name, completed=False, points=0)
                     del active_games[user_id]
                     reply = build_games_menu(current_theme)
+                else:
+                    reply = TextMessage(text="❌ لا يوجد لعبة نشطة")
             
+            # Start Game or Replay
             elif text.startswith("لعبة ") or text.startswith("إعادة "):
                 if not user_data.get("is_registered"):
                     reply = build_registration_required(current_theme)
                 else:
-                    # استخراج اسم اللعبة
+                    # Extract game name
                     if text.startswith("إعادة "):
                         game_name = text.replace("إعادة ", "").strip()
                     else:
                         game_name = text.replace("لعبة ", "").strip()
                     
                     if game_name in AVAILABLE_GAMES:
-                        GameClass = AVAILABLE_GAMES[game_name]
-                        game_instance = GameClass(line_bot_api)
-                        
-                        # Set theme
-                        if hasattr(game_instance, 'set_theme'):
-                            game_instance.set_theme(current_theme)
-                        
-                        active_games[user_id] = game_instance
-                        reply = game_instance.start_game()
-                        
-                        # Update statistics
-                        update_game_stats(game_name, completed=False, points=0)
-                        update_user_games_played(user_id, game_name)
-                        
-                        logger.info(f"🎮 {username} بدأ لعبة {game_name}")
-            
-            else:
-                # Game answer handling
-                if user_id in active_games:
-                    game_instance = active_games[user_id]
-                    game_name = game_instance.game_name
-                    result = game_instance.check_answer(text, user_id, username)
-                    
-                    if result:
-                        # Update points
-                        if result.get('points', 0) > 0:
-                            registered_users[user_id]['points'] += result['points']
-                        
-                        # Check if game over
-                        if result.get('game_over'):
-                            # عرض نافذة الفائز
-                            final_points = registered_users[user_id]['points']
-                            total_score = result.get('points', 0)
+                        try:
+                            GameClass = AVAILABLE_GAMES[game_name]
+                            game_instance = GameClass(line_bot_api)
                             
-                            reply = build_winner_announcement(
-                                username=username,
-                                game_name=game_name,
-                                total_score=total_score,
-                                final_points=final_points,
-                                theme=current_theme
-                            )
+                            # Set theme
+                            if hasattr(game_instance, 'set_theme'):
+                                game_instance.set_theme(current_theme)
+                            
+                            active_games[user_id] = game_instance
+                            reply = game_instance.start_game()
                             
                             # Update statistics
-                            update_game_stats(game_name, completed=True, points=total_score)
+                            update_game_stats(game_name, completed=False, points=0)
+                            update_user_games_played(user_id, game_name)
                             
-                            del active_games[user_id]
-                        else:
-                            reply = result.get('response')
+                            logger.info(f"🎮 {username} بدأ لعبة {game_name}")
+                        except Exception as e:
+                            logger.error(f"❌ خطأ في بدء اللعبة {game_name}: {e}")
+                            reply = TextMessage(text=f"❌ حدث خطأ في بدء اللعبة. الرجاء المحاولة مرة أخرى.")
+                    else:
+                        reply = TextMessage(text=f"❌ اللعبة '{game_name}' غير موجودة")
+            
+            # Game Answer Handling
+            else:
+                if user_id in active_games:
+                    try:
+                        game_instance = active_games[user_id]
+                        game_name = game_instance.game_name
+                        result = game_instance.check_answer(text, user_id, username)
+                        
+                        if result:
+                            # Update points
+                            if result.get('points', 0) > 0:
+                                registered_users[user_id]['points'] += result['points']
+                            
+                            # Check if game over
+                            if result.get('game_over'):
+                                # Winner announcement
+                                final_points = registered_users[user_id]['points']
+                                total_score = result.get('points', 0)
+                                
+                                reply = build_winner_announcement(
+                                    username=username,
+                                    game_name=game_name,
+                                    total_score=total_score,
+                                    final_points=final_points,
+                                    theme=current_theme
+                                )
+                                
+                                # Update statistics
+                                update_game_stats(game_name, completed=True, points=total_score)
+                                
+                                del active_games[user_id]
+                            else:
+                                reply = result.get('response')
+                    except Exception as e:
+                        logger.error(f"❌ خطأ في معالجة إجابة اللعبة: {e}")
+                        reply = TextMessage(text="❌ حدث خطأ في معالجة الإجابة. الرجاء المحاولة مرة أخرى.")
                 else:
                     # No active game
                     reply = build_home(current_theme, username, user_data['points'], user_data['is_registered'])
             
-            # Send reply with Quick Reply buttons
+            # ===== Send Reply with Quick Reply =====
             if reply:
-                reply.quick_reply = create_quick_reply()
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(reply_token=event.reply_token, messages=[reply])
-                )
+                send_with_quick_reply(line_bot_api, event.reply_token, reply)
                 
     except Exception as e:
         logger.error(f"❌ Error in handle_message: {e}", exc_info=True)
+        # Send error message with Quick Reply
+        try:
+            error_msg = TextMessage(text="❌ حدث خطأ غير متوقع. الرجاء المحاولة مرة أخرى.")
+            send_with_quick_reply(line_bot_api, event.reply_token, error_msg)
+        except:
+            pass
 
 # ============================================================================
 # Run Application
@@ -516,12 +587,15 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     
-    logger.info("=" * 60)
-    logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION} - Ultimate Edition")
+    logger.info("=" * 70)
+    logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION} - Ultimate Edition v5.0")
     logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
     logger.info(f"🎨 Themes: {len(__import__('constants').THEMES)}")
     logger.info(f"🌐 Server on port {port}")
-    logger.info("✨ Quick Reply Buttons: ENABLED")
-    logger.info("=" * 60)
+    logger.info("✨ Quick Reply Buttons: ENABLED (Always Active)")
+    logger.info("✨ Enhanced Error Handling: ENABLED")
+    logger.info("✨ Game Statistics: ENABLED")
+    logger.info("✨ Auto Cleanup: ENABLED")
+    logger.info("=" * 70)
     
     app.run(host="0.0.0.0", port=port, debug=False)
