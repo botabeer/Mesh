@@ -1,6 +1,6 @@
 """
-🎮 Bot Mesh v7.0 - Enhanced Base Game System (FIXED)
-نظام الألعاب الأساسي المحسّن مع تصميم احترافي
+🎮 Bot Mesh v8.0 - Enhanced Base Game System (NO AI)
+نظام الألعاب الأساسي المحسّن بدون AI
 Created by: Abeer Aldosari © 2025
 """
 
@@ -14,6 +14,7 @@ class BaseGame:
     """
     القاعدة الأساسية المحسّنة لجميع الألعاب
     مع دعم كامل للثيمات والتصميم الاحترافي
+    بدون AI
     """
 
     # إعدادات اللعبة
@@ -94,7 +95,7 @@ class BaseGame:
             line_bot_api: LINE Bot API (اختياري، للتوافق مع الإصدارات القديمة)
             questions_count: عدد الأسئلة
         """
-        self.line_bot_api = line_bot_api  # للتوافق مع الإصدارات القديمة
+        self.line_bot_api = line_bot_api
         self.questions_count = questions_count
         self.current_question = 0
         self.current_answer = None
@@ -106,10 +107,6 @@ class BaseGame:
         
         self.game_active = False
         self.game_start_time: Optional[datetime] = None
-        
-        # دعم AI (اختياري)
-        self.ai_generate_question = None
-        self.ai_check_answer = None
 
     # ===== دورة حياة اللعبة =====
     
@@ -394,6 +391,13 @@ class BaseGame:
                         "spacing": "sm",
                         "contents": footer_buttons
                     } if footer_buttons else {"type": "spacer", "size": "xs"},
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "❓ مساعدة", "text": "مساعدة لعبة"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "color": colors["shadow1"]
+                    },
                     {
                         "type": "button",
                         "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
