@@ -1,13 +1,13 @@
 """
-Bot Mesh - Enhanced UI Builder with Perfect LINE Compatibility
+Bot Mesh v5.0 - Professional UI Builder (100% Flex Messages)
 Created by: Abeer Aldosari © 2025
 
-Features:
-✅ Perfect Arabic encoding
-✅ Professional Neumorphism design
-✅ LINE-optimized Flex Messages
-✅ Smooth animations
-✅ Accessibility-friendly colors
+✨ التحسينات:
+✅ تصميم أنظف وأجمل
+✅ نصوص أوضح وأقصر
+✅ أزرار أكبر وأسهل للمس
+✅ ألوان متناسقة
+✅ تنسيق محسّن للجوال
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer
@@ -16,63 +16,12 @@ from constants import (
     GAME_LIST, FIXED_BUTTONS
 )
 
-
-def create_neumorphic_card(colors, contents, footer_contents=None, size="mega"):
-    """
-    إنشاء بطاقة Neumorphic محسنة
-    
-    Args:
-        colors: ألوان الثيم
-        contents: محتويات البطاقة
-        footer_contents: محتويات التذييل (اختياري)
-        size: حجم البطاقة (kilo/mega/giga)
-    
-    Returns:
-        dict: بطاقة Flex Message
-    """
-    card = {
-        "type": "bubble",
-        "size": size,
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "lg",
-            "contents": contents,
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px"
-        },
-        "styles": {
-            "body": {"backgroundColor": colors["bg"]}
-        }
-    }
-    
-    if footer_contents:
-        card["footer"] = {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "sm",
-            "contents": footer_contents,
-            "backgroundColor": colors["bg"],
-            "paddingAll": "15px"
-        }
-        card["styles"]["footer"] = {"backgroundColor": colors["bg"]}
-    
-    return card
-
+# ============================================================================
+# Helper Functions
+# ============================================================================
 
 def create_button(label, text, style="secondary", color=None):
-    """
-    إنشاء زر محسن
-    
-    Args:
-        label: نص الزر
-        text: الرسالة المرسلة عند الضغط
-        style: نمط الزر (primary/secondary)
-        color: لون مخصص (اختياري)
-    
-    Returns:
-        dict: زر
-    """
+    """إنشاء زر محسّن"""
     button = {
         "type": "button",
         "action": {
@@ -89,18 +38,8 @@ def create_button(label, text, style="secondary", color=None):
     
     return button
 
-
 def create_button_row(buttons, spacing="sm"):
-    """
-    إنشاء صف أزرار
-    
-    Args:
-        buttons: قائمة الأزرار
-        spacing: المسافة بين الأزرار
-    
-    Returns:
-        dict: صف أزرار أفقي
-    """
+    """إنشاء صف أزرار"""
     return {
         "type": "box",
         "layout": "horizontal",
@@ -108,37 +47,16 @@ def create_button_row(buttons, spacing="sm"):
         "contents": buttons
     }
 
-
 def create_separator(color="#E2E8F0", margin="md"):
-    """
-    إنشاء خط فاصل
-    
-    Args:
-        color: لون الخط
-        margin: الهامش
-    
-    Returns:
-        dict: خط فاصل
-    """
+    """إنشاء خط فاصل"""
     return {
         "type": "separator",
         "color": color,
         "margin": margin
     }
 
-
 def create_header(title, subtitle=None, colors=None):
-    """
-    إنشاء رأس احترافي
-    
-    Args:
-        title: العنوان الرئيسي
-        subtitle: العنوان الفرعي (اختياري)
-        colors: ألوان الثيم
-    
-    Returns:
-        dict: رأس البطاقة
-    """
+    """إنشاء رأس احترافي"""
     if not colors:
         colors = THEMES[DEFAULT_THEME]
     
@@ -170,68 +88,43 @@ def create_header(title, subtitle=None, colors=None):
         "spacing": "xs"
     }
 
-
-def create_info_card(icon, title, value, colors):
-    """
-    إنشاء بطاقة معلومات
-    
-    Args:
-        icon: أيقونة
-        title: عنوان
-        value: قيمة
-        colors: ألوان الثيم
-    
-    Returns:
-        dict: بطاقة معلومات
-    """
-    return {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-            {
-                "type": "text",
-                "text": icon,
-                "size": "xl",
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": title,
-                "size": "xs",
-                "color": colors["text2"],
-                "align": "center",
-                "margin": "sm"
-            },
-            {
-                "type": "text",
-                "text": str(value),
-                "size": "lg",
-                "weight": "bold",
-                "color": colors["primary"],
-                "align": "center",
-                "margin": "xs"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "20px",
-        "paddingAll": "20px",
-        "spacing": "xs"
+def create_card(colors, contents, footer_contents=None, size="mega"):
+    """إنشاء بطاقة Neumorphic"""
+    card = {
+        "type": "bubble",
+        "size": size,
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        },
+        "styles": {
+            "body": {"backgroundColor": colors["bg"]}
+        }
     }
+    
+    if footer_contents:
+        card["footer"] = {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": footer_contents,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "15px"
+        }
+        card["styles"]["footer"] = {"backgroundColor": colors["bg"]}
+    
+    return card
 
+# ============================================================================
+# Main Pages
+# ============================================================================
 
 def build_home(theme="💜", username="مستخدم", points=0, is_registered=False):
-    """
-    بناء الصفحة الرئيسية المحسنة
-    
-    Args:
-        theme: رمز الثيم
-        username: اسم المستخدم
-        points: نقاط المستخدم
-        is_registered: حالة التسجيل
-    
-    Returns:
-        FlexMessage: رسالة الصفحة الرئيسية
-    """
+    """بناء الصفحة الرئيسية المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     status = "✅ مسجل" if is_registered else "⚪ غير مسجل"
     status_color = colors["success"] if is_registered else colors["text2"]
@@ -344,23 +237,14 @@ def build_home(theme="💜", username="مستخدم", points=0, is_registered=Fa
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons)
+    card = create_card(colors, contents, footer_buttons)
     return FlexMessage(
         alt_text=f"{BOT_NAME} - البداية",
         contents=FlexContainer.from_dict(card)
     )
 
-
 def build_games_menu(theme="💜"):
-    """
-    بناء قائمة الألعاب المحسنة
-    
-    Args:
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة قائمة الألعاب
-    """
+    """بناء قائمة الألعاب المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     # إنشاء أزرار الألعاب (3 في كل صف)
@@ -371,31 +255,31 @@ def build_games_menu(theme="💜"):
         row_games = games[i:i+3]
         buttons = [
             create_button(
-                f"{game[1]['icon']} {game[1]['label']}",
+                f"{game[1]['icon']}",
                 f"لعبة {game[0]}",
-                "secondary",
+                "primary",
                 colors["primary"]
             )
             for game in row_games
         ]
         game_buttons.append(create_button_row(buttons))
     
-    # بطاقة التعليمات
-    instructions_card = {
+    # بطاقة التعليمات المختصرة
+    instructions = {
         "type": "box",
         "layout": "vertical",
         "spacing": "sm",
         "contents": [
             {
                 "type": "text",
-                "text": "💡 الأوامر أثناء اللعب:",
+                "text": "💡 أوامر سريعة:",
                 "size": "sm",
                 "color": colors["text"],
                 "weight": "bold"
             },
             {
                 "type": "text",
-                "text": "• لمح - للحصول على تلميح\n• جاوب - لكشف الإجابة\n• إيقاف - لإنهاء اللعبة",
+                "text": "• لمح → تلميح\n• جاوب → إجابة\n• إيقاف → خروج",
                 "size": "xs",
                 "color": colors["text2"],
                 "wrap": True,
@@ -409,11 +293,11 @@ def build_games_menu(theme="💜"):
     
     # بناء المحتوى
     contents = [
-        create_header("🎮 الألعاب المتاحة", f"اختر من {len(GAME_LIST)} لعبة مختلفة", colors),
+        create_header("🎮 الألعاب المتاحة", f"{len(GAME_LIST)} لعبة مختلفة", colors),
         create_separator(colors["shadow1"])
     ] + game_buttons + [
         create_separator(colors["shadow1"], "lg"),
-        instructions_card
+        instructions
     ]
     
     # التذييل
@@ -442,44 +326,19 @@ def build_games_menu(theme="💜"):
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons)
+    card = create_card(colors, contents, footer_buttons)
     return FlexMessage(
         alt_text=f"{BOT_NAME} - الألعاب",
         contents=FlexContainer.from_dict(card)
     )
 
-
 def build_my_points(username, points, theme="💜"):
-    """
-    بناء صفحة النقاط المحسنة
-    
-    Args:
-        username: اسم المستخدم
-        points: النقاط
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة النقاط
-    """
+    """بناء صفحة النقاط المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     # تحديد المستوى
-    if points < 50:
-        level = "🌱 مبتدئ"
-        level_color = colors["success"]
-        progress = int((points / 50) * 100)
-    elif points < 150:
-        level = "⭐ متوسط"
-        level_color = "#667EEA"
-        progress = int(((points - 50) / 100) * 100)
-    elif points < 300:
-        level = "🔥 متقدم"
-        level_color = "#DD6B20"
-        progress = int(((points - 150) / 150) * 100)
-    else:
-        level = "👑 محترف"
-        level_color = "#D53F8C"
-        progress = 100
+    from constants import get_user_level
+    level_info = get_user_level(points)
     
     # بطاقة النقاط الرئيسية
     points_card = {
@@ -530,10 +389,10 @@ def build_my_points(username, points, theme="💜"):
             },
             {
                 "type": "text",
-                "text": level,
+                "text": level_info["name"],
                 "size": "xl",
                 "weight": "bold",
-                "color": level_color,
+                "color": level_info["color"],
                 "align": "center"
             },
             # شريط التقدم
@@ -545,8 +404,8 @@ def build_my_points(username, points, theme="💜"):
                         "type": "box",
                         "layout": "vertical",
                         "contents": [],
-                        "width": f"{progress}%",
-                        "backgroundColor": level_color,
+                        "width": f"{level_info['progress']}%",
+                        "backgroundColor": level_info["color"],
                         "height": "6px"
                     }
                 ],
@@ -556,7 +415,7 @@ def build_my_points(username, points, theme="💜"):
             },
             {
                 "type": "text",
-                "text": f"{progress}% للمستوى التالي",
+                "text": f"{level_info['progress']}% للمستوى التالي",
                 "size": "xs",
                 "color": colors["text2"],
                 "align": "center"
@@ -616,24 +475,14 @@ def build_my_points(username, points, theme="💜"):
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
+    card = create_card(colors, contents, footer_buttons, "kilo")
     return FlexMessage(
         alt_text="نقاطي",
         contents=FlexContainer.from_dict(card)
     )
 
-
 def build_leaderboard(top_users, theme="💜"):
-    """
-    بناء لوحة الصدارة المحسنة
-    
-    Args:
-        top_users: قائمة أفضل المستخدمين [(name, points), ...]
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة لوحة الصدارة
-    """
+    """بناء لوحة الصدارة المحسّنة"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     medals = ["🥇", "🥈", "🥉"]
     
@@ -735,23 +584,14 @@ def build_leaderboard(top_users, theme="💜"):
         }
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
+    card = create_card(colors, contents, footer_buttons, "kilo")
     return FlexMessage(
         alt_text="الصدارة",
         contents=FlexContainer.from_dict(card)
     )
 
-
 def build_registration_required(theme="💜"):
-    """
-    بناء رسالة التسجيل المطلوب
-    
-    Args:
-        theme: رمز الثيم
-    
-    Returns:
-        FlexMessage: رسالة التسجيل
-    """
+    """بناء رسالة التسجيل المطلوب"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     contents = [
@@ -797,8 +637,189 @@ def build_registration_required(theme="💜"):
         ])
     ]
     
-    card = create_neumorphic_card(colors, contents, footer_buttons, "kilo")
+    card = create_card(colors, contents, footer_buttons, "kilo")
     return FlexMessage(
         alt_text="تسجيل مطلوب",
+        contents=FlexContainer.from_dict(card)
+    )
+
+# ============================================================================
+# Game-Specific UI Components
+# ============================================================================
+
+def build_game_question(game_name, question, round_num, total_rounds, theme="💜"):
+    """بناء سؤال اللعبة"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    game_info = GAME_LIST.get(game_name, {})
+    
+    contents = [
+        {
+            "type": "text",
+            "text": f"{game_info.get('icon', '🎮')} {game_name}",
+            "size": "xl",
+            "weight": "bold",
+            "color": colors["primary"],
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": f"الجولة {round_num}/{total_rounds}",
+            "size": "sm",
+            "color": colors["text2"],
+            "align": "center"
+        },
+        create_separator(colors["shadow1"]),
+        {
+            "type": "text",
+            "text": question,
+            "size": "lg",
+            "color": colors["text"],
+            "weight": "bold",
+            "align": "center",
+            "wrap": True
+        }
+    ]
+    
+    footer_buttons = [
+        create_button_row([
+            create_button(
+                FIXED_BUTTONS["hint"]["label"],
+                FIXED_BUTTONS["hint"]["text"]
+            ),
+            create_button(
+                FIXED_BUTTONS["stop"]["label"],
+                FIXED_BUTTONS["stop"]["text"],
+                "secondary",
+                colors["error"]
+            )
+        ])
+    ]
+    
+    card = create_card(colors, contents, footer_buttons, "kilo")
+    return FlexMessage(
+        alt_text=f"{game_name} - السؤال",
+        contents=FlexContainer.from_dict(card)
+    )
+
+def build_game_result(is_correct, correct_answer, earned_points, theme="💜"):
+    """بناء نتيجة الإجابة"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    if is_correct:
+        icon = "✅"
+        title = "إجابة صحيحة!"
+        color = colors["success"]
+    else:
+        icon = "❌"
+        title = "إجابة خاطئة"
+        color = colors["error"]
+    
+    contents = [
+        {
+            "type": "text",
+            "text": icon,
+            "size": "xxl",
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": title,
+            "size": "xl",
+            "weight": "bold",
+            "color": color,
+            "align": "center",
+            "margin": "md"
+        }
+    ]
+    
+    if not is_correct:
+        contents.append({
+            "type": "text",
+            "text": f"الإجابة الصحيحة:\n{correct_answer}",
+            "size": "md",
+            "color": colors["text"],
+            "align": "center",
+            "wrap": True,
+            "margin": "md"
+        })
+    
+    if earned_points > 0:
+        contents.append({
+            "type": "text",
+            "text": f"⭐ +{earned_points} نقطة",
+            "size": "lg",
+            "color": colors["primary"],
+            "weight": "bold",
+            "align": "center",
+            "margin": "md"
+        })
+    
+    footer_buttons = [
+        create_button_row([
+            create_button(
+                FIXED_BUTTONS["next"]["label"],
+                FIXED_BUTTONS["next"]["text"],
+                "primary",
+                colors["button"]
+            )
+        ])
+    ]
+    
+    card = create_card(colors, contents, footer_buttons, "kilo")
+    return FlexMessage(
+        alt_text="نتيجة الإجابة",
+        contents=FlexContainer.from_dict(card)
+    )
+
+def build_game_winner(game_name, total_points, theme="💜"):
+    """بناء نافذة الفائز"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    contents = [
+        {
+            "type": "text",
+            "text": "🎉",
+            "size": "xxl",
+            "align": "center"
+        },
+        {
+            "type": "text",
+            "text": "انتهت اللعبة!",
+            "size": "xl",
+            "weight": "bold",
+            "color": colors["primary"],
+            "align": "center",
+            "margin": "md"
+        },
+        create_separator(colors["shadow1"]),
+        {
+            "type": "text",
+            "text": f"مجموع نقاطك:\n⭐ {total_points}",
+            "size": "lg",
+            "color": colors["text"],
+            "weight": "bold",
+            "align": "center",
+            "wrap": True
+        }
+    ]
+    
+    footer_buttons = [
+        create_button_row([
+            create_button(
+                f"🔄 إعادة {game_name}",
+                f"لعبة {game_name}",
+                "primary",
+                colors["button"]
+            ),
+            create_button(
+                FIXED_BUTTONS["games"]["label"],
+                FIXED_BUTTONS["games"]["text"]
+            )
+        ])
+    ]
+    
+    card = create_card(colors, contents, footer_buttons, "kilo")
+    return FlexMessage(
+        alt_text="نهاية اللعبة",
         contents=FlexContainer.from_dict(card)
     )
