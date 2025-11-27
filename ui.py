@@ -1,324 +1,585 @@
 """
-ui.py — واجهات Bot Mesh (ثيمات، نوافذ Flex، Quick Reply) - UPDATED
-Created by: Abeer Aldosari © 2025
-
-التحديثات:
-✅ Quick Reply يحتوي على 12 لعبة فقط
-✅ نافذة مساعدة مستقلة أثناء اللعب
+Bot Mesh v6.0 - UI Module
+Simple & Beautiful Flex Messages
 """
 
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
+from linebot.v3.messaging import FlexMessage, FlexContainer
 
-BOT_NAME = "Bot Mesh"
-BOT_RIGHTS = "Bot Mesh © 2025 by Abeer Aldosari"
-BOT_CREATOR = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
-
-# الثيمات
+# ============================================================================
+# 9 ثيمات جميلة
+# ============================================================================
 THEMES = {
-    "رمادي": {"primary": "#60A5FA", "bg": "#0F172A", "card": "#1E293B", "text": "#F1F5F9", "text2": "#CBD5E1", "success": "#34D399", "error": "#F87171", "warning": "#FBBF24", "shadow": "#334155", "border": "#475569", "gradient": "linear-gradient(135deg,#1F2937 0%,#111827 100%)"},
-    "بنفسجي": {"primary": "#A78BFA", "bg": "#1E1B4B", "card": "#2E2558", "text": "#F3F4F6", "text2": "#C4B5FD", "success": "#10B981", "error": "#EF4444", "warning": "#F59E0B", "shadow": "#6D28D9", "border": "#7C3AED", "gradient": "linear-gradient(135deg,#7C3AED 0%,#4C1D95 100%)"},
-    "أخضر": {"primary": "#10B981", "bg": "#064E3B", "card": "#065F46", "text": "#F0FDF4", "text2": "#6EE7B7", "success": "#34D399", "error": "#F87171", "warning": "#FBBF24", "shadow": "#047857", "border": "#10B981", "gradient": "linear-gradient(135deg,#047857 0%,#065F46 100%)"},
-    "أزرق": {"primary": "#3B82F6", "bg": "#1E3A8A", "card": "#1E40AF", "text": "#EFF6FF", "text2": "#93C5FD", "success": "#22C55E", "error": "#EF4444", "warning": "#F59E0B", "shadow": "#1D4ED8", "border": "#3B82F6", "gradient": "linear-gradient(135deg,#2563EB 0%,#1E3A8A 100%)"},
-    "وردي": {"primary": "#EC4899", "bg": "#831843", "card": "#9D174D", "text": "#FFF1F2", "text2": "#FBCFE8", "success": "#22C55E", "error": "#DC2626", "warning": "#F59E0B", "shadow": "#BE185D", "border": "#EC4899", "gradient": "linear-gradient(135deg,#BE185D 0%,#831843 100%)"},
-    "برتقالي": {"primary": "#F97316", "bg": "#7C2D12", "card": "#9A3412", "text": "#FFF7ED", "text2": "#FED7AA", "success": "#22C55E", "error": "#DC2626", "warning": "#FBBF24", "shadow": "#C2410C", "border": "#F97316", "gradient": "linear-gradient(135deg,#ED8F03 0%,#7C2D12 100%)"},
-    "أبيض": {"primary": "#8B5CF6", "bg": "#F9FAFB", "card": "#FFFFFF", "text": "#111827", "text2": "#6B7280", "success": "#10B981", "error": "#EF4444", "warning": "#F59E0B", "shadow": "#E5E7EB", "border": "#E5E7EB", "gradient": "linear-gradient(135deg,#FFFFFF 0%,#F3F4F6 100%)"},
-    "بني": {"primary": "#D97706", "bg": "#451A03", "card": "#78350F", "text": "#FEF3C7", "text2": "#FCD34D", "success": "#10B981", "error": "#EF4444", "warning": "#F59E0B", "shadow": "#92400E", "border": "#D97706", "gradient": "linear-gradient(135deg,#7C2D12 0%,#451A03 100%)"},
-    "أصفر": {"primary": "#EAB308", "bg": "#713F12", "card": "#854D0E", "text": "#FEFCE8", "text2": "#FEF08A", "success": "#22C55E", "error": "#DC2626", "warning": "#F97316", "shadow": "#A16207", "border": "#EAB308", "gradient": "linear-gradient(135deg,#FFD89B 0%,#F59E0B 100%)"}
+    "💜": {  # Purple Dream
+        "name": "أرجواني حالم",
+        "primary": "#805AD5",
+        "secondary": "#9F7AEA",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#EDF2F7",
+        "card": "#FFFFFF",
+        "text": "#2D3748",
+        "text2": "#718096",
+        "shadow": "#CBD5E0"
+    },
+    "💚": {  # Green Nature
+        "name": "أخضر طبيعي",
+        "primary": "#38A169",
+        "secondary": "#48BB78",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#F0FDF4",
+        "card": "#FFFFFF",
+        "text": "#1C4532",
+        "text2": "#276749",
+        "shadow": "#C6F6D5"
+    },
+    "🤍": {  # Clean White
+        "name": "أبيض نظيف",
+        "primary": "#4299E1",
+        "secondary": "#63B3ED",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#F7FAFC",
+        "card": "#FFFFFF",
+        "text": "#2D3748",
+        "text2": "#718096",
+        "shadow": "#E2E8F0"
+    },
+    "🖤": {  # Dark Elegant
+        "name": "أسود أنيق",
+        "primary": "#667EEA",
+        "secondary": "#7F9CF5",
+        "success": "#48BB78",
+        "error": "#FC8181",
+        "bg": "#1A202C",
+        "card": "#2D3748",
+        "text": "#F7FAFC",
+        "text2": "#CBD5E0",
+        "shadow": "#4A5568"
+    },
+    "💙": {  # Ocean Blue
+        "name": "أزرق المحيط",
+        "primary": "#2B6CB0",
+        "secondary": "#3182CE",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#EBF8FF",
+        "card": "#FFFFFF",
+        "text": "#2C5282",
+        "text2": "#2B6CB0",
+        "shadow": "#BEE3F8"
+    },
+    "🩶": {  # Silver Gray
+        "name": "رمادي فضي",
+        "primary": "#4A5568",
+        "secondary": "#718096",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#F7FAFC",
+        "card": "#FFFFFF",
+        "text": "#2D3748",
+        "text2": "#718096",
+        "shadow": "#E2E8F0"
+    },
+    "🩷": {  # Pink Blossom
+        "name": "وردي زهري",
+        "primary": "#B83280",
+        "secondary": "#D53F8C",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#FFF5F7",
+        "card": "#FFFFFF",
+        "text": "#702459",
+        "text2": "#97266D",
+        "shadow": "#FED7E2"
+    },
+    "🧡": {  # Warm Sunset
+        "name": "برتقالي دافئ",
+        "primary": "#C05621",
+        "secondary": "#DD6B20",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#FFFAF0",
+        "card": "#FFFFFF",
+        "text": "#7C2D12",
+        "text2": "#9C4221",
+        "shadow": "#FEEBC8"
+    },
+    "🤎": {  # Earth Brown
+        "name": "بني ترابي",
+        "primary": "#744210",
+        "secondary": "#8B4513",
+        "success": "#48BB78",
+        "error": "#F56565",
+        "bg": "#FEFCF9",
+        "card": "#FFFFFF",
+        "text": "#5C2E00",
+        "text2": "#7A4F1D",
+        "shadow": "#E6D5C3"
+    }
 }
 
-DEFAULT_THEME = "رمادي"
+DEFAULT_THEME = "💜"
 
-# الألعاب - 12 لعبة فقط
-ORDERED_GAMES = [
-    ("سرعة", "سرعة ⚡"),
-    ("ذكاء", "ذكاء 🧠"),
-    ("لعبة", "لعبة 🎯"),
-    ("أغنية", "أغنية 🎵"),
-    ("تخمين", "تخمين 🔮"),
-    ("سلسلة", "سلسلة 🔗"),
-    ("كلمات", "ترتيب 🔤"),
-    ("تكوين", "تكوين 📝"),
-    ("أضداد", "ضد ↔️"),
-    ("ألوان", "لون 🎨"),
-    ("رياضيات", "رياضيات 🔢"),
-    ("توافق", "توافق 🖤")
-]
+def get_theme(theme_emoji="💜"):
+    """الحصول على ألوان الثيم"""
+    return THEMES.get(theme_emoji, THEMES[DEFAULT_THEME])
 
-GAME_DESCRIPTIONS = {
-    "لعبة": "إنسان حيوان نبات",
-    "سرعة": "اختبار السرعة",
-    "ذكاء": "ألغاز ذكية",
-    "أغنية": "خمن المغني",
-    "تخمين": "خمن الكلمة",
-    "سلسلة": "سلسلة كلمات",
-    "كلمات": "رتب الحروف",
-    "تكوين": "كوّن كلمات",
-    "أضداد": "اكتشف العكس",
-    "ألوان": "تحدي الألوان",
-    "رياضيات": "أسئلة حسابية",
-    "توافق": "احسب نسبة التوافق"
-}
+# ============================================================================
+# مكونات مساعدة
+# ============================================================================
 
-# ---------- Helpers ----------
-def _3d_button(label, text, colors, style="secondary", color_override=None):
+def button(label, text, color=None, theme=None):
+    """إنشاء زر"""
+    if theme is None:
+        theme = get_theme()
     return {
         "type": "button",
         "action": {"type": "message", "label": label, "text": text},
-        "style": style,
+        "style": "primary" if color else "secondary",
         "height": "sm",
-        "color": color_override or (colors["primary"] if style == "primary" else colors["card"])
+        "color": color or theme["shadow"]
     }
 
-def _row(buttons, spacing="sm"):
-    return {"type": "box", "layout": "horizontal", "spacing": spacing, "contents": buttons}
+def separator(theme=None):
+    """خط فاصل"""
+    if theme is None:
+        theme = get_theme()
+    return {"type": "separator", "margin": "lg", "color": theme["shadow"]}
 
-def _separator(colors, margin="md"):
-    return {"type": "separator", "color": colors["shadow"], "margin": margin}
-
-def _3d_card(contents, colors, corner="15px", pad="15px"):
+def text_box(text, size="md", color=None, bold=False, theme=None):
+    """صندوق نص"""
+    if theme is None:
+        theme = get_theme()
     return {
-        "type": "box",
-        "layout": "vertical",
-        "contents": contents,
-        "backgroundColor": colors["card"],
-        "cornerRadius": corner,
-        "paddingAll": pad,
-        "borderWidth": "1px",
-        "borderColor": colors["border"]
+        "type": "text",
+        "text": text,
+        "size": size,
+        "color": color or theme["text"],
+        "weight": "bold" if bold else "regular",
+        "wrap": True,
+        "align": "center"
     }
 
-def _header(title, subtitle, colors):
-    contents = [
-        {"type": "text", "text": title, "weight": "bold", "size": "xxl", "color": colors["primary"], "align": "center"}
-    ]
-    if subtitle:
-        contents.append({"type": "text", "text": subtitle, "size": "sm", "color": colors["text2"], "align": "center", "margin": "sm"})
-    return {"type": "box", "layout": "vertical", "contents": contents, "spacing": "xs"}
+# ============================================================================
+# الشاشات الرئيسية
+# ============================================================================
 
-def _footer(button_rows, colors):
-    contents = []
-    for r in button_rows:
-        contents.append(r)
-    contents.append(_separator(colors))
-    contents.append({"type": "text", "text": f"{BOT_RIGHTS} — {BOT_CREATOR}", "size": "xxs", "color": colors["text2"], "align": "center"})
-    return {"type": "box", "layout": "vertical", "spacing": "sm", "contents": contents, "backgroundColor": colors["bg"], "paddingAll": "12px"}
-
-def _bubble(body_contents, footer_box, colors):
-    return {
+def home_screen(username, points, current_theme="💜"):
+    """🏠 الشاشة الرئيسية"""
+    theme = get_theme(current_theme)
+    
+    content = {
         "type": "bubble",
-        "size": "mega",
-        "body": {"type": "box", "layout": "vertical", "spacing": "lg", "contents": body_contents, "backgroundColor": colors["bg"], "paddingAll": "18px"},
-        "footer": footer_box,
-        "styles": {"body": {"backgroundColor": colors["bg"]}, "footer": {"backgroundColor": colors["bg"]}}
+        "hero": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎮 Bot Mesh",
+                    "size": "xxl",
+                    "weight": "bold",
+                    "color": "#FFFFFF",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "بوت الألعاب الجماعية",
+                    "size": "sm",
+                    "color": "#FFFFFF",
+                    "align": "center",
+                    "margin": "sm"
+                }
+            ],
+            "backgroundColor": theme["primary"],
+            "paddingAll": "30px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                text_box("👤 اللاعب", "xs", theme["text2"], theme=theme),
+                                text_box(username, "lg", theme["primary"], True, theme)
+                            ],
+                            "flex": 1
+                        },
+                        {"type": "separator"},
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                text_box("⭐ النقاط", "xs", theme["text2"], theme=theme),
+                                text_box(str(points), "lg", theme["success"], True, theme)
+                            ],
+                            "flex": 1
+                        }
+                    ],
+                    "backgroundColor": theme["card"],
+                    "cornerRadius": "15px",
+                    "paddingAll": "15px"
+                },
+                separator(theme),
+                text_box("اختر وضع اللعب:", "md", theme["text"], True, theme)
+            ]
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                button("👥 لعب جماعي", "جماعي", theme["primary"], theme),
+                button("👤 لعب فردي", "فردي", theme["secondary"], theme),
+                separator(theme),
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": [
+                        button("🎮 الألعاب", "العاب", theme=theme),
+                        button("🎨 الثيمات", "ثيمات", theme=theme)
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": [
+                        button("🏆 الصدارة", "صدارة", theme=theme),
+                        button("ℹ️ المساعدة", "مساعدة", theme=theme)
+                    ]
+                }
+            ],
+            "paddingAll": "20px"
+        }
     }
-
-# ✅ Quick Reply - الـ12 لعبة فقط
-def get_quick_reply():
-    """
-    إنشاء Quick Reply مع 12 لعبة فقط
-    """
-    items = []
     
-    # جميع الألعاب الـ12
-    for key, label in ORDERED_GAMES:
-        items.append(QuickReplyItem(action=MessageAction(label=label, text=f"لعبة {key}")))
+    return FlexMessage(alt_text="الشاشة الرئيسية", contents=FlexContainer.from_dict(content))
+
+
+def themes_selector(current_theme="💜"):
+    """🎨 شاشة اختيار الثيمات"""
+    theme = get_theme(current_theme)
     
-    return QuickReply(items=items)
-
-# ✅ Quick Reply للمساعدة أثناء اللعب
-def get_game_help_quick_reply():
-    """
-    Quick Reply خاص بالمساعدة أثناء اللعب
-    """
-    items = [
-        QuickReplyItem(action=MessageAction(label="💡 لمح", text="لمح")),
-        QuickReplyItem(action=MessageAction(label="🔍 جاوب", text="جاوب")),
-        QuickReplyItem(action=MessageAction(label="⛔ إيقاف", text="إيقاف")),
-        QuickReplyItem(action=MessageAction(label="🏠 البداية", text="بداية"))
-    ]
-    return QuickReply(items=items)
-
-# ---------- دوال بناء النوافذ ----------
-def build_home(theme=DEFAULT_THEME, username="مستخدم", points=0, is_registered=False):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-
-    user_card = _3d_card([
-        {"type": "text", "text": f"👤 {username}", "size": "xl", "color": colors["text"], "weight": "bold", "align": "center"},
-        {"type": "box", "layout": "horizontal", "spacing": "md", "contents": [
-            {"type": "text", "text": ("✅ مسجل" if is_registered else "⚪ غير مسجل"), "size": "sm", "color": (colors["success"] if is_registered else colors["text2"]), "flex": 1},
-            {"type": "text", "text": f"⭐ {points}", "size": "sm", "color": colors["primary"], "align": "end", "flex": 1, "weight": "bold"}
-        ], "margin": "md"}
-    ], colors, corner="18px", pad="18px")
-
-    # ثيمات مختصرة
-    theme_rows = []
-    tkeys = list(THEMES.keys())
-    for i in range(0, len(tkeys), 3):
-        row_buttons = []
-        for tk in tkeys[i:i+3]:
-            row_buttons.append(_3d_button(f"▫️ {tk}", f"ثيم {tk}", colors, "primary" if tk == theme else "secondary", colors["primary"] if tk == theme else None))
-        theme_rows.append(_row(row_buttons))
-
-    body = [
-        _header(f"🎮 {BOT_NAME}", "بوت الألعاب الترفيهي", colors),
-        _separator(colors),
-        user_card,
-        {"type": "text", "text": "🎨 اختر ثيمك المفضل:", "size": "md", "weight": "bold", "color": colors["text"], "margin": "lg"}
-    ] + theme_rows
-
-    footer_buttons = [
-        _row([_3d_button("▫️ ألعاب", "العاب", colors, "primary", colors["primary"]), _3d_button("▫️ نقاطي", "نقاطي", colors)]),
-        _row([_3d_button("▫️ صدارة", "صدارة", colors), _3d_button("▫️ مساعدة", "مساعدة", colors)])
-    ]
-
-    footer = _footer(footer_buttons, colors)
-    return FlexMessage(alt_text=f"{BOT_NAME} - البداية", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
-
-# ✅ نافذة المساعدة المستقلة (تظهر أثناء اللعب)
-def build_game_help(theme=DEFAULT_THEME):
-    """
-    نافذة مساعدة خاصة تظهر أثناء اللعب
-    """
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-
-    help_card = _3d_card([
-        {"type": "text", "text": "🎮 أوامر اللعبة:", "size": "lg", "color": colors["text"], "weight": "bold", "align": "center"},
-        _separator(colors, margin="md"),
-        {"type": "text", "text": "💡 لمح", "size": "md", "color": colors["primary"], "weight": "bold", "margin": "md"},
-        {"type": "text", "text": "احصل على تلميح لمساعدتك في الإجابة", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
+    # بناء أزرار الثيمات (3 في كل صف)
+    theme_buttons = []
+    theme_items = list(THEMES.items())
+    
+    for i in range(0, len(theme_items), 3):
+        row_themes = theme_items[i:i+3]
+        buttons = []
         
-        {"type": "text", "text": "🔍 جاوب", "size": "md", "color": colors["primary"], "weight": "bold", "margin": "md"},
-        {"type": "text", "text": "اعرض الإجابة الصحيحة وانتقل للسؤال التالي", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
+        for emoji, t_data in row_themes:
+            is_current = (emoji == current_theme)
+            btn = button(
+                f"{emoji} {t_data['name']}" + (" ✓" if is_current else ""),
+                f"ثيم {emoji}",
+                t_data["primary"] if is_current else None,
+                theme
+            )
+            buttons.append(btn)
         
-        {"type": "text", "text": "⛔ إيقاف", "size": "md", "color": colors["error"], "weight": "bold", "margin": "md"},
-        {"type": "text", "text": "أوقف اللعبة الحالية وعد للقائمة", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
-        
-        _separator(colors, margin="md"),
-        {"type": "text", "text": "💡 نصيحة: استخدم الأزرار السريعة أسفل الشاشة للوصول السريع!", "size": "xs", "color": colors["warning"], "wrap": True, "align": "center", "margin": "md"}
-    ], colors, corner="18px", pad="18px")
+        theme_buttons.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": buttons
+        })
+    
+    content = {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                text_box("🎨 اختر الثيم المفضل", "xl", "#FFFFFF", True, theme)
+            ],
+            "backgroundColor": theme["primary"],
+            "paddingAll": "25px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                text_box(f"الثيم الحالي: {THEMES[current_theme]['name']}", "sm", theme["text2"], theme=theme),
+                separator(theme)
+            ] + theme_buttons,
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                button("🏠 الرئيسية", "بداية", theme["primary"], theme)
+            ],
+            "paddingAll": "15px"
+        }
+    }
+    
+    return FlexMessage(alt_text="اختيار الثيم", contents=FlexContainer.from_dict(content))
 
-    body = [
-        _header("❓ مساعدة اللعبة", "كيف تلعب؟", colors),
-        _separator(colors),
-        help_card
-    ]
 
-    footer_buttons = [
-        _row([_3d_button("💡 لمح", "لمح", colors, "secondary"), _3d_button("🔍 جاوب", "جاوب", colors, "secondary")]),
-        _row([_3d_button("⛔ إيقاف", "إيقاف", colors, "primary", colors["error"]), _3d_button("🏠 البداية", "بداية", colors)])
+def games_menu(mode="فردي", current_theme="💜"):
+def games_menu(mode="فردي", current_theme="💜"):
+    """🎮 قائمة الألعاب"""
+    theme = get_theme(current_theme)
+    
+    games = [
+        {"icon": "🧠", "name": "ذكاء", "cmd": "لعبة ذكاء"},
+        {"icon": "🔢", "name": "رياضيات", "cmd": "لعبة رياضيات"},
+        {"icon": "🎨", "name": "ألوان", "cmd": "لعبة ألوان"},
+        {"icon": "⚡", "name": "سرعة", "cmd": "لعبة سرعة"},
+        {"icon": "🔤", "name": "كلمات", "cmd": "لعبة كلمات"},
+        {"icon": "🎵", "name": "أغاني", "cmd": "لعبة أغاني"}
     ]
     
-    footer = _footer(footer_buttons, colors)
-    return FlexMessage(alt_text="مساعدة اللعبة", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
+    # بناء أزرار الألعاب
+    game_buttons = []
+    for i in range(0, len(games), 2):
+        row = {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": []
+        }
+        for game in games[i:i+2]:
+            row["contents"].append(button(f"{game['icon']} {game['name']}", game['cmd'], theme=theme))
+        game_buttons.append(row)
+    
+    content = {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                text_box(f"🎮 الألعاب - {mode}", "xl", "#FFFFFF", True, theme)
+            ],
+            "backgroundColor": theme["primary"],
+            "paddingAll": "20px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": game_buttons + [
+                separator(theme),
+                text_box(f"وضع اللعب: {mode}", "xs", theme["text2"], theme=theme)
+            ],
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                button("🏠 الرئيسية", "بداية", theme["primary"], theme),
+                button("🔄 تغيير الوضع", "جماعي" if mode == "فردي" else "فردي", theme=theme)
+            ],
+            "paddingAll": "15px"
+        }
+    }
+    
+    return FlexMessage(alt_text="قائمة الألعاب", contents=FlexContainer.from_dict(content))
 
-def build_help(theme=DEFAULT_THEME):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
 
-    basic = _3d_card([
-        {"type": "text", "text": "📌 الأوامر الأساسية:", "size": "md", "color": colors["text"], "weight": "bold"},
-        {"type": "text", "text": "• بداية → العودة للقائمة الرئيسية\n• العاب → عرض الألعاب\n• نقاطي → عرض نقاطك\n• صدارة → لوحة الصدارة\n• انضم → تسجيل\n• انسحب → إلغاء التسجيل", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
-    ], colors)
+def game_question(game_name, question, round_num, total_rounds, mode="فردي", current_theme="💜"):
+    """❓ سؤال اللعبة"""
+    theme = get_theme(current_theme)
+    
+    content = {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        text_box(f"🎮 {game_name}", "lg", "#FFFFFF", True, theme),
+                        text_box(f"{round_num}/{total_rounds}", "md", "#FFFFFF", theme=theme)
+                    ]
+                },
+                text_box(f"وضع: {mode}", "xs", "#FFFFFF", theme=theme)
+            ],
+            "backgroundColor": theme["primary"],
+            "paddingAll": "20px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        text_box("❓ السؤال:", "sm", theme["text2"], True, theme),
+                        text_box(question, "xl", theme["primary"], True, theme)
+                    ],
+                    "backgroundColor": theme["card"],
+                    "cornerRadius": "20px",
+                    "paddingAll": "25px"
+                },
+                text_box("💡 اكتب إجابتك في الدردشة", "xs", theme["text2"], theme=theme)
+            ],
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": [
+                        button("💡 تلميح", "تلميح", theme=theme),
+                        button("👁️ إجابة", "اجابة", theme=theme)
+                    ]
+                },
+                button("⛔ إيقاف", "ايقاف", theme["error"], theme)
+            ],
+            "paddingAll": "15px"
+        }
+    }
+    
+    return FlexMessage(alt_text=f"{game_name} - سؤال {round_num}", contents=FlexContainer.from_dict(content))
 
-    game_cmds = _3d_card([
-        {"type": "text", "text": "🎮 أوامر اللعب:", "size": "md", "color": colors["text"], "weight": "bold"},
-        {"type": "text", "text": "• لعبة [اسم] → بدء اللعبة\n• لمح → طلب تلميح\n• جاوب → الإجابة\n• إيقاف → إنهاء اللعبة", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
-    ], colors)
 
-    body = [
-        _header("❓ مساعدة", "دليل استخدام البوت", colors),
-        _separator(colors),
-        basic,
-        game_cmds
-    ]
+def game_result(winner_name, winner_points, all_players, mode="فردي", current_theme="💜"):
+    """🏆 نتيجة اللعبة"""
+    theme = get_theme(current_theme)
+    
+    # قائمة اللاعبين
+    players_list = []
+    for i, (name, points) in enumerate(all_players[:5], 1):
+        medal = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][i-1]
+        players_list.append({
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                text_box(f"{medal} {name}", "sm", theme["text"], theme=theme),
+                text_box(f"{points} نقطة", "sm", theme["primary"], True, theme)
+            ],
+            "backgroundColor": theme["card"] if i == 1 else "transparent",
+            "cornerRadius": "10px",
+            "paddingAll": "10px"
+        })
+    
+    content = {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                text_box("🎉 انتهت اللعبة!", "xxl", "#FFFFFF", True, theme)
+            ],
+            "backgroundColor": theme["success"],
+            "paddingAll": "30px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "lg",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        text_box("🏆 الفائز", "sm", theme["text2"], theme=theme),
+                        text_box(winner_name, "xxl", theme["primary"], True, theme),
+                        text_box(f"{winner_points} نقطة", "lg", theme["success"], True, theme)
+                    ],
+                    "backgroundColor": theme["card"],
+                    "cornerRadius": "20px",
+                    "paddingAll": "25px"
+                },
+                separator(theme),
+                text_box("📊 جميع اللاعبين:", "sm", theme["text"], True, theme)
+            ] + players_list,
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                button("🔄 لعب مرة أخرى", "العاب", theme["primary"], theme),
+                button("🏠 الرئيسية", "بداية", theme=theme)
+            ],
+            "paddingAll": "15px"
+        }
+    }
+    
+    return FlexMessage(alt_text="نتيجة اللعبة", contents=FlexContainer.from_dict(content))
 
-    footer_buttons = [_row([_3d_button("▫️ البداية", "بداية", colors, "primary", colors["primary"]), _3d_button("▫️ ألعاب", "العاب", colors)])]
-    footer = _footer(footer_buttons, colors)
-    return FlexMessage(alt_text="مساعدة", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
 
-def build_games_menu(theme=DEFAULT_THEME):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-
-    # جميع الألعاب (مجموعات 2×2)
-    game_rows = []
-    for i in range(0, len(ORDERED_GAMES), 2):
-        row_buttons = []
-        for gkey, glabel in ORDERED_GAMES[i:i+2]:
-            row_buttons.append(_3d_button(glabel, f"لعبة {gkey}", colors))
-        game_rows.append(_row(row_buttons))
-
-    instr = _3d_card([
-        {"type": "text", "text": "💡 كيفية اللعب:", "size": "sm", "color": colors["text"], "weight": "bold"},
-        {"type": "text", "text": "اضغط على اسم اللعبة لبدءها. استخدم الأزرار السريعة في الأسفل للوصول السريع.", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
-    ], colors)
-
-    body = [
-        _header("🎮 الألعاب المتاحة", f"{len(ORDERED_GAMES)} لعبة", colors),
-        _separator(colors)
-    ] + game_rows + [_separator(colors), instr]
-
-    footer_buttons = [_row([_3d_button("▫️ البداية", "بداية", colors, "primary", colors["primary"]), _3d_button("▫️ مساعدة", "مساعدة", colors)])]
-    footer = _footer(footer_buttons, colors)
-    return FlexMessage(alt_text="قائمة الألعاب", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
-
-def build_my_points(username, points, theme=DEFAULT_THEME):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-
-    pts = _3d_card([
-        {"type": "text", "text": "⭐", "size": "xxl", "align": "center"},
-        {"type": "text", "text": str(points), "size": "xxl", "weight": "bold", "color": colors["primary"], "align": "center", "margin": "md"},
-        {"type": "text", "text": "نقطة", "size": "md", "color": colors["text2"], "align": "center", "margin": "sm"}
-    ], colors, corner="20px", pad="20px")
-
-    body = [_header("⭐ نقاطي", f"مرحباً {username}", colors), _separator(colors), pts]
-
-    footer_buttons = [
-        _row([_3d_button("▫️ الصدارة", "صدارة", colors, "primary", colors["primary"]), _3d_button("▫️ ألعاب", "الالعاب", colors)]),
-        _row([_3d_button("▫️ البداية", "بداية", colors)])
-    ]
-    footer = _footer(footer_buttons, colors)
-    return FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
-
-def build_leaderboard(top_players, theme=DEFAULT_THEME):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    player_cards = []
-    for i, (name, pts) in enumerate(top_players[:10], 1):
-        medal = "▫️"
-        color_medal = colors["text"]
-        if i == 1:
-            medal = "1."
-            color_medal = "#FFD700"
-        elif i == 2:
-            medal = "2."
-            color_medal = "#C0C0C0"
-        elif i == 3:
-            medal = "3."
-            color_medal = "#CD7F32"
-
-        player_cards.append(_3d_card([
-            {"type": "box", "layout": "horizontal", "contents": [
-                {"type": "text", "text": medal, "size": "lg", "color": color_medal, "weight": "bold", "flex": 0, "align": "center"},
-                {"type": "text", "text": name[:20] + "..." if len(name) > 20 else name, "size": "sm", "color": colors["text"], "flex": 3, "margin": "md"},
-                {"type": "text", "text": f"⭐ {pts}", "size": "sm", "color": colors["primary"], "align": "end", "weight": "bold", "flex": 2}
-            ]}
-        ], colors, corner="12px", pad="12px"))
-
-    if not player_cards:
-        player_cards = [_3d_card([{"type": "text", "text": "لا يوجد لاعبون بعد", "size": "md", "color": colors["text2"], "align": "center"}], colors)]
-
-    body = [_header("🏆 الصدارة", f"أفضل {len(top_players)} لاعب", colors), _separator(colors)] + player_cards
-    footer_buttons = [_row([_3d_button("▫️ نقاطي", "نقاطي", colors, "primary", colors["primary"]), _3d_button("▫️ ألعاب", "العاب", colors)]), _row([_3d_button("▫️ البداية", "بداية", colors)])]
-    footer = _footer(footer_buttons, colors)
-    return FlexMessage(alt_text="صدارة", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
-
-def build_registration_required(theme=DEFAULT_THEME):
-    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    alert = _3d_card([
-        {"type": "text", "text": "⚠️", "size": "xxl", "align": "center"},
-        {"type": "text", "text": "يجب التسجيل أولاً", "size": "xl", "weight": "bold", "color": colors["warning"], "align": "center", "margin": "md"},
-        {"type": "text", "text": "للوصول إلى الألعاب وجمع النقاط، الرجاء التسجيل", "size": "sm", "color": colors["text2"], "align": "center", "wrap": True, "margin": "md"}
-    ], colors, corner="18px", pad="18px")
-
-    body = [_header("🔒 تسجيل", "انضم إلينا", colors), _separator(colors), alert]
-    footer_buttons = [_row([_3d_button("▫️ انضم الآن", "انضم", colors, "primary", colors["success"])]), _row([_3d_button("▫️ البداية", "بداية", colors)])]
-    footer = _footer(footer_buttons, colors)
-    return FlexMessage(alt_text="تسجيل مطلوب", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
+def leaderboard(top_players, current_theme="💜"):
+    """🏆 لوحة الصدارة"""
+    theme = get_theme(current_theme)
+    medals = ["🥇", "🥈", "🥉"]
+    
+    # قائمة اللاعبين
+    players_list = []
+    for i, (name, points) in enumerate(top_players[:10], 1):
+        medal = medals[i-1] if i <= 3 else f"{i}."
+        bg = theme["card"] if i <= 3 else "transparent"
+        
+        players_list.append({
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                text_box(medal, "lg", theme["primary"], True, theme),
+                text_box(name, "md", theme["text"], theme=theme),
+                text_box(str(points), "md", theme["success"], True, theme)
+            ],
+            "spacing": "md",
+            "backgroundColor": bg,
+            "cornerRadius": "15px",
+            "paddingAll": "15px"
+        })
+    
+    content = {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                text_box("🏆 لوحة الصدارة", "xxl", "#FFFFFF", True, theme),
+                text_box("أفضل 10 لاعبين", "sm", "#FFFFFF", theme=theme)
+            ],
+            "backgroundColor": theme["primary"],
+            "paddingAll": "25px"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": players_list if players_list else [
+                text_box("لا يوجد لاعبون بعد", "md", theme["text2"], theme=theme)
+            ],
+            "paddingAll": "20px"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                button("🏠 الرئيسية", "بداية", theme["primary"], theme)
+            ],
+            "paddingAll": "15px"
+        }
+    }
+    
+    return FlexMessage(alt_text="لوحة الصدارة", contents=FlexContainer.from_dict(content))

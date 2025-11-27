@@ -1,358 +1,372 @@
 """
-Bot Mesh v10.0 - Enhanced Game Loader
-Created by: Abeer Aldosari © 2025
-
-التحسينات:
-✅ تحميل ديناميكي محسّن
-✅ Error handling شامل
-✅ Game factory pattern
-✅ Session management محسّن
-✅ Auto-cleanup للألعاب المنتهية
-✅ Performance monitoring
+Bot Mesh v6.0 - Games Engine
+Simple, Clean & Group-Friendly
 """
 
-import importlib
-import logging
-import inspect
-from typing import Dict, Optional, List, Any
-from datetime import datetime, timedelta
-from threading import Lock
+import random
+from datetime import datetime
 
-logger = logging.getLogger(__name__)
+# ============================================================================
+# محرك اللعبة الأساسي
+# ============================================================================
 
-class GameSession:
-    """تمثيل جلسة لعبة مع metadata"""
+class Game:
+    """محرك اللعبة الأساسي - يدعم الفردي والجماعي"""
     
-    def __init__(self, game_instance, user_id: str, game_name: str):
-        self.game = game_instance
-        self.user_id = user_id
-        self.game_name = game_name
-        self.started_at = datetime.now()
+    def __init__(self, game_type, mode="فردي", max_rounds=5):
+        self.game_type = game_type
+        self.mode = mode  # "فردي" أو "جماعي"
+        self.max_rounds = max_rounds
+        
+        # حالة اللعبة
+        self.active = True
+        self.current_round = 0
+        self.current_question = None
+        self.current_answer = None
+        
+        # النقاط (للفردي والجماعي)
+        self.scores = {}  # {user_id: {"name": str, "points": int}}
+        self.answered_this_round = set()  # من أجاب في هذه الجولة
+        
+        # التوقيت
+        self.created_at = datetime.now()
         self.last_activity = datetime.now()
     
-    def update_activity(self):
-        """تحديث آخر نشاط"""
+    def start(self):
+        """بدء اللعبة"""
+        self.current_round = 1
+        self.generate_question()
+        return self.get_question_text()
+    
+    def generate_question(self):
+        """توليد سؤال جديد - يجب تطبيقها في كل لعبة"""
+        raise NotImplementedError
+    
+    def check_answer(self, user_id, username, answer):
+        """فحص الإجابة"""
         self.last_activity = datetime.now()
-    
-    def is_expired(self, timeout_minutes: int = 30) -> bool:
-        """التحقق من انتهاء الصلاحية"""
-        return (datetime.now() - self.last_activity) > timedelta(minutes=timeout_minutes)
-    
-    def get_duration(self) -> float:
-        """الحصول على مدة اللعبة بالثواني"""
-        return (datetime.now() - self.started_at).total_seconds()
-
-
-class GameLoader:
-    """محمّل الألعاب المحسّن مع error handling و monitoring"""
-    
-    # خريطة الألعاب (الاسم العربي -> اسم الملف)
-    GAME_MAPPING = {
-        "ذكاء": "iq_game",
-        "رياضيات": "math_game",
-        "سرعة": "fast_typing_game",
-        "كلمات": "scramble_word_game",
-        "ألوان": "word_color_game",
-        "أضداد": "opposite_game",
-        "سلسلة": "chain_words_game",
-        "تخمين": "guess_game",
-        "أغنية": "song_game",
-        "تكوين": "letters_words_game",
-        "لعبة": "general_game",
-        "توافق": "compatibility_game"
-    }
-    
-    def __init__(self, auto_cleanup: bool = True, session_timeout: int = 30):
-        """
-        تهيئة محمّل الألعاب
         
-        Args:
-            auto_cleanup: تفعيل التنظيف التلقائي
-            session_timeout: مدة انتهاء الجلسة بالدقائق
-        """
-        self.loaded: Dict[str, type] = {}
-        self.active_sessions: Dict[str, GameSession] = {}
-        self.session_timeout = session_timeout
-        self.auto_cleanup = auto_cleanup
-        self.lock = Lock()
+        # في الوضع الفردي: مستخدم واحد فقط
+        if self.mode == "فردي" and self.scores and user_id not in self.scores:
+            return {"valid": False, "message": "هذه لعبة فردية لشخص آخر!"}
         
-        # إحصائيات
-        self.stats = {
-            'games_started': 0,
-            'games_completed': 0,
-            'games_failed': 0,
-            'load_errors': 0
-        }
+        # إذا أجاب في هذه الجولة (جماعي فقط)
+        if self.mode == "جماعي" and user_id in self.answered_this_round:
+            return {"valid": False, "message": "لقد أجبت في هذه الجولة!"}
         
-        self._load_all_games()
+        # تسجيل اللاعب إذا لم يكن موجوداً
+        if user_id not in self.scores:
+            self.scores[user_id] = {"name": username, "points": 0}
         
-        logger.info(f"✅ GameLoader initialized: {len(self.loaded)}/{len(self.GAME_MAPPING)} games loaded")
-    
-    def _load_all_games(self):
-        """تحميل الألعاب بشكل آمن"""
-        logger.info("🎮 Loading games...")
+        # فحص الإجابة
+        is_correct = self._check_answer_logic(answer)
         
-        for arabic_name, file_name in self.GAME_MAPPING.items():
-            try:
-                # استيراد الموديول
-                module = importlib.import_module(f"games.{file_name}")
-                
-                # البحث عن Game class
-                game_class = self._find_game_class(module)
-                
-                if game_class:
-                    # التحقق من أن الكلاس قابل للاستخدام
-                    if self._validate_game_class(game_class):
-                        self.loaded[arabic_name] = game_class
-                        logger.info(f"  ✅ {arabic_name} ({file_name})")
-                    else:
-                        logger.warning(f"  ⚠️ {arabic_name} - validation failed")
-                        self.stats['load_errors'] += 1
-                else:
-                    logger.warning(f"  ⚠️ {arabic_name} - no Game class found")
-                    self.stats['load_errors'] += 1
-                    
-            except Exception as e:
-                logger.error(f"  ❌ {arabic_name} - error: {e}")
-                self.stats['load_errors'] += 1
-        
-        logger.info(f"✅ Loaded {len(self.loaded)}/{len(self.GAME_MAPPING)} games successfully")
-    
-    def _find_game_class(self, module) -> Optional[type]:
-        """البحث عن Game class في الموديول"""
-        # محاولة 1: البحث عن "Game" مباشرة
-        if hasattr(module, "Game"):
-            return module.Game
-        
-        # محاولة 2: البحث عن أي class ينتهي بـ "Game"
-        for attr_name in dir(module):
-            if attr_name.endswith("Game") and not attr_name.startswith("_"):
-                attr = getattr(module, attr_name)
-                if isinstance(attr, type):
-                    return attr
-        
-        return None
-    
-    def _validate_game_class(self, game_class: type) -> bool:
-        """التحقق من صحة Game class"""
-        try:
-            # تحقق من وجود الميثودات الأساسية
-            required_methods = ['start', 'check_answer']
-            for method in required_methods:
-                if not hasattr(game_class, method):
-                    logger.warning(f"Missing method: {method}")
-                    return False
+        if is_correct:
+            points = 10
+            self.scores[user_id]["points"] += points
+            self.answered_this_round.add(user_id)
             
-            return True
-        
-        except Exception as e:
-            logger.error(f"Validation error: {e}")
-            return False
-    
-    def _create_game_instance(self, game_class: type) -> Optional[Any]:
-        """إنشاء نسخة من اللعبة بطريقة آمنة"""
-        try:
-            # فحص signature الـ __init__
-            sig = inspect.signature(game_class.__init__)
-            params = list(sig.parameters.keys())
+            # الانتقال للجولة التالية
+            self.current_round += 1
             
-            # إزالة 'self' من القائمة
-            params = [p for p in params if p != 'self']
-            
-            # محاولة إنشاء النسخة
-            if not params:
-                # لا يحتاج أي معاملات
-                return game_class()
-            elif 'line_bot_api' in params:
-                # يحتاج line_bot_api
-                return game_class(line_bot_api=None)
+            if self.current_round > self.max_rounds:
+                # انتهت اللعبة
+                self.active = False
+                return {
+                    "valid": True,
+                    "correct": True,
+                    "points": points,
+                    "game_over": True,
+                    "results": self.get_results()
+                }
             else:
-                # محاولة عامة
-                try:
-                    return game_class()
-                except TypeError:
-                    return game_class(line_bot_api=None)
-        
-        except Exception as e:
-            logger.error(f"Error creating game instance: {e}")
-            return None
-    
-    def start_game(self, user_id: str, game_name: str) -> Optional[Any]:
-        """
-        بدء لعبة جديدة
-        
-        Args:
-            user_id: معرف المستخدم
-            game_name: اسم اللعبة
-        
-        Returns:
-            استجابة بدء اللعبة أو None
-        """
-        with self.lock:
-            # التحقق من وجود اللعبة
-            if game_name not in self.loaded:
-                logger.warning(f"⚠️ Game not found: {game_name}")
-                return None
-            
-            try:
-                # إنهاء اللعبة السابقة إن وجدت
-                if user_id in self.active_sessions:
-                    self.end_game(user_id)
-                
-                # إنشاء نسخة من اللعبة
-                GameClass = self.loaded[game_name]
-                game = self._create_game_instance(GameClass)
-                
-                if not game:
-                    logger.error(f"❌ Failed to create game instance: {game_name}")
-                    self.stats['games_failed'] += 1
-                    return None
-                
-                # بدء اللعبة
-                if hasattr(game, 'start_game'):
-                    response = game.start_game()
-                elif hasattr(game, 'start'):
-                    response = game.start()
-                else:
-                    raise AttributeError("No start method found")
-                
-                # حفظ الجلسة
-                session = GameSession(game, user_id, game_name)
-                self.active_sessions[user_id] = session
-                
-                self.stats['games_started'] += 1
-                
-                logger.info(f"🎮 {user_id[:8]}... started {game_name}")
-                return response
-                
-            except Exception as e:
-                logger.error(f"❌ Error starting game {game_name}: {e}", exc_info=True)
-                self.stats['games_failed'] += 1
-                
-                # تنظيف في حالة الفشل
-                if user_id in self.active_sessions:
-                    del self.active_sessions[user_id]
-                
-                return None
-    
-    def get_game(self, user_id: str) -> Optional[Any]:
-        """
-        الحصول على اللعبة النشطة للمستخدم
-        
-        Args:
-            user_id: معرف المستخدم
-        
-        Returns:
-            نسخة اللعبة أو None
-        """
-        session = self.active_sessions.get(user_id)
-        if session:
-            session.update_activity()
-            return session.game
-        return None
-    
-    def has_active_game(self, user_id: str) -> bool:
-        """
-        التحقق من وجود لعبة نشطة
-        
-        Args:
-            user_id: معرف المستخدم
-        
-        Returns:
-            True إذا كانت هناك لعبة نشطة
-        """
-        return user_id in self.active_sessions
-    
-    def end_game(self, user_id: str, completed: bool = False):
-        """
-        إنهاء اللعبة
-        
-        Args:
-            user_id: معرف المستخدم
-            completed: هل انتهت اللعبة بنجاح
-        """
-        with self.lock:
-            if user_id in self.active_sessions:
-                session = self.active_sessions[user_id]
-                duration = session.get_duration()
-                
-                if completed:
-                    self.stats['games_completed'] += 1
-                
-                del self.active_sessions[user_id]
-                
-                logger.info(
-                    f"🛑 {user_id[:8]}... ended {session.game_name} "
-                    f"(duration: {duration:.1f}s, completed: {completed})"
-                )
-    
-    def cleanup_expired_sessions(self):
-        """تنظيف الجلسات المنتهية"""
-        if not self.auto_cleanup:
-            return
-        
-        with self.lock:
-            expired = []
-            
-            for user_id, session in self.active_sessions.items():
-                if session.is_expired(self.session_timeout):
-                    expired.append(user_id)
-            
-            for user_id in expired:
-                logger.info(f"🧹 Cleaning expired session: {user_id[:8]}...")
-                self.end_game(user_id, completed=False)
-            
-            if expired:
-                logger.info(f"🧹 Cleaned {len(expired)} expired sessions")
-    
-    def get_available_games(self) -> List[str]:
-        """
-        الحصول على قائمة الألعاب المتاحة
-        
-        Returns:
-            قائمة أسماء الألعاب
-        """
-        return list(self.loaded.keys())
-    
-    def get_stats(self) -> Dict:
-        """
-        الحصول على إحصائيات محمّل الألعاب
-        
-        Returns:
-            dict مع الإحصائيات
-        """
-        with self.lock:
+                # جولة جديدة
+                self.answered_this_round.clear()
+                self.generate_question()
+                return {
+                    "valid": True,
+                    "correct": True,
+                    "points": points,
+                    "next_question": self.get_question_text()
+                }
+        else:
             return {
-                'total_games': len(self.GAME_MAPPING),
-                'loaded_games': len(self.loaded),
-                'load_errors': self.stats['load_errors'],
-                'active_sessions': len(self.active_sessions),
-                'games_started': self.stats['games_started'],
-                'games_completed': self.stats['games_completed'],
-                'games_failed': self.stats['games_failed'],
-                'available_games': self.get_available_games(),
-                'success_rate': (
-                    self.stats['games_completed'] / self.stats['games_started'] * 100
-                    if self.stats['games_started'] > 0 else 0
-                )
+                "valid": True,
+                "correct": False,
+                "message": "❌ إجابة خاطئة، حاول مرة أخرى!"
             }
     
-    def get_session_info(self, user_id: str) -> Optional[Dict]:
-        """
-        الحصول على معلومات الجلسة
+    def _check_answer_logic(self, answer):
+        """منطق فحص الإجابة - يجب تطبيقها في كل لعبة"""
+        raise NotImplementedError
+    
+    def get_question_text(self):
+        """الحصول على نص السؤال"""
+        return {
+            "game": self.game_type,
+            "question": self.current_question,
+            "round": self.current_round,
+            "total_rounds": self.max_rounds,
+            "mode": self.mode
+        }
+    
+    def get_results(self):
+        """الحصول على النتائج النهائية"""
+        sorted_scores = sorted(
+            self.scores.items(),
+            key=lambda x: x[1]["points"],
+            reverse=True
+        )
         
-        Args:
-            user_id: معرف المستخدم
+        players = [(data["name"], data["points"]) for _, data in sorted_scores]
         
-        Returns:
-            dict مع معلومات الجلسة أو None
-        """
-        session = self.active_sessions.get(user_id)
-        if session:
+        if players:
+            winner_name, winner_points = players[0]
+        else:
+            winner_name, winner_points = "لا أحد", 0
+        
+        return {
+            "winner_name": winner_name,
+            "winner_points": winner_points,
+            "all_players": players,
+            "mode": self.mode
+        }
+    
+    def get_hint(self):
+        """تلميح"""
+        if isinstance(self.current_answer, list):
+            ans = self.current_answer[0]
+        else:
+            ans = str(self.current_answer)
+        
+        if len(ans) > 2:
+            return f"💡 الإجابة تبدأ بـ: {ans[0]}\n📏 الطول: {len(ans)} حرف"
+        return f"💡 الإجابة تبدأ بـ: {ans[0]}"
+    
+    def reveal_answer(self):
+        """كشف الإجابة والانتقال للسؤال التالي"""
+        if isinstance(self.current_answer, list):
+            answer_text = " أو ".join(self.current_answer)
+        else:
+            answer_text = str(self.current_answer)
+        
+        # الانتقال للجولة التالية
+        self.current_round += 1
+        self.answered_this_round.clear()
+        
+        if self.current_round > self.max_rounds:
+            self.active = False
             return {
-                'game_name': session.game_name,
-                'started_at': session.started_at.isoformat(),
-                'duration': session.get_duration(),
-                'last_activity': session.last_activity.isoformat()
+                "answer": answer_text,
+                "game_over": True,
+                "results": self.get_results()
             }
-        return None
+        else:
+            self.generate_question()
+            return {
+                "answer": answer_text,
+                "next_question": self.get_question_text()
+            }
+    
+    def is_expired(self, max_minutes=30):
+        """هل انتهت صلاحية اللعبة؟"""
+        elapsed = (datetime.now() - self.last_activity).total_seconds() / 60
+        return elapsed > max_minutes
+
+
+# ============================================================================
+# الألعاب المتاحة
+# ============================================================================
+
+class IQGame(Game):
+    """🧠 لعبة الذكاء"""
+    
+    def __init__(self, mode="فردي"):
+        super().__init__("ذكاء", mode)
+        self.questions = [
+            {"q": "ما يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "الغيم", "سحاب", "غيم"]},
+            {"q": "له رأس ولا عين له؟", "a": ["الدبوس", "دبوس", "المسمار", "مسمار"]},
+            {"q": "كلما زاد نقص؟", "a": ["العمر", "عمر", "الوقت", "وقت"]},
+            {"q": "يكتب ولا يقرأ؟", "a": ["القلم", "قلم"]},
+            {"q": "له أسنان ولا يعض؟", "a": ["المشط", "مشط"]},
+            {"q": "في الماء ولكن الماء يميته؟", "a": ["الملح", "ملح"]},
+            {"q": "يتكلم بكل اللغات؟", "a": ["الصدى", "صدى"]},
+            {"q": "يؤخذ منك قبل أن تعطيه؟", "a": ["الصورة", "صورة"]},
+        ]
+        random.shuffle(self.questions)
+    
+    def generate_question(self):
+        q_data = self.questions[(self.current_round - 1) % len(self.questions)]
+        self.current_question = q_data["q"]
+        self.current_answer = q_data["a"]
+    
+    def _check_answer_logic(self, answer):
+        answer = answer.strip().lower()
+        for correct in self.current_answer:
+            if answer == correct.lower():
+                return True
+        return False
+
+
+class MathGame(Game):
+    """🔢 لعبة الرياضيات"""
+    
+    def __init__(self, mode="فردي"):
+        super().__init__("رياضيات", mode)
+    
+    def generate_question(self):
+        # مستوى الصعوبة حسب الجولة
+        level = min(self.current_round, 5)
+        max_num = 10 * level
+        
+        a = random.randint(1, max_num)
+        b = random.randint(1, max_num)
+        op = random.choice(['+', '-', '×'])
+        
+        if op == '+':
+            self.current_question = f"{a} + {b} = ؟"
+            self.current_answer = str(a + b)
+        elif op == '-':
+            if a < b:
+                a, b = b, a
+            self.current_question = f"{a} - {b} = ؟"
+            self.current_answer = str(a - b)
+        else:  # ×
+            a = random.randint(2, 12)
+            b = random.randint(2, 12)
+            self.current_question = f"{a} × {b} = ؟"
+            self.current_answer = str(a * b)
+    
+    def _check_answer_logic(self, answer):
+        try:
+            return int(answer.strip()) == int(self.current_answer)
+        except:
+            return False
+
+
+class ColorGame(Game):
+    """🎨 لعبة الألوان (Stroop Effect)"""
+    
+    def __init__(self, mode="فردي"):
+        super().__init__("ألوان", mode)
+        self.colors = {
+            "أحمر": "#E53E3E",
+            "أزرق": "#3182CE",
+            "أخضر": "#38A169",
+            "أصفر": "#D69E2E",
+            "برتقالي": "#DD6B20",
+            "بنفسجي": "#805AD5"
+        }
+        self.color_names = list(self.colors.keys())
+    
+    def generate_question(self):
+        word = random.choice(self.color_names)
+        # 70% مختلف، 30% نفس اللون
+        if random.random() < 0.7:
+            color = random.choice([c for c in self.color_names if c != word])
+        else:
+            color = word
+        
+        self.current_question = f"ما لون هذه الكلمة؟\n[{word} بلون {color}]"
+        self.current_answer = [color]
+    
+    def _check_answer_logic(self, answer):
+        answer = answer.strip().lower()
+        return answer == self.current_answer[0].lower()
+
+
+class SpeedGame(Game):
+    """⚡ لعبة السرعة"""
+    
+    def __init__(self, mode="فردي"):
+        super().__init__("سرعة", mode)
+        self.phrases = [
+            "السرعة والدقة",
+            "التركيز مهم",
+            "اكتب بسرعة",
+            "الوقت من ذهب",
+            "التحدي يبدأ الآن",
+            "كن الأفضل دائماً",
+            "النجاح يحتاج صبر",
+            "الأمل نور الحياة"
+        ]
+    
+    def generate_question(self):
+        phrase = random.choice(self.phrases)
+        self.current_question = f"اكتب هذا النص بالضبط:\n{phrase}"
+        self.current_answer = phrase
+    
+    def _check_answer_logic(self, answer):
+        return answer.strip() == self.current_answer
+
+
+class WordsGame(Game):
+    """🔤 لعبة الكلمات"""
+    
+    def __init__(self, mode="فردي"):
+        super().__init__("كلمات", mode)
+        self.words = [
+            {"scrambled": "سرمدة", "answer": ["مدرسة"]},
+            {"scrambled": "باتك", "answer": ["كتاب"]},
+            {"scrambled": "ملق", "answer": ["قلم"]},
+            {"scrambled": "رسية", "answer": ["سيارة"]},
+            {"scrambled": "بحر", "answer": ["حرب", "برح"]},
+            {"scrambled": "رمق", "answer": ["قمر"]},
+        ]
+    
+    def generate_question(self):
+        word_data = random.choice(self.words)
+        self.current_question = f"رتّب الحروف:\n{word_data['scrambled']}"
+        self.current_answer = word_data['answer']
+    
+    def _check_answer_logic(self, answer):
+        answer = answer.strip().lower()
+        for correct in self.current_answer:
+            if answer == correct.lower():
+                return True
+        return False
+
+
+class SongGame(Game):
+    """🎵 لعبة الأغاني"""
+    
+    def __init__(self, mode="فردي"):
+        super().__init__("أغاني", mode)
+        self.songs = [
+            {"lyrics": "رجعت لي أيام الماضي", "artist": ["أم كلثوم", "ام كلثوم"]},
+            {"lyrics": "جلست والخوف بعينيها", "artist": ["عبد الحليم", "عبدالحليم"]},
+            {"lyrics": "تملي معاك ولو حتى بعيد", "artist": ["عمرو دياب", "عمرودياب"]},
+            {"lyrics": "يا بنات يا بنات", "artist": ["نانسي عجرم", "نانسي"]},
+        ]
+    
+    def generate_question(self):
+        song = random.choice(self.songs)
+        self.current_question = f"من المغني؟\n\"{song['lyrics']}\""
+        self.current_answer = song['artist']
+    
+    def _check_answer_logic(self, answer):
+        answer = answer.strip().lower().replace(" ", "")
+        for correct in self.current_answer:
+            if answer == correct.lower().replace(" ", ""):
+                return True
+        return False
+
+
+# ============================================================================
+# مدير الألعاب
+# ============================================================================
+
+GAMES = {
+    "ذكاء": IQGame,
+    "رياضيات": MathGame,
+    "ألوان": ColorGame,
+    "سرعة": SpeedGame,
+    "كلمات": WordsGame,
+    "أغاني": SongGame
+}
+
+def create_game(game_type, mode="فردي"):
+    """إنشاء لعبة جديدة"""
+    if game_type in GAMES:
+        return GAMES[game_type](mode)
+    return None
