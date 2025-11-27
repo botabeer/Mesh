@@ -1,18 +1,17 @@
 """
 Bot Mesh - Enhanced Constants & Configuration
 Created by: Abeer Aldosari © 2025
-Fixed: UTF-8 encoding, optimized performance
+Enhanced: Better color schemes, LINE compatibility, smarter config
 """
 
 import os
 import re
-from functools import lru_cache
 
 # ============================================================================
-# Bot Information (UTF-8 صحيح)
+# Bot Information
 # ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "3.2.0"
+BOT_VERSION = "3.1.0"
 BOT_RIGHTS = "Bot Mesh © 2025 by Abeer Aldosari"
 BOT_DESCRIPTION = "بوت ألعاب ذكي مع تصميم احترافي"
 
@@ -23,30 +22,22 @@ LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 
 # ============================================================================
-# Gemini AI Keys (Enhanced with rotation)
+# Gemini AI Keys (Multiple keys for better reliability)
 # ============================================================================
 GEMINI_API_KEY_1 = os.getenv('GEMINI_API_KEY_1')
 GEMINI_API_KEY_2 = os.getenv('GEMINI_API_KEY_2')
 GEMINI_API_KEY_3 = os.getenv('GEMINI_API_KEY_3')
 
-# تصفية المفاتيح الفارغة
-GEMINI_KEYS = [k for k in [GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3] if k]
-
 # ============================================================================
-# Game Settings (محسّن)
+# Game Settings
 # ============================================================================
 ROUNDS_PER_GAME = 5
 POINTS_PER_CORRECT_ANSWER = 10
 INACTIVITY_DAYS = 7
 MAX_LEADERBOARD_USERS = 10
 
-# حدود الأمان (جديد)
-MAX_MESSAGE_LENGTH = 500
-RATE_LIMIT_MESSAGES = 30  # رسالة في الدقيقة
-MAX_CACHE_SIZE = 100  # عناصر
-
 # ============================================================================
-# Enhanced Neumorphism Themes (LINE متوافق 100%)
+# Enhanced Neumorphism Themes (LINE Compatible)
 # ============================================================================
 THEMES = {
     "💜": {
@@ -180,7 +171,7 @@ THEMES = {
 DEFAULT_THEME = "💜"
 
 # ============================================================================
-# Game List (محسّن مع تصنيفات)
+# Enhanced Game List (Better organization)
 # ============================================================================
 GAME_LIST = {
     "IQ": {
@@ -270,7 +261,7 @@ GAME_LIST = {
 }
 
 # ============================================================================
-# Fixed Buttons (LINE متوافق)
+# Fixed Buttons (LINE Compatible)
 # ============================================================================
 FIXED_BUTTONS = {
     "home": {"label": "🏠 البداية", "text": "بداية"},
@@ -283,117 +274,128 @@ FIXED_BUTTONS = {
 }
 
 # ============================================================================
-# Arabic Normalization (محسّن بـ LRU Cache)
+# Arabic Character Normalization (Enhanced)
 # ============================================================================
 ARABIC_NORMALIZE = {
     'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ء': 'ا',
     'ى': 'ي', 'ة': 'ه', 'ؤ': 'و', 'ئ': 'ي'
 }
 
-@lru_cache(maxsize=1000)
 def normalize_arabic(text):
     """
-    تطبيع محسّن للنصوص العربية مع Cache
+    Enhanced Arabic text normalization
     
     Args:
-        text: النص المدخل
+        text: Input Arabic text
         
     Returns:
-        النص المطبّع
+        Normalized text
     """
     if not text:
         return ""
     
     text = text.strip().lower()
     
-    # تطبيع الأحرف العربية
+    # Normalize Arabic characters
     for old, new in ARABIC_NORMALIZE.items():
         text = text.replace(old, new)
     
-    # إزالة التشكيل
+    # Remove diacritics
     text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
     
-    # إزالة المسافات الزائدة
+    # Remove extra spaces
     text = ' '.join(text.split())
     
     return text
 
 # ============================================================================
-# Helper Functions (محسّنة)
+# Helper Functions
 # ============================================================================
 
 def get_username(profile):
     """
-    استخراج اسم المستخدم بأمان
+    Extract username from LINE profile safely
     
     Args:
-        profile: بروفايل LINE
+        profile: LINE user profile
         
     Returns:
-        اسم المستخدم
+        Clean username or default
     """
     try:
         if hasattr(profile, 'display_name'):
             name = profile.display_name
             if name and name.strip():
-                # تنظيف الاسم من الرموز الخطيرة
-                name = re.sub(r'[<>\"\'\\]', '', name)
-                return name.strip()[:50]
+                return name.strip()[:50]  # Limit length
         return "مستخدم"
     except Exception:
         return "مستخدم"
 
 def validate_env():
     """
-    التحقق من المتغيرات البيئية
+    Validate required environment variables
     
     Returns:
-        bool: صحيح إذا كانت صالحة
+        bool: True if valid
         
     Raises:
-        ValueError: إذا كانت ناقصة
+        ValueError: If missing required variables
     """
+    # Required variables
     required = ['LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN']
     missing = [var for var in required if not os.getenv(var)]
     
     if missing:
-        raise ValueError(f"❌ متغيرات ناقصة: {', '.join(missing)}")
+        raise ValueError(f"Missing environment variables: {', '.join(missing)}")
     
-    # فحص مفاتيح AI
-    if not GEMINI_KEYS:
-        print("⚠️ لا توجد مفاتيح Gemini AI - وضع Fallback")
+    # Check AI keys
+    ai_keys = [GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3]
+    active_keys = [k for k in ai_keys if k]
+    
+    if not active_keys:
+        print("⚠️ No Gemini AI keys - Using fallback mode")
     else:
-        print(f"✅ {len(GEMINI_KEYS)} مفتاح AI متاح")
+        print(f"✅ {len(active_keys)} Gemini AI key(s) available")
     
     return True
 
-@lru_cache(maxsize=10)
 def get_theme_colors(theme_emoji):
     """
-    الحصول على ألوان الثيم مع Cache
+    Get theme colors safely
     
     Args:
-        theme_emoji: رمز الثيم
+        theme_emoji: Theme emoji identifier
         
     Returns:
-        dict: ألوان الثيم
+        dict: Theme colors
     """
     return THEMES.get(theme_emoji, THEMES[DEFAULT_THEME])
 
 def is_valid_theme(theme_emoji):
     """
-    التحقق من صحة الثيم
+    Check if theme is valid
     
     Args:
-        theme_emoji: رمز الثيم
+        theme_emoji: Theme emoji to check
         
     Returns:
-        bool: صحيح إذا كان صالحاً
+        bool: True if valid
     """
     return theme_emoji in THEMES
 
 # ============================================================================
-# User Levels (محسّن)
+# Game Categories
+# ============================================================================
+GAME_CATEGORIES = {
+    "عقلية": ["IQ", "رياضيات", "تخمين"],
+    "لغوية": ["كلمة مبعثرة", "عكس", "حروف وكلمات", "سلسلة كلمات"],
+    "مهارة": ["كتابة سريعة", "لون الكلمة"],
+    "ثقافية": ["أغنية", "إنسان حيوان نبات"],
+    "تسلية": ["توافق"]
+}
+
+# ============================================================================
+# User Levels
 # ============================================================================
 USER_LEVELS = [
     {"min": 0, "max": 49, "name": "🌱 مبتدئ", "color": "#48BB78"},
@@ -402,16 +404,15 @@ USER_LEVELS = [
     {"min": 300, "max": 999999, "name": "👑 محترف", "color": "#D53F8C"}
 ]
 
-@lru_cache(maxsize=100)
 def get_user_level(points):
     """
-    تحديد مستوى المستخدم مع Cache
+    Get user level based on points
     
     Args:
-        points: النقاط
+        points: User points
         
     Returns:
-        dict: معلومات المستوى
+        dict: Level info
     """
     for level in USER_LEVELS:
         if level["min"] <= points <= level["max"]:
@@ -419,37 +420,37 @@ def get_user_level(points):
     return USER_LEVELS[0]
 
 # ============================================================================
-# Sanitization (محسّن)
+# Validation & Sanitization
 # ============================================================================
 
-def sanitize_user_input(text, max_length=MAX_MESSAGE_LENGTH):
+def sanitize_user_input(text, max_length=200):
     """
-    تنظيف مدخلات المستخدم بشكل آمن
+    Sanitize user input
     
     Args:
-        text: النص المدخل
-        max_length: الحد الأقصى للطول
+        text: Input text
+        max_length: Maximum allowed length
         
     Returns:
-        النص المنظف
+        Clean text
     """
     if not text:
         return ""
     
-    # إزالة الأحرف الخطيرة
+    # Remove control characters
     text = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
-    text = re.sub(r'[<>\"\'\\]', '', text)
     
-    # تحديد الطول
+    # Limit length
     text = text[:max_length]
     
+    # Trim whitespace
     return text.strip()
 
 # ============================================================================
-# Validation
+# Export validation on import
 # ============================================================================
 if __name__ != "__main__":
     try:
         validate_env()
     except ValueError as e:
-        print(f"⚠️ تحذير: {e}")
+        print(f"⚠️ Configuration warning: {e}")
