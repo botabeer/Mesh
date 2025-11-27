@@ -1,12 +1,8 @@
 """
-ui.py — واجهات Bot Mesh (ثيمات، نوافذ Flex، Quick Reply)
+ui.py — واجهات Bot Mesh (ثيمات، نوافذ Flex، Quick Reply) - FIXED
 Created by: Abeer Aldosari © 2025
-ملاحظات:
-- كل زر ألعاب مع بادئة "▫️" وبدون إيموجي كما طلبت.
-- محاكاة ستايل ثلاثي الأبعاد عبر تدرجات وظلال في قيمة الثيم.
-- دالة get_quick_reply() لإرفاق Quick Reply دائمًا.
-- الدوال تُعيد FlexMessage فقط. في app.py نُرسل رسالة نصية صغيرة مع quick reply بعد FlexMessage
-  لضمان ظهور Quick Reply دائمًا في واجهة LINE.
+
+التحديث: حل مشكلة تجاوز حد Quick Reply (13 عنصر كحد أقصى)
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
@@ -15,7 +11,7 @@ BOT_NAME = "Bot Mesh"
 BOT_RIGHTS = "Bot Mesh © 2025 by Abeer Aldosari"
 BOT_CREATOR = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
-# الثيمات (ألوان + ظلال/محاكاة 3D عبر border/shadow/gradient string للمرجع)
+# الثيمات
 THEMES = {
     "رمادي": {"primary": "#60A5FA", "bg": "#0F172A", "card": "#1E293B", "text": "#F1F5F9", "text2": "#CBD5E1", "success": "#34D399", "error": "#F87171", "warning": "#FBBF24", "shadow": "#334155", "border": "#475569", "gradient": "linear-gradient(135deg,#1F2937 0%,#111827 100%)"},
     "بنفسجي": {"primary": "#A78BFA", "bg": "#1E1B4B", "card": "#2E2558", "text": "#F3F4F6", "text2": "#C4B5FD", "success": "#10B981", "error": "#EF4444", "warning": "#F59E0B", "shadow": "#6D28D9", "border": "#7C3AED", "gradient": "linear-gradient(135deg,#7C3AED 0%,#4C1D95 100%)"},
@@ -30,27 +26,22 @@ THEMES = {
 
 DEFAULT_THEME = "رمادي"
 
-# -----------------------
-# الألعاب — أسماؤها بدون إيموجي ومرتبة حسب الأفضلية كما طلبت (مع بادئة ▫️)
-# ترتيب الأزرار في الأسفل ثابت (Quick Reply دائم)
-# خريطة الأسماء الداخليه المستخدمة بواسطة game loader
-# -----------------------
+# الألعاب - مرتبة حسب الأفضلية
 ORDERED_GAMES = [
     ("سرعة", "▫️ سرعة"),
     ("ذكاء", "▫️ ذكاء"),
-    ("لعبة", "▫️ لعبة"),       # لعبة = إنسان حيوان نبات
+    ("لعبة", "▫️ لعبة"),
     ("أغنية", "▫️ أغنية"),
     ("تخمين", "▫️ تخمين"),
     ("سلسلة", "▫️ سلسلة"),
-    ("كلمات", "▫️ ترتيب"),     # عرضها كـ "ترتيب" حسب طلبك
+    ("كلمات", "▫️ ترتيب"),
     ("تكوين", "▫️ تكوين"),
-    ("أضداد", "▫️ ضد"),        # عرضها بكلمة "ضد"
-    ("ألوان", "▫️ لون"),       # عرضها بكلمة "لون"
+    ("أضداد", "▫️ ضد"),
+    ("ألوان", "▫️ لون"),
     ("رياضيات", "▫️ رياضيات"),
-    ("توافق", "▫️ توافق")       # توافق آخر شيء
+    ("توافق", "▫️ توافق")
 ]
 
-# إذا عندك قائمة ألعاب مفصلة - ضع هنا الوصف (اختياري)
 GAME_DESCRIPTIONS = {
     "لعبة": "إنسان حيوان نبات",
     "سرعة": "اختبار السرعة",
@@ -66,9 +57,8 @@ GAME_DESCRIPTIONS = {
     "توافق": "احسب نسبة التوافق"
 }
 
-# ---------- Helpers لبناء مكونات Flex (ثلاثية الأبعاد محاكاة) ----------
+# ---------- Helpers ----------
 def _3d_button(label, text, colors, style="secondary", color_override=None):
-    # زر يظهر كتدرج/حدود لإعطاء إحساس 3D
     return {
         "type": "button",
         "action": {"type": "message", "label": label, "text": text},
@@ -120,24 +110,39 @@ def _bubble(body_contents, footer_box, colors):
         "styles": {"body": {"backgroundColor": colors["bg"]}, "footer": {"backgroundColor": colors["bg"]}}
     }
 
-# Quick Reply — دائم (ترجع QuickReply object لاستخدامه متى شئت)
+# ✅ FIXED: Quick Reply محدود بـ 13 عنصر كحد أقصى
 def get_quick_reply():
+    """
+    إنشاء Quick Reply مع التقيد بحد LINE (13 عنصر كحد أقصى)
+    
+    الاستراتيجية:
+    - 9 ألعاب أساسية (الأكثر شعبية)
+    - 4 أزرار رئيسية
+    = 13 عنصرًا بالضبط
+    """
     items = []
-    for key, label in ORDERED_GAMES:
-        # نرسل نص "لعبة <الاسم الداخلي>" أثناء الضغط
+    
+    # أخذ أول 9 ألعاب فقط (الأكثر شعبية)
+    for key, label in ORDERED_GAMES[:9]:
         items.append(QuickReplyItem(action=MessageAction(label=label, text=f"لعبة {key}")))
-    # أضف أزرار رئيسية
+    
+    # أزرار رئيسية (4 أزرار)
     main_quick = [
         QuickReplyItem(action=MessageAction(label="▫️ بداية", text="بداية")),
-        QuickReplyItem(action=MessageAction(label="▫️ مساعدة", text="مساعدة")),
+        QuickReplyItem(action=MessageAction(label="▫️ ألعاب", text="العاب")),
         QuickReplyItem(action=MessageAction(label="▫️ نقاطي", text="نقاطي")),
         QuickReplyItem(action=MessageAction(label="▫️ صدارة", text="صدارة"))
     ]
-    # اجمع (نضع ألعاب أولًا ثم رئيسية)
-    items = items + main_quick
+    
+    items.extend(main_quick)
+    
+    # التأكد من أننا لا نتجاوز 13
+    if len(items) > 13:
+        items = items[:13]
+    
     return QuickReply(items=items)
 
-# ---------- دوال بناء النوافذ (ترجع FlexMessage) ----------
+# ---------- دوال بناء النوافذ ----------
 def build_home(theme=DEFAULT_THEME, username="مستخدم", points=0, is_registered=False):
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
 
@@ -149,7 +154,7 @@ def build_home(theme=DEFAULT_THEME, username="مستخدم", points=0, is_regist
         ], "margin": "md"}
     ], colors, corner="18px", pad="18px")
 
-    # ثيمات مختصرة (زر لكل ثيم)
+    # ثيمات مختصرة
     theme_rows = []
     tkeys = list(THEMES.keys())
     for i in range(0, len(tkeys), 3):
@@ -165,7 +170,6 @@ def build_home(theme=DEFAULT_THEME, username="مستخدم", points=0, is_regist
         {"type": "text", "text": "🎨 اختر ثيمك المفضل:", "size": "md", "weight": "bold", "color": colors["text"], "margin": "lg"}
     ] + theme_rows
 
-    # أزرار رئيسية Footer
     footer_buttons = [
         _row([_3d_button("▫️ ألعاب", "العاب", colors, "primary", colors["primary"]), _3d_button("▫️ نقاطي", "نقاطي", colors)]),
         _row([_3d_button("▫️ صدارة", "صدارة", colors), _3d_button("▫️ مساعدة", "مساعدة", colors)])
@@ -184,7 +188,7 @@ def build_help(theme=DEFAULT_THEME):
 
     game_cmds = _3d_card([
         {"type": "text", "text": "🎮 أوامر اللعب:", "size": "md", "color": colors["text"], "weight": "bold"},
-        {"type": "text", "text": "• لعبة [اسم] → بدء اللعبة\n• لمح → طلب تلميح\n• جاوب [الجواب] → للإجابة\n• إيقاف → إنهاء اللعبة", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
+        {"type": "text", "text": "• لعبة [اسم] → بدء اللعبة\n• لمح → طلب تلميح\n• جاوب → الإجابة\n• إيقاف → إنهاء اللعبة", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
     ], colors)
 
     body = [
@@ -201,7 +205,7 @@ def build_help(theme=DEFAULT_THEME):
 def build_games_menu(theme=DEFAULT_THEME):
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
 
-    # أبني أزرار الألعاب حسب ORDERED_GAMES بمجموعات 2 في الصف ليتناسب مع Flex
+    # جميع الألعاب (مجموعات 2×2)
     game_rows = []
     for i in range(0, len(ORDERED_GAMES), 2):
         row_buttons = []
