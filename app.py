@@ -1,12 +1,13 @@
 """
-Bot Mesh - LINE Bot Application v3.1 FINAL
+Bot Mesh - LINE Bot Application v3.2 FINAL
 Created by: Abeer Aldosari © 2025
 
 التحديثات:
-- إصلاح نظام تحميل الألعاب
-- توحيد أسماء الكلاسات
-- إصلاح مشكلة PORT
-- تحسين معالجة الأخطاء
+- إلغاء AI بالكامل
+- نافذة إعلان الفائز مع زر إعادة
+- عرض السؤال والإجابة السابقة
+- أول إجابة صحيحة فقط
+- مؤقت للألعاب السريعة
 """
 
 import os
@@ -27,13 +28,13 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from constants import (
     BOT_NAME, BOT_VERSION, BOT_RIGHTS,
     LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
-    GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3,
-    validate_env, get_username, GAME_LIST, DEFAULT_THEME, THEMES
+    validate_env, get_username, GAME_LIST, DEFAULT_THEME
 )
 
 from ui_builder import (
     build_home, build_games_menu, build_my_points,
-    build_leaderboard, build_registration_required
+    build_leaderboard, build_registration_required,
+    build_winner_announcement
 )
 
 # ============================================================================
@@ -66,79 +67,7 @@ user_themes = {}       # {user_id: theme_name}
 active_games = {}      # {user_id: game_instance}
 
 # ============================================================================
-# AI Integration with Intelligent Fallback
-# ============================================================================
-current_gemini_key = 0
-gemini_keys = [k for k in [GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3] if k]
-
-def get_next_gemini_key():
-    """Rotate through available Gemini API keys"""
-    global current_gemini_key
-    if not gemini_keys:
-        logger.warning("⚠️ No Gemini API keys available")
-        return None
-    
-    key = gemini_keys[current_gemini_key % len(gemini_keys)]
-    current_gemini_key += 1
-    logger.info(f"🔑 Using Gemini key #{current_gemini_key % len(gemini_keys) + 1}")
-    return key
-
-def ai_generate_question(game_type):
-    """Generate question using Gemini AI with fallback"""
-    try:
-        import google.generativeai as genai
-        key = get_next_gemini_key()
-        if not key:
-            return None
-        
-        genai.configure(api_key=key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        prompts = {
-            "IQ": "أنشئ لغز ذكاء عربي مع إجابة قصيرة. رد بصيغة JSON: {\"q\": \"السؤال\", \"a\": \"الإجابة\"}",
-            "رياضيات": "أنشئ مسألة رياضية بسيطة مع الحل. رد بصيغة JSON: {\"q\": \"المسألة\", \"a\": \"الجواب\"}",
-            "عكس": "أعط كلمة عربية وعكسها. رد بصيغة JSON: {\"word\": \"الكلمة\", \"opposite\": \"العكس\"}"
-        }
-        
-        prompt = prompts.get(game_type, prompts["IQ"])
-        response = model.generate_content(prompt)
-        
-        import json
-        text = response.text.strip()
-        
-        # Clean JSON from markdown
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
-        elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
-        
-        return json.loads(text.strip())
-    except Exception as e:
-        logger.error(f"❌ AI generation error: {e}")
-        return None
-
-def ai_check_answer(correct_answer, user_answer):
-    """Validate answer using Gemini AI"""
-    try:
-        import google.generativeai as genai
-        key = get_next_gemini_key()
-        if not key:
-            return False
-        
-        genai.configure(api_key=key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        prompt = f"هل الإجابة '{user_answer}' صحيحة للجواب '{correct_answer}'? رد فقط بـ 'نعم' أو 'لا'"
-        response = model.generate_content(prompt)
-        
-        answer_text = response.text.strip().lower()
-        return 'نعم' in answer_text or 'yes' in answer_text
-    except Exception as e:
-        logger.error(f"❌ AI check error: {e}")
-        return False
-
-# ============================================================================
-# Game Loading System - تحميل جميع الألعاب
+# Game Loading System
 # ============================================================================
 AVAILABLE_GAMES = {}
 
@@ -156,7 +85,6 @@ try:
     from games.guess_game import GuessGame
     from games.compatibility_game import CompatibilityGame
     
-    # ربط الأسماء الكاملة بالكلاسات
     AVAILABLE_GAMES = {
         "IQ": IqGame,
         "رياضيات": MathGame,
@@ -173,7 +101,6 @@ try:
     }
     
     logger.info(f"✅ تم تحميل {len(AVAILABLE_GAMES)} لعبة بنجاح")
-    logger.info(f"📋 الألعاب المتاحة: {', '.join(AVAILABLE_GAMES.keys())}")
 except Exception as e:
     logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
     import traceback
@@ -243,12 +170,7 @@ def home():
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            * {{
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }}
-            
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -259,7 +181,6 @@ def home():
                 justify-content: center;
                 padding: 20px;
             }}
-            
             .container {{
                 background: rgba(255, 255, 255, 0.1);
                 backdrop-filter: blur(10px);
@@ -270,19 +191,8 @@ def home():
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
                 text-align: center;
             }}
-            
-            h1 {{
-                font-size: 3em;
-                margin-bottom: 10px;
-                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            }}
-            
-            .version {{
-                font-size: 0.9em;
-                opacity: 0.8;
-                margin-bottom: 30px;
-            }}
-            
+            h1 {{ font-size: 3em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); }}
+            .version {{ font-size: 0.9em; opacity: 0.8; margin-bottom: 30px; }}
             .status {{
                 font-size: 1.3em;
                 margin: 30px 0;
@@ -290,56 +200,29 @@ def home():
                 background: rgba(255, 255, 255, 0.2);
                 border-radius: 20px;
             }}
-            
             .stats {{
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
                 gap: 20px;
                 margin: 30px 0;
             }}
-            
             .stat-card {{
                 background: rgba(255, 255, 255, 0.2);
                 padding: 20px;
                 border-radius: 20px;
             }}
-            
-            .stat-value {{
-                font-size: 2.5em;
-                font-weight: bold;
-                margin: 10px 0;
-            }}
-            
-            .stat-label {{
-                font-size: 0.9em;
-                opacity: 0.9;
-            }}
-            
-            .footer {{
-                margin-top: 30px;
-                font-size: 0.85em;
-                opacity: 0.7;
-            }}
-            
-            .pulse {{
-                animation: pulse 2s infinite;
-            }}
-            
-            @keyframes pulse {{
-                0%, 100% {{ opacity: 1; }}
-                50% {{ opacity: 0.6; }}
-            }}
+            .stat-value {{ font-size: 2.5em; font-weight: bold; margin: 10px 0; }}
+            .stat-label {{ font-size: 0.9em; opacity: 0.9; }}
+            .footer {{ margin-top: 30px; font-size: 0.85em; opacity: 0.7; }}
+            .pulse {{ animation: pulse 2s infinite; }}
+            @keyframes pulse {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.6; }} }}
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🎮 {BOT_NAME}</h1>
             <div class="version">Version {BOT_VERSION}</div>
-            
-            <div class="status pulse">
-                ✅ Bot is running smoothly
-            </div>
-            
+            <div class="status pulse">✅ Bot is running smoothly</div>
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-value">{len(registered_users)}</div>
@@ -353,15 +236,8 @@ def home():
                     <div class="stat-value">{len(active_games)}</div>
                     <div class="stat-label">⚡ نشط الآن</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value">{len(gemini_keys)}</div>
-                    <div class="stat-label">🤖 AI Keys</div>
-                </div>
             </div>
-            
-            <div class="footer">
-                {BOT_RIGHTS}
-            </div>
+            <div class="footer">{BOT_RIGHTS}</div>
         </div>
     </body>
     </html>
@@ -437,6 +313,7 @@ def handle_message(event):
                 reply = build_games_menu(current_theme)
             
             elif text.startswith("ثيم "):
+                from constants import THEMES
                 theme = text.replace("ثيم ", "").strip()
                 if theme in THEMES:
                     user_themes[user_id] = theme
@@ -466,21 +343,19 @@ def handle_message(event):
                     del active_games[user_id]
                     reply = build_games_menu(current_theme)
             
-            elif text.startswith("لعبة "):
+            elif text.startswith("لعبة ") or text.startswith("إعادة "):
                 if not user_data.get("is_registered"):
                     reply = build_registration_required(current_theme)
                 else:
-                    game_name = text.replace("لعبة ", "").strip()
+                    # استخراج اسم اللعبة
+                    if text.startswith("إعادة "):
+                        game_name = text.replace("إعادة ", "").strip()
+                    else:
+                        game_name = text.replace("لعبة ", "").strip()
+                    
                     if game_name in AVAILABLE_GAMES:
                         GameClass = AVAILABLE_GAMES[game_name]
                         game_instance = GameClass(line_bot_api)
-                        
-                        # Set AI functions for supported games
-                        if game_name in ["IQ", "رياضيات", "عكس"]:
-                            if hasattr(game_instance, 'ai_generate_question'):
-                                game_instance.ai_generate_question = lambda: ai_generate_question(game_name)
-                            if hasattr(game_instance, 'ai_check_answer'):
-                                game_instance.ai_check_answer = ai_check_answer
                         
                         # Set theme
                         if hasattr(game_instance, 'set_theme'):
@@ -502,11 +377,24 @@ def handle_message(event):
                         if result.get('points', 0) > 0:
                             registered_users[user_id]['points'] += result['points']
                         
-                        # End game if over
+                        # Check if game over
                         if result.get('game_over'):
+                            # عرض نافذة الفائز
+                            final_points = registered_users[user_id]['points']
+                            game_name = game_instance.game_name
+                            total_score = result.get('points', 0)
+                            
+                            reply = build_winner_announcement(
+                                username=username,
+                                game_name=game_name,
+                                total_score=total_score,
+                                final_points=final_points,
+                                theme=current_theme
+                            )
+                            
                             del active_games[user_id]
-                        
-                        reply = result.get('response')
+                        else:
+                            reply = result.get('response')
                 else:
                     # No active game
                     reply = build_home(current_theme, username, user_data['points'], user_data['is_registered'])
@@ -529,8 +417,7 @@ if __name__ == "__main__":
     logger.info("=" * 60)
     logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION}")
     logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
-    logger.info(f"🤖 AI Keys: {len(gemini_keys)}")
-    logger.info(f"🎨 Themes: {len(THEMES)}")
+    logger.info(f"🎨 Themes: {len(__import__('constants').THEMES)}")
     logger.info(f"🌐 Server on port {port}")
     logger.info("=" * 60)
     
