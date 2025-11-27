@@ -1,17 +1,6 @@
 """
 Bot Mesh v10.0 - Production Ready Enhanced
 Created by: Abeer Aldosari © 2025
-
-التحسينات الرئيسية:
-✅ LINE Bot SDK v3 - معالجة صحيحة بدون أخطاء
-✅ Quick Reply موثوق 100%
-✅ Rate limiting متقدم مع Redis fallback
-✅ Error handling شامل
-✅ Thread-safe operations
-✅ Database persistence محسّن
-✅ Security hardening
-✅ Performance optimization
-✅ Logging متقدم
 """
 
 import os
@@ -34,11 +23,11 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, FollowEvent, TextMessageContent
 
-# استيراد المكونات
+# استيراد المكونات - تصحيح اسم الدالة
 from ui import (
     build_home, build_games_menu, build_my_points, 
     build_leaderboard, build_registration_required, 
-    build_help, get_main_quick_reply
+    build_help, get_quick_reply  # ✅ تم التصحيح من get_main_quick_reply إلى get_quick_reply
 )
 from db import DB
 from games import GameLoader
@@ -60,8 +49,6 @@ DB_PATH = os.getenv('DB_PATH', '/app/data/botmesh.db')
 # التحقق من المتغيرات
 if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_CHANNEL_SECRET:
     logger.error("❌ LINE credentials missing!")
-    # في production، أوقف التطبيق
-    # exit(1)
 
 # ================== تهيئة التطبيق ==================
 app = Flask(__name__)
@@ -90,19 +77,14 @@ class AdvancedRateLimiter:
         self.window_seconds = window_seconds
         self.cleanup_interval = cleanup_interval
         self.requests = defaultdict(list)
-        self.blocked_users = {}  # {user_id: blocked_until_timestamp}
+        self.blocked_users = {}
         self.lock = Lock()
         self.last_cleanup = time.time()
     
     def is_allowed(self, user_id: str) -> tuple[bool, str]:
-        """
-        التحقق من السماح بالطلب
-        Returns: (allowed: bool, message: str)
-        """
         with self.lock:
             now = time.time()
             
-            # تحقق من الحظر المؤقت
             if user_id in self.blocked_users:
                 if now < self.blocked_users[user_id]:
                     remaining = int(self.blocked_users[user_id] - now)
@@ -110,36 +92,26 @@ class AdvancedRateLimiter:
                 else:
                     del self.blocked_users[user_id]
             
-            # Cleanup دوري
             if now - self.last_cleanup > self.cleanup_interval:
                 self._cleanup(now)
                 self.last_cleanup = now
             
-            # تنظيف الطلبات القديمة
             cutoff = now - self.window_seconds
-            self.requests[user_id] = [
-                t for t in self.requests[user_id] if t > cutoff
-            ]
+            self.requests[user_id] = [t for t in self.requests[user_id] if t > cutoff]
             
-            # التحقق من الحد
             current_count = len(self.requests[user_id])
             
             if current_count >= self.max_requests:
-                # حظر مؤقت لـ 5 دقائق بعد 3 محاولات متتالية
                 if current_count >= self.max_requests + 3:
-                    self.blocked_users[user_id] = now + 300  # 5 دقائق
+                    self.blocked_users[user_id] = now + 300
                     return False, "⛔ تجاوزت الحد بشكل متكرر. محظور لمدة 5 دقائق"
-                
                 return False, f"⚠️ تجاوزت حد الرسائل ({self.max_requests}/{self.window_seconds}ث). انتظر قليلاً"
             
             self.requests[user_id].append(now)
             return True, ""
     
     def _cleanup(self, now: float):
-        """تنظيف البيانات القديمة"""
         cutoff = now - self.window_seconds
-        
-        # تنظيف الطلبات
         to_delete = []
         for user_id, timestamps in self.requests.items():
             self.requests[user_id] = [t for t in timestamps if t > cutoff]
@@ -149,15 +121,14 @@ class AdvancedRateLimiter:
         for user_id in to_delete:
             del self.requests[user_id]
         
-        # تنظيف الحظر المؤقت
         expired_blocks = [uid for uid, until in self.blocked_users.items() if now >= until]
         for uid in expired_blocks:
             del self.blocked_users[uid]
         
-        logger.info(f"🧹 Cleanup: removed {len(to_delete)} inactive users, {len(expired_blocks)} expired blocks")
+        if to_delete or expired_blocks:
+            logger.info(f"🧹 Cleanup: removed {len(to_delete)} inactive users, {len(expired_blocks)} expired blocks")
     
     def get_stats(self) -> dict:
-        """إحصائيات الـ Rate Limiter"""
         with self.lock:
             return {
                 'active_users': len(self.requests),
@@ -169,63 +140,36 @@ rate_limiter = AdvancedRateLimiter(max_requests=15, window_seconds=60)
 
 # ================== Input Validation و Sanitization ==================
 class InputValidator:
-    """معالج متقدم للنصوص مع حماية من الهجمات"""
-    
     @staticmethod
     def sanitize_text(text: str, max_length: int = 500) -> str:
-        """تنظيف النص من المحتوى الخطر"""
         if not text:
             return ""
-        
-        # إزالة HTML tags
         text = html.escape(text)
-        
-        # إزالة zero-width characters و invisible characters
         text = re.sub(r'[\u200B-\u200D\uFEFF\u180E\u2060]', '', text)
-        
-        # إزالة control characters (ما عدا الأساسية)
         text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\r\t')
-        
-        # إزالة emoji المكررة
         text = re.sub(r'([\U0001F600-\U0001F64F])\1{3,}', r'\1\1', text)
-        
-        # تنظيف المسافات
         text = ' '.join(text.split())
-        
-        # الحد الأقصى للطول
         text = text.strip()[:max_length]
-        
         return text
     
     @staticmethod
     def normalize_arabic(text: str) -> str:
-        """تطبيع النص العربي للمقارنة"""
         if not text:
             return ""
-        
         text = text.strip().lower()
-        
-        # تطبيع الحروف العربية
         replacements = {
             'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
             'ى': 'ي', 'ة': 'ه', 'ؤ': 'و', 'ئ': 'ي'
         }
-        
         for old, new in replacements.items():
             text = text.replace(old, new)
-        
-        # إزالة التشكيل
         text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
-        
         return text
     
     @staticmethod
     def is_valid_command(text: str) -> bool:
-        """التحقق من صحة الأمر"""
         if not text or len(text) > 100:
             return False
-        
-        # قائمة الأوامر المسموحة
         allowed_patterns = [
             r'^(بداية|start|home)$',
             r'^(مساعدة|help)$',
@@ -241,7 +185,6 @@ class InputValidator:
             r'^لعبة .+$',
             r'^لعبه .+$'
         ]
-        
         normalized = InputValidator.normalize_arabic(text)
         return any(re.match(pattern, normalized, re.IGNORECASE) for pattern in allowed_patterns)
 
@@ -249,18 +192,6 @@ validator = InputValidator()
 
 # ================== Message Helpers محسّنة ==================
 def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply: bool = True):
-    """
-    إرسال رسالة آمن مع retry و error handling
-    
-    Args:
-        api: LINE Messaging API
-        user_id: معرف المستخدم
-        content: FlexMessage أو TextMessage أو str
-        use_quick_reply: إضافة Quick Reply
-    
-    Returns:
-        bool: نجاح الإرسال
-    """
     max_retries = 3
     retry_delay = 0.5
     
@@ -268,15 +199,13 @@ def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply:
         try:
             messages = []
             
-            # تحويل المحتوى إلى رسائل
             if isinstance(content, str):
-                quick_reply = get_main_quick_reply() if use_quick_reply else None
+                quick_reply = get_quick_reply() if use_quick_reply else None
                 messages.append(TextMessage(text=content, quickReply=quick_reply))
             elif isinstance(content, FlexMessage):
                 messages.append(content)
                 if use_quick_reply:
-                    # إضافة رسالة نصية صغيرة مع Quick Reply بعد الـ Flex
-                    quick_reply = get_main_quick_reply()
+                    quick_reply = get_quick_reply()
                     messages.append(TextMessage(
                         text="استخدم الأزرار السريعة ⬇️",
                         quickReply=quick_reply
@@ -287,7 +216,6 @@ def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply:
                 logger.error(f"❌ Invalid content type: {type(content)}")
                 return False
             
-            # إرسال الرسائل
             api.push_message(
                 PushMessageRequest(
                     to=user_id,
@@ -309,16 +237,7 @@ def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply:
 
 # ================== معالج الرسائل المحسّن ==================
 def process_message_safe(user_id: str, text: str):
-    """
-    معالجة الرسائل مع error handling شامل
-    
-    Args:
-        user_id: معرف المستخدم
-        text: نص الرسالة
-    """
-    
     try:
-        # Rate limiting
         allowed, rate_msg = rate_limiter.is_allowed(user_id)
         if not allowed:
             logger.warning(f"⚠️ Rate limit: {user_id[:8]}... - {rate_msg}")
@@ -327,13 +246,11 @@ def process_message_safe(user_id: str, text: str):
                 send_message_safe(api, user_id, rate_msg, use_quick_reply=False)
             return
         
-        # تنظيف النص
         text = validator.sanitize_text(text)
         if not text:
             logger.warning(f"⚠️ Empty message from {user_id[:8]}...")
             return
         
-        # الحصول على بيانات المستخدم
         user = db.get_user(user_id)
         theme = user.get('theme', 'رمادي') if user else 'رمادي'
         points = user.get('points', 0) if user else 0
@@ -345,7 +262,6 @@ def process_message_safe(user_id: str, text: str):
         with ApiClient(configuration) as api_client:
             api = MessagingApi(api_client)
             
-            # ===== الأوامر الأساسية =====
             if normalized in ['بداية', 'start', 'home']:
                 msg = build_home(theme, username, points, is_registered)
                 send_message_safe(api, user_id, msg)
@@ -408,7 +324,6 @@ def process_message_safe(user_id: str, text: str):
                 send_message_safe(api, user_id, msg)
                 return
             
-            # ===== أثناء اللعب =====
             if game_loader.has_active_game(user_id):
                 game = game_loader.get_game(user_id)
                 
@@ -417,7 +332,6 @@ def process_message_safe(user_id: str, text: str):
                     send_message_safe(api, user_id, hint)
                     return
                 
-                # تمرير الإجابة
                 if hasattr(game, 'check_answer'):
                     result = game.check_answer(text, user_id, username)
                     
@@ -426,7 +340,6 @@ def process_message_safe(user_id: str, text: str):
                         if pts > 0:
                             db.add_points(user_id, pts)
                         
-                        # إرسال الاستجابة
                         response = result.get('response')
                         message_text = result.get('message', '')
                         
@@ -440,7 +353,6 @@ def process_message_safe(user_id: str, text: str):
                         
                         return
             
-            # ===== بدء لعبة =====
             if normalized.startswith('لعبة ') or normalized.startswith('لعبه '):
                 if not is_registered:
                     msg = build_registration_required(theme)
@@ -449,11 +361,9 @@ def process_message_safe(user_id: str, text: str):
                 
                 game_name = text.replace('لعبة ', '').replace('لعبه ', '').strip()
                 
-                # إنهاء اللعبة الحالية
                 if game_loader.has_active_game(user_id):
                     game_loader.end_game(user_id)
                 
-                # بدء اللعبة الجديدة
                 result = game_loader.start_game(user_id, game_name)
                 
                 if not result:
@@ -471,71 +381,47 @@ def process_message_safe(user_id: str, text: str):
                     send_message_safe(api, user_id, "ℹ️ لا توجد لعبة نشطة")
                 return
             
-            # ===== المستخدم غير مسجل =====
             if not is_registered:
-                send_message_safe(
-                    api, user_id,
-                    "⚠️ يجب التسجيل أولاً\nاكتب 'انضم' للتسجيل"
-                )
+                send_message_safe(api, user_id, "⚠️ يجب التسجيل أولاً\nاكتب 'انضم' للتسجيل")
                 return
             
-            # ===== رسالة افتراضية =====
-            send_message_safe(
-                api, user_id,
-                "❓ لم أفهم الأمر\nاكتب 'مساعدة' للحصول على المساعدة"
-            )
+            send_message_safe(api, user_id, "❓ لم أفهم الأمر\nاكتب 'مساعدة' للحصول على المساعدة")
     
     except Exception as e:
         logger.error(f"❌ Error processing message from {user_id[:8]}...: {e}", exc_info=True)
         try:
             with ApiClient(configuration) as api_client:
                 api = MessagingApi(api_client)
-                send_message_safe(
-                    api, user_id,
-                    "❌ حدث خطأ غير متوقع. حاول مرة أخرى",
-                    use_quick_reply=False
-                )
+                send_message_safe(api, user_id, "❌ حدث خطأ غير متوقع. حاول مرة أخرى", use_quick_reply=False)
         except:
             pass
 
 # ================== LINE Webhook Handlers ==================
 @handler.add(FollowEvent)
 def handle_follow(event):
-    """معالج متابعة جديدة"""
     user_id = event.source.user_id
-    
     try:
-        # تسجيل المستخدم
         db.create_user(user_id, "مستخدم", "رمادي")
-        
-        # إرسال رسالة ترحيب
         with ApiClient(configuration) as api_client:
             api = MessagingApi(api_client)
             msg = build_home("رمادي", "مستخدم", 0, True)
             send_message_safe(api, user_id, msg)
-        
         logger.info(f"✅ New follower: {user_id[:8]}...")
-    
     except Exception as e:
         logger.error(f"❌ Follow event error: {e}")
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """معالج الرسائل النصية"""
     user_id = event.source.user_id
     text = event.message.text
-    
-    # معالجة الرسالة بشكل آمن
     process_message_safe(user_id, text)
 
 # ================== Flask Routes ==================
 @app.route("/", methods=["GET"])
 def home():
-    """الصفحة الرئيسية"""
     try:
         stats = db.get_stats()
         rate_stats = rate_limiter.get_stats()
-        
         return jsonify({
             "status": "running",
             "bot": "Bot Mesh v10.0",
@@ -552,14 +438,9 @@ def home():
 
 @app.route("/health", methods=["GET"])
 def health():
-    """فحص صحة الخدمة"""
     try:
-        # فحص قاعدة البيانات
         total_users = db.get_total_users()
-        
-        # فحص Game Loader
         active_games = len(game_loader.active_sessions)
-        
         return jsonify({
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
@@ -573,7 +454,6 @@ def health():
                 "active_games": active_games
             }
         }), 200
-    
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return jsonify({
@@ -584,44 +464,35 @@ def health():
 
 @app.route("/callback", methods=["POST"])
 def callback():
-    """LINE Webhook Callback"""
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
-    
     try:
         handler.handle(body, signature)
-    
     except InvalidSignatureError:
         logger.error("❌ Invalid signature")
         abort(400)
-    
     except Exception as e:
         logger.error(f"❌ Callback error: {e}", exc_info=True)
-    
     return "OK"
 
 @app.route("/stats", methods=["GET"])
 def stats():
-    """إحصائيات مفصلة"""
     try:
         db_stats = db.get_stats()
         rate_stats = rate_limiter.get_stats()
         game_stats = game_loader.get_stats()
-        
         return jsonify({
             "database": db_stats,
             "rate_limiter": rate_stats,
             "games": game_stats,
             "timestamp": datetime.now().isoformat()
         })
-    
     except Exception as e:
         logger.error(f"Stats error: {e}")
         return jsonify({"error": "Failed to get stats"}), 500
 
 @app.route("/admin/backup", methods=["POST"])
 def backup_database():
-    """إنشاء نسخة احتياطية"""
     try:
         success = db.backup()
         if success:
@@ -632,7 +503,6 @@ def backup_database():
         logger.error(f"Backup error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ================== Error Handlers ==================
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"error": "Not found"}), 404
@@ -642,17 +512,10 @@ def internal_error(e):
     logger.error(f"Internal error: {e}")
     return jsonify({"error": "Internal server error"}), 500
 
-# ================== Startup ==================
 if __name__ == "__main__":
     logger.info(f"🚀 Bot Mesh v10.0 starting on port {PORT}")
     logger.info(f"📊 Games loaded: {games_count}")
     logger.info(f"💾 Database: {DB_PATH}")
     logger.info(f"🔒 Security: Enhanced")
     logger.info(f"⚡ Performance: Optimized")
-    
-    app.run(
-        host="0.0.0.0",
-        port=PORT,
-        debug=False,
-        threaded=True
-    )
+    app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
