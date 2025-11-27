@@ -1,14 +1,10 @@
 """
-Bot Mesh - UI Builder with Neumorphism 3D Design
+Bot Mesh - UI Builder v3.2
 Created by: Abeer Aldosari © 2025
 
 Features:
-- Professional Neumorphism soft shadows
-- 9 customizable themes
-- LINE-compatible Flex Messages
-- 3D depth effects
-- Fixed buttons always visible
-- Eye-friendly design
+- نافذة إعلان الفائز مع زر إعادة
+- عرض السؤال والإجابة السابقة في كل سؤال
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer
@@ -95,7 +91,7 @@ def create_theme_selector(current_theme, colors):
     return rows
 
 
-def build_home(theme="💜", username="مستخدم", points=0, is_registered=False):
+def build_home(theme="أبيض", username="مستخدم", points=0, is_registered=False):
     """Build home window with neumorphic design"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     status = "✅ مسجل" if is_registered else "⚪ غير مسجل"
@@ -203,7 +199,7 @@ def build_home(theme="💜", username="مستخدم", points=0, is_registered=Fa
     return FlexMessage(alt_text=f"{BOT_NAME} - البداية", contents=FlexContainer.from_dict(card))
 
 
-def build_games_menu(theme="💜"):
+def build_games_menu(theme="أبيض"):
     """Build games menu with all 12 games"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
@@ -301,7 +297,7 @@ def build_games_menu(theme="💜"):
     return FlexMessage(alt_text=f"{BOT_NAME} - الألعاب", contents=FlexContainer.from_dict(card))
 
 
-def build_my_points(username, points, theme="💜"):
+def build_my_points(username, points, theme="أبيض"):
     """Build my points window with level system"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
@@ -428,7 +424,7 @@ def build_my_points(username, points, theme="💜"):
     return FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(card))
 
 
-def build_leaderboard(top_users, theme="💜"):
+def build_leaderboard(top_users, theme="أبيض"):
     """Build leaderboard window"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
@@ -523,7 +519,7 @@ def build_leaderboard(top_users, theme="💜"):
     return FlexMessage(alt_text="الصدارة", contents=FlexContainer.from_dict(card))
 
 
-def build_registration_required(theme="💜"):
+def build_registration_required(theme="أبيض"):
     """Build registration required message"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
@@ -556,3 +552,145 @@ def build_registration_required(theme="💜"):
     
     card = create_neumorphic_card(colors, contents, footer)
     return FlexMessage(alt_text="تسجيل مطلوب", contents=FlexContainer.from_dict(card))
+
+
+def build_winner_announcement(username, game_name, total_score, final_points, theme="أبيض"):
+    """Build winner announcement window with replay button"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    contents = [
+        # Celebration Header
+        {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎉",
+                    "size": "xxl",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "تهانينا!",
+                    "size": "xxl",
+                    "weight": "bold",
+                    "color": colors["primary"],
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": f"أنهيت لعبة {game_name}",
+                    "size": "md",
+                    "color": colors["text2"],
+                    "align": "center"
+                }
+            ],
+            "spacing": "sm"
+        },
+        
+        {"type": "separator", "color": colors["shadow1"]},
+        
+        # Player Info
+        {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": f"👤 {username}",
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "align": "center"
+                }
+            ],
+            "backgroundColor": colors["card"],
+            "cornerRadius": "15px",
+            "paddingAll": "15px"
+        },
+        
+        # Score Card
+        {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "النقاط المكتسبة",
+                    "size": "sm",
+                    "color": colors["text2"],
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": f"+{total_score}",
+                    "size": "xxl",
+                    "weight": "bold",
+                    "color": colors["success"],
+                    "align": "center"
+                }
+            ],
+            "backgroundColor": colors["card"],
+            "cornerRadius": "20px",
+            "paddingAll": "25px"
+        },
+        
+        # Total Points
+        {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "⭐ إجمالي النقاط:",
+                    "size": "md",
+                    "color": colors["text"],
+                    "flex": 2
+                },
+                {
+                    "type": "text",
+                    "text": f"{final_points}",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": colors["primary"],
+                    "align": "end",
+                    "flex": 1
+                }
+            ],
+            "backgroundColor": colors["card"],
+            "cornerRadius": "15px",
+            "paddingAll": "15px"
+        }
+    ]
+    
+    # Footer with Replay Button
+    footer = [
+        {
+            "type": "button",
+            "action": {
+                "type": "message",
+                "label": "🔄 إعادة نفس اللعبة",
+                "text": f"إعادة {game_name}"
+            },
+            "style": "primary",
+            "height": "sm",
+            "color": colors["primary"]
+        },
+        create_button_row([
+            FIXED_BUTTONS["games"],
+            FIXED_BUTTONS["home"]
+        ], colors),
+        {"type": "separator", "color": colors["shadow1"]},
+        {
+            "type": "text",
+            "text": BOT_RIGHTS,
+            "size": "xxs",
+            "color": colors["text2"],
+            "align": "center"
+        }
+    ]
+    
+    card = create_neumorphic_card(colors, contents, footer)
+    return FlexMessage(alt_text="🎉 تهانينا!", contents=FlexContainer.from_dict(card))
