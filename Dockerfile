@@ -1,23 +1,49 @@
+# Bot Mesh v10.0 - Enhanced Dockerfile
+# Created by: Abeer Aldosari © 2025
+
 FROM python:3.11-slim
 
-# تعطيل إنشاء ملفات .pyc وتفعيل unbuffered output
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# تعيين المتغيرات البيئية
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# إنشاء user غير root للأمان
+RUN useradd -m -u 1000 botmesh && \
+    mkdir -p /app/data && \
+    chown -R botmesh:botmesh /app
+
+# تعيين مجلد العمل
 WORKDIR /app
 
-# نسخ متطلبات التثبيت أولاً (للاستفادة من Docker cache)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# نسخ requirements أولاً (للاستفادة من Docker cache)
+COPY --chown=botmesh:botmesh requirements.txt .
+
+# تثبيت المتطلبات
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt && \
+    rm -rf ~/.cache/pip
 
 # نسخ باقي الملفات
-COPY . .
+COPY --chown=botmesh:botmesh . .
 
-# إنشاء مجلد البيانات
-RUN mkdir -p /app/data
+# التبديل للـ user
+USER botmesh
 
-# المنفذ الافتراضي (يمكن تعديله بمتغير البيئة)
-EXPOSE 5000
+# المنفذ الافتراضي
+EXPOSE 10000
 
-# أمر التشغيل مع دعم متغير PORT
-CMD gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 120
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:10000/health', timeout=2)"
+
+# أمر التشغيل
+CMD ["gunicorn", "app:app", \
+     "--bind", "0.0.0.0:${PORT:-10000}", \
+     "--workers", "2", \
+     "--threads", "4", \
+     "--timeout", "120", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info"]
