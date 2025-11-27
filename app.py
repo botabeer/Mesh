@@ -1,6 +1,11 @@
 """
 Bot Mesh v10.0 - Production Ready Enhanced
 Created by: Abeer Aldosari © 2025
+
+التحديثات:
+✅ دعم نافذة مساعدة مستقلة أثناء اللعب
+✅ إزالة دعم AI
+✅ Quick Reply محدث
 """
 
 import os
@@ -26,10 +31,11 @@ from linebot.v3.webhooks import MessageEvent, FollowEvent, TextMessageContent
 from ui import (
     build_home, build_games_menu, build_my_points, 
     build_leaderboard, build_registration_required, 
-    build_help, get_quick_reply
+    build_help, build_game_help, get_quick_reply,
+    get_game_help_quick_reply
 )
 from db import DB
-from game_loader import GameLoader  # ✅ تغيير الاستيراد
+from game_loader import GameLoader
 
 # ================== إعداد Logging ==================
 logging.basicConfig(
@@ -169,6 +175,7 @@ class InputValidator:
         allowed_patterns = [
             r'^(بداية|start|home)$',
             r'^(مساعدة|help)$',
+            r'^(مساعدة لعبة|game help)$',
             r'^(انضم|join)$',
             r'^(انسحب|leave)$',
             r'^(العاب|games|الالعاب)$',
@@ -187,7 +194,17 @@ class InputValidator:
 validator = InputValidator()
 
 # ================== Message Helpers ==================
-def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply: bool = True):
+def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply: bool = True, game_active: bool = False):
+    """
+    إرسال رسالة مع Quick Reply مناسب
+    
+    Args:
+        api: MessagingApi instance
+        user_id: معرف المستخدم
+        content: المحتوى (نص أو Flex)
+        use_quick_reply: استخدام Quick Reply
+        game_active: هل هناك لعبة نشطة (لاختيار Quick Reply المناسب)
+    """
     max_retries = 3
     retry_delay = 0.5
     
@@ -196,12 +213,16 @@ def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply:
             messages = []
             
             if isinstance(content, str):
-                quick_reply = get_quick_reply() if use_quick_reply else None
+                # اختيار Quick Reply المناسب
+                if use_quick_reply:
+                    quick_reply = get_game_help_quick_reply() if game_active else get_quick_reply()
+                else:
+                    quick_reply = None
                 messages.append(TextMessage(text=content, quickReply=quick_reply))
             elif isinstance(content, FlexMessage):
                 messages.append(content)
                 if use_quick_reply:
-                    quick_reply = get_quick_reply()
+                    quick_reply = get_game_help_quick_reply() if game_active else get_quick_reply()
                     messages.append(TextMessage(
                         text="استخدم الأزرار السريعة ⬇️",
                         quickReply=quick_reply
@@ -255,17 +276,26 @@ def process_message_safe(user_id: str, text: str):
         
         normalized = validator.normalize_arabic(text)
         
+        # تحديد حالة اللعبة
+        game_active = game_loader.has_active_game(user_id)
+        
         with ApiClient(configuration) as api_client:
             api = MessagingApi(api_client)
             
             if normalized in ['بداية', 'start', 'home']:
                 msg = build_home(theme, username, points, is_registered)
-                send_message_safe(api, user_id, msg)
+                send_message_safe(api, user_id, msg, game_active=False)
                 return
             
             if normalized in ['مساعدة', 'help']:
                 msg = build_help(theme)
-                send_message_safe(api, user_id, msg)
+                send_message_safe(api, user_id, msg, game_active=False)
+                return
+            
+            # ✅ نافذة المساعدة أثناء اللعب
+            if normalized in ['مساعدة لعبة', 'game help']:
+                msg = build_game_help(theme)
+                send_message_safe(api, user_id, msg, game_active=True)
                 return
             
             if normalized.startswith('ثيم '):
@@ -275,57 +305,57 @@ def process_message_safe(user_id: str, text: str):
                     if user:
                         db.update_theme(user_id, new_theme)
                     msg = build_home(new_theme, username, points, is_registered)
-                    send_message_safe(api, user_id, msg)
+                    send_message_safe(api, user_id, msg, game_active=False)
                 else:
-                    send_message_safe(api, user_id, f"⚠️ الثيم '{new_theme}' غير موجود")
+                    send_message_safe(api, user_id, f"⚠️ الثيم '{new_theme}' غير موجود", game_active=False)
                 return
             
             if normalized in ['انضم', 'join']:
                 if not is_registered:
                     db.create_user(user_id, username, theme)
-                    send_message_safe(api, user_id, f"✅ تم تسجيلك بنجاح يا {username}!")
+                    send_message_safe(api, user_id, f"✅ تم تسجيلك بنجاح يا {username}!", game_active=False)
                 else:
-                    send_message_safe(api, user_id, "ℹ️ أنت مسجل بالفعل")
+                    send_message_safe(api, user_id, "ℹ️ أنت مسجل بالفعل", game_active=False)
                 return
             
             if normalized in ['انسحب', 'leave']:
                 if is_registered:
                     db.deactivate_user(user_id)
-                    send_message_safe(api, user_id, "✅ تم إلغاء تسجيلك")
+                    send_message_safe(api, user_id, "✅ تم إلغاء تسجيلك", game_active=False)
                 else:
-                    send_message_safe(api, user_id, "ℹ️ أنت غير مسجل")
+                    send_message_safe(api, user_id, "ℹ️ أنت غير مسجل", game_active=False)
                 return
             
             if normalized in ['العاب', 'games', 'الالعاب']:
                 if not is_registered:
                     msg = build_registration_required(theme)
-                    send_message_safe(api, user_id, msg)
+                    send_message_safe(api, user_id, msg, game_active=False)
                 else:
                     msg = build_games_menu(theme)
-                    send_message_safe(api, user_id, msg)
+                    send_message_safe(api, user_id, msg, game_active=False)
                 return
             
             if normalized in ['نقاطي', 'points']:
                 if not is_registered:
                     msg = build_registration_required(theme)
-                    send_message_safe(api, user_id, msg)
+                    send_message_safe(api, user_id, msg, game_active=False)
                 else:
                     msg = build_my_points(username, points, theme)
-                    send_message_safe(api, user_id, msg)
+                    send_message_safe(api, user_id, msg, game_active=False)
                 return
             
             if normalized in ['صدارة', 'leaderboard']:
                 top = db.get_leaderboard(10)
                 msg = build_leaderboard(top, theme)
-                send_message_safe(api, user_id, msg)
+                send_message_safe(api, user_id, msg, game_active=False)
                 return
             
-            if game_loader.has_active_game(user_id):
+            if game_active:
                 game = game_loader.get_game(user_id)
                 
                 if normalized in ['لمح', 'hint']:
                     hint = game.get_hint() if hasattr(game, 'get_hint') else "لا يوجد تلميح"
-                    send_message_safe(api, user_id, hint)
+                    send_message_safe(api, user_id, hint, game_active=True)
                     return
                 
                 if hasattr(game, 'check_answer'):
@@ -340,9 +370,9 @@ def process_message_safe(user_id: str, text: str):
                         message_text = result.get('message', '')
                         
                         if isinstance(response, FlexMessage):
-                            send_message_safe(api, user_id, response)
+                            send_message_safe(api, user_id, response, game_active=True)
                         elif message_text:
-                            send_message_safe(api, user_id, message_text)
+                            send_message_safe(api, user_id, message_text, game_active=True)
                         
                         if result.get('game_over'):
                             game_loader.end_game(user_id)
@@ -352,7 +382,7 @@ def process_message_safe(user_id: str, text: str):
             if normalized.startswith('لعبة ') or normalized.startswith('لعبه '):
                 if not is_registered:
                     msg = build_registration_required(theme)
-                    send_message_safe(api, user_id, msg)
+                    send_message_safe(api, user_id, msg, game_active=False)
                     return
                 
                 game_name = text.replace('لعبة ', '').replace('لعبه ', '').strip()
@@ -363,32 +393,32 @@ def process_message_safe(user_id: str, text: str):
                 result = game_loader.start_game(user_id, game_name)
                 
                 if not result:
-                    send_message_safe(api, user_id, f"❌ اللعبة '{game_name}' غير موجودة")
+                    send_message_safe(api, user_id, f"❌ اللعبة '{game_name}' غير موجودة", game_active=False)
                     return
                 
-                send_message_safe(api, user_id, result)
+                send_message_safe(api, user_id, result, game_active=True)
                 return
             
             if normalized in ['ايقاف', 'إيقاف', 'stop']:
                 if game_loader.has_active_game(user_id):
                     game_loader.end_game(user_id)
-                    send_message_safe(api, user_id, "✅ تم إيقاف اللعبة")
+                    send_message_safe(api, user_id, "✅ تم إيقاف اللعبة", game_active=False)
                 else:
-                    send_message_safe(api, user_id, "ℹ️ لا توجد لعبة نشطة")
+                    send_message_safe(api, user_id, "ℹ️ لا توجد لعبة نشطة", game_active=False)
                 return
             
             if not is_registered:
-                send_message_safe(api, user_id, "⚠️ يجب التسجيل أولاً\nاكتب 'انضم' للتسجيل")
+                send_message_safe(api, user_id, "⚠️ يجب التسجيل أولاً\nاكتب 'انضم' للتسجيل", game_active=False)
                 return
             
-            send_message_safe(api, user_id, "❓ لم أفهم الأمر\nاكتب 'مساعدة' للحصول على المساعدة")
+            send_message_safe(api, user_id, "❓ لم أفهم الأمر\nاكتب 'مساعدة' للحصول على المساعدة", game_active=game_active)
     
     except Exception as e:
         logger.error(f"❌ Error processing message from {user_id[:8]}...: {e}", exc_info=True)
         try:
             with ApiClient(configuration) as api_client:
                 api = MessagingApi(api_client)
-                send_message_safe(api, user_id, "❌ حدث خطأ غير متوقع. حاول مرة أخرى", use_quick_reply=False)
+                send_message_safe(api, user_id, "❌ حدث خطأ غير متوقع. حاول مرة أخرى", use_quick_reply=False, game_active=False)
         except:
             pass
 
@@ -401,7 +431,7 @@ def handle_follow(event):
         with ApiClient(configuration) as api_client:
             api = MessagingApi(api_client)
             msg = build_home("رمادي", "مستخدم", 0, True)
-            send_message_safe(api, user_id, msg)
+            send_message_safe(api, user_id, msg, game_active=False)
         logger.info(f"✅ New follower: {user_id[:8]}...")
     except Exception as e:
         logger.error(f"❌ Follow event error: {e}")
