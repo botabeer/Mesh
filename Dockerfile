@@ -10,3 +10,10 @@ COPY . .
 EXPOSE 10000
 
 CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--workers", "2", "--timeout", "120", "app:app"]
+```
+
+---
+
+### 3️⃣ `runtime.txt`
+```
+python-3.11.7
