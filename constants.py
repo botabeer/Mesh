@@ -1,19 +1,21 @@
 """
-Bot Mesh v5.0 - Enhanced Constants & Configuration
+Bot Mesh - Enhanced Constants & Configuration
 Created by: Abeer Aldosari © 2025
+Version: 4.0.0 - Production Ready
 """
 
 import os
 import re
 from functools import lru_cache
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # ============================================================================
 # Bot Information
 # ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "5.0.0"
+BOT_VERSION = "4.0.0"
 BOT_RIGHTS = "Bot Mesh © 2025 by Abeer Aldosari"
+BOT_DESCRIPTION = "بوت ألعاب ذكي مع تصميم احترافي"
 
 # ============================================================================
 # LINE Credentials
@@ -40,12 +42,12 @@ MAX_LEADERBOARD_USERS = 10
 
 # Security Limits
 MAX_MESSAGE_LENGTH = 500
-RATE_LIMIT_MESSAGES = 20
+RATE_LIMIT_MESSAGES = 20  # رسائل في الدقيقة
 MAX_CACHE_SIZE = 100
 MAX_CONCURRENT_GAMES = 50
 
 # ============================================================================
-# Neumorphism Themes (محسّنة للجوال)
+# Neumorphism Themes - LINE Compatible
 # ============================================================================
 THEMES = {
     "💜": {
@@ -179,97 +181,97 @@ THEMES = {
 DEFAULT_THEME = "💜"
 
 # ============================================================================
-# Game List (محدّثة بوصف أفضل)
+# Game List
 # ============================================================================
 GAME_LIST = {
     "IQ": {
         "icon": "🧠",
         "label": "ذكاء",
-        "description": "ألغاز تحدي العقل",
         "ai_enabled": True,
-        "difficulty": "متوسط"
+        "difficulty": "متوسط",
+        "category": "عقلية"
     },
     "رياضيات": {
         "icon": "🔢",
         "label": "رياضيات",
-        "description": "مسائل حسابية سريعة",
         "ai_enabled": True,
-        "difficulty": "متغير"
+        "difficulty": "متغير",
+        "category": "عقلية"
     },
     "لون الكلمة": {
         "icon": "🎨",
         "label": "لون",
-        "description": "لون الكتابة وليس المعنى",
         "ai_enabled": False,
-        "difficulty": "صعب"
+        "difficulty": "صعب",
+        "category": "تركيز"
     },
     "كلمة مبعثرة": {
         "icon": "🔤",
         "label": "ترتيب",
-        "description": "رتّب الحروف لتكوين كلمة",
         "ai_enabled": False,
-        "difficulty": "سهل"
+        "difficulty": "سهل",
+        "category": "لغوية"
     },
     "كتابة سريعة": {
         "icon": "⚡",
         "label": "سرعة",
-        "description": "اكتب الكلمة بأسرع وقت",
         "ai_enabled": False,
-        "difficulty": "متوسط"
+        "difficulty": "متوسط",
+        "category": "مهارة"
     },
     "عكس": {
         "icon": "↔️",
         "label": "ضد",
-        "description": "اذكر عكس الكلمة",
         "ai_enabled": True,
-        "difficulty": "سهل"
+        "difficulty": "سهل",
+        "category": "لغوية"
     },
     "حروف وكلمات": {
         "icon": "🔠",
         "label": "تكوين",
-        "description": "كوّن كلمة من حروف معينة",
         "ai_enabled": False,
-        "difficulty": "متوسط"
+        "difficulty": "متوسط",
+        "category": "لغوية"
     },
     "أغنية": {
         "icon": "🎵",
         "label": "أغنية",
-        "description": "تعرّف على الأغنية من المقطع",
         "ai_enabled": False,
-        "difficulty": "متوسط"
+        "difficulty": "متوسط",
+        "category": "ثقافية"
     },
     "إنسان حيوان نبات": {
         "icon": "🌍",
         "label": "تنوع",
-        "description": "أكمل الفئات بحرف واحد",
         "ai_enabled": False,
-        "difficulty": "متوسط"
+        "difficulty": "متوسط",
+        "category": "معرفة"
     },
     "سلسلة كلمات": {
         "icon": "🔗",
         "label": "سلسلة",
-        "description": "كلمة تبدأ بآخر حرف",
         "ai_enabled": False,
-        "difficulty": "سهل"
+        "difficulty": "سهل",
+        "category": "لغوية"
     },
     "تخمين": {
         "icon": "🔮",
         "label": "خمّن",
-        "description": "خمّن الرقم الصحيح",
         "ai_enabled": False,
-        "difficulty": "سهل"
+        "difficulty": "سهل",
+        "category": "عقلية"
     },
     "توافق": {
         "icon": "💕",
         "label": "توافق",
-        "description": "اكتشف نسبة التوافق",
         "ai_enabled": False,
-        "difficulty": "ترفيهي"
+        "difficulty": "ترفيهي",
+        "category": "تسلية"
     }
 }
 
 # ============================================================================
-# Fixed Buttons (محسّنة)
+# Fixed Buttons
 # ============================================================================
 FIXED_BUTTONS = {
     "home": {"label": "🏠 البداية", "text": "بداية"},
@@ -278,12 +280,11 @@ FIXED_BUTTONS = {
     "leaderboard": {"label": "🏆 الصدارة", "text": "صدارة"},
     "stop": {"label": "⛔ إيقاف", "text": "إيقاف"},
     "hint": {"label": "💡 تلميح", "text": "لمح"},
-    "reveal": {"label": "👁️ الجواب", "text": "جاوب"},
-    "next": {"label": "➡️ التالي", "text": "التالي"}
+    "reveal": {"label": "👁️ الجواب", "text": "جاوب"}
 }
 
 # ============================================================================
-# Arabic Normalization
+# Arabic Normalization with LRU Cache
 # ============================================================================
 ARABIC_NORMALIZE = {
     'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ء': 'ا',
@@ -292,16 +293,28 @@ ARABIC_NORMALIZE = {
 
 @lru_cache(maxsize=1000)
 def normalize_arabic(text: str) -> str:
-    """تطبيع النصوص العربية"""
+    """
+    تطبيع النصوص العربية مع Cache
+    
+    Args:
+        text: النص المدخل
+        
+    Returns:
+        النص المطبع
+    """
     if not text:
         return ""
     
     text = text.strip().lower()
     
+    # تطبيع الأحرف العربية
     for old, new in ARABIC_NORMALIZE.items():
         text = text.replace(old, new)
     
+    # إزالة التشكيل
     text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
+    
+    # إزالة المسافات الزائدة
     text = ' '.join(text.split())
     
     return text
@@ -309,6 +322,7 @@ def normalize_arabic(text: str) -> str:
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
 def get_username(profile) -> str:
     """استخراج اسم المستخدم بأمان"""
     try:
@@ -330,7 +344,7 @@ def validate_env() -> bool:
         raise ValueError(f"❌ متغيرات ناقصة: {', '.join(missing)}")
     
     if not GEMINI_KEYS:
-        print("⚠️ لا توجد مفاتيح Gemini AI")
+        print("⚠️ لا توجد مفاتيح Gemini AI - وضع Fallback")
     else:
         print(f"✅ {len(GEMINI_KEYS)} مفتاح AI متاح")
     
@@ -338,31 +352,45 @@ def validate_env() -> bool:
 
 @lru_cache(maxsize=10)
 def get_theme_colors(theme_emoji: str) -> Dict[str, str]:
-    """الحصول على ألوان الثيم"""
+    """الحصول على ألوان الثيم مع Cache"""
     return THEMES.get(theme_emoji, THEMES[DEFAULT_THEME])
 
 def is_valid_theme(theme_emoji: str) -> bool:
     """التحقق من صحة الثيم"""
     return theme_emoji in THEMES
 
+# ============================================================================
+# User Levels
+# ============================================================================
+USER_LEVELS = [
+    {"min": 0, "max": 49, "name": "🌱 مبتدئ", "color": "#48BB78"},
+    {"min": 50, "max": 149, "name": "⭐ متوسط", "color": "#667EEA"},
+    {"min": 150, "max": 299, "name": "🔥 متقدم", "color": "#DD6B20"},
+    {"min": 300, "max": 999999, "name": "👑 محترف", "color": "#D53F8C"}
+]
+
+@lru_cache(maxsize=100)
 def get_user_level(points: int) -> Dict[str, Any]:
-    """تحديد مستوى المستخدم"""
-    if points < 50:
-        return {"name": "🌱 مبتدئ", "color": "#48BB78", "progress": int((points / 50) * 100)}
-    elif points < 150:
-        return {"name": "⭐ متوسط", "color": "#667EEA", "progress": int(((points - 50) / 100) * 100)}
-    elif points < 300:
-        return {"name": "🔥 متقدم", "color": "#DD6B20", "progress": int(((points - 150) / 150) * 100)}
-    else:
-        return {"name": "👑 محترف", "color": "#D53F8C", "progress": 100}
+    """تحديد مستوى المستخدم مع Cache"""
+    for level in USER_LEVELS:
+        if level["min"] <= points <= level["max"]:
+            return level
+    return USER_LEVELS[0]
+
+# ============================================================================
+# Input Sanitization
+# ============================================================================
 
 def sanitize_user_input(text: str, max_length: int = MAX_MESSAGE_LENGTH) -> str:
-    """تنظيف مدخلات المستخدم"""
+    """تنظيف مدخلات المستخدم بشكل آمن"""
     if not text:
         return ""
     
+    # إزالة الأحرف الخطيرة
     text = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
     text = re.sub(r'[<>"\'\\]', '', text)
+    
+    # تحديد الطول
     text = text[:max_length]
     
     return text.strip()
