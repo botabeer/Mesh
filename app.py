@@ -1,51 +1,43 @@
 """
-Bot Mesh v5.0 - Production LINE Bot with Rich Menu
+Bot Mesh - LINE Bot Application v3.0
 Created by: Abeer Aldosari © 2025
 
-✨ التحسينات الجديدة:
-✅ Rich Menu ثابت أسفل الشاشة
-✅ 100% Flex Messages (لا توجد رسائل نصية)
-✅ إصلاح Gemini AI بالموديل الصحيح
-✅ إدارة حالة محسّنة للألعاب
-✅ واجهات أجمل وأوضح
-✅ أداء محسّن بنسبة 70%
+Enhanced Features:
+- Professional Neumorphism 3D Design
+- 9 Customizable Themes
+- AI-powered Games (Gemini)
+- Smart Fallback System
+- Group-Friendly
+- Auto-Cleanup System
+- LINE-Compatible Flex Messages
 """
 
 import os
 import sys
 import logging
-import json
-import threading
 from datetime import datetime, timedelta
-from collections import OrderedDict, defaultdict
 from flask import Flask, request, abort
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, RichMenuRequest, RichMenuArea,
-    RichMenuSize, RichMenuBounds, CreateRichMenuAliasRequest,
-    URIAction, MessageAction, PostbackAction
+    ReplyMessageRequest
 )
-from linebot.v3.webhooks import MessageEvent, TextMessageContent, PostbackEvent
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-# Import constants
+# Import our modules
 from constants import (
     BOT_NAME, BOT_VERSION, BOT_RIGHTS,
     LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
-    GEMINI_KEYS, validate_env, get_username, GAME_LIST,
-    DEFAULT_THEME, sanitize_user_input, get_user_level,
-    MAX_CACHE_SIZE, RATE_LIMIT_MESSAGES, MAX_CONCURRENT_GAMES
+    GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3,
+    validate_env, get_username, GAME_LIST, DEFAULT_THEME
 )
 
 from ui_builder import (
     build_home, build_games_menu, build_my_points,
-    build_leaderboard, build_registration_required,
-    build_game_question, build_game_result, build_game_winner
+    build_leaderboard, build_registration_required
 )
-
-from games.game_loader import games_list
 
 # ============================================================================
 # Configuration & Validation
@@ -53,18 +45,16 @@ from games.game_loader import games_list
 try:
     validate_env()
 except ValueError as e:
-    print(f"❌ خطأ: {e}")
+    print(f"❌ Configuration Error: {e}")
     sys.exit(1)
 
 # ============================================================================
 # Flask & LINE Setup
 # ============================================================================
 app = Flask(__name__)
-
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -72,242 +62,32 @@ configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 # ============================================================================
-# Rich Menu Manager
+# In-Memory Storage
 # ============================================================================
-class RichMenuManager:
-    """إدارة Rich Menu الثابت"""
-    
-    def __init__(self, api_client):
-        self.api = MessagingApi(api_client)
-        self.rich_menu_id = None
-        
-    def create_main_rich_menu(self):
-        """إنشاء Rich Menu الرئيسي"""
-        try:
-            # تصميم Rich Menu
-            rich_menu = RichMenuRequest(
-                size=RichMenuSize(width=2500, height=843),
-                selected=True,
-                name="Bot Mesh Main Menu",
-                chat_bar_text="📱 القائمة الرئيسية",
-                areas=[
-                    # الصف الأول
-                    RichMenuArea(
-                        bounds=RichMenuBounds(x=0, y=0, width=833, height=843),
-                        action=MessageAction(label="🏠 البداية", text="بداية")
-                    ),
-                    RichMenuArea(
-                        bounds=RichMenuBounds(x=833, y=0, width=833, height=843),
-                        action=MessageAction(label="🎮 الألعاب", text="مساعدة")
-                    ),
-                    RichMenuArea(
-                        bounds=RichMenuBounds(x=1666, y=0, width=834, height=843),
-                        action=MessageAction(label="⭐ نقاطي", text="نقاطي")
-                    )
-                ]
-            )
-            
-            # إنشاء القائمة
-            result = self.api.create_rich_menu(rich_menu_request=rich_menu)
-            self.rich_menu_id = result.rich_menu_id
-            
-            logger.info(f"✅ Rich Menu تم إنشاؤه: {self.rich_menu_id}")
-            
-            # ملاحظة: يجب رفع صورة للـ Rich Menu يدويًا عبر LINE Console
-            # أو عبر API: self.api.set_rich_menu_image(...)
-            
-            return self.rich_menu_id
-            
-        except Exception as e:
-            logger.error(f"❌ فشل إنشاء Rich Menu: {e}")
-            return None
-    
-    def assign_to_user(self, user_id):
-        """تعيين Rich Menu لمستخدم"""
-        if not self.rich_menu_id:
-            return False
-            
-        try:
-            self.api.link_rich_menu_id_to_user(user_id, self.rich_menu_id)
-            return True
-        except Exception as e:
-            logger.error(f"❌ فشل تعيين Rich Menu: {e}")
-            return False
+registered_users = {}  # {user_id: {name, points, is_registered, created_at, last_activity}}
+user_themes = {}       # {user_id: theme_emoji}
+active_games = {}      # {user_id: game_instance}
 
 # ============================================================================
-# Enhanced Storage Classes
-# ============================================================================
-class LimitedDict(OrderedDict):
-    """قاموس محدود الحجم مع Thread-safe"""
-    def __init__(self, max_size=MAX_CACHE_SIZE):
-        self.max_size = max_size
-        self._lock = threading.Lock()
-        super().__init__()
-    
-    def __setitem__(self, key, value):
-        with self._lock:
-            if len(self) >= self.max_size:
-                self.popitem(last=False)
-            super().__setitem__(key, value)
-    
-    def __getitem__(self, key):
-        with self._lock:
-            return super().__getitem__(key)
-
-class GameSession:
-    """جلسة لعبة واحدة"""
-    def __init__(self, game_name, game_instance):
-        self.game_name = game_name
-        self.game_instance = game_instance
-        self.current_round = 0
-        self.total_points = 0
-        self.created_at = datetime.now()
-        self.last_activity = datetime.now()
-    
-    def is_expired(self, max_minutes=30):
-        """فحص انتهاء الجلسة"""
-        return (datetime.now() - self.last_activity).total_seconds() > (max_minutes * 60)
-    
-    def update_activity(self):
-        """تحديث وقت النشاط"""
-        self.last_activity = datetime.now()
-
-class GameManager:
-    """مدير الألعاب المحسّن"""
-    def __init__(self, max_games=MAX_CONCURRENT_GAMES):
-        self.sessions = {}
-        self.max_games = max_games
-        self._lock = threading.Lock()
-    
-    def start_game(self, user_id, game_name, game_instance):
-        """بدء لعبة جديدة"""
-        with self._lock:
-            # حذف اللعبة القديمة إن وجدت
-            if user_id in self.sessions:
-                self.end_game(user_id)
-            
-            # تنظيف الألعاب المنتهية
-            self._cleanup_expired()
-            
-            # فحص الحد الأقصى
-            if len(self.sessions) >= self.max_games:
-                oldest = min(self.sessions.items(), key=lambda x: x[1].created_at)
-                self.sessions.pop(oldest[0], None)
-            
-            # إنشاء جلسة جديدة
-            self.sessions[user_id] = GameSession(game_name, game_instance)
-            logger.info(f"🎮 بدء لعبة {game_name} للمستخدم {user_id}")
-    
-    def get_session(self, user_id):
-        """الحصول على جلسة اللعبة"""
-        with self._lock:
-            session = self.sessions.get(user_id)
-            if session:
-                session.update_activity()
-            return session
-    
-    def end_game(self, user_id):
-        """إنهاء لعبة"""
-        with self._lock:
-            session = self.sessions.pop(user_id, None)
-            if session:
-                try:
-                    session.game_instance.cleanup()
-                except:
-                    pass
-                logger.info(f"🏁 إنهاء لعبة {session.game_name}")
-    
-    def _cleanup_expired(self, max_age_minutes=30):
-        """تنظيف الألعاب المنتهية"""
-        expired = [
-            uid for uid, session in self.sessions.items()
-            if session.is_expired(max_age_minutes)
-        ]
-        for uid in expired:
-            self.end_game(uid)
-        
-        if expired:
-            logger.info(f"🧹 تنظيف {len(expired)} ألعاب منتهية")
-
-# ============================================================================
-# Global Storage
-# ============================================================================
-registered_users = {}
-user_themes = {}
-active_games = GameManager(max_games=MAX_CONCURRENT_GAMES)
-ai_cache = LimitedDict(max_size=MAX_CACHE_SIZE)
-user_message_count = defaultdict(list)
-rate_limit_lock = threading.Lock()
-
-stats = {
-    "total_games_played": 0,
-    "total_messages": 0,
-    "start_time": datetime.now(),
-    "ai_calls": 0,
-    "cache_hits": 0,
-    "errors": 0
-}
-stats_lock = threading.Lock()
-
-# ============================================================================
-# Game Loading
-# ============================================================================
-AVAILABLE_GAMES = {}
-
-for game_class in games_list:
-    try:
-        name_map = {
-            'IqGame': 'IQ',
-            'MathGame': 'رياضيات',
-            'WordColorGame': 'لون الكلمة',
-            'ScrambleWordGame': 'كلمة مبعثرة',
-            'FastTypingGame': 'كتابة سريعة',
-            'OppositeGame': 'عكس',
-            'LettersWordsGame': 'حروف وكلمات',
-            'SongGame': 'أغنية',
-            'HumanAnimalPlantGame': 'إنسان حيوان نبات',
-            'ChainWordsGame': 'سلسلة كلمات',
-            'GuessGame': 'تخمين',
-            'CompatibilityGame': 'توافق'
-        }
-        
-        class_name = game_class.__name__
-        if class_name in name_map:
-            matched_key = name_map[class_name]
-            AVAILABLE_GAMES[matched_key] = game_class
-            logger.info(f"✅ تحميل: {matched_key}")
-            
-    except Exception as e:
-        logger.error(f"❌ خطأ في {game_class.__name__}: {e}")
-
-logger.info(f"📊 تم تحميل {len(AVAILABLE_GAMES)}/{len(GAME_LIST)} لعبة")
-
-# ============================================================================
-# AI Integration (محسّن مع الموديل الصحيح)
+# AI Integration with Intelligent Fallback
 # ============================================================================
 current_gemini_key = 0
-gemini_lock = threading.Lock()
+gemini_keys = [k for k in [GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3] if k]
 
 def get_next_gemini_key():
-    """تدوير مفاتيح Gemini"""
+    """Rotate through available Gemini API keys"""
     global current_gemini_key
-    if not GEMINI_KEYS:
+    if not gemini_keys:
+        logger.warning("⚠️ No Gemini API keys available")
         return None
     
-    with gemini_lock:
-        key = GEMINI_KEYS[current_gemini_key % len(GEMINI_KEYS)]
-        current_gemini_key += 1
-        return key
+    key = gemini_keys[current_gemini_key % len(gemini_keys)]
+    current_gemini_key += 1
+    logger.info(f"🔑 Using Gemini key #{current_gemini_key % len(gemini_keys) + 1}")
+    return key
 
-def ai_generate_question(game_type, force_new=False):
-    """توليد سؤال بالذكاء الاصطناعي مع الموديل الصحيح"""
-    cache_key = f"{game_type}_{datetime.now().hour}_{datetime.now().minute // 10}"
-    
-    if not force_new and cache_key in ai_cache:
-        with stats_lock:
-            stats["cache_hits"] += 1
-        return ai_cache[cache_key].copy()
-    
+def ai_generate_question(game_type):
+    """Generate question using Gemini AI with fallback"""
     try:
         import google.generativeai as genai
         key = get_next_gemini_key()
@@ -315,129 +95,165 @@ def ai_generate_question(game_type, force_new=False):
             return None
         
         genai.configure(api_key=key)
-        
-        # ✅ قائمة الموديلات المدعومة (الأحدث أولاً)
-        models_to_try = [
-            'gemini-1.5-flash-latest',
-            'gemini-1.5-flash',
-            'gemini-1.5-pro-latest',
-            'gemini-pro'
-        ]
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompts = {
-            "IQ": "أنشئ لغز ذكاء عربي مع إجابة قصيرة. رد بصيغة JSON: {\"q\": \"السؤال\", \"a\": [\"الإجابة1\", \"الإجابة2\"]}",
+            "IQ": "أنشئ لغز ذكاء عربي مع إجابة قصيرة. رد بصيغة JSON: {\"q\": \"السؤال\", \"a\": \"الإجابة\"}",
             "رياضيات": "أنشئ مسألة رياضية بسيطة مع الحل. رد بصيغة JSON: {\"q\": \"المسألة\", \"a\": \"الجواب\"}",
             "عكس": "أعط كلمة عربية وعكسها. رد بصيغة JSON: {\"word\": \"الكلمة\", \"opposite\": \"العكس\"}"
         }
         
         prompt = prompts.get(game_type, prompts["IQ"])
+        response = model.generate_content(prompt)
         
-        # محاولة الموديلات بالترتيب
-        last_error = None
-        for model_name in models_to_try:
-            try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt)
-                
-                with stats_lock:
-                    stats["ai_calls"] += 1
-                
-                text = response.text.strip()
-                
-                # تنظيف JSON
-                if "```json" in text:
-                    text = text.split("```json")[1].split("```")[0]
-                elif "```" in text:
-                    text = text.split("```")[1].split("```")[0]
-                
-                result = json.loads(text.strip())
-                
-                # التأكد من أن الإجابة قائمة
-                if "a" in result and not isinstance(result["a"], list):
-                    result["a"] = [str(result["a"])]
-                
-                ai_cache[cache_key] = result.copy()
-                logger.info(f"🤖 AI ({model_name}): {game_type}")
-                return result
-                
-            except Exception as e:
-                last_error = e
-                logger.warning(f"⚠️ فشل {model_name}: {e}")
-                continue
+        import json
+        text = response.text.strip()
         
-        # إذا فشلت جميع الموديلات
-        logger.error(f"❌ جميع موديلات AI فشلت: {last_error}")
-        with stats_lock:
-            stats["errors"] += 1
-        return None
+        # Clean JSON from markdown
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0]
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0]
         
+        return json.loads(text.strip())
     except Exception as e:
-        logger.error(f"❌ AI خطأ عام: {e}")
-        with stats_lock:
-            stats["errors"] += 1
+        logger.error(f"❌ AI generation error: {e}")
         return None
+
+def ai_check_answer(correct_answer, user_answer):
+    """Validate answer using Gemini AI"""
+    try:
+        import google.generativeai as genai
+        key = get_next_gemini_key()
+        if not key:
+            return False
+        
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"هل الإجابة '{user_answer}' صحيحة للجواب '{correct_answer}'? رد فقط بـ 'نعم' أو 'لا'"
+        response = model.generate_content(prompt)
+        
+        answer_text = response.text.strip().lower()
+        return 'نعم' in answer_text or 'yes' in answer_text
+    except Exception as e:
+        logger.error(f"❌ AI check error: {e}")
+        return False
+
+# ============================================================================
+# Game Loading System - تحميل جميع الألعاب
+# ============================================================================
+AVAILABLE_GAMES = {}
+
+try:
+    # الألعاب الأساسية (النظام القديم)
+    from games.iq_game import IqGame
+    from games.math_game import MathGame
+    from games.word_color_game import WordColorGame
+    from games.scramble_word_game import ScrambleWordGame
+    from games.fast_typing_game import FastTypingGame
+    from games.opposite_game import OppositeGame
+    
+    # الألعاب المتقدمة (النظام الجديد)
+    from games.song_game import SongGame
+    from games.letters_words_game import LettersWordsGame
+    from games.human_animal_plant_game import HumanAnimalPlantGame
+    from games.chain_words_game import ChainWordsGame
+    from games.guess_game import GuessGame
+    from games.compatibility_game import CompatibilityGame
+    
+    AVAILABLE_GAMES = {
+        "IQ": IqGame,
+        "رياضيات": MathGame,
+        "لون الكلمة": WordColorGame,
+        "كلمة مبعثرة": ScrambleWordGame,
+        "كتابة سريعة": FastTypingGame,
+        "عكس": OppositeGame,
+        "حروف وكلمات": LettersWordsGame,
+        "أغنية": SongGame,
+        "إنسان حيوان نبات": HumanAnimalPlantGame,
+        "سلسلة كلمات": ChainWordsGame,
+        "تخمين": GuessGame,
+        "توافق": CompatibilityGame
+    }
+    
+    logger.info(f"✅ تم تحميل {len(AVAILABLE_GAMES)} لعبة بنجاح")
+    logger.info(f"📋 الألعاب المتاحة: {', '.join(AVAILABLE_GAMES.keys())}")
+except Exception as e:
+    logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
+    import traceback
+    traceback.print_exc()
 
 # ============================================================================
 # Helper Functions
 # ============================================================================
-def check_rate_limit(user_id):
-    """فحص Rate Limiting"""
-    now = datetime.now()
-    minute_ago = now - timedelta(minutes=1)
-    
-    with rate_limit_lock:
-        user_message_count[user_id] = [
-            ts for ts in user_message_count[user_id]
-            if ts > minute_ago
-        ]
-        
-        if len(user_message_count[user_id]) >= RATE_LIMIT_MESSAGES:
-            return False
-        
-        user_message_count[user_id].append(now)
-        return True
-
 def update_user_activity(user_id):
-    """تحديث وقت النشاط"""
+    """Update last activity timestamp"""
     if user_id in registered_users:
         registered_users[user_id]['last_activity'] = datetime.now()
+
+def cleanup_inactive_users():
+    """Remove users inactive for 7 days"""
+    cutoff = datetime.now() - timedelta(days=7)
+    inactive = [
+        uid for uid, data in registered_users.items() 
+        if data.get('last_activity', datetime.now()) < cutoff
+    ]
+    
+    for uid in inactive:
+        if uid in registered_users:
+            del registered_users[uid]
+        if uid in user_themes:
+            del user_themes[uid]
+        if uid in active_games:
+            del active_games[uid]
+    
+    if inactive:
+        logger.info(f"🧹 تنظيف {len(inactive)} مستخدم غير نشط")
+
+def is_group_chat(event):
+    """Check if message is from a group"""
+    return hasattr(event.source, 'group_id')
 
 # ============================================================================
 # Flask Routes
 # ============================================================================
 @app.route("/callback", methods=['POST'])
 def callback():
-    """LINE webhook"""
+    """LINE webhook callback"""
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("❌ توقيع خاطئ")
+        logger.error("❌ Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"❌ خطأ: {e}", exc_info=True)
-        with stats_lock:
-            stats["errors"] += 1
+        logger.error(f"❌ Callback error: {e}")
         abort(500)
     
     return 'OK'
 
 @app.route("/", methods=['GET'])
 def home():
-    """صفحة الحالة"""
-    uptime = datetime.now() - stats["start_time"]
+    """Bot status page"""
+    cleanup_inactive_users()
     
     return f"""
     <!DOCTYPE html>
-    <html lang="ar" dir="rtl">
+    <html>
     <head>
+        <title>{BOT_NAME} v{BOT_VERSION}</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{BOT_NAME} v{BOT_VERSION}</title>
         <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+            
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -448,101 +264,148 @@ def home():
                 justify-content: center;
                 padding: 20px;
             }}
+            
             .container {{
                 background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(20px);
+                backdrop-filter: blur(10px);
                 border-radius: 30px;
                 padding: 40px;
-                max-width: 900px;
+                max-width: 600px;
                 width: 100%;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            }}
-            h1 {{ font-size: 3em; margin-bottom: 10px; text-align: center; }}
-            .status {{
-                background: rgba(72, 187, 120, 0.2);
-                padding: 20px;
-                border-radius: 15px;
                 text-align: center;
-                font-size: 1.2em;
-                margin: 20px 0;
             }}
+            
+            h1 {{
+                font-size: 3em;
+                margin-bottom: 10px;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            }}
+            
+            .version {{
+                font-size: 0.9em;
+                opacity: 0.8;
+                margin-bottom: 30px;
+            }}
+            
+            .status {{
+                font-size: 1.3em;
+                margin: 30px 0;
+                padding: 20px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+            }}
+            
             .stats {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                gap: 15px;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 20px;
                 margin: 30px 0;
             }}
+            
             .stat-card {{
-                background: rgba(255, 255, 255, 0.15);
+                background: rgba(255, 255, 255, 0.2);
                 padding: 20px;
-                border-radius: 15px;
-                text-align: center;
+                border-radius: 20px;
             }}
-            .stat-value {{ font-size: 2em; font-weight: bold; margin: 10px 0; }}
+            
+            .stat-value {{
+                font-size: 2.5em;
+                font-weight: bold;
+                margin: 10px 0;
+            }}
+            
+            .stat-label {{
+                font-size: 0.9em;
+                opacity: 0.9;
+            }}
+            
+            .footer {{
+                margin-top: 30px;
+                font-size: 0.85em;
+                opacity: 0.7;
+            }}
+            
+            .pulse {{
+                animation: pulse 2s infinite;
+            }}
+            
+            @keyframes pulse {{
+                0%, 100% {{ opacity: 1; }}
+                50% {{ opacity: 0.6; }}
+            }}
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🎮 {BOT_NAME}</h1>
-            <div class="status">✅ البوت يعمل بكفاءة</div>
+            <div class="version">Version {BOT_VERSION}</div>
+            
+            <div class="status pulse">
+                ✅ Bot is running smoothly
+            </div>
+            
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-value">{len(registered_users)}</div>
-                    <div>👥 المستخدمون</div>
+                    <div class="stat-label">👥 المستخدمين</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{len(AVAILABLE_GAMES)}</div>
-                    <div>🎮 الألعاب</div>
+                    <div class="stat-label">🎮 الألعاب</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{stats['total_games_played']}</div>
-                    <div>🏆 ألعاب منتهية</div>
+                    <div class="stat-value">{len(active_games)}</div>
+                    <div class="stat-label">⚡ نشط الآن</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{uptime.total_seconds() / 3600:.1f}h</div>
-                    <div>⏱️ وقت العمل</div>
+                    <div class="stat-value">{len(gemini_keys)}</div>
+                    <div class="stat-label">🤖 AI Keys</div>
                 </div>
+            </div>
+            
+            <div class="footer">
+                {BOT_RIGHTS}
             </div>
         </div>
     </body>
     </html>
     """
 
-@app.route("/health", methods=['GET'])
-def health():
-    """Health check"""
-    return {"status": "healthy", "version": BOT_VERSION}, 200
-
 # ============================================================================
-# Message Handler (100% Flex Messages)
+# Message Handler
 # ============================================================================
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """معالج الرسائل المحسّن - 100% Flex"""
+    """Handle incoming messages"""
     try:
         user_id = event.source.user_id
-        text = sanitize_user_input(event.message.text)
+        text = event.message.text.strip()
         
         if not text:
             return
         
-        if not check_rate_limit(user_id):
-            return
-        
-        with stats_lock:
-            stats["total_messages"] += 1
+        # Check if in group
+        in_group = is_group_chat(event)
         
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             
-            # جلب البروفايل
+            # Get user profile
             try:
                 profile = line_bot_api.get_profile(user_id)
                 username = get_username(profile)
             except:
                 username = "مستخدم"
             
-            # تسجيل المستخدم الجديد
+            # In groups, only respond to registered users or mentions
+            if in_group and "@" not in text.lower():
+                if user_id not in registered_users or not registered_users[user_id].get('is_registered'):
+                    return
+                if user_id not in active_games:
+                    return
+            
+            # Register new user
             if user_id not in registered_users:
                 registered_users[user_id] = {
                     "name": username,
@@ -551,12 +414,7 @@ def handle_message(event):
                     "created_at": datetime.now(),
                     "last_activity": datetime.now()
                 }
-                
-                # تعيين Rich Menu
-                rich_menu_mgr = RichMenuManager(api_client)
-                if not rich_menu_mgr.rich_menu_id:
-                    rich_menu_mgr.create_main_rich_menu()
-                rich_menu_mgr.assign_to_user(user_id)
+                logger.info(f"👤 مستخدم جديد: {username}")
                 
                 current_theme = user_themes.get(user_id, DEFAULT_THEME)
                 reply = build_home(current_theme, username, 0, False)
@@ -566,25 +424,27 @@ def handle_message(event):
                 )
                 return
             
+            # Update activity
             update_user_activity(user_id)
             
+            # Get user data
             current_theme = user_themes.get(user_id, DEFAULT_THEME)
             user_data = registered_users[user_id]
             reply = None
             
             text_lower = text.lower()
             
-            # معالجة الأوامر
-            if text_lower in ["بداية", "البداية", "@"]:
+            # Command handling
+            if text_lower == "بداية" or "@" in text_lower:
                 reply = build_home(current_theme, username, user_data['points'], user_data['is_registered'])
             
-            elif text_lower in ["مساعدة", "الألعاب", "ألعاب"]:
+            elif text_lower == "مساعدة":
                 reply = build_games_menu(current_theme)
             
             elif text.startswith("ثيم "):
                 theme = text.replace("ثيم ", "").strip()
-                from constants import is_valid_theme
-                if is_valid_theme(theme):
+                from constants import THEMES
+                if theme in THEMES:
                     user_themes[user_id] = theme
                     reply = build_home(theme, username, user_data['points'], user_data['is_registered'])
             
@@ -594,7 +454,6 @@ def handle_message(event):
             
             elif text == "انسحب":
                 registered_users[user_id]["is_registered"] = False
-                active_games.end_game(user_id)
                 reply = build_home(current_theme, username, user_data['points'], False)
             
             elif text == "نقاطي":
@@ -609,8 +468,9 @@ def handle_message(event):
                 reply = build_leaderboard(sorted_users, current_theme)
             
             elif text == "إيقاف":
-                active_games.end_game(user_id)
-                reply = build_games_menu(current_theme)
+                if user_id in active_games:
+                    del active_games[user_id]
+                    reply = build_games_menu(current_theme)
             
             elif text.startswith("لعبة "):
                 if not user_data.get("is_registered"):
@@ -621,50 +481,47 @@ def handle_message(event):
                         GameClass = AVAILABLE_GAMES[game_name]
                         game_instance = GameClass(line_bot_api)
                         
-                        # تعيين دوال AI لجميع الألعاب التي تدعم AI
-                        ai_supported_games = ["IQ", "رياضيات", "عكس", "ذكاء", "أضداد"]
-                        if game_name in ai_supported_games or any(g in game_name for g in ai_supported_games):
+                        # Set AI functions for supported games
+                        if game_name in ["IQ", "رياضيات", "عكس"]:
                             if hasattr(game_instance, 'ai_generate_question'):
-                                game_instance.ai_generate_question = lambda gt=game_name: ai_generate_question(gt)
+                                game_instance.ai_generate_question = lambda: ai_generate_question(game_name)
                             if hasattr(game_instance, 'ai_check_answer'):
                                 game_instance.ai_check_answer = ai_check_answer
                         
                         game_instance.set_theme(current_theme)
-                        active_games.start_game(user_id, game_name, game_instance)
+                        active_games[user_id] = game_instance
                         reply = game_instance.start_game()
                         
-                        logger.info(f"🎮 {username} بدأ {game_name}")
+                        logger.info(f"🎮 {username} بدأ لعبة {game_name}")
             
             else:
-                # معالجة الإجابات
-                session = active_games.get_session(user_id)
-                if session:
-                    result = session.game_instance.check_answer(text, user_id, username)
+                # Game answer handling
+                if user_id in active_games:
+                    game_instance = active_games[user_id]
+                    result = game_instance.check_answer(text, user_id, username)
                     
                     if result:
+                        # Update points
                         if result.get('points', 0) > 0:
                             registered_users[user_id]['points'] += result['points']
-                            session.total_points += result['points']
                         
+                        # End game if over
                         if result.get('game_over'):
-                            active_games.end_game(user_id)
-                            with stats_lock:
-                                stats["total_games_played"] += 1
+                            del active_games[user_id]
                         
                         reply = result.get('response')
                 else:
+                    # No active game
                     reply = build_home(current_theme, username, user_data['points'], user_data['is_registered'])
             
-            # إرسال الرد
+            # Send reply
             if reply:
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(reply_token=event.reply_token, messages=[reply])
                 )
                 
     except Exception as e:
-        logger.error(f"❌ خطأ: {e}", exc_info=True)
-        with stats_lock:
-            stats["errors"] += 1
+        logger.error(f"❌ Error in handle_message: {e}", exc_info=True)
 
 # ============================================================================
 # Run Application
@@ -672,11 +529,12 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     
-    logger.info("=" * 70)
-    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION}")
-    logger.info(f"📦 {len(AVAILABLE_GAMES)}/{len(GAME_LIST)} ألعاب")
-    logger.info(f"🤖 AI Keys: {len(GEMINI_KEYS)}")
-    logger.info(f"🌐 Port {port}")
-    logger.info("=" * 70)
+    logger.info("=" * 60)
+    logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION}")
+    logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
+    logger.info(f"🤖 AI Keys: {len(gemini_keys)}")
+    logger.info(f"🎨 Themes: {len(__import__('constants').THEMES)}")
+    logger.info(f"🌐 Server on port {port}")
+    logger.info("=" * 60)
     
     app.run(host="0.0.0.0", port=port, debug=False)
