@@ -36,14 +36,14 @@ EXPOSE 10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:10000/health', timeout=2)"
+    CMD python -c "import requests; requests.get('http://localhost:${PORT:-10000}/health', timeout=2)" || exit 1
 
-# أمر التشغيل
-CMD ["gunicorn", "app:app", \
-     "--bind", "0.0.0.0:${PORT:-10000}", \
-     "--workers", "2", \
-     "--threads", "4", \
-     "--timeout", "120", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info"]
+# أمر التشغيل - استخدام shell form بدلاً من exec form
+CMD gunicorn app:app \
+    --bind 0.0.0.0:${PORT:-10000} \
+    --workers 2 \
+    --threads 4 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info
