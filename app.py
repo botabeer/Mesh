@@ -1,5 +1,5 @@
 """
-Bot Mesh v9.0 - Main Server (Fixed & Clean)
+Bot Mesh v9.0 - Main Server (Fixed)
 Created by: Abeer Aldosari © 2025
 """
 
@@ -21,11 +21,10 @@ from ui import (
 )
 from db import DB
 
-# استيراد GameLoader من ملف games.py المبسط
+# استيراد GameLoader
 try:
     from games import GameLoader
 except ImportError:
-    # إذا فشل، جرب من games/loader.py
     from games.loader import GameLoader
 
 # ============================================================================
@@ -55,7 +54,17 @@ game_loader = GameLoader()
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-logger.info(f"✅ Bot Mesh initialized with {len(game_loader.loaded)} games")
+# ✅ إصلاح: استخدام الخاصية الصحيحة
+try:
+    games_count = len(game_loader.loaded)
+except AttributeError:
+    # إذا لم توجد loaded، جرب games
+    try:
+        games_count = len(game_loader.games)
+    except AttributeError:
+        games_count = len(game_loader.GAME_MAPPING) if hasattr(game_loader, 'GAME_MAPPING') else 0
+
+logger.info(f"✅ Bot Mesh initialized with {games_count} games")
 
 # ============================================================================
 # Rate Limiting
@@ -301,16 +310,21 @@ def home():
     return {
         "status": "running",
         "bot": "Bot Mesh v9.0",
-        "games": len(game_loader.loaded),
+        "games": games_count,
         "users": db.get_total_users()
     }
 
 @app.route("/health", methods=["GET"])
 def health():
+    try:
+        active_count = len(game_loader.active_sessions)
+    except:
+        active_count = 0
+    
     return {
         "status": "healthy",
-        "games_loaded": len(game_loader.loaded),
-        "active_sessions": len(game_loader.active_sessions)
+        "games_loaded": games_count,
+        "active_sessions": active_count
     }, 200
 
 @app.route("/callback", methods=["POST"])
@@ -330,11 +344,16 @@ def callback():
 
 @app.route("/stats", methods=["GET"])
 def stats():
+    try:
+        active_count = len(game_loader.active_sessions)
+    except:
+        active_count = 0
+    
     return {
         "total_users": db.get_total_users(),
         "total_points": db.get_total_points(),
-        "games_available": len(game_loader.loaded),
-        "active_games": len(game_loader.active_sessions),
+        "games_available": games_count,
+        "active_games": active_count,
         "leaderboard": db.get_leaderboard(5)
     }
 
@@ -358,7 +377,7 @@ if __name__ == "__main__":
     ╔══════════════════════════════════╗
     ║   Bot Mesh v9.0 Starting         ║
     ║   Port: {PORT}                    ║
-    ║   Games: {len(game_loader.loaded)}                   ║
+    ║   Games: {games_count}                   ║
     ╚══════════════════════════════════╝
     """)
     
