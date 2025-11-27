@@ -6,9 +6,8 @@ Created by: Abeer Aldosari © 2025
 import os
 import logging
 import time
-import hashlib
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import Flask, request, abort, jsonify
 from threading import Lock
 import re
@@ -23,16 +22,16 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, FollowEvent, TextMessageContent
 
-# استيراد المكونات - تصحيح اسم الدالة
+# استيراد المكونات
 from ui import (
     build_home, build_games_menu, build_my_points, 
     build_leaderboard, build_registration_required, 
-    build_help, get_quick_reply  # ✅ تم التصحيح من get_main_quick_reply إلى get_quick_reply
+    build_help, get_quick_reply
 )
 from db import DB
-from games import GameLoader
+from game_loader import GameLoader  # ✅ تغيير الاستيراد
 
-# ================== إعداد Logging المتقدم ==================
+# ================== إعداد Logging ==================
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
@@ -46,32 +45,29 @@ LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET', '')
 PORT = int(os.getenv('PORT', 10000))
 DB_PATH = os.getenv('DB_PATH', '/app/data/botmesh.db')
 
-# التحقق من المتغيرات
 if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_CHANNEL_SECRET:
     logger.error("❌ LINE credentials missing!")
 
 # ================== تهيئة التطبيق ==================
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# قاعدة البيانات
 db = DB(db_path=DB_PATH)
-
-# محمّل الألعاب
 game_loader = GameLoader()
-games_count = len(game_loader.get_available_games())
 
-logger.info(f"✅ Bot Mesh v10.0 initialized with {games_count} games")
+try:
+    games_count = len(game_loader.get_available_games())
+    logger.info(f"✅ Bot Mesh v10.0 initialized with {games_count} games")
+except Exception as e:
+    logger.error(f"❌ Error loading games: {e}")
+    games_count = 0
 
-# LINE SDK Configuration
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-# ================== Rate Limiter محسّن مع Cleanup ==================
+# ================== Rate Limiter ==================
 class AdvancedRateLimiter:
-    """Rate limiter متقدم مع cleanup تلقائي وحماية من DDoS"""
-    
     def __init__(self, max_requests=15, window_seconds=60, cleanup_interval=300):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
@@ -138,7 +134,7 @@ class AdvancedRateLimiter:
 
 rate_limiter = AdvancedRateLimiter(max_requests=15, window_seconds=60)
 
-# ================== Input Validation و Sanitization ==================
+# ================== Input Validation ==================
 class InputValidator:
     @staticmethod
     def sanitize_text(text: str, max_length: int = 500) -> str:
@@ -190,7 +186,7 @@ class InputValidator:
 
 validator = InputValidator()
 
-# ================== Message Helpers محسّنة ==================
+# ================== Message Helpers ==================
 def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply: bool = True):
     max_retries = 3
     retry_delay = 0.5
@@ -235,7 +231,7 @@ def send_message_safe(api: MessagingApi, user_id: str, content, use_quick_reply:
     
     return False
 
-# ================== معالج الرسائل المحسّن ==================
+# ================== معالج الرسائل ==================
 def process_message_safe(user_id: str, text: str):
     try:
         allowed, rate_msg = rate_limiter.is_allowed(user_id)
@@ -491,18 +487,6 @@ def stats():
         logger.error(f"Stats error: {e}")
         return jsonify({"error": "Failed to get stats"}), 500
 
-@app.route("/admin/backup", methods=["POST"])
-def backup_database():
-    try:
-        success = db.backup()
-        if success:
-            return jsonify({"status": "success", "message": "Backup created"})
-        else:
-            return jsonify({"status": "error", "message": "Backup failed"}), 500
-    except Exception as e:
-        logger.error(f"Backup error: {e}")
-        return jsonify({"error": str(e)}), 500
-
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"error": "Not found"}), 404
@@ -516,6 +500,4 @@ if __name__ == "__main__":
     logger.info(f"🚀 Bot Mesh v10.0 starting on port {PORT}")
     logger.info(f"📊 Games loaded: {games_count}")
     logger.info(f"💾 Database: {DB_PATH}")
-    logger.info(f"🔒 Security: Enhanced")
-    logger.info(f"⚡ Performance: Optimized")
     app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
