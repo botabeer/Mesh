@@ -1,8 +1,10 @@
 """
-ui.py — واجهات Bot Mesh (ثيمات، نوافذ Flex، Quick Reply) - FIXED
+ui.py — واجهات Bot Mesh (ثيمات، نوافذ Flex، Quick Reply) - UPDATED
 Created by: Abeer Aldosari © 2025
 
-التحديث: حل مشكلة تجاوز حد Quick Reply (13 عنصر كحد أقصى)
+التحديثات:
+✅ Quick Reply يحتوي على 12 لعبة فقط
+✅ نافذة مساعدة مستقلة أثناء اللعب
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
@@ -26,20 +28,20 @@ THEMES = {
 
 DEFAULT_THEME = "رمادي"
 
-# الألعاب - مرتبة حسب الأفضلية
+# الألعاب - 12 لعبة فقط
 ORDERED_GAMES = [
-    ("سرعة", "▫️ سرعة"),
-    ("ذكاء", "▫️ ذكاء"),
-    ("لعبة", "▫️ لعبة"),
-    ("أغنية", "▫️ أغنية"),
-    ("تخمين", "▫️ تخمين"),
-    ("سلسلة", "▫️ سلسلة"),
-    ("كلمات", "▫️ ترتيب"),
-    ("تكوين", "▫️ تكوين"),
-    ("أضداد", "▫️ ضد"),
-    ("ألوان", "▫️ لون"),
-    ("رياضيات", "▫️ رياضيات"),
-    ("توافق", "▫️ توافق")
+    ("سرعة", "سرعة ⚡"),
+    ("ذكاء", "ذكاء 🧠"),
+    ("لعبة", "لعبة 🎯"),
+    ("أغنية", "أغنية 🎵"),
+    ("تخمين", "تخمين 🔮"),
+    ("سلسلة", "سلسلة 🔗"),
+    ("كلمات", "ترتيب 🔤"),
+    ("تكوين", "تكوين 📝"),
+    ("أضداد", "ضد ↔️"),
+    ("ألوان", "لون 🎨"),
+    ("رياضيات", "رياضيات 🔢"),
+    ("توافق", "توافق 🖤")
 ]
 
 GAME_DESCRIPTIONS = {
@@ -110,36 +112,30 @@ def _bubble(body_contents, footer_box, colors):
         "styles": {"body": {"backgroundColor": colors["bg"]}, "footer": {"backgroundColor": colors["bg"]}}
     }
 
-# ✅ FIXED: Quick Reply محدود بـ 13 عنصر كحد أقصى
+# ✅ Quick Reply - الـ12 لعبة فقط
 def get_quick_reply():
     """
-    إنشاء Quick Reply مع التقيد بحد LINE (13 عنصر كحد أقصى)
-    
-    الاستراتيجية:
-    - 9 ألعاب أساسية (الأكثر شعبية)
-    - 4 أزرار رئيسية
-    = 13 عنصرًا بالضبط
+    إنشاء Quick Reply مع 12 لعبة فقط
     """
     items = []
     
-    # أخذ أول 9 ألعاب فقط (الأكثر شعبية)
-    for key, label in ORDERED_GAMES[:9]:
+    # جميع الألعاب الـ12
+    for key, label in ORDERED_GAMES:
         items.append(QuickReplyItem(action=MessageAction(label=label, text=f"لعبة {key}")))
     
-    # أزرار رئيسية (4 أزرار)
-    main_quick = [
-        QuickReplyItem(action=MessageAction(label="▫️ بداية", text="بداية")),
-        QuickReplyItem(action=MessageAction(label="▫️ ألعاب", text="العاب")),
-        QuickReplyItem(action=MessageAction(label="▫️ نقاطي", text="نقاطي")),
-        QuickReplyItem(action=MessageAction(label="▫️ صدارة", text="صدارة"))
+    return QuickReply(items=items)
+
+# ✅ Quick Reply للمساعدة أثناء اللعب
+def get_game_help_quick_reply():
+    """
+    Quick Reply خاص بالمساعدة أثناء اللعب
+    """
+    items = [
+        QuickReplyItem(action=MessageAction(label="💡 لمح", text="لمح")),
+        QuickReplyItem(action=MessageAction(label="🔍 جاوب", text="جاوب")),
+        QuickReplyItem(action=MessageAction(label="⛔ إيقاف", text="إيقاف")),
+        QuickReplyItem(action=MessageAction(label="🏠 البداية", text="بداية"))
     ]
-    
-    items.extend(main_quick)
-    
-    # التأكد من أننا لا نتجاوز 13
-    if len(items) > 13:
-        items = items[:13]
-    
     return QuickReply(items=items)
 
 # ---------- دوال بناء النوافذ ----------
@@ -177,6 +173,43 @@ def build_home(theme=DEFAULT_THEME, username="مستخدم", points=0, is_regist
 
     footer = _footer(footer_buttons, colors)
     return FlexMessage(alt_text=f"{BOT_NAME} - البداية", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
+
+# ✅ نافذة المساعدة المستقلة (تظهر أثناء اللعب)
+def build_game_help(theme=DEFAULT_THEME):
+    """
+    نافذة مساعدة خاصة تظهر أثناء اللعب
+    """
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+
+    help_card = _3d_card([
+        {"type": "text", "text": "🎮 أوامر اللعبة:", "size": "lg", "color": colors["text"], "weight": "bold", "align": "center"},
+        _separator(colors, margin="md"),
+        {"type": "text", "text": "💡 لمح", "size": "md", "color": colors["primary"], "weight": "bold", "margin": "md"},
+        {"type": "text", "text": "احصل على تلميح لمساعدتك في الإجابة", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
+        
+        {"type": "text", "text": "🔍 جاوب", "size": "md", "color": colors["primary"], "weight": "bold", "margin": "md"},
+        {"type": "text", "text": "اعرض الإجابة الصحيحة وانتقل للسؤال التالي", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
+        
+        {"type": "text", "text": "⛔ إيقاف", "size": "md", "color": colors["error"], "weight": "bold", "margin": "md"},
+        {"type": "text", "text": "أوقف اللعبة الحالية وعد للقائمة", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
+        
+        _separator(colors, margin="md"),
+        {"type": "text", "text": "💡 نصيحة: استخدم الأزرار السريعة أسفل الشاشة للوصول السريع!", "size": "xs", "color": colors["warning"], "wrap": True, "align": "center", "margin": "md"}
+    ], colors, corner="18px", pad="18px")
+
+    body = [
+        _header("❓ مساعدة اللعبة", "كيف تلعب؟", colors),
+        _separator(colors),
+        help_card
+    ]
+
+    footer_buttons = [
+        _row([_3d_button("💡 لمح", "لمح", colors, "secondary"), _3d_button("🔍 جاوب", "جاوب", colors, "secondary")]),
+        _row([_3d_button("⛔ إيقاف", "إيقاف", colors, "primary", colors["error"]), _3d_button("🏠 البداية", "بداية", colors)])
+    ]
+    
+    footer = _footer(footer_buttons, colors)
+    return FlexMessage(alt_text="مساعدة اللعبة", contents=FlexContainer.from_dict(_bubble(body, footer, colors)))
 
 def build_help(theme=DEFAULT_THEME):
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
