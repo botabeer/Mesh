@@ -131,7 +131,7 @@ def process_message_background(user_id: str, text: str, reply_token: str):
             name = get_username(profile)
             
             user = db.get_user(user_id)
-            theme = user['theme'] if user else 'بنفسجي'
+            theme = user['theme'] if user else 'رمادي'  # ✅ الثيم الافتراضي: رمادي
             points = user['points'] if user else 0
             is_registered = user is not None and user['status'] == 'active'
             
@@ -282,8 +282,8 @@ def handle_follow(event):
             try:
                 profile = line_bot_api.get_profile(user_id)
                 name = get_username(profile)
-                db.create_user(user_id, name, 'بنفسجي')
-                msg = build_home('بنفسجي', name, 0, True)
+                db.create_user(user_id, name, 'رمادي')  # ✅ الثيم الافتراضي: رمادي
+                msg = build_home('رمادي', name, 0, True)
                 line_bot_api.push_message_with_http_info(user_id, [msg])
             except Exception as e:
                 logger.error(f"❌ Follow error: {e}")
