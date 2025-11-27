@@ -1,12 +1,52 @@
+"""
+Bot Mesh v10.0 - Enhanced Game Loader
+Created by: Abeer Aldosari © 2025
+
+التحسينات:
+✅ تحميل ديناميكي محسّن
+✅ Error handling شامل
+✅ Game factory pattern
+✅ Session management محسّن
+✅ Auto-cleanup للألعاب المنتهية
+✅ Performance monitoring
+"""
+
 import importlib
 import logging
-from typing import Dict, Optional, List
+import inspect
+from typing import Dict, Optional, List, Any
+from datetime import datetime, timedelta
+from threading import Lock
 
 logger = logging.getLogger(__name__)
 
-class GameLoader:
-    """محمّل الألعاب المبسط"""
+class GameSession:
+    """تمثيل جلسة لعبة مع metadata"""
     
+    def __init__(self, game_instance, user_id: str, game_name: str):
+        self.game = game_instance
+        self.user_id = user_id
+        self.game_name = game_name
+        self.started_at = datetime.now()
+        self.last_activity = datetime.now()
+    
+    def update_activity(self):
+        """تحديث آخر نشاط"""
+        self.last_activity = datetime.now()
+    
+    def is_expired(self, timeout_minutes: int = 30) -> bool:
+        """التحقق من انتهاء الصلاحية"""
+        return (datetime.now() - self.last_activity) > timedelta(minutes=timeout_minutes)
+    
+    def get_duration(self) -> float:
+        """الحصول على مدة اللعبة بالثواني"""
+        return (datetime.now() - self.started_at).total_seconds()
+
+
+class GameLoader:
+    """محمّل الألعاب المحسّن مع error handling و monitoring"""
+    
+    # خريطة الألعاب (الاسم العربي -> اسم الملف)
     GAME_MAPPING = {
         "ذكاء": "iq_game",
         "رياضيات": "math_game",
@@ -22,104 +62,297 @@ class GameLoader:
         "توافق": "compatibility_game"
     }
     
-    def __init__(self):
-        self.loaded: Dict[str, type] = {}  # ✅ التعريف الصحيح
-        self.active_sessions: Dict[str, object] = {}
+    def __init__(self, auto_cleanup: bool = True, session_timeout: int = 30):
+        """
+        تهيئة محمّل الألعاب
+        
+        Args:
+            auto_cleanup: تفعيل التنظيف التلقائي
+            session_timeout: مدة انتهاء الجلسة بالدقائق
+        """
+        self.loaded: Dict[str, type] = {}
+        self.active_sessions: Dict[str, GameSession] = {}
+        self.session_timeout = session_timeout
+        self.auto_cleanup = auto_cleanup
+        self.lock = Lock()
+        
+        # إحصائيات
+        self.stats = {
+            'games_started': 0,
+            'games_completed': 0,
+            'games_failed': 0,
+            'load_errors': 0
+        }
+        
         self._load_all_games()
+        
+        logger.info(f"✅ GameLoader initialized: {len(self.loaded)}/{len(self.GAME_MAPPING)} games loaded")
     
     def _load_all_games(self):
-        """تحميل الألعاب"""
-        logger.info("🎮 جاري تحميل الألعاب...")
+        """تحميل الألعاب بشكل آمن"""
+        logger.info("🎮 Loading games...")
         
         for arabic_name, file_name in self.GAME_MAPPING.items():
             try:
+                # استيراد الموديول
                 module = importlib.import_module(f"games.{file_name}")
                 
                 # البحث عن Game class
-                game_class = None
-                if hasattr(module, "Game"):
-                    game_class = module.Game
-                else:
-                    for attr_name in dir(module):
-                        if attr_name.endswith("Game") and not attr_name.startswith("_"):
-                            attr = getattr(module, attr_name)
-                            if isinstance(attr, type):
-                                game_class = attr
-                                break
+                game_class = self._find_game_class(module)
                 
                 if game_class:
-                    self.loaded[arabic_name] = game_class
-                    logger.info(f"  ✅ {arabic_name} ({file_name})")
+                    # التحقق من أن الكلاس قابل للاستخدام
+                    if self._validate_game_class(game_class):
+                        self.loaded[arabic_name] = game_class
+                        logger.info(f"  ✅ {arabic_name} ({file_name})")
+                    else:
+                        logger.warning(f"  ⚠️ {arabic_name} - validation failed")
+                        self.stats['load_errors'] += 1
                 else:
-                    logger.warning(f"  ⚠️ {arabic_name} - لم يتم العثور على Game class")
+                    logger.warning(f"  ⚠️ {arabic_name} - no Game class found")
+                    self.stats['load_errors'] += 1
                     
             except Exception as e:
-                logger.error(f"  ❌ {arabic_name} - خطأ: {e}")
+                logger.error(f"  ❌ {arabic_name} - error: {e}")
+                self.stats['load_errors'] += 1
         
-        logger.info(f"✅ تم تحميل {len(self.loaded)}/{len(self.GAME_MAPPING)} لعبة")
+        logger.info(f"✅ Loaded {len(self.loaded)}/{len(self.GAME_MAPPING)} games successfully")
     
-    def start_game(self, user_id: str, game_name: str):
-        """بدء لعبة"""
-        if game_name not in self.loaded:
-            logger.warning(f"⚠️ اللعبة '{game_name}' غير موجودة")
-            return None
+    def _find_game_class(self, module) -> Optional[type]:
+        """البحث عن Game class في الموديول"""
+        # محاولة 1: البحث عن "Game" مباشرة
+        if hasattr(module, "Game"):
+            return module.Game
         
+        # محاولة 2: البحث عن أي class ينتهي بـ "Game"
+        for attr_name in dir(module):
+            if attr_name.endswith("Game") and not attr_name.startswith("_"):
+                attr = getattr(module, attr_name)
+                if isinstance(attr, type):
+                    return attr
+        
+        return None
+    
+    def _validate_game_class(self, game_class: type) -> bool:
+        """التحقق من صحة Game class"""
         try:
-            # إنهاء اللعبة السابقة إن وجدت
-            if user_id in self.active_sessions:
-                self.end_game(user_id)
+            # تحقق من وجود الميثودات الأساسية
+            required_methods = ['start', 'check_answer']
+            for method in required_methods:
+                if not hasattr(game_class, method):
+                    logger.warning(f"Missing method: {method}")
+                    return False
             
-            GameClass = self.loaded[game_name]
-            
-            # محاولة إنشاء نسخة من اللعبة
-            try:
-                game = GameClass()
-            except TypeError:
-                # بعض الألعاب تحتاج line_bot_api
-                game = GameClass(line_bot_api=None)
-            
-            self.active_sessions[user_id] = game
-            
-            # بدء اللعبة
-            if hasattr(game, 'start_game'):
-                response = game.start_game()
-            elif hasattr(game, 'start'):
-                response = game.start()
-            else:
-                raise AttributeError("اللعبة لا تحتوي على start() أو start_game()")
-            
-            logger.info(f"🎮 {user_id} بدأ لعبة {game_name}")
-            return response
-            
+            return True
+        
         except Exception as e:
-            logger.error(f"❌ خطأ في بدء اللعبة {game_name}: {e}", exc_info=True)
-            if user_id in self.active_sessions:
-                del self.active_sessions[user_id]
+            logger.error(f"Validation error: {e}")
+            return False
+    
+    def _create_game_instance(self, game_class: type) -> Optional[Any]:
+        """إنشاء نسخة من اللعبة بطريقة آمنة"""
+        try:
+            # فحص signature الـ __init__
+            sig = inspect.signature(game_class.__init__)
+            params = list(sig.parameters.keys())
+            
+            # إزالة 'self' من القائمة
+            params = [p for p in params if p != 'self']
+            
+            # محاولة إنشاء النسخة
+            if not params:
+                # لا يحتاج أي معاملات
+                return game_class()
+            elif 'line_bot_api' in params:
+                # يحتاج line_bot_api
+                return game_class(line_bot_api=None)
+            else:
+                # محاولة عامة
+                try:
+                    return game_class()
+                except TypeError:
+                    return game_class(line_bot_api=None)
+        
+        except Exception as e:
+            logger.error(f"Error creating game instance: {e}")
             return None
     
-    def get_game(self, user_id: str):
-        """الحصول على اللعبة النشطة للمستخدم"""
-        return self.active_sessions.get(user_id)
+    def start_game(self, user_id: str, game_name: str) -> Optional[Any]:
+        """
+        بدء لعبة جديدة
+        
+        Args:
+            user_id: معرف المستخدم
+            game_name: اسم اللعبة
+        
+        Returns:
+            استجابة بدء اللعبة أو None
+        """
+        with self.lock:
+            # التحقق من وجود اللعبة
+            if game_name not in self.loaded:
+                logger.warning(f"⚠️ Game not found: {game_name}")
+                return None
+            
+            try:
+                # إنهاء اللعبة السابقة إن وجدت
+                if user_id in self.active_sessions:
+                    self.end_game(user_id)
+                
+                # إنشاء نسخة من اللعبة
+                GameClass = self.loaded[game_name]
+                game = self._create_game_instance(GameClass)
+                
+                if not game:
+                    logger.error(f"❌ Failed to create game instance: {game_name}")
+                    self.stats['games_failed'] += 1
+                    return None
+                
+                # بدء اللعبة
+                if hasattr(game, 'start_game'):
+                    response = game.start_game()
+                elif hasattr(game, 'start'):
+                    response = game.start()
+                else:
+                    raise AttributeError("No start method found")
+                
+                # حفظ الجلسة
+                session = GameSession(game, user_id, game_name)
+                self.active_sessions[user_id] = session
+                
+                self.stats['games_started'] += 1
+                
+                logger.info(f"🎮 {user_id[:8]}... started {game_name}")
+                return response
+                
+            except Exception as e:
+                logger.error(f"❌ Error starting game {game_name}: {e}", exc_info=True)
+                self.stats['games_failed'] += 1
+                
+                # تنظيف في حالة الفشل
+                if user_id in self.active_sessions:
+                    del self.active_sessions[user_id]
+                
+                return None
+    
+    def get_game(self, user_id: str) -> Optional[Any]:
+        """
+        الحصول على اللعبة النشطة للمستخدم
+        
+        Args:
+            user_id: معرف المستخدم
+        
+        Returns:
+            نسخة اللعبة أو None
+        """
+        session = self.active_sessions.get(user_id)
+        if session:
+            session.update_activity()
+            return session.game
+        return None
     
     def has_active_game(self, user_id: str) -> bool:
-        """التحقق من وجود لعبة نشطة"""
+        """
+        التحقق من وجود لعبة نشطة
+        
+        Args:
+            user_id: معرف المستخدم
+        
+        Returns:
+            True إذا كانت هناك لعبة نشطة
+        """
         return user_id in self.active_sessions
     
-    def end_game(self, user_id: str):
-        """إنهاء اللعبة"""
-        if user_id in self.active_sessions:
-            del self.active_sessions[user_id]
-            logger.info(f"🛑 {user_id} أنهى اللعبة")
+    def end_game(self, user_id: str, completed: bool = False):
+        """
+        إنهاء اللعبة
+        
+        Args:
+            user_id: معرف المستخدم
+            completed: هل انتهت اللعبة بنجاح
+        """
+        with self.lock:
+            if user_id in self.active_sessions:
+                session = self.active_sessions[user_id]
+                duration = session.get_duration()
+                
+                if completed:
+                    self.stats['games_completed'] += 1
+                
+                del self.active_sessions[user_id]
+                
+                logger.info(
+                    f"🛑 {user_id[:8]}... ended {session.game_name} "
+                    f"(duration: {duration:.1f}s, completed: {completed})"
+                )
+    
+    def cleanup_expired_sessions(self):
+        """تنظيف الجلسات المنتهية"""
+        if not self.auto_cleanup:
+            return
+        
+        with self.lock:
+            expired = []
+            
+            for user_id, session in self.active_sessions.items():
+                if session.is_expired(self.session_timeout):
+                    expired.append(user_id)
+            
+            for user_id in expired:
+                logger.info(f"🧹 Cleaning expired session: {user_id[:8]}...")
+                self.end_game(user_id, completed=False)
+            
+            if expired:
+                logger.info(f"🧹 Cleaned {len(expired)} expired sessions")
     
     def get_available_games(self) -> List[str]:
-        """قائمة الألعاب المتاحة"""
+        """
+        الحصول على قائمة الألعاب المتاحة
+        
+        Returns:
+            قائمة أسماء الألعاب
+        """
         return list(self.loaded.keys())
     
     def get_stats(self) -> Dict:
-        """إحصائيات محمّل الألعاب"""
-        return {
-            'total_games': len(self.GAME_MAPPING),
-            'loaded_games': len(self.loaded),
-            'active_sessions': len(self.active_sessions),
-            'available_games': list(self.loaded.keys())
-        }
+        """
+        الحصول على إحصائيات محمّل الألعاب
+        
+        Returns:
+            dict مع الإحصائيات
+        """
+        with self.lock:
+            return {
+                'total_games': len(self.GAME_MAPPING),
+                'loaded_games': len(self.loaded),
+                'load_errors': self.stats['load_errors'],
+                'active_sessions': len(self.active_sessions),
+                'games_started': self.stats['games_started'],
+                'games_completed': self.stats['games_completed'],
+                'games_failed': self.stats['games_failed'],
+                'available_games': self.get_available_games(),
+                'success_rate': (
+                    self.stats['games_completed'] / self.stats['games_started'] * 100
+                    if self.stats['games_started'] > 0 else 0
+                )
+            }
+    
+    def get_session_info(self, user_id: str) -> Optional[Dict]:
+        """
+        الحصول على معلومات الجلسة
+        
+        Args:
+            user_id: معرف المستخدم
+        
+        Returns:
+            dict مع معلومات الجلسة أو None
+        """
+        session = self.active_sessions.get(user_id)
+        if session:
+            return {
+                'game_name': session.game_name,
+                'started_at': session.started_at.isoformat(),
+                'duration': session.get_duration(),
+                'last_activity': session.last_activity.isoformat()
+            }
+        return None
