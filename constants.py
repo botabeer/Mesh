@@ -1,5 +1,5 @@
 """
-Bot Mesh - Constants & Configuration
+Bot Mesh - Constants & Configuration v3.2
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 """
 
@@ -9,7 +9,7 @@ import os
 # Bot Information
 # ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "3.0.0"
+BOT_VERSION = "3.2.0"
 BOT_RIGHTS = "Bot Mesh © 2025 — تم إنشاء هذا البوت بواسطة عبير الدوسري"
 
 # ============================================================================
@@ -19,13 +19,6 @@ LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 
 # ============================================================================
-# Gemini AI Keys (Optional - 3 keys for fallback)
-# ============================================================================
-GEMINI_API_KEY_1 = os.getenv('GEMINI_API_KEY_1')
-GEMINI_API_KEY_2 = os.getenv('GEMINI_API_KEY_2')
-GEMINI_API_KEY_3 = os.getenv('GEMINI_API_KEY_3')
-
-# ============================================================================
 # Game Settings
 # ============================================================================
 ROUNDS_PER_GAME = 5
@@ -33,7 +26,7 @@ POINTS_PER_CORRECT_ANSWER = 10
 INACTIVITY_DAYS = 7
 
 # ============================================================================
-# Themes (9 Professional Themes - NO GROUPS - Ordered List)
+# Themes (9 Professional Themes - Ordered List)
 # ============================================================================
 THEMES = {
     "أبيض": {
@@ -46,7 +39,9 @@ THEMES = {
         "text2": "#718096",
         "shadow1": "#E2E8F0",
         "shadow2": "#FFFFFF",
-        "button": "#4299E1"
+        "button": "#4299E1",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "أسود": {
         "name": "أسود",
@@ -58,7 +53,9 @@ THEMES = {
         "text2": "#CBD5E0",
         "shadow1": "#4A5568",
         "shadow2": "#414D5F",
-        "button": "#667EEA"
+        "button": "#667EEA",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "رمادي": {
         "name": "رمادي",
@@ -70,7 +67,9 @@ THEMES = {
         "text2": "#718096",
         "shadow1": "#E2E8F0",
         "shadow2": "#FFFFFF",
-        "button": "#4A5568"
+        "button": "#4A5568",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "أزرق": {
         "name": "أزرق",
@@ -82,7 +81,9 @@ THEMES = {
         "text2": "#2B6CB0",
         "shadow1": "#BEE3F8",
         "shadow2": "#FFFFFF",
-        "button": "#2B6CB0"
+        "button": "#2B6CB0",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "بنفسجي": {
         "name": "بنفسجي",
@@ -94,7 +95,9 @@ THEMES = {
         "text2": "#7C3AED",
         "shadow1": "#DDD6FE",
         "shadow2": "#FFFFFF",
-        "button": "#805AD5"
+        "button": "#805AD5",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "وردي": {
         "name": "وردي",
@@ -106,7 +109,9 @@ THEMES = {
         "text2": "#97266D",
         "shadow1": "#FED7E2",
         "shadow2": "#FFFFFF",
-        "button": "#B83280"
+        "button": "#B83280",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "أخضر": {
         "name": "أخضر",
@@ -118,7 +123,9 @@ THEMES = {
         "text2": "#065F46",
         "shadow1": "#A7F3D0",
         "shadow2": "#FFFFFF",
-        "button": "#38A169"
+        "button": "#38A169",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "برتقالي": {
         "name": "برتقالي",
@@ -130,7 +137,9 @@ THEMES = {
         "text2": "#9C4221",
         "shadow1": "#FEEBC8",
         "shadow2": "#FFFFFF",
-        "button": "#C05621"
+        "button": "#C05621",
+        "success": "#48BB78",
+        "error": "#EF4444"
     },
     "بني": {
         "name": "بني",
@@ -142,28 +151,41 @@ THEMES = {
         "text2": "#7A4F1D",
         "shadow1": "#E6D5C3",
         "shadow2": "#FFFFFF",
-        "button": "#744210"
+        "button": "#744210",
+        "success": "#48BB78",
+        "error": "#EF4444"
     }
 }
 
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# Available Games (ORDERED LIST - NO EMOJI - WITH ▫️)
+# Available Games (ORDERED LIST - WITH ICONS)
 # ============================================================================
 GAME_LIST = {
-    "سرعة": {"label": "▫️ سرعة", "file": "fast_typing_game"},
-    "ذكاء": {"label": "▫️ ذكاء", "file": "iq_game"},
-    "لعبة": {"label": "▫️ لعبة", "file": "human_animal_plant_game"},
-    "أغنية": {"label": "▫️ أغنية", "file": "song_game"},
-    "خمن": {"label": "▫️ خمن", "file": "guess_game"},
-    "سلسلة": {"label": "▫️ سلسلة", "file": "chain_words_game"},
-    "ترتيب": {"label": "▫️ ترتيب", "file": "scramble_word_game"},
-    "تكوين": {"label": "▫️ تكوين", "file": "letters_words_game"},
-    "ضد": {"label": "▫️ ضد", "file": "opposite_game"},
-    "لون": {"label": "▫️ لون", "file": "word_color_game"},
-    "رياضيات": {"label": "▫️ رياضيات", "file": "math_game"},
-    "توافق": {"label": "▫️ توافق", "file": "compatibility_game"}  # Always last
+    "كتابة سريعة": {"label": "سرعة", "icon": "⚡"},
+    "IQ": {"label": "ذكاء", "icon": "🧠"},
+    "إنسان حيوان نبات": {"label": "لعبة", "icon": "🎯"},
+    "أغنية": {"label": "أغنية", "icon": "🎵"},
+    "تخمين": {"label": "خمن", "icon": "🔮"},
+    "سلسلة كلمات": {"label": "سلسلة", "icon": "🔗"},
+    "كلمة مبعثرة": {"label": "ترتيب", "icon": "🔤"},
+    "حروف وكلمات": {"label": "تكوين", "icon": "📝"},
+    "عكس": {"label": "ضد", "icon": "↔️"},
+    "لون الكلمة": {"label": "لون", "icon": "🎨"},
+    "رياضيات": {"label": "رياضيات", "icon": "🔢"},
+    "توافق": {"label": "توافق", "icon": "🖤"}
+}
+
+# ============================================================================
+# Fixed Buttons
+# ============================================================================
+FIXED_BUTTONS = {
+    "home": {"label": "🏠 البداية", "text": "بداية"},
+    "games": {"label": "🎮 الألعاب", "text": "مساعدة"},
+    "points": {"label": "⭐ نقاطي", "text": "نقاطي"},
+    "leaderboard": {"label": "🏆 الصدارة", "text": "صدارة"},
+    "stop": {"label": "⛔ إيقاف", "text": "إيقاف"}
 }
 
 # ============================================================================
@@ -197,14 +219,5 @@ def validate_env():
     
     if missing:
         raise ValueError(f"❌ Missing environment variables: {', '.join(missing)}")
-    
-    # Check AI keys
-    ai_keys = [GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3]
-    active_keys = [k for k in ai_keys if k]
-    
-    if not active_keys:
-        print("⚠️ No Gemini AI keys found - AI features will use fallback mode")
-    else:
-        print(f"✅ {len(active_keys)} Gemini AI key(s) available")
     
     return True
