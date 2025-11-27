@@ -1,15 +1,12 @@
 """
-Bot Mesh - LINE Bot Application v3.0
+Bot Mesh - LINE Bot Application v3.1 FINAL
 Created by: Abeer Aldosari © 2025
 
-Enhanced Features:
-- Professional Neumorphism 3D Design
-- 9 Customizable Themes
-- AI-powered Games (Gemini)
-- Smart Fallback System
-- Group-Friendly
-- Auto-Cleanup System
-- LINE-Compatible Flex Messages
+التحديثات:
+- إصلاح نظام تحميل الألعاب
+- توحيد أسماء الكلاسات
+- إصلاح مشكلة PORT
+- تحسين معالجة الأخطاء
 """
 
 import os
@@ -31,7 +28,7 @@ from constants import (
     BOT_NAME, BOT_VERSION, BOT_RIGHTS,
     LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
     GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3,
-    validate_env, get_username, GAME_LIST, DEFAULT_THEME
+    validate_env, get_username, GAME_LIST, DEFAULT_THEME, THEMES
 )
 
 from ui_builder import (
@@ -65,7 +62,7 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 # In-Memory Storage
 # ============================================================================
 registered_users = {}  # {user_id: {name, points, is_registered, created_at, last_activity}}
-user_themes = {}       # {user_id: theme_emoji}
+user_themes = {}       # {user_id: theme_name}
 active_games = {}      # {user_id: game_instance}
 
 # ============================================================================
@@ -146,22 +143,20 @@ def ai_check_answer(correct_answer, user_answer):
 AVAILABLE_GAMES = {}
 
 try:
-    # الألعاب الأساسية (النظام القديم)
     from games.iq_game import IqGame
     from games.math_game import MathGame
     from games.word_color_game import WordColorGame
     from games.scramble_word_game import ScrambleWordGame
     from games.fast_typing_game import FastTypingGame
     from games.opposite_game import OppositeGame
-    
-    # الألعاب المتقدمة (النظام الجديد)
-    from games.song_game import SongGame
     from games.letters_words_game import LettersWordsGame
+    from games.song_game import SongGame
     from games.human_animal_plant_game import HumanAnimalPlantGame
     from games.chain_words_game import ChainWordsGame
     from games.guess_game import GuessGame
     from games.compatibility_game import CompatibilityGame
     
+    # ربط الأسماء الكاملة بالكلاسات
     AVAILABLE_GAMES = {
         "IQ": IqGame,
         "رياضيات": MathGame,
@@ -443,7 +438,6 @@ def handle_message(event):
             
             elif text.startswith("ثيم "):
                 theme = text.replace("ثيم ", "").strip()
-                from constants import THEMES
                 if theme in THEMES:
                     user_themes[user_id] = theme
                     reply = build_home(theme, username, user_data['points'], user_data['is_registered'])
@@ -488,7 +482,10 @@ def handle_message(event):
                             if hasattr(game_instance, 'ai_check_answer'):
                                 game_instance.ai_check_answer = ai_check_answer
                         
-                        game_instance.set_theme(current_theme)
+                        # Set theme
+                        if hasattr(game_instance, 'set_theme'):
+                            game_instance.set_theme(current_theme)
+                        
                         active_games[user_id] = game_instance
                         reply = game_instance.start_game()
                         
@@ -533,7 +530,7 @@ if __name__ == "__main__":
     logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION}")
     logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
     logger.info(f"🤖 AI Keys: {len(gemini_keys)}")
-    logger.info(f"🎨 Themes: {len(__import__('constants').THEMES)}")
+    logger.info(f"🎨 Themes: {len(THEMES)}")
     logger.info(f"🌐 Server on port {port}")
     logger.info("=" * 60)
     
