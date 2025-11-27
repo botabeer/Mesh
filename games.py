@@ -1,7 +1,3 @@
-"""
-Game Loader - Bot Mesh v9.0 (Fixed)
-"""
-
 import importlib
 import logging
 from typing import Dict, Optional, List
