@@ -10,6 +10,7 @@ Created by: Abeer Aldosari © 2025
 - ✅ تكامل 100% بين جميع المكونات
 - ✅ نظام تنظيف تلقائي للبيانات
 - ✅ دعم كامل للمجموعات
+- ✅ إصلاح لعبة إنسان حيوان نبات
 """
 
 import os
@@ -354,6 +355,7 @@ def home():
                     <li>نظام نقاط وصدارة متقدم</li>
                     <li>دعم كامل للمجموعات والدردشات الفردية</li>
                     <li>تنظيف تلقائي للبيانات غير النشطة</li>
+                    <li>إصلاح كامل للعبة إنسان حيوان نبات</li>
                 </ul>
             </div>
             
@@ -596,6 +598,7 @@ if __name__ == "__main__":
     logger.info("✨ Enhanced Error Handling: ENABLED")
     logger.info("✨ Game Statistics: ENABLED")
     logger.info("✨ Auto Cleanup: ENABLED")
+    logger.info("✨ Human Animal Plant Game: FIXED")
     logger.info("=" * 70)
     
     app.run(host="0.0.0.0", port=port, debug=False)
