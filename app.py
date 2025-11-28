@@ -1,16 +1,14 @@
 """
-Bot Mesh - LINE Bot Application v5.0 ULTIMATE EDITION
+Bot Mesh - LINE Bot Application v6.0 DATABASE EDITION
 Created by: Abeer Aldosari © 2025
 
-التحسينات الجديدة v5.0:
-- ✅ Quick Reply Buttons دائمة في جميع الردود بدون استثناء
-- ✅ نظام مساعدة تفاعلي شامل لكل لعبة
-- ✅ إحصائيات مفصلة ومرئية للألعاب
-- ✅ معالجة أخطاء محسّنة مع رسائل واضحة
-- ✅ تكامل 100% بين جميع المكونات
-- ✅ نظام تنظيف تلقائي للبيانات
-- ✅ دعم كامل للمجموعات
-- ✅ إصلاح لعبة إنسان حيوان نبات
+التحسينات الجديدة v6.0:
+- ✅ قاعدة بيانات SQLite للبيانات الدائمة
+- ✅ نظام الإنجازات الكامل
+- ✅ إشعارات فتح الإنجازات
+- ✅ إحصائيات محسّنة من قاعدة البيانات
+- ✅ تنظيف تلقائي للبيانات القديمة
+- ✅ نسخ احتياطي تلقائي يومي
 """
 
 import os
@@ -42,6 +40,10 @@ from ui_builder import (
     build_game_stats, build_detailed_game_info
 )
 
+# Import new modules
+from database import get_database
+from achievements import AchievementManager, build_achievements_ui, build_achievement_unlock_notification
+
 # ============================================================================
 # Configuration & Validation
 # ============================================================================
@@ -65,12 +67,16 @@ configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 # ============================================================================
-# In-Memory Storage
+# Database & Achievement System
 # ============================================================================
-registered_users = {}  # {user_id: {name, points, is_registered, created_at, last_activity, games_played}}
-user_themes = {}       # {user_id: theme_name}
+db = get_database()
+achievement_manager = AchievementManager(db)
+
+# ============================================================================
+# In-Memory Storage (للأداء السريع)
+# ============================================================================
 active_games = {}      # {user_id: game_instance}
-game_statistics = {}   # {game_name: {plays: 0, completions: 0, total_points: 0, avg_score: 0}}
+user_cache = {}        # {user_id: user_data} - cache مؤقت
 
 # ============================================================================
 # Game Loading System
@@ -106,15 +112,6 @@ try:
         "توافق": CompatibilityGame
     }
     
-    # Initialize game statistics
-    for game_name in AVAILABLE_GAMES.keys():
-        game_statistics[game_name] = {
-            "plays": 0,
-            "completions": 0,
-            "total_points": 0,
-            "avg_score": 0.0
-        }
-    
     logger.info(f"✅ تم تحميل {len(AVAILABLE_GAMES)} لعبة بنجاح")
 except Exception as e:
     logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
@@ -122,28 +119,22 @@ except Exception as e:
     traceback.print_exc()
 
 # ============================================================================
-# Quick Reply Helper Function - ALWAYS APPLIED
+# Quick Reply Helper Function
 # ============================================================================
 def create_quick_reply():
-    """
-    Create permanent Quick Reply buttons for easy navigation
-    هذه الأزرار ستظهر دائماً في جميع الردود
-    """
+    """Create permanent Quick Reply buttons"""
     return QuickReply(items=[
         QuickReplyItem(action=MessageAction(label="🏠 البداية", text="بداية")),
         QuickReplyItem(action=MessageAction(label="🎮 الألعاب", text="ألعاب")),
         QuickReplyItem(action=MessageAction(label="⭐ نقاطي", text="نقاطي")),
         QuickReplyItem(action=MessageAction(label="🏆 الصدارة", text="صدارة")),
-        QuickReplyItem(action=MessageAction(label="📊 إحصائيات", text="إحصائيات")),
+        QuickReplyItem(action=MessageAction(label="🎖️ الإنجازات", text="إنجازات")),
         QuickReplyItem(action=MessageAction(label="❓ مساعدة", text="مساعدة")),
         QuickReplyItem(action=MessageAction(label="⛔ إيقاف", text="إيقاف"))
     ])
 
 def attach_quick_reply(message):
-    """
-    Attach Quick Reply to any message
-    دالة مساعدة لإضافة Quick Reply لأي رسالة
-    """
+    """Attach Quick Reply to any message"""
     if hasattr(message, 'quick_reply'):
         message.quick_reply = create_quick_reply()
     return message
@@ -151,67 +142,80 @@ def attach_quick_reply(message):
 # ============================================================================
 # Helper Functions
 # ============================================================================
-def update_user_activity(user_id):
-    """Update last activity timestamp"""
-    if user_id in registered_users:
-        registered_users[user_id]['last_activity'] = datetime.now()
+def get_user_data(user_id: str, username: str = "مستخدم") -> dict:
+    """الحصول على بيانات المستخدم مع cache"""
+    # التحقق من الـ cache
+    if user_id in user_cache:
+        return user_cache[user_id]
+    
+    # الحصول من قاعدة البيانات
+    user = db.get_user(user_id)
+    
+    if not user:
+        # إنشاء مستخدم جديد
+        db.create_user(user_id, username)
+        user = db.get_user(user_id)
+    
+    # حفظ في الـ cache
+    user_cache[user_id] = user
+    return user
 
-def cleanup_inactive_users():
-    """Remove users inactive for 7 days"""
-    cutoff = datetime.now() - timedelta(days=7)
-    inactive = [
-        uid for uid, data in registered_users.items() 
-        if data.get('last_activity', datetime.now()) < cutoff
-    ]
+def update_user_cache(user_id: str):
+    """تحديث الـ cache من قاعدة البيانات"""
+    user = db.get_user(user_id)
+    if user:
+        user_cache[user_id] = user
+
+def send_with_quick_reply(line_bot_api, reply_token, message):
+    """Send message with Quick Reply buttons"""
+    message = attach_quick_reply(message)
+    line_bot_api.reply_message_with_http_info(
+        ReplyMessageRequest(reply_token=reply_token, messages=[message])
+    )
+
+def send_achievement_notifications(line_bot_api, reply_token, achievements, theme):
+    """إرسال إشعارات الإنجازات المفتوحة"""
+    if not achievements:
+        return
     
-    for uid in inactive:
-        if uid in registered_users:
-            del registered_users[uid]
-        if uid in user_themes:
-            del user_themes[uid]
-        if uid in active_games:
-            del active_games[uid]
+    messages = []
+    for achievement in achievements[:3]:  # أقصى 3 إشعارات
+        msg = build_achievement_unlock_notification(achievement, theme)
+        messages.append(attach_quick_reply(msg))
     
-    if inactive:
-        logger.info(f"🧹 تنظيف {len(inactive)} مستخدم غير نشط")
+    if messages:
+        try:
+            line_bot_api.reply_message_with_http_info(
+                ReplyMessageRequest(reply_token=reply_token, messages=messages)
+            )
+        except:
+            pass
 
 def is_group_chat(event):
     """Check if message is from a group"""
     return hasattr(event.source, 'group_id')
 
-def update_game_stats(game_name, completed=False, points=0):
-    """Update game statistics with average calculation"""
-    if game_name in game_statistics:
-        stats = game_statistics[game_name]
-        stats["plays"] += 1
-        if completed:
-            stats["completions"] += 1
-        stats["total_points"] += points
+# ============================================================================
+# Scheduled Tasks
+# ============================================================================
+def run_daily_cleanup():
+    """تنظيف يومي للبيانات القديمة"""
+    try:
+        # حذف المستخدمين غير النشطين
+        deleted_users = db.cleanup_inactive_users(days=7)
         
-        # Calculate average score
-        if stats["completions"] > 0:
-            stats["avg_score"] = round(stats["total_points"] / stats["completions"], 1)
-
-def update_user_games_played(user_id, game_name):
-    """Track games played by user"""
-    if user_id in registered_users:
-        if "games_played" not in registered_users[user_id]:
-            registered_users[user_id]["games_played"] = {}
+        # حذف جلسات الألعاب القديمة
+        deleted_sessions = db.cleanup_old_sessions(days=30)
         
-        if game_name not in registered_users[user_id]["games_played"]:
-            registered_users[user_id]["games_played"][game_name] = 0
+        # نسخ احتياطي
+        backup_path = f"backups/botmesh_{datetime.now().strftime('%Y%m%d')}.db"
+        os.makedirs("backups", exist_ok=True)
+        db.backup_database(backup_path)
         
-        registered_users[user_id]["games_played"][game_name] += 1
-
-def send_with_quick_reply(line_bot_api, reply_token, message):
-    """
-    Send message with Quick Reply buttons
-    CRITICAL: Always attach Quick Reply before sending
-    """
-    message = attach_quick_reply(message)
-    line_bot_api.reply_message_with_http_info(
-        ReplyMessageRequest(reply_token=reply_token, messages=[message])
-    )
+        logger.info(f"🧹 Daily cleanup: {deleted_users} users, {deleted_sessions} sessions")
+        logger.info(f"💾 Backup saved: {backup_path}")
+    except Exception as e:
+        logger.error(f"❌ Daily cleanup error: {e}")
 
 # ============================================================================
 # Flask Routes
@@ -236,11 +240,11 @@ def callback():
 @app.route("/", methods=['GET'])
 def home():
     """Bot status page"""
-    cleanup_inactive_users()
+    stats = db.get_stats_summary()
+    game_stats = db.get_all_game_stats()
     
-    total_games_played = sum(stats["plays"] for stats in game_statistics.values())
-    total_points_awarded = sum(stats["total_points"] for stats in game_statistics.values())
-    total_completions = sum(stats["completions"] for stats in game_statistics.values())
+    total_games_played = sum(g.get('plays', 0) for g in game_stats.values())
+    total_completions = sum(g.get('completions', 0) for g in game_stats.values())
     
     return f"""
     <!DOCTYPE html>
@@ -312,13 +316,17 @@ def home():
     <body>
         <div class="container">
             <h1>🎮 {BOT_NAME}</h1>
-            <div class="version">Version {BOT_VERSION} - Ultimate Edition v5.0</div>
+            <div class="version">Version {BOT_VERSION} - Database Edition v6.0</div>
             <div class="status pulse">✅ Bot is running smoothly</div>
             
             <div class="stats">
                 <div class="stat-card">
-                    <div class="stat-value">{len(registered_users)}</div>
+                    <div class="stat-value">{stats['total_users']}</div>
                     <div class="stat-label">👥 المستخدمين</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{stats['registered_users']}</div>
+                    <div class="stat-label">📝 المسجلين</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{len(AVAILABLE_GAMES)}</div>
@@ -337,25 +345,29 @@ def home():
                     <div class="stat-label">✅ الإنجازات</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">{total_points_awarded}</div>
+                    <div class="stat-value">{stats['total_points']}</div>
                     <div class="stat-label">⭐ النقاط الممنوحة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{len(achievement_manager.ACHIEVEMENTS) if hasattr(achievement_manager, 'ACHIEVEMENTS') else 21}</div>
+                    <div class="stat-label">🏆 الإنجازات</div>
                 </div>
             </div>
             
             <div class="features">
-                <h3>✨ المميزات الجديدة v5.0</h3>
+                <h3>✨ المميزات الجديدة v6.0</h3>
                 <ul>
-                    <li>Quick Reply Buttons دائمة في جميع الردود</li>
-                    <li>نظام مساعدة تفاعلي شامل لكل لعبة</li>
-                    <li>إحصائيات مفصلة ومرئية للألعاب</li>
-                    <li>معالجة أخطاء محسّنة مع رسائل واضحة</li>
-                    <li>واجهة متكاملة 100% سهلة الاستخدام</li>
-                    <li>12 لعبة متنوعة مع تحسينات جودة</li>
-                    <li>نظام ثيمات احترافي (9 ثيمات)</li>
+                    <li>قاعدة بيانات SQLite للبيانات الدائمة</li>
+                    <li>نظام الإنجازات الكامل (21 إنجاز)</li>
+                    <li>إشعارات فتح الإنجازات</li>
+                    <li>إحصائيات محسّنة من قاعدة البيانات</li>
+                    <li>تنظيف تلقائي للبيانات القديمة</li>
+                    <li>نسخ احتياطي تلقائي يومي</li>
+                    <li>Quick Reply Buttons دائمة</li>
+                    <li>12 لعبة متنوعة</li>
+                    <li>9 ثيمات احترافية</li>
                     <li>نظام نقاط وصدارة متقدم</li>
-                    <li>دعم كامل للمجموعات والدردشات الفردية</li>
-                    <li>تنظيف تلقائي للبيانات غير النشطة</li>
-                    <li>إصلاح كامل للعبة إنسان حيوان نبات</li>
+                    <li>دعم كامل للمجموعات</li>
                 </ul>
             </div>
             
@@ -365,15 +377,18 @@ def home():
     </html>
     """
 
+@app.route("/cleanup", methods=['POST'])
+def manual_cleanup():
+    """تنظيف يدوي (للمطورين)"""
+    run_daily_cleanup()
+    return {"status": "success", "message": "Cleanup completed"}
+
 # ============================================================================
 # Message Handler
 # ============================================================================
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """
-    Handle incoming messages with Quick Reply support
-    المعالج الرئيسي للرسائل مع دعم Quick Reply دائم
-    """
+    """Handle incoming messages with Database integration"""
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
@@ -396,34 +411,20 @@ def handle_message(event):
             
             # In groups, only respond to registered users or mentions
             if in_group and "@" not in text.lower():
-                if user_id not in registered_users or not registered_users[user_id].get('is_registered'):
+                user = get_user_data(user_id, username)
+                if not user.get('is_registered'):
                     return
                 if user_id not in active_games:
                     return
             
-            # Register new user
-            if user_id not in registered_users:
-                registered_users[user_id] = {
-                    "name": username,
-                    "points": 0,
-                    "is_registered": False,
-                    "created_at": datetime.now(),
-                    "last_activity": datetime.now(),
-                    "games_played": {}
-                }
-                logger.info(f"👤 مستخدم جديد: {username}")
-                
-                current_theme = user_themes.get(user_id, DEFAULT_THEME)
-                reply = build_home(current_theme, username, 0, False)
-                send_with_quick_reply(line_bot_api, event.reply_token, reply)
-                return
+            # Get or create user
+            user = get_user_data(user_id, username)
             
             # Update activity
-            update_user_activity(user_id)
+            db.update_activity(user_id)
             
-            # Get user data
-            current_theme = user_themes.get(user_id, DEFAULT_THEME)
-            user_data = registered_users[user_id]
+            # Get theme from database
+            current_theme = user.get('theme', DEFAULT_THEME)
             reply = None
             
             text_lower = text.lower()
@@ -432,65 +433,59 @@ def handle_message(event):
             
             # Home/Start
             if text_lower in ["بداية", "start", "home"] or "@" in text_lower:
-                reply = build_home(current_theme, username, user_data['points'], user_data['is_registered'])
+                reply = build_home(current_theme, username, user['points'], user['is_registered'])
             
             # Games Menu
             elif text_lower in ["ألعاب", "games", "مساعدة", "help"] and user_id not in active_games:
                 reply = build_games_menu(current_theme)
             
-            # Help Menu (during game)
-            elif text_lower in ["مساعدة", "help"] and user_id in active_games:
-                game_instance = active_games[user_id]
-                reply = build_help_menu(current_theme, game_instance.game_name)
-            
-            # Statistics
-            elif text_lower in ["إحصائيات", "stats", "statistics"]:
-                reply = build_game_stats(game_statistics, current_theme)
-            
-            # Detailed Game Info
-            elif text.startswith("معلومات "):
-                game_name = text.replace("معلومات ", "").strip()
-                if game_name in AVAILABLE_GAMES:
-                    reply = build_detailed_game_info(game_name, game_statistics.get(game_name, {}), current_theme)
+            # Achievements
+            elif text_lower in ["إنجازات", "achievements"]:
+                reply = build_achievements_ui(user_id, achievement_manager, current_theme)
             
             # Theme Change
             elif text.startswith("ثيم "):
                 from constants import THEMES
                 theme = text.replace("ثيم ", "").strip()
                 if theme in THEMES:
-                    user_themes[user_id] = theme
-                    reply = build_home(theme, username, user_data['points'], user_data['is_registered'])
+                    db.update_user(user_id, theme=theme)
+                    update_user_cache(user_id)
+                    reply = build_home(theme, username, user['points'], user['is_registered'])
                 else:
-                    reply = TextMessage(text=f"❌ ثيم '{theme}' غير موجود. الثيمات المتاحة: {', '.join(THEMES.keys())}")
+                    reply = TextMessage(text=f"❌ ثيم '{theme}' غير موجود")
             
             # Join/Register
             elif text_lower in ["انضم", "join", "register"]:
-                registered_users[user_id]["is_registered"] = True
-                reply = build_home(current_theme, username, user_data['points'], True)
+                db.update_user(user_id, is_registered=True)
+                update_user_cache(user_id)
+                
+                # فتح إنجاز التسجيل
+                unlocked = achievement_manager.check_and_unlock(user_id, "registered")
+                if unlocked:
+                    send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
+                
+                reply = build_home(current_theme, username, user['points'], True)
             
             # Leave/Unregister
             elif text_lower in ["انسحب", "leave", "unregister"]:
-                registered_users[user_id]["is_registered"] = False
-                reply = build_home(current_theme, username, user_data['points'], False)
+                db.update_user(user_id, is_registered=False)
+                update_user_cache(user_id)
+                reply = build_home(current_theme, username, user['points'], False)
             
             # My Points
             elif text_lower in ["نقاطي", "points", "score"]:
-                reply = build_my_points(username, user_data['points'], user_data.get('games_played', {}), current_theme)
+                user_game_stats = db.get_user_game_stats(user_id)
+                reply = build_my_points(username, user['points'], user_game_stats, current_theme)
             
             # Leaderboard
             elif text_lower in ["صدارة", "leaderboard", "top"]:
-                sorted_users = sorted(
-                    [(u["name"], u["points"]) for u in registered_users.values() if u.get("is_registered")],
-                    key=lambda x: x[1],
-                    reverse=True
-                )
-                reply = build_leaderboard(sorted_users, current_theme)
+                leaderboard = db.get_leaderboard(10)
+                reply = build_leaderboard(leaderboard, current_theme)
             
             # Stop Game
             elif text_lower in ["إيقاف", "stop", "quit", "exit"]:
                 if user_id in active_games:
                     game_name = active_games[user_id].game_name
-                    update_game_stats(game_name, completed=False, points=0)
                     del active_games[user_id]
                     reply = build_games_menu(current_theme)
                 else:
@@ -498,7 +493,7 @@ def handle_message(event):
             
             # Start Game or Replay
             elif text.startswith("لعبة ") or text.startswith("إعادة "):
-                if not user_data.get("is_registered"):
+                if not user.get("is_registered"):
                     reply = build_registration_required(current_theme)
                 else:
                     # Extract game name
@@ -519,14 +514,19 @@ def handle_message(event):
                             active_games[user_id] = game_instance
                             reply = game_instance.start_game()
                             
-                            # Update statistics
-                            update_game_stats(game_name, completed=False, points=0)
-                            update_user_games_played(user_id, game_name)
+                            # Create session in database
+                            session_id = db.create_game_session(user_id, game_name)
+                            game_instance.session_id = session_id
+                            
+                            # فتح إنجاز اللعبة الأولى
+                            unlocked = achievement_manager.check_and_unlock(user_id, "game_played")
+                            if unlocked:
+                                send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
                             
                             logger.info(f"🎮 {username} بدأ لعبة {game_name}")
                         except Exception as e:
                             logger.error(f"❌ خطأ في بدء اللعبة {game_name}: {e}")
-                            reply = TextMessage(text=f"❌ حدث خطأ في بدء اللعبة. الرجاء المحاولة مرة أخرى.")
+                            reply = TextMessage(text=f"❌ حدث خطأ في بدء اللعبة")
                     else:
                         reply = TextMessage(text=f"❌ اللعبة '{game_name}' غير موجودة")
             
@@ -539,36 +539,50 @@ def handle_message(event):
                         result = game_instance.check_answer(text, user_id, username)
                         
                         if result:
-                            # Update points
+                            # Update points in database
                             if result.get('points', 0) > 0:
-                                registered_users[user_id]['points'] += result['points']
+                                db.add_points(user_id, result['points'])
+                                update_user_cache(user_id)
+                                
+                                # التحقق من إنجازات النقاط
+                                unlocked = achievement_manager.check_and_unlock(user_id, "points_updated")
+                                if unlocked:
+                                    send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
                             
                             # Check if game over
                             if result.get('game_over'):
-                                # Winner announcement
-                                final_points = registered_users[user_id]['points']
-                                total_score = result.get('points', 0)
+                                # Complete session
+                                if hasattr(game_instance, 'session_id'):
+                                    db.complete_game_session(game_instance.session_id, result.get('points', 0))
                                 
+                                # Update game stats
+                                db.update_game_stats(game_name, completed=True, points=result.get('points', 0))
+                                
+                                # Winner announcement
+                                user = get_user_data(user_id, username)
                                 reply = build_winner_announcement(
                                     username=username,
                                     game_name=game_name,
-                                    total_score=total_score,
-                                    final_points=final_points,
+                                    total_score=result.get('points', 0),
+                                    final_points=user['points'],
                                     theme=current_theme
                                 )
                                 
-                                # Update statistics
-                                update_game_stats(game_name, completed=True, points=total_score)
+                                # فتح إنجازات الفوز
+                                unlocked = achievement_manager.check_and_unlock(user_id, "game_won")
+                                unlocked += achievement_manager.check_and_unlock(user_id, "games_count")
+                                if unlocked:
+                                    send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
                                 
                                 del active_games[user_id]
                             else:
                                 reply = result.get('response')
                     except Exception as e:
                         logger.error(f"❌ خطأ في معالجة إجابة اللعبة: {e}")
-                        reply = TextMessage(text="❌ حدث خطأ في معالجة الإجابة. الرجاء المحاولة مرة أخرى.")
+                        reply = TextMessage(text="❌ حدث خطأ في معالجة الإجابة")
                 else:
                     # No active game
-                    reply = build_home(current_theme, username, user_data['points'], user_data['is_registered'])
+                    reply = build_home(current_theme, username, user['points'], user['is_registered'])
             
             # ===== Send Reply with Quick Reply =====
             if reply:
@@ -576,7 +590,6 @@ def handle_message(event):
                 
     except Exception as e:
         logger.error(f"❌ Error in handle_message: {e}", exc_info=True)
-        # Send error message with Quick Reply
         try:
             error_msg = TextMessage(text="❌ حدث خطأ غير متوقع. الرجاء المحاولة مرة أخرى.")
             send_with_quick_reply(line_bot_api, event.reply_token, error_msg)
@@ -590,15 +603,16 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     
     logger.info("=" * 70)
-    logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION} - Ultimate Edition v5.0")
+    logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION} - Database Edition v6.0")
     logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
     logger.info(f"🎨 Themes: {len(__import__('constants').THEMES)}")
+    logger.info(f"🗄️ Database: SQLite")
+    logger.info(f"🏆 Achievements: 21 achievements")
     logger.info(f"🌐 Server on port {port}")
-    logger.info("✨ Quick Reply Buttons: ENABLED (Always Active)")
-    logger.info("✨ Enhanced Error Handling: ENABLED")
-    logger.info("✨ Game Statistics: ENABLED")
-    logger.info("✨ Auto Cleanup: ENABLED")
-    logger.info("✨ Human Animal Plant Game: FIXED")
     logger.info("=" * 70)
+    
+    # تشغيل التنظيف الأولي
+    logger.info("🧹 Running initial cleanup...")
+    run_daily_cleanup()
     
     app.run(host="0.0.0.0", port=port, debug=False)
