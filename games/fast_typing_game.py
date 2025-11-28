@@ -1,5 +1,5 @@
 """
-لعبة الكتابة السريعة - إصدار تنافسي متكامل
+لعبة الكتابة السريعة - إصدار تنافسي نهائي
 Created by: Abeer Aldosari © 2025
 """
 
@@ -10,63 +10,96 @@ from typing import Dict, Any, Optional
 
 
 class FastTypingGame(BaseGame):
-    """لعبة الكتابة السريعة التنافسية"""
+    """لعبة الكتابة السريعة - تنافس فردي + فريقين"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "كتابة سريعة"
-        self.game_icon = "⚡"
-
+        self.game_name = "الكتابة السريعة"
+        self.game_icon = "▪️"
         self.supports_hint = False
         self.supports_reveal = False
 
-        # 50 عبارة (أذكار + أدعية + حكم)
+        # 50 مثال (أذكار - أدعية - حكم)
         self.phrases = [
-            "سبحان الله", "الحمد لله", "لا إله إلا الله", "الله أكبر",
-            "استغفر الله", "حسبي الله ونعم الوكيل", "لا حول ولا قوة إلا بالله",
-            "اللهم صل على محمد", "اللهم اغفر لي", "اللهم ارحمنا",
-            "رضيت بالله رباً", "اليقين لا يزول بالشك", "الصبر مفتاح الفرج",
-            "التوكل على الله", "الأمل حياة", "الصدق نجاة",
-            "كل تأخيرة فيها خيرة", "من جد وجد", "الصمت حكمة",
-            "النية أساس العمل", "بر الوالدين طريق الجنة",
-            "القناعة كنز", "الدعاء سلاح المؤمن",
-            "راحة البال كنز", "الإخلاص سر النجاح",
-            "العمل عبادة", "التواضع رفعة",
-            "من صبر ظفر", "العلم نور",
-            "ذكر الله طمأنينة", "الحكمة ضالة المؤمن",
-            "من توكل كُفي", "البسمة صدقة",
-            "القلب إذا صلح", "لا تيأس أبداً",
-            "الخير قادم", "الثبات نجاح",
-            "السعي عبادة", "العفو قوة",
-            "الزهد راحة", "العدل أساس الملك",
-            "الإحسان حياة", "الوفاء شيمة",
-            "الرضا سر الراحة", "التفاؤل عبادة",
-            "الأمانة شرف", "الصبر جميل",
-            "ذكر الله حياة", "الصدق أمان"
+            "سبحان الله",
+            "الحمد لله",
+            "الله أكبر",
+            "لا إله إلا الله",
+            "رب اغفر لي",
+            "توكل على الله",
+            "الصبر مفتاح الفرج",
+            "من جد وجد",
+            "العلم نور",
+            "راحة القلب في الذكر",
+            "اللهم اهدنا",
+            "كن محسنا",
+            "الدال على الخير كفاعله",
+            "رب زدني علما",
+            "اتق الله",
+            "خير الأمور أوسطها",
+            "اللهم اشف مرضانا",
+            "التواضع رفعة",
+            "الصدق منجاة",
+            "الصمت حكمة",
+            "اللهم ارزقني رضاك",
+            "النية الصالحة بركة",
+            "استغفر الله العظيم",
+            "من صبر ظفر",
+            "العمل عبادة",
+            "القناعة كنز",
+            "اللهم يسر أموري",
+            "الرحمة قوة",
+            "لا تحقرن من المعروف شيئا",
+            "الصلاة نور",
+            "الدعاء سلاح المؤمن",
+            "العفو عند المقدرة",
+            "ذكر الله حياة القلوب",
+            "العدل أساس الملك",
+            "الأمانة شرف",
+            "اللهم بارك لنا",
+            "اغتنم وقتك",
+            "خير الناس أنفعهم",
+            "اللهم ثبت قلبي",
+            "الصبر جميل",
+            "اللسان مرآة العقل",
+            "احفظ الله يحفظك",
+            "الخير في العطاء",
+            "اللهم توفنا مسلمين",
+            "السكينة في الطاعة",
+            "اجعل نيتك لله",
+            "الحق أحق أن يتبع",
+            "اللهم حسن الخاتمة",
+            "التوبة بداية جديدة"
         ]
 
         random.shuffle(self.phrases)
         self.used_phrases = []
         self.question_start_time = None
 
-    # =========================
+        # نظام الفريقين
+        self.team_mode = False
+        self.teams = {"A": set(), "B": set()}
+        self.team_scores = {"A": 0, "B": 0}
+
+    # -----------------------------
     # بدء اللعبة
-    # =========================
-    def start_game(self):
+    # -----------------------------
+    def start_game(self, team_mode: bool = False):
         self.current_question = 0
         self.game_active = True
-        self.previous_question = None
-        self.previous_answer = None
         self.answered_users.clear()
+        self.used_phrases.clear()
+        self.team_mode = team_mode
+        self.team_scores = {"A": 0, "B": 0}
         return self.get_question()
 
-    # =========================
-    # عرض السؤال
-    # =========================
+    # -----------------------------
+    # توليد السؤال
+    # -----------------------------
     def get_question(self):
         available = [p for p in self.phrases if p not in self.used_phrases]
         if not available:
-            self.used_phrases = []
+            self.used_phrases.clear()
             available = self.phrases.copy()
 
         phrase = random.choice(available)
@@ -76,111 +109,107 @@ class FastTypingGame(BaseGame):
 
         colors = self.get_theme_colors()
 
-        flex_content = {
-            "type": "bubble",
-            "size": "kilo",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": self.game_name, "size": "xl",
-                     "weight": "bold", "color": colors["text"], "align": "center"},
-                    {"type": "text", "text": f"جولة {self.current_question + 1} من {self.questions_count}",
-                     "size": "sm", "color": colors["text2"], "align": "center"},
+        info_text = (
+            "⏱️ الجولة موقتة\n"
+            "اكتب النص كما هو تماما\n"
+        )
 
-                    {"type": "separator", "margin": "lg"},
+        if self.team_mode:
+            info_text += "\nوضع فريقين مفعل"
 
-                    {"type": "text", "text": "اكتب العبارة التالية كما هي ⏱️",
-                     "size": "md", "color": colors["text"], "align": "center"},
+        return self.build_question_flex(
+            question_text=phrase,
+            additional_info=info_text
+        )
 
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": phrase, "size": "xl",
-                             "color": colors["primary"], "weight": "bold",
-                             "align": "center", "wrap": True}
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "24px",
-                        "margin": "lg"
-                    },
-
-                    {"type": "text",
-                     "text": "أسرع إجابة صحيحة تحصد نقاطاً أعلى",
-                     "size": "xs", "align": "center", "color": colors["text2"]},
-
-                    {"type": "button",
-                     "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"},
-                     "style": "primary", "color": colors["error"], "margin": "lg"}
-                ],
-                "paddingAll": "24px"
-            }
-        }
-
-        return self._create_flex_with_buttons(self.game_name, flex_content)
-
-    # =========================
-    # التحقق من الإجابة
-    # =========================
+    # -----------------------------
+    # فحص الإجابة
+    # -----------------------------
     def check_answer(self, user_answer: str, user_id: str, display_name: str):
-
         if not self.game_active or user_id in self.answered_users:
             return None
 
         text = user_answer.strip()
 
+        # حساب الزمن
         time_taken = (datetime.now() - self.question_start_time).total_seconds()
 
-        # ✅ إجابة صحيحة
+        # التحقق
         if text == self.current_answer:
+            self.answered_users.add(user_id)
 
+            # نقاط حسب الزمن
             base_points = 10
             speed_bonus = 5 if time_taken <= 5 else 0
             total_points = base_points + speed_bonus
 
-            # ✅ وضع الفريقين
-            if self.is_team_mode:
-                team = self.get_team_of_user(user_id)
-                points = self.add_team_score(team, total_points)
+            # توزيع النقاط
+            if self.team_mode:
+                team = self.get_user_team(user_id)
+                self.team_scores[team] += total_points
             else:
-                points = self.add_score(user_id, display_name, total_points)
+                self.add_score(user_id, display_name, total_points)
 
-            self.previous_question = self.current_answer
-            self.previous_answer = f"{time_taken:.1f} ثانية"
-
-            self.answered_users.add(user_id)
             self.current_question += 1
             self.answered_users.clear()
 
-            # ✅ نهاية اللعبة
+            # انتهاء الجولات
             if self.current_question >= self.questions_count:
-                return self.end_game_with_leaderboard(points)
+                return self.end_game()
 
+            msg = f"✅ صحيح • ⏱️ {time_taken:.1f} ثانية"
             return {
-                'message': f"صحيح ⏱️ {time_taken:.1f}ث +{total_points} نقطة",
+                'message': msg,
                 'response': self.get_question(),
                 'points': total_points
             }
 
-        # ❌ خطأ
         return {
-            'message': f"خطأ إملائي ⏱️ {time_taken:.1f}ث",
-            'response': self._create_text_message("الإجابة غير مطابقة تماماً"),
+            'message': f"❌ خطأ • ⏱️ {time_taken:.1f} ثانية",
+            'response': self._create_text_message(f"❌ خطأ • ⏱️ {time_taken:.1f} ثانية"),
             'points': 0
         }
 
-    # =========================
-    # معلومات اللعبة
-    # =========================
-    def get_game_info(self) -> Dict[str, Any]:
-        info = super().get_game_info()
-        info.update({
-            "description": "لعبة سرعة ودقة بنظام تنافسي فردي أو فرق",
-            "phrases_count": len(self.phrases),
-            "supports_teams": True,
-            "supports_timer": True,
-            "supports_leaderboard": True
-        })
-        return info
+    # -----------------------------
+    # تحديد فريق اللاعب
+    # -----------------------------
+    def get_user_team(self, user_id: str):
+        if user_id in self.teams["A"]:
+            return "A"
+        if user_id in self.teams["B"]:
+            return "B"
+        team = "A" if len(self.teams["A"]) <= len(self.teams["B"]) else "B"
+        self.teams[team].add(user_id)
+        return team
+
+    # -----------------------------
+    # إنهاء اللعبة مع الترتيب
+    # -----------------------------
+    def end_game(self):
+        self.game_active = False
+
+        if self.team_mode:
+            a = self.team_scores["A"]
+            b = self.team_scores["B"]
+
+            if a > b:
+                winner = "🏆 الفريق A"
+            elif b > a:
+                winner = "🏆 الفريق B"
+            else:
+                winner = "تعادل"
+
+            message = (
+                f"النتيجة النهائية 🏆\n"
+                f"الفريق A: {a}\n"
+                f"الفريق B: {b}\n\n"
+                f"الفائز: {winner}"
+            )
+
+            return {
+                "game_over": True,
+                "points": max(a, b),
+                "message": message
+            }
+
+        return super().end_game()
