@@ -1,5 +1,8 @@
-# Bot Mesh - UI Builder v8.5 COMPLETE FIXED
-# Created by: Abeer Aldosari © 2025
+"""
+Bot Mesh - UI Builder v8.5 FIXED
+Created by: Abeer Aldosari © 2025
+✅ إصلاح backgroundColor issue
+"""
 
 import traceback
 from typing import List, Optional, Dict, Any, Tuple
@@ -33,34 +36,6 @@ def _safe_get_colors(theme: str) -> Dict[str, str]:
         return get_theme_colors(theme)
     except Exception:
         return get_theme_colors(DEFAULT_THEME)
-
-
-def create_debug_report(exc: Exception, context: Optional[Dict[str, Any]] = None) -> TextMessage:
-    """إنشاء تقرير خطأ مفصل"""
-    try:
-        tb = traceback.format_exc()
-        ctx_lines = []
-
-        if context:
-            for k, v in context.items():
-                ctx_lines.append(f"{k}: {str(v)[:100]}")
-
-        ctx_text = "\n".join(ctx_lines) if ctx_lines else "لا توجد معلومات إضافية"
-
-        text = (
-            "⚠️ تقرير خطأ\n\n"
-            f"الخطأ: {str(exc)[:200]}\n\n"
-            f"التفاصيل:\n{tb[:800]}\n\n"
-            f"السياق:\n{ctx_text}"
-        )
-
-        if len(text) > 1800:
-            text = text[:900] + "\n\n...[مقتطع]...\n\n" + text[-800:]
-
-        return TextMessage(text=text)
-
-    except Exception:
-        return TextMessage(text="⚠️ حدث خطأ غير متوقع")
 
 
 # ============================================================================
@@ -158,10 +133,10 @@ def build_enhanced_home(username: str, points: int, is_registered: bool, theme: 
     )
 
     buttons = [
-        {"type": "button", "action": {"type": "message", "label": "🎮 ألعاب", "text": "ألعاب"}},
-        {"type": "button", "action": {"type": "message", "label": "⭐ نقاطي", "text": "نقاطي"}},
-        {"type": "button", "action": {"type": "message", "label": "🏆 صدارة", "text": "صدارة"}},
-        {"type": "button", "action": {"type": "message", "label": "🎨 ثيمات", "text": "ثيمات"}},
+        {"type": "button", "action": {"type": "message", "label": "🎮 ألعاب", "text": "ألعاب"}, "style": "primary", "height": "sm"},
+        {"type": "button", "action": {"type": "message", "label": "⭐ نقاطي", "text": "نقاطي"}, "style": "link", "height": "sm"},
+        {"type": "button", "action": {"type": "message", "label": "🏆 صدارة", "text": "صدارة"}, "style": "link", "height": "sm"},
+        {"type": "button", "action": {"type": "message", "label": "🎨 ثيمات", "text": "ثيمات"}, "style": "link", "height": "sm"},
     ]
 
     bubble = {
@@ -170,7 +145,6 @@ def build_enhanced_home(username: str, points: int, is_registered: bool, theme: 
             "type": "box",
             "layout": "vertical",
             "contents": header + buttons,
-            "backgroundColor": colors["bg"],
             "paddingAll": "20px"
         }
     }
@@ -195,7 +169,9 @@ def build_games_menu(theme: str = DEFAULT_THEME) -> FlexMessage:
                 "type": "message",
                 "label": f"{icon} {display_name}",
                 "text": display_name
-            }
+            },
+            "style": "link",
+            "height": "sm"
         })
 
     bubble = {
@@ -204,7 +180,6 @@ def build_games_menu(theme: str = DEFAULT_THEME) -> FlexMessage:
             "type": "box",
             "layout": "vertical",
             "contents": header + buttons,
-            "backgroundColor": colors["bg"],
             "paddingAll": "20px"
         }
     }
@@ -218,16 +193,31 @@ def build_games_menu(theme: str = DEFAULT_THEME) -> FlexMessage:
 def build_my_points(username: str, total_points: int, stats: Dict, theme: str = DEFAULT_THEME) -> FlexMessage:
     colors = _safe_get_colors(theme)
 
+    contents = [
+        {"type": "text", "text": "⭐ نقاطي", "weight": "bold", "size": "xl", "align": "center", "color": colors["primary"]},
+        {"type": "separator", "margin": "md"},
+        {"type": "text", "text": f"اللاعب: {username}", "size": "md", "margin": "md"},
+        {"type": "text", "text": f"النقاط الإجمالية: {total_points}", "size": "lg", "weight": "bold", "margin": "sm", "color": colors["success"]}
+    ]
+
+    if stats:
+        contents.append({"type": "separator", "margin": "lg"})
+        contents.append({"type": "text", "text": "إحصائيات الألعاب:", "weight": "bold", "margin": "md"})
+        
+        for game_name, data in list(stats.items())[:5]:
+            contents.append({
+                "type": "text",
+                "text": f"{game_name}: {data.get('plays', 0)} لعبة - {data.get('total_score', 0)} نقطة",
+                "size": "sm",
+                "margin": "xs"
+            })
+
     bubble = {
         "type": "bubble",
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": [
-                {"type": "text", "text": f"{username}", "weight": "bold"},
-                {"type": "text", "text": f"النقاط: {total_points}"}
-            ],
-            "backgroundColor": colors["bg"],
+            "contents": contents,
             "paddingAll": "20px"
         }
     }
@@ -238,17 +228,29 @@ def build_my_points(username: str, total_points: int, stats: Dict, theme: str = 
 def build_leaderboard(top_users: List[Tuple[str, int]], theme: str = DEFAULT_THEME) -> FlexMessage:
     colors = _safe_get_colors(theme)
 
-    items = []
-    for name, pts in top_users:
-        items.append({"type": "text", "text": f"{name} - {pts}"})
+    contents = [
+        {"type": "text", "text": "🏆 الصدارة", "weight": "bold", "size": "xl", "align": "center", "color": colors["primary"]},
+        {"type": "separator", "margin": "md"}
+    ]
+
+    medals = ["🥇", "🥈", "🥉"]
+    
+    for i, (name, pts) in enumerate(top_users[:10]):
+        medal = medals[i] if i < 3 else f"{i+1}."
+        contents.append({
+            "type": "text",
+            "text": f"{medal} {name} - {pts} نقطة",
+            "size": "md" if i < 3 else "sm",
+            "margin": "sm",
+            "weight": "bold" if i < 3 else "regular"
+        })
 
     bubble = {
         "type": "bubble",
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": items,
-            "backgroundColor": colors["bg"],
+            "contents": contents,
             "paddingAll": "20px"
         }
     }
@@ -259,11 +261,19 @@ def build_leaderboard(top_users: List[Tuple[str, int]], theme: str = DEFAULT_THE
 def build_theme_selector(current_theme: str = DEFAULT_THEME) -> FlexMessage:
     colors = _safe_get_colors(current_theme)
 
+    header = [
+        {"type": "text", "text": "🎨 اختر الثيم", "weight": "bold", "size": "xl", "align": "center"},
+        {"type": "separator", "margin": "md"}
+    ]
+
     buttons = []
     for name in THEMES.keys():
+        marker = "✓" if name == current_theme else ""
         buttons.append({
             "type": "button",
-            "action": {"type": "message", "label": name, "text": f"ثيم {name}"}
+            "action": {"type": "message", "label": f"{marker} {name}", "text": f"ثيم {name}"},
+            "style": "primary" if name == current_theme else "link",
+            "height": "sm"
         })
 
     bubble = {
@@ -271,8 +281,7 @@ def build_theme_selector(current_theme: str = DEFAULT_THEME) -> FlexMessage:
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": buttons,
-            "backgroundColor": colors["bg"],
+            "contents": header + buttons,
             "paddingAll": "20px"
         }
     }
@@ -289,10 +298,11 @@ def build_registration_required(theme: str = DEFAULT_THEME) -> FlexMessage:
             "type": "box",
             "layout": "vertical",
             "contents": [
-                {"type": "text", "text": "يجب التسجيل أولاً"},
-                {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم"}}
+                {"type": "text", "text": "⚠️", "size": "xxl", "align": "center"},
+                {"type": "text", "text": "يجب التسجيل أولاً", "weight": "bold", "size": "lg", "align": "center", "margin": "md"},
+                {"type": "text", "text": "للعب الألعاب وكسب النقاط", "size": "sm", "align": "center", "margin": "sm", "wrap": True},
+                {"type": "button", "action": {"type": "message", "label": "✅ انضم الآن", "text": "انضم"}, "style": "primary", "margin": "lg"}
             ],
-            "backgroundColor": colors["bg"],
             "paddingAll": "20px"
         }
     }
@@ -309,13 +319,14 @@ def build_winner_announcement(username: str, game_name: str, points: int, total_
             "type": "box",
             "layout": "vertical",
             "contents": [
-                {"type": "text", "text": "🏆 الفائز"},
-                {"type": "text", "text": username},
-                {"type": "text", "text": f"{game_name}"},
-                {"type": "text", "text": f"+{points}"},
-                {"type": "text", "text": f"الإجمالي: {total_points}"}
+                {"type": "text", "text": "🏆", "size": "xxl", "align": "center"},
+                {"type": "text", "text": "انتهت اللعبة", "weight": "bold", "size": "xl", "align": "center", "margin": "sm"},
+                {"type": "separator", "margin": "lg"},
+                {"type": "text", "text": f"الفائز: {username}", "size": "lg", "weight": "bold", "align": "center", "margin": "md"},
+                {"type": "text", "text": f"اللعبة: {game_name}", "size": "md", "align": "center", "margin": "sm"},
+                {"type": "text", "text": f"النقاط المكتسبة: +{points}", "size": "lg", "color": colors["success"], "align": "center", "margin": "md"},
+                {"type": "text", "text": f"الإجمالي: {total_points} نقطة", "size": "sm", "align": "center", "margin": "sm"}
             ],
-            "backgroundColor": colors["bg"],
             "paddingAll": "20px"
         }
     }
@@ -326,22 +337,38 @@ def build_winner_announcement(username: str, game_name: str, points: int, total_
 def build_help_window(theme: str = DEFAULT_THEME) -> FlexMessage:
     colors = _safe_get_colors(theme)
 
-    items = [
-        {"type": "text", "text": "ألعاب"},
-        {"type": "text", "text": "نقاطي"},
-        {"type": "text", "text": "صدارة"},
-        {"type": "text", "text": "ثيمات"},
-        {"type": "text", "text": "انضم"},
-        {"type": "text", "text": "إيقاف"}
+    commands = [
+        ("🎮 ألعاب", "عرض قائمة الألعاب"),
+        ("⭐ نقاطي", "عرض نقاطك وإحصائياتك"),
+        ("🏆 صدارة", "عرض أفضل اللاعبين"),
+        ("🎨 ثيمات", "تغيير مظهر البوت"),
+        ("✅ انضم", "التسجيل في البوت"),
+        ("⛔ إيقاف", "إيقاف اللعبة الحالية"),
+        ("❓ مساعدة", "عرض هذه القائمة")
     ]
+
+    contents = [
+        {"type": "text", "text": "📚 دليل الأوامر", "weight": "bold", "size": "xl", "align": "center"},
+        {"type": "separator", "margin": "md"}
+    ]
+
+    for cmd, desc in commands:
+        contents.append({
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": cmd, "weight": "bold", "size": "md"},
+                {"type": "text", "text": desc, "size": "xs", "color": colors["text2"], "wrap": True}
+            ],
+            "margin": "md"
+        })
 
     bubble = {
         "type": "bubble",
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": items,
-            "backgroundColor": colors["bg"],
+            "contents": contents,
             "paddingAll": "20px"
         }
     }
@@ -353,9 +380,14 @@ def build_multiplayer_help_window(theme: str = DEFAULT_THEME) -> FlexMessage:
     colors = _safe_get_colors(theme)
 
     steps = [
-        {"type": "text", "text": "1 اكتب فريقين"},
-        {"type": "text", "text": "2 اكتب انضم"},
-        {"type": "text", "text": "3 ابدأ اللعبة"}
+        {"type": "text", "text": "👥 وضع الفريقين", "weight": "bold", "size": "xl", "align": "center"},
+        {"type": "separator", "margin": "md"},
+        {"type": "text", "text": "1️⃣ اكتب: فريقين", "size": "md", "margin": "md"},
+        {"type": "text", "text": "لبدء مرحلة الانضمام", "size": "xs", "color": colors["text2"], "margin": "xs"},
+        {"type": "text", "text": "2️⃣ اكتب: انضم", "size": "md", "margin": "md"},
+        {"type": "text", "text": "للانضمام للعبة الجماعية", "size": "xs", "color": colors["text2"], "margin": "xs"},
+        {"type": "text", "text": "3️⃣ اختر اللعبة", "size": "md", "margin": "md"},
+        {"type": "text", "text": "سيتم تقسيم الفرق تلقائياً", "size": "xs", "color": colors["text2"], "margin": "xs"}
     ]
 
     bubble = {
@@ -364,7 +396,6 @@ def build_multiplayer_help_window(theme: str = DEFAULT_THEME) -> FlexMessage:
             "type": "box",
             "layout": "vertical",
             "contents": steps,
-            "backgroundColor": colors["bg"],
             "paddingAll": "20px"
         }
     }
