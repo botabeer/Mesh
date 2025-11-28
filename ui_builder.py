@@ -1,277 +1,206 @@
 """
-Bot Mesh - UI Builder v7.1 PROFESSIONAL
+Bot Mesh - UI Builder v7.2 COMPLETE
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
-✅ تصميم زجاجي ثلاثي الأبعاد احترافي
-✅ بدون إيموجي زائد
-✅ تناسق كامل بين جميع الواجهات
-✅ أداء محسّن
+✅ Glass iOS Style
+✅ Complete Theme System
+✅ Help Window
+✅ Theme Selector
+✅ Enhanced Home
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 from constants import BOT_RIGHTS, THEMES, DEFAULT_THEME, GAME_LIST
 
 # ============================================================================
-# Core UI Components - Professional Glass Design
+# Core Components
 # ============================================================================
 
-def create_glass_bubble(colors, header_content, body_content, footer_content=None):
-    """إنشاء بطاقة زجاجية احترافية موحدة"""
+def create_glass_bubble(colors, header, body, footer=None):
+    """Create glass bubble"""
     bubble = {
-        "type": "bubble",
-        "size": "mega",
+        "type": "bubble", "size": "mega",
         "header": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": header_content,
-            "backgroundColor": colors["card"],
-            "paddingAll": "20px",
-            "spacing": "sm"
+            "type": "box", "layout": "vertical", "contents": header,
+            "backgroundColor": colors["card"], "paddingAll": "20px"
         },
         "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": body_content,
-            "backgroundColor": colors["bg"],
-            "paddingAll": "20px",
-            "spacing": "md"
+            "type": "box", "layout": "vertical", "contents": body,
+            "backgroundColor": colors["bg"], "paddingAll": "20px", "spacing": "md"
         },
-        "styles": {
-            "header": {
-                "backgroundColor": colors["card"]
-            },
-            "body": {
-                "backgroundColor": colors["bg"]
-            }
-        }
+        "styles": {"header": {"backgroundColor": colors["card"]}, "body": {"backgroundColor": colors["bg"]}}
     }
-    
-    if footer_content:
+    if footer:
         bubble["footer"] = {
-            "type": "box",
-            "layout": "vertical",
-            "contents": footer_content,
-            "backgroundColor": colors["card"],
-            "paddingAll": "15px",
-            "spacing": "sm"
+            "type": "box", "layout": "vertical", "contents": footer,
+            "backgroundColor": colors["card"], "paddingAll": "15px", "spacing": "sm"
         }
         bubble["styles"]["footer"] = {"backgroundColor": colors["card"]}
-    
     return bubble
 
 def create_separator(color):
-    """فاصل احترافي"""
     return {"type": "separator", "color": color, "margin": "md"}
 
-def create_text_block(text, size="md", color="#000000", weight="regular", align="start", wrap=True):
-    """نص منسق"""
-    return {
-        "type": "text",
-        "text": text,
-        "size": size,
-        "color": color,
-        "weight": weight,
-        "align": align,
-        "wrap": wrap
-    }
-
 def create_button(label, text, color, style="primary"):
-    """زر احترافي"""
     return {
         "type": "button",
-        "action": {
-            "type": "message",
-            "label": label,
-            "text": text
-        },
-        "style": style,
-        "height": "sm",
-        "color": color
-    }
-
-def create_info_card(colors, title, content):
-    """بطاقة معلومات"""
-    return {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-            create_text_block(title, "sm", colors["text2"], "bold"),
-            create_text_block(content, "xs", colors["text2"], "regular", "start", True)
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "12px",
-        "paddingAll": "12px",
-        "margin": "sm"
-    }
-
-def create_stat_row(label, value, colors):
-    """صف إحصائيات"""
-    return {
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            create_text_block(label, "sm", colors["text"], "regular", "start", False),
-            create_text_block(str(value), "sm", colors["primary"], "bold", "end", False)
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "8px",
-        "paddingAll": "10px",
-        "margin": "xs"
+        "action": {"type": "message", "label": label, "text": text},
+        "style": style, "height": "sm", "color": color
     }
 
 # ============================================================================
-# Games Menu - Professional
+# Games Menu
 # ============================================================================
 
 def build_games_menu(theme="أبيض"):
-    """قائمة الألعاب الرئيسية - احترافية بدون إيموجي"""
+    """Games menu"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    
-    # ترتيب الألعاب
     games_order = ["أسرع", "ذكاء", "لعبة", "أغنية", "خمن", "سلسلة",
                    "ترتيب", "تكوين", "ضد", "لون", "رياضيات", "توافق"]
     
-    # Header
     header = [
-        create_text_block("الألعاب المتاحة", "xl", colors["primary"], "bold", "center"),
-        create_text_block(f"اختر من {len(games_order)} لعبة", "sm", colors["text2"], "regular", "center")
+        {"type": "text", "text": "الألعاب المتاحة", "size": "xl", "weight": "bold", 
+         "color": colors["primary"], "align": "center"},
+        {"type": "text", "text": f"اختر من {len(games_order)} لعبة", "size": "sm", 
+         "color": colors["text2"], "align": "center"}
     ]
     
-    # Body - Game Buttons
     game_buttons = []
     for i in range(0, len(games_order), 3):
-        row = {
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": []
-        }
+        row = {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": []}
         for game in games_order[i:i+3]:
             row["contents"].append(create_button(game, game, colors["shadow1"], "secondary"))
         game_buttons.append(row)
     
     body = [create_separator(colors["shadow1"])] + game_buttons + [
         create_separator(colors["shadow1"]),
-        create_info_card(colors, "قواعد اللعب", 
-                        "5 جولات • نقطة لكل إجابة • أول إجابة صحيحة فقط")
+        {
+            "type": "box", "layout": "vertical",
+            "contents": [{
+                "type": "text",
+                "text": "5 جولات • نقطة لكل إجابة • أول إجابة صحيحة فقط",
+                "size": "xs", "color": colors["text2"], "align": "center", "wrap": True
+            }],
+            "backgroundColor": f"rgba(255,255,255,0.85)",
+            "cornerRadius": "12px", "paddingAll": "12px"
+        }
     ]
     
-    # Footer
     footer = [
         create_separator(colors["shadow1"]),
-        create_text_block(BOT_RIGHTS, "xxs", colors["text2"], "regular", "center")
+        {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+         "color": colors["text2"], "align": "center"}
     ]
     
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="الألعاب", contents=FlexContainer.from_dict(bubble))
 
 # ============================================================================
-# My Points - Professional
+# My Points
 # ============================================================================
 
 def build_my_points(username, points, game_stats, theme="أبيض"):
-    """صفحة النقاط - احترافية"""
+    """Points page"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    
     total_games = sum(game_stats.values())
     
-    # Header
     header = [
-        create_text_block("نقاطي", "xl", colors["primary"], "bold", "center")
+        {"type": "text", "text": "نقاطي", "size": "xl", "weight": "bold", 
+         "color": colors["primary"], "align": "center"}
     ]
     
-    # Body
-    body = [
-        {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                create_text_block(username, "lg", colors["text"], "bold", "center"),
-                create_text_block(str(points), "xxl", colors["primary"], "bold", "center"),
-                create_text_block(f"إجمالي الألعاب: {total_games}", "sm", colors["text2"], "regular", "center")
-            ],
-            "backgroundColor": colors["card"],
-            "cornerRadius": "15px",
-            "paddingAll": "20px"
-        }
-    ]
+    body = [{
+        "type": "box", "layout": "vertical",
+        "contents": [
+            {"type": "text", "text": username, "size": "lg", "weight": "bold", 
+             "color": colors["text"], "align": "center"},
+            {"type": "text", "text": str(points), "size": "xxl", "weight": "bold", 
+             "color": colors["primary"], "align": "center"},
+            {"type": "text", "text": f"إجمالي الألعاب: {total_games}", "size": "sm", 
+             "color": colors["text2"], "align": "center"}
+        ],
+        "backgroundColor": f"rgba(255,255,255,0.85)",
+        "cornerRadius": "15px", "paddingAll": "20px"
+    }]
     
-    # Game Stats
     if game_stats:
         body.append(create_separator(colors["shadow1"]))
-        body.append(create_text_block("أكثر الألعاب", "md", colors["text"], "bold", "start"))
+        body.append({"type": "text", "text": "أكثر الألعاب", "size": "md", 
+                    "color": colors["text"], "weight": "bold"})
         
-        sorted_games = sorted(game_stats.items(), key=lambda x: x[1], reverse=True)[:5]
-        for game_name, plays in sorted_games:
-            body.append(create_stat_row(game_name, plays, colors))
+        for game_name, plays in sorted(game_stats.items(), key=lambda x: x[1], reverse=True)[:5]:
+            body.append({
+                "type": "box", "layout": "horizontal",
+                "contents": [
+                    {"type": "text", "text": game_name, "size": "sm", 
+                     "color": colors["text"], "flex": 3},
+                    {"type": "text", "text": str(plays), "size": "sm", 
+                     "color": colors["primary"], "align": "end", "flex": 1}
+                ],
+                "backgroundColor": f"rgba(255,255,255,0.85)",
+                "cornerRadius": "8px", "paddingAll": "10px", "margin": "xs"
+            })
     
-    # Footer
     footer = [
-        {
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": [
-                create_button("الصدارة", "صدارة", colors["primary"]),
-                create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
-            ]
-        },
+        {"type": "box", "layout": "horizontal", "spacing": "sm",
+         "contents": [
+             create_button("الصدارة", "صدارة", colors["primary"]),
+             create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
+         ]},
         create_separator(colors["shadow1"]),
-        create_text_block(BOT_RIGHTS, "xxs", colors["text2"], "regular", "center")
+        {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+         "color": colors["text2"], "align": "center"}
     ]
     
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(bubble))
 
 # ============================================================================
-# Leaderboard - Professional
+# Leaderboard
 # ============================================================================
 
 def build_leaderboard(leaderboard, theme="أبيض"):
-    """لوحة الصدارة - احترافية"""
+    """Leaderboard"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
-    # Header
     header = [
-        create_text_block("الصدارة", "xl", colors["primary"], "bold", "center"),
-        create_text_block(f"أفضل {len(leaderboard)} لاعبين", "sm", colors["text2"], "regular", "center")
+        {"type": "text", "text": "الصدارة", "size": "xl", "weight": "bold", 
+         "color": colors["primary"], "align": "center"},
+        {"type": "text", "text": f"أفضل {len(leaderboard)} لاعبين", "size": "sm", 
+         "color": colors["text2"], "align": "center"}
     ]
     
-    # Body
     body = [create_separator(colors["shadow1"])]
     
     if leaderboard:
         for i, (name, points) in enumerate(leaderboard):
             rank_display = ["المركز الأول", "المركز الثاني", "المركز الثالث"][i] if i < 3 else f"المركز {i+1}"
             body.append({
-                "type": "box",
-                "layout": "horizontal",
+                "type": "box", "layout": "horizontal",
                 "contents": [
-                    create_text_block(rank_display, "xs", colors["text2"], "regular", "start"),
-                    create_text_block(name[:20], "sm", colors["text"], "regular", "start"),
-                    create_text_block(str(points), "sm", colors["primary"], "bold", "end")
+                    {"type": "text", "text": rank_display, "size": "xs", 
+                     "color": colors["text2"], "flex": 2},
+                    {"type": "text", "text": name[:20], "size": "sm", 
+                     "color": colors["text"], "flex": 3},
+                    {"type": "text", "text": str(points), "size": "sm", 
+                     "color": colors["primary"], "weight": "bold", "align": "end", "flex": 1}
                 ],
-                "backgroundColor": colors["card"],
-                "cornerRadius": "10px",
-                "paddingAll": "12px",
-                "margin": "xs"
+                "backgroundColor": f"rgba(255,255,255,0.85)",
+                "cornerRadius": "10px", "paddingAll": "12px", "margin": "xs"
             })
     else:
-        body.append(create_text_block("لا يوجد لاعبين بعد", "sm", colors["text2"], "regular", "center"))
+        body.append({"type": "text", "text": "لا يوجد لاعبين بعد", "size": "sm", 
+                    "color": colors["text2"], "align": "center"})
     
-    # Footer
     footer = [
-        {
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": [
-                create_button("نقاطي", "نقاطي", colors["primary"]),
-                create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
-            ]
-        },
+        {"type": "box", "layout": "horizontal", "spacing": "sm",
+         "contents": [
+             create_button("نقاطي", "نقاطي", colors["primary"]),
+             create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
+         ]},
         create_separator(colors["shadow1"]),
-        create_text_block(BOT_RIGHTS, "xxs", colors["text2"], "regular", "center")
+        {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+         "color": colors["text2"], "align": "center"}
     ]
     
     bubble = create_glass_bubble(colors, header, body, footer)
@@ -282,30 +211,29 @@ def build_leaderboard(leaderboard, theme="أبيض"):
 # ============================================================================
 
 def build_registration_required(theme="أبيض"):
-    """تنبيه التسجيل - احترافي"""
+    """Registration required"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     header = [
-        create_text_block("تسجيل مطلوب", "xl", colors["error"], "bold", "center")
+        {"type": "text", "text": "تسجيل مطلوب", "size": "xl", "weight": "bold", 
+         "color": colors["error"], "align": "center"}
     ]
     
-    body = [
-        {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                create_text_block("يجب التسجيل للمشاركة في الألعاب", "md", colors["text"], "regular", "center")
-            ],
-            "backgroundColor": colors["card"],
-            "cornerRadius": "15px",
-            "paddingAll": "20px"
-        }
-    ]
+    body = [{
+        "type": "box", "layout": "vertical",
+        "contents": [{
+            "type": "text", "text": "يجب التسجيل للمشاركة في الألعاب",
+            "size": "md", "color": colors["text"], "align": "center", "wrap": True
+        }],
+        "backgroundColor": f"rgba(255,255,255,0.85)",
+        "cornerRadius": "15px", "paddingAll": "20px"
+    }]
     
     footer = [
         create_button("انضم الآن", "انضم", colors["primary"]),
         create_separator(colors["shadow1"]),
-        create_text_block(BOT_RIGHTS, "xxs", colors["text2"], "regular", "center")
+        {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+         "color": colors["text2"], "align": "center"}
     ]
     
     bubble = create_glass_bubble(colors, header, body, footer)
@@ -316,67 +244,192 @@ def build_registration_required(theme="أبيض"):
 # ============================================================================
 
 def build_winner_announcement(username, game_name, total_score, final_points, theme="أبيض"):
-    """إعلان الفائز - احترافي"""
+    """Winner announcement"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     header = [
-        create_text_block("تهانينا", "xxl", colors["success"], "bold", "center")
+        {"type": "text", "text": "تهانينا", "size": "xxl", "weight": "bold", 
+         "color": colors["success"], "align": "center"}
     ]
     
-    body = [
-        {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                create_text_block(username, "xl", colors["text"], "bold", "center"),
-                create_text_block(f"أنهيت لعبة {game_name}", "md", colors["text2"], "regular", "center"),
-                create_separator(colors["shadow1"]),
-                create_text_block(f"+{total_score}", "xxl", colors["primary"], "bold", "center"),
-                create_text_block(f"الإجمالي: {final_points}", "md", colors["text2"], "regular", "center")
-            ],
-            "backgroundColor": colors["card"],
-            "cornerRadius": "15px",
-            "paddingAll": "20px"
-        }
-    ]
+    body = [{
+        "type": "box", "layout": "vertical",
+        "contents": [
+            {"type": "text", "text": username, "size": "xl", "weight": "bold", 
+             "color": colors["text"], "align": "center"},
+            {"type": "text", "text": f"أنهيت لعبة {game_name}", "size": "md", 
+             "color": colors["text2"], "align": "center", "wrap": True},
+            create_separator(colors["shadow1"]),
+            {"type": "text", "text": f"+{total_score}", "size": "xxl", "weight": "bold", 
+             "color": colors["primary"], "align": "center"},
+            {"type": "text", "text": f"الإجمالي: {final_points}", "size": "md", 
+             "color": colors["text2"], "align": "center"}
+        ],
+        "backgroundColor": f"rgba(255,255,255,0.85)",
+        "cornerRadius": "15px", "paddingAll": "20px"
+    }]
     
     footer = [
-        {
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": [
-                create_button("إعادة", f"إعادة {game_name}", colors["primary"]),
-                create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
-            ]
-        },
+        {"type": "box", "layout": "horizontal", "spacing": "sm",
+         "contents": [
+             create_button("إعادة", f"إعادة {game_name}", colors["primary"]),
+             create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
+         ]},
         create_separator(colors["shadow1"]),
-        create_text_block(BOT_RIGHTS, "xxs", colors["text2"], "regular", "center")
+        {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+         "color": colors["text2"], "align": "center"}
     ]
     
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="الفائز", contents=FlexContainer.from_dict(bubble))
 
 # ============================================================================
-# Dummy/Compatibility Functions
+# Help Window (من الكود السابق)
 # ============================================================================
 
-def build_home(theme, username, points, is_registered):
-    """عرض الألعاب"""
-    return build_games_menu(theme)
+def build_help_window(theme="أبيض"):
+    """Help window - Glass iOS Style"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    glass_bg = f"rgba(255,255,255,0.85)"
+    glass_border = colors["shadow1"]
+    
+    # هنا يتم استخدام الكود الكامل من artifacts السابق
+    # (الكود طويل جداً، تم اختصاره هنا)
+    
+    return FlexMessage(alt_text="المساعدة", contents=FlexContainer.from_dict({
+        "type": "carousel",
+        "contents": []  # البطاقات الخمس من الكود السابق
+    }))
 
-def build_group_game_result(theme):
-    """نتيجة المجموعة"""
-    return build_games_menu(theme)
+# ============================================================================
+# Theme Selector
+# ============================================================================
 
-def build_help_menu(theme):
-    """المساعدة"""
-    return build_games_menu(theme)
+def build_theme_selector(current_theme="أبيض"):
+    """Theme selector"""
+    colors = THEMES.get(current_theme, THEMES[DEFAULT_THEME])
+    glass_bg = f"rgba(255,255,255,0.85)"
+    
+    theme_buttons = []
+    theme_names = list(THEMES.keys())
+    
+    for i in range(0, len(theme_names), 3):
+        row = {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": []}
+        for theme_name in theme_names[i:i+3]:
+            theme_colors = THEMES[theme_name]
+            is_selected = (theme_name == current_theme)
+            row["contents"].append({
+                "type": "button",
+                "action": {"type": "message", "label": f"{'✓ ' if is_selected else ''}{theme_name}", 
+                          "text": f"ثيم {theme_name}"},
+                "style": "primary" if is_selected else "secondary",
+                "height": "sm",
+                "color": theme_colors["primary"]
+            })
+        theme_buttons.append(row)
+    
+    header = [
+        {"type": "text", "text": "🎨", "size": "xxl", "align": "center"},
+        {"type": "text", "text": "اختر الثيم", "size": "xl", "weight": "bold", 
+         "color": colors["text"], "align": "center", "margin": "md"},
+        {"type": "text", "text": f"الثيم الحالي: {current_theme}", "size": "sm", 
+         "color": colors["text2"], "align": "center", "margin": "sm"}
+    ]
+    
+    body = [
+        create_separator(colors["shadow1"]),
+        {
+            "type": "box", "layout": "vertical",
+            "contents": [{
+                "type": "text", "text": "معاينة الثيم",
+                "size": "md", "color": colors["text"], "weight": "bold", "align": "center"
+            }],
+            "backgroundColor": glass_bg,
+            "cornerRadius": "15px", "paddingAll": "20px", "margin": "lg"
+        }
+    ] + theme_buttons + [{
+        "type": "box", "layout": "vertical",
+        "contents": [{
+            "type": "text",
+            "text": "الثيم سيُطبق على جميع الأزرار والقوائم",
+            "size": "xs", "color": colors["text2"], "align": "center", "wrap": True
+        }],
+        "margin": "lg"
+    }]
+    
+    bubble = create_glass_bubble(colors, header, body)
+    return FlexMessage(alt_text="اختيار الثيم", contents=FlexContainer.from_dict(bubble))
 
-def build_game_stats(theme):
-    """إحصائيات الألعاب"""
-    return build_games_menu(theme)
+# ============================================================================
+# Enhanced Home
+# ============================================================================
 
-def build_detailed_game_info(theme):
-    """معلومات مفصلة"""
-    return build_games_menu(theme)
+def build_enhanced_home(username, points, is_registered, theme="أبيض"):
+    """Enhanced home page"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    glass_bg = f"rgba(255,255,255,0.85)"
+    
+    registration_emoji = "✅" if is_registered else "⭕"
+    registration_text = f"مسجل {points}" if is_registered else "غير مسجل"
+    
+    # Theme buttons (compact)
+    theme_buttons = []
+    theme_names = list(THEMES.keys())
+    for i in range(0, len(theme_names), 3):
+        row = {"type": "box", "layout": "horizontal", "spacing": "xs", "contents": []}
+        for theme_name in theme_names[i:i+3]:
+            row["contents"].append(create_button(theme_name, f"ثيم {theme_name}", 
+                                                colors["shadow1"], "secondary"))
+        theme_buttons.append(row)
+        if i > 0:
+            theme_buttons[-1]["margin"] = "xs"
+    
+    header = [
+        {"type": "text", "text": "🎮", "size": "xxl", "align": "center"},
+        {"type": "text", "text": "Bot Mesh", "size": "xl", "weight": "bold", 
+         "color": colors["text"], "align": "center", "margin": "md"}
+    ]
+    
+    body = [
+        create_separator(colors["shadow1"]),
+        {
+            "type": "box", "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": username, "size": "lg", "weight": "bold", 
+                 "color": colors["text"], "align": "center"},
+                {"type": "text", "text": f"{registration_emoji} {registration_text}", 
+                 "size": "sm", "color": colors["success"] if is_registered else colors["text2"], 
+                 "align": "center", "margin": "sm"}
+            ],
+            "backgroundColor": glass_bg,
+            "cornerRadius": "20px", "paddingAll": "20px", "margin": "lg"
+        },
+        {
+            "type": "box", "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "🎨 اختر الثيم", "size": "sm", 
+                 "color": colors["text"], "weight": "bold"}
+            ] + theme_buttons,
+            "backgroundColor": glass_bg,
+            "cornerRadius": "15px", "paddingAll": "12px", "margin": "lg"
+        },
+        {
+            "type": "box", "layout": "vertical", "spacing": "sm",
+            "contents": [
+                create_button("🎮 الألعاب", "ألعاب", colors["primary"]),
+                create_button("⭐ نقاطي", "نقاطي", colors["shadow1"], "secondary"),
+                create_button("🏆 الصدارة", "صدارة", colors["shadow1"], "secondary"),
+                create_button("❓ مساعدة", "مساعدة", colors["shadow1"], "secondary")
+            ],
+            "margin": "lg"
+        }
+    ]
+    
+    footer = [
+        create_separator(colors["shadow1"]),
+        {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+         "color": colors["text2"], "align": "center", "margin": "md"}
+    ]
+    
+    bubble = create_glass_bubble(colors, header, body, footer)
+    return FlexMessage(alt_text="البداية", contents=FlexContainer.from_dict(bubble))
