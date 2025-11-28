@@ -1,13 +1,6 @@
 """
-لعبة التوافق - للترفيه فقط
+لعبة التوافق - FIXED - تعطي نسبة التوافق الآن
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
-
-Features:
-✅ جولة واحدة فقط
-❌ بدون نقاط
-❌ بدون لمح/جاوب
-❌ بدون إعلان فائز
-🎨 تصميم زجاجي احترافي
 """
 
 from games.base_game import BaseGame
@@ -38,15 +31,15 @@ class CompatibilityGame(BaseGame):
     def get_compatibility_message(self, percentage: int) -> str:
         """رسالة التوافق"""
         if percentage >= 90:
-            return "توافق عالي جداً! علاقة رائعة"
+            return "توافق عالي جداً - علاقة رائعة"
         elif percentage >= 75:
-            return "توافق عالي! علاقة قوية"
+            return "توافق عالي - علاقة قوية"
         elif percentage >= 60:
-            return "توافق جيد! علاقة واعدة"
+            return "توافق جيد - علاقة واعدة"
         elif percentage >= 45:
-            return "توافق متوسط! يحتاج عمل"
+            return "توافق متوسط - يحتاج عمل"
         else:
-            return "توافق منخفض! قد تكون هناك تحديات"
+            return "توافق منخفض - قد تكون هناك تحديات"
 
     def start_game(self):
         self.current_question = 0
@@ -54,7 +47,7 @@ class CompatibilityGame(BaseGame):
         return self.get_question()
 
     def get_question(self):
-        """واجهة إدخال الأسماء - تصميم زجاجي"""
+        """واجهة إدخال الأسماء"""
         colors = self.get_theme_colors()
 
         flex_content = {
@@ -64,93 +57,26 @@ class CompatibilityGame(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
+                    {"type": "text", "text": "التوافق", "size": "xxl", "weight": "bold", 
+                     "color": colors["text"], "align": "center"},
+                    {"type": "text", "text": "حساب نسبة التوافق", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    {"type": "separator", "margin": "xl", "color": colors["shadow1"]},
+                    {"type": "text", "text": "أدخل اسمين لحساب نسبة التوافق", 
+                     "size": "md", "color": colors["text"], "align": "center", "wrap": True, 
+                     "weight": "bold", "margin": "lg"},
                     {
-                        "type": "box",
-                        "layout": "vertical",
+                        "type": "box", "layout": "vertical",
                         "contents": [
-                            {
-                                "type": "text",
-                                "text": "التوافق",
-                                "size": "xxl",
-                                "weight": "bold",
-                                "color": colors["text"],
-                                "align": "center"
-                            },
-                            {
-                                "type": "text",
-                                "text": "حساب نسبة التوافق",
-                                "size": "sm",
-                                "color": colors["text2"],
-                                "align": "center",
-                                "margin": "sm"
-                            }
+                            {"type": "text", "text": "مثال: ميش عبير", "size": "sm", 
+                             "color": colors["primary"], "align": "center"}
                         ],
-                        "spacing": "xs",
-                        "margin": "none",
-                        "paddingAll": "0px"
+                        "cornerRadius": "10px", "paddingAll": "10px", "margin": "md"
                     },
-                    {
-                        "type": "separator",
-                        "margin": "xl",
-                        "color": colors["shadow1"]
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "أدخل اسمين لحساب نسبة التوافق",
-                                "size": "md",
-                                "color": colors["text"],
-                                "align": "center",
-                                "wrap": True,
-                                "weight": "bold"
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "مثال: أحمد سارة",
-                                        "size": "sm",
-                                        "color": colors["primary"],
-                                        "align": "center"
-                                    }
-                                ],
-                                "backgroundColor": colors["card"],
-                                "cornerRadius": "10px",
-                                "paddingAll": "10px",
-                                "margin": "md"
-                            }
-                        ],
-                        "spacing": "md",
-                        "margin": "xl"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "للترفيه فقط - بدون نقاط",
-                                "size": "xs",
-                                "color": colors["text2"],
-                                "align": "center"
-                            }
-                        ],
-                        "margin": "lg"
-                    }
+                    {"type": "text", "text": "للترفيه فقط - بدون نقاط", 
+                     "size": "xs", "color": colors["text2"], "align": "center", "margin": "lg"}
                 ],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "24px",
-                "spacing": "none"
-            },
-            "styles": {
-                "body": {
-                    "backgroundColor": colors["bg"]
-                }
+                "paddingAll": "24px", "spacing": "none"
             }
         }
 
@@ -165,7 +91,7 @@ class CompatibilityGame(BaseGame):
 
         if len(names) < 2:
             return {
-                'response': self._create_text_message("يرجى كتابة اسمين مفصولين بمسافة\nمثال: أحمد سارة"),
+                'response': self._create_text_message("يرجى كتابة اسمين مفصولين بمسافة\nمثال: ميش عبير"),
                 'points': 0
             }
 
@@ -175,7 +101,7 @@ class CompatibilityGame(BaseGame):
 
         colors = self.get_theme_colors()
 
-        # تصميم النتيجة - زجاجي احترافي
+        # تصميم النتيجة
         flex_content = {
             "type": "bubble",
             "size": "kilo",
@@ -183,127 +109,36 @@ class CompatibilityGame(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
+                    {"type": "text", "text": "نتيجة التوافق", "size": "xl", "weight": "bold", 
+                     "color": colors["text"], "align": "center"},
+                    {"type": "separator", "margin": "lg", "color": colors["shadow1"]},
+                    {"type": "text", "text": f"{name1} و {name2}", "size": "lg", 
+                     "weight": "bold", "color": colors["text"], "align": "center", 
+                     "wrap": True, "margin": "lg"},
                     {
-                        "type": "box",
-                        "layout": "vertical",
+                        "type": "box", "layout": "vertical",
                         "contents": [
-                            {
-                                "type": "text",
-                                "text": "نتيجة التوافق",
-                                "size": "xl",
-                                "weight": "bold",
-                                "color": colors["text"],
-                                "align": "center"
-                            }
+                            {"type": "text", "text": f"{percentage}%", "size": "xxl", 
+                             "weight": "bold", "color": colors["primary"], "align": "center"}
                         ],
-                        "spacing": "none",
-                        "margin": "none"
+                        "cornerRadius": "20px", "paddingAll": "20px", "margin": "xl"
                     },
                     {
-                        "type": "separator",
-                        "margin": "lg",
-                        "color": colors["shadow1"]
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": f"{name1} و {name2}",
-                                "size": "lg",
-                                "weight": "bold",
-                                "color": colors["text"],
-                                "align": "center",
-                                "wrap": True
-                            }
-                        ],
+                        "type": "text", "text": message_text, "size": "md",
+                        "color": colors["text"], "align": "center", "wrap": True,
                         "margin": "lg"
                     },
+                    {"type": "text", "text": f"نفس النسبة لو كتبت: {name2} {name1}", 
+                     "size": "xs", "color": colors["text2"], "align": "center", 
+                     "wrap": True, "margin": "lg"},
                     {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": f"{percentage}%",
-                                        "size": "xxl",
-                                        "weight": "bold",
-                                        "color": colors["primary"],
-                                        "align": "center"
-                                    }
-                                ],
-                                "backgroundColor": colors["card"],
-                                "cornerRadius": "20px",
-                                "paddingAll": "20px"
-                            }
-                        ],
-                        "margin": "xl"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": message_text,
-                                "size": "md",
-                                "color": colors["text"],
-                                "align": "center",
-                                "wrap": True
-                            }
-                        ],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "12px",
-                        "paddingAll": "16px",
-                        "margin": "lg"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": f"نفس النسبة لو كتبت: {name2} {name1}",
-                                "size": "xs",
-                                "color": colors["text2"],
-                                "align": "center",
-                                "wrap": True
-                            }
-                        ],
-                        "margin": "lg"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "message",
-                                    "label": "إعادة",
-                                    "text": "توافق"
-                                },
-                                "style": "primary",
-                                "height": "sm",
-                                "color": colors["primary"]
-                            }
-                        ],
+                        "type": "button",
+                        "action": {"type": "message", "label": "إعادة", "text": "توافق"},
+                        "style": "primary", "height": "sm", "color": colors["primary"],
                         "margin": "xl"
                     }
                 ],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "24px",
-                "spacing": "none"
-            },
-            "styles": {
-                "body": {
-                    "backgroundColor": colors["bg"]
-                }
+                "paddingAll": "24px", "spacing": "none"
             }
         }
 
@@ -312,7 +147,7 @@ class CompatibilityGame(BaseGame):
 
         return {
             'response': result_message,
-            'points': 0,  # بدون نقاط
+            'points': 0,
             'game_over': True
         }
 
