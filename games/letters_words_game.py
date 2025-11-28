@@ -1,10 +1,15 @@
 """
-لعبة تكوين الكلمات - النسخة النهائية المتكاملة
+لعبة تكوين الكلمات - Bot Mesh v9.0 FINAL
 Created by: Abeer Aldosari © 2025
+✅ فردي: لمح (أول حرف + عدد) + جاوب + مؤقت
+✅ فريقين: مؤقت فقط
+✅ 3 كلمات لكل جولة
 """
 
 from games.base_game import BaseGame
 import random
+import time
+from typing import Dict, Any, Optional
 
 
 class LettersWordsGame(BaseGame):
@@ -13,9 +18,13 @@ class LettersWordsGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "تكوين"
-        self.game_icon = ""
+        self.game_icon = "📝"
+        self.supports_hint = True
+        self.supports_reveal = True
 
-        # ✅ مجموعات الحروف الكاملة (مدمجة بدون حذف)
+        self.round_time = 40  # ⏱️ 40 ثانية للعثور على 3 كلمات
+        self.round_start_time = None
+
         self.letter_sets = [
             {"letters": ["ق","ل","م","ع","ر","ب"], "words": ["قلم","عمل","علم","قلب","رقم","عقل","قبل","بقر","قرب"]},
             {"letters": ["س","ا","ر","ة","ي","م"], "words": ["سيارة","سير","مسار","سارية","رأس","أسر","يسار","مارس"]},
@@ -36,129 +45,131 @@ class LettersWordsGame(BaseGame):
             {"letters": ["خ","ب","ز","ر","ن","م"], "words": ["خبز","خزن","برز","زمن","نزر"]},
             {"letters": ["ع","س","ل","ج","ر","ن"], "words": ["عسل","جرس","عجل","رجل","سجل"]},
             {"letters": ["م","ا","ء","ي","ر","ن"], "words": ["ماء","مرء","نار","راء","أمر"]},
-            {"letters": ["ب","ي","ت","ك","م","ن"], "words": ["بيت","كتب","نبت","بنت","نكت"]},
+            {"letters": ["ب","ي","ت","ك","م","ن"], "words": ["بيت","كتب","نبت","بنت","نكت"]}
         ]
 
         random.shuffle(self.letter_sets)
-
         self.current_set = None
         self.found_words = set()
         self.required_words = 3
 
-        # ✅ وضع الفرق
-        self.team_mode = False
-        self.team_players = set()
-
-    # ==============================
-    # بدء اللعبة
-    # ==============================
     def start_game(self):
         self.current_question = 0
         self.game_active = True
-        self.found_words.clear()
         self.previous_question = None
         self.previous_answer = None
         self.answered_users.clear()
+        self.found_words.clear()
         return self.get_question()
 
-    # ==============================
-    # إنشاء السؤال
-    # ==============================
     def get_question(self):
         q_data = self.letter_sets[self.current_question % len(self.letter_sets)]
         self.current_set = q_data
         self.current_answer = q_data["words"]
         self.found_words.clear()
+        self.round_start_time = time.time()
 
-        colors = self.get_theme_colors()
-        letters_display = " ▫️ ".join(q_data["letters"])
+        letters_display = " • ".join(q_data["letters"])
 
-        flex_content = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": self.game_name, "align": "center", "weight": "bold"},
-                    {"type": "separator"},
-                    {"type": "text", "text": "كوّن كلمات من الحروف التالية:", "align": "center"},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents":[{"type":"text","text":letters_display,"align":"center","weight":"bold"}],
-                        "backgroundColor": colors["card"]
-                    },
-                    {"type": "text", "text": f"مطلوب {self.required_words} كلمات", "align": "center"},
-                ]
-            }
-        }
+        # ✅ النص الإضافي حسب الوضع
+        if self.team_mode:
+            additional_info = f"⏱️ {self.round_time} ثانية\nمطلوب {self.required_words} كلمات"
+        else:
+            additional_info = f"⏱️ {self.round_time} ثانية\nمطلوب {self.required_words} كلمات\n💡 اكتب 'لمح' أو 'جاوب'"
 
-        return self._create_flex_with_buttons(self.game_name, flex_content)
+        return self.build_question_flex(
+            question_text=f"كوّن كلمات من:\n{letters_display}",
+            additional_info=additional_info
+        )
 
-    # ==============================
-    # فحص الإجابة
-    # ==============================
-    def check_answer(self, user_answer: str, user_id: str, display_name: str):
+    def _time_expired(self) -> bool:
+        if not self.round_start_time:
+            return False
+        return (time.time() - self.round_start_time) > self.round_time
 
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active:
+            return None
+
+        # التحقق من الوقت
+        if self._time_expired():
+            words = " • ".join(self.current_answer[:5])
+            self.current_question += 1
+            self.answered_users.clear()
+            self.found_words.clear()
+
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"⏱️ انتهى الوقت!\nكلمات ممكنة: {words}\n\n{result.get('message', '')}"
+                return result
+
+            return {
+                "message": f"⏱️ انتهى الوقت!\nكلمات ممكنة: {words}",
+                "response": self.get_question(),
+                "points": 0
+            }
+
+        if self.team_mode and user_id not in self.joined_users:
             return None
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ تجاهل غير المنضمين في وضع الفريقين
-        if self.team_mode and user_id not in self.team_players:
-            return None
-
-        # ✅ وضع الفريقين: لا يوجد لمح أو جاوب
-        if self.team_mode and normalized in ["لمح","جاوب"]:
-            return None
-
-        # ==============================
-        # الوضع الفردي فقط
-        # ==============================
+        # ✅ لمح وجاوب للفردي فقط
         if not self.team_mode:
-
             if normalized == "لمح":
                 remaining = [w for w in self.current_answer if self.normalize_text(w) not in self.found_words]
                 if remaining:
                     word = remaining[0]
-                    hint = f"أول حرف: {word[0]}"
+                    hint = f"💡 تبدأ بـ: {word[0]}\nعدد الحروف: {len(word)}"
                 else:
                     hint = "لا توجد تلميحات"
-                return {"message": hint, "response": self._create_text_message(hint), "points": 0}
+                return {
+                    "message": hint,
+                    "response": self._create_text_message(hint),
+                    "points": 0
+                }
 
             if normalized == "جاوب":
-                words = " ▪️ ".join(self.current_answer)
-                msg = f"الكلمات الممكنة:\n{words}"
+                words = " • ".join(self.current_answer[:5])
+                msg = f"كلمات ممكنة:\n{words}"
                 self.current_question += 1
                 self.answered_users.clear()
                 self.found_words.clear()
 
                 if self.current_question >= self.questions_count:
                     result = self.end_game()
-                    result["message"] = f"{msg}\n\n{result.get('message','')}"
+                    result["message"] = f"{msg}\n\n{result.get('message', '')}"
                     return result
 
-                return {"message": msg, "response": self.get_question(), "points": 0}
+                return {
+                    "message": msg,
+                    "response": self.get_question(),
+                    "points": 0
+                }
 
-        # ==============================
         # التحقق من صحة الإجابة
-        # ==============================
         valid_words = [self.normalize_text(w) for w in self.current_answer]
 
         if normalized not in valid_words or normalized in self.found_words:
-            return {"message":"إجابة غير صحيحة", "response": self._create_text_message("إجابة غير صحيحة"), "points":0}
+            return {
+                "message": "❌ خطأ أو مكررة",
+                "response": self._create_text_message("❌ خطأ أو مكررة"),
+                "points": 0
+            }
 
         self.found_words.add(normalized)
+        points = 10
 
-        # ✅ احتساب النقاط فردي أو فريق
-        points = self.add_score(user_id, display_name, 10)
+        if self.team_mode:
+            team = self.get_user_team(user_id)
+            if not team:
+                team = self.assign_to_team(user_id)
+            self.add_team_score(team, points)
+        else:
+            self.add_score(user_id, display_name, points)
 
-        # ==============================
         # الانتقال للسؤال التالي
-        # ==============================
         if len(self.found_words) >= self.required_words:
-
             self.current_question += 1
             self.answered_users.clear()
             self.found_words.clear()
@@ -166,10 +177,17 @@ class LettersWordsGame(BaseGame):
             if self.current_question >= self.questions_count:
                 result = self.end_game()
                 result["points"] = points
-                result["message"] = f"تم إنهاء الجولة\n{result.get('message','')}"
                 return result
 
-            return {"message": "تم الانتقال للجولة التالية", "response": self.get_question(), "points": points}
+            return {
+                "message": f"✅ تم! انتقال للجولة التالية",
+                "response": self.get_question(),
+                "points": points
+            }
 
         remaining = self.required_words - len(self.found_words)
-        return {"message": f"صحيح - تبقى {remaining} كلمات", "response": self._create_text_message("تم تسجيل الإجابة"), "points": points}
+        return {
+            "message": f"✅ صحيح! تبقى {remaining} كلمة",
+            "response": self._create_text_message(f"✅ صحيح! تبقى {remaining} كلمة"),
+            "points": points
+        }
