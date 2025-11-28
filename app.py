@@ -165,8 +165,8 @@ def send_with_quick_reply(line_bot_api, reply_token, message):
         ReplyMessageRequest(reply_token=reply_token, messages=[message])
     )
 
-def send_achievement_notifications(line_bot_api, reply_token, achievements, theme):
-    """إرسال إشعارات الإنجازات المفتوحة"""
+def send_achievement_notifications(line_bot_api, user_id, achievements, theme):
+    """إرسال إشعارات الإنجازات المفتوحة باستخدام push بدلاً من reply"""
     if not achievements:
         return
     
@@ -177,11 +177,12 @@ def send_achievement_notifications(line_bot_api, reply_token, achievements, them
     
     if messages:
         try:
-            line_bot_api.reply_message_with_http_info(
-                ReplyMessageRequest(reply_token=reply_token, messages=messages)
+            from linebot.v3.messaging import PushMessageRequest
+            line_bot_api.push_message_with_http_info(
+                PushMessageRequest(to=user_id, messages=messages)
             )
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"❌ Failed to send achievement notification: {e}")
 
 def is_group_chat(event):
     """Check if message is from a group"""
@@ -350,11 +351,12 @@ def handle_message(event):
                 db.update_user(user_id, is_registered=True)
                 update_user_cache(user_id)
                 
+                reply = build_home(current_theme, username, user['points'], True)
+                
+                # إرسال إشعارات الإنجازات بعد الرد
                 unlocked = achievement_manager.check_and_unlock(user_id, "registered")
                 if unlocked:
-                    send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
-                
-                reply = build_home(current_theme, username, user['points'], True)
+                    send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
             
             elif text_lower in ["انسحب", "leave", "unregister"]:
                 db.update_user(user_id, is_registered=False)
@@ -398,6 +400,12 @@ def handle_message(event):
                             GameClass = AVAILABLE_GAMES[game_name]
                             game_instance = GameClass(line_bot_api)
                             
+                            # Initialize AI attributes to None (no AI available)
+                            if not hasattr(game_instance, 'ai_generate_question'):
+                                game_instance.ai_generate_question = None
+                            if not hasattr(game_instance, 'ai_check_answer'):
+                                game_instance.ai_check_answer = None
+                            
                             if hasattr(game_instance, 'set_theme'):
                                 game_instance.set_theme(current_theme)
                             
@@ -407,11 +415,12 @@ def handle_message(event):
                             session_id = db.create_game_session(user_id, game_name)
                             game_instance.session_id = session_id
                             
+                            logger.info(f"🎮 {username} بدأ لعبة {game_name}")
+                            
+                            # إرسال إشعارات الإنجازات بعد الرد
                             unlocked = achievement_manager.check_and_unlock(user_id, "game_played")
                             if unlocked:
-                                send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
-                            
-                            logger.info(f"🎮 {username} بدأ لعبة {game_name}")
+                                send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
                         except Exception as e:
                             logger.error(f"❌ خطأ في بدء اللعبة {game_name}: {e}")
                             reply = TextMessage(text=f"❌ حدث خطأ في بدء اللعبة")
@@ -430,9 +439,10 @@ def handle_message(event):
                                 db.add_points(user_id, result['points'])
                                 update_user_cache(user_id)
                                 
+                                # إرسال إشعارات الإنجازات بعد الرد
                                 unlocked = achievement_manager.check_and_unlock(user_id, "points_updated")
                                 if unlocked:
-                                    send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
+                                    send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
                             
                             if result.get('game_over'):
                                 if hasattr(game_instance, 'session_id'):
@@ -449,10 +459,11 @@ def handle_message(event):
                                     theme=current_theme
                                 )
                                 
+                                # إرسال إشعارات الإنجازات بعد الرد
                                 unlocked = achievement_manager.check_and_unlock(user_id, "game_won")
                                 unlocked += achievement_manager.check_and_unlock(user_id, "games_count")
                                 if unlocked:
-                                    send_achievement_notifications(line_bot_api, event.reply_token, unlocked, current_theme)
+                                    send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
                                 
                                 del active_games[user_id]
                             else:
