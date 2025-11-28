@@ -940,6 +940,450 @@ def build_game_stopped(game_name: str, theme: str = DEFAULT_THEME) -> FlexMessag
         FlexMessage(alt_text="إيقاف", contents=FlexContainer.from_dict(bubble))
     )
 
+def build_winner_announcement(username: str, game_name: str, points: int, total_points: int, theme: str = DEFAULT_THEME) -> FlexMessage:
+    """نافذة إعلان الفائز"""
+    colors = _safe_get_colors(theme)
+
+    bubble = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🏆",
+                    "size": "xxl",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "مبروك!",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": colors["success"],
+                    "align": "center",
+                    "margin": "sm"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": username,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "align": "center",
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": f"فاز في لعبة {game_name}",
+                    "size": "md",
+                    "color": colors["text2"],
+                    "align": "center",
+                    "wrap": True,
+                    "margin": "sm"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"+{points}",
+                            "size": "xxl",
+                            "weight": "bold",
+                            "color": colors["primary"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"المجموع: {total_points}",
+                            "size": "sm",
+                            "color": colors["text2"],
+                            "align": "center",
+                            "margin": "xs"
+                        }
+                    ],
+                    "cornerRadius": "15px",
+                    "paddingAll": "15px",
+                    "margin": "lg",
+                    "borderWidth": "2px",
+                    "borderColor": colors.get("primary", "#3B82F6")
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                create_glass_button("🎮 العب مرة أخرى", "ألعاب", "primary"),
+                create_glass_button("📊 نقاطي", "نقاطي", "link"),
+                create_glass_button("🏆 الصدارة", "صدارة", "link")
+            ],
+            "paddingAll": "20px"
+        }
+    }
+
+    return attach_quick_reply_to_message(
+        FlexMessage(alt_text="فوز", contents=FlexContainer.from_dict(bubble))
+    )
+
+
+def build_help_window(theme: str = DEFAULT_THEME) -> FlexMessage:
+    """نافذة المساعدة"""
+    colors = _safe_get_colors(theme)
+
+    bubble = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "❓",
+                    "size": "xxl",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "المساعدة",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": colors["primary"],
+                    "align": "center",
+                    "margin": "sm"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "📝 الأوامر الأساسية:",
+                            "size": "md",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "wrap": True
+                        },
+                        {
+                            "type": "text",
+                            "text": "• بداية - الصفحة الرئيسية\n• ألعاب - قائمة الألعاب\n• نقاطي - نقاطك وإحصائياتك\n• صدارة - لوحة الصدارة\n• ثيمات - تغيير المظهر\n• انضم - التسجيل في البوت",
+                            "size": "sm",
+                            "color": colors["text2"],
+                            "wrap": True,
+                            "margin": "md"
+                        }
+                    ],
+                    "cornerRadius": "10px",
+                    "paddingAll": "10px",
+                    "margin": "md",
+                    "borderWidth": "1px",
+                    "borderColor": colors.get("border", "#E2E8F0")
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "🎮 أوامر اللعب:",
+                            "size": "md",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "wrap": True
+                        },
+                        {
+                            "type": "text",
+                            "text": "• لمح - تلميح للإجابة\n• جاوب - كشف الإجابة\n• إيقاف - إيقاف اللعبة\n• فريقين - لعبة جماعية",
+                            "size": "sm",
+                            "color": colors["text2"],
+                            "wrap": True,
+                            "margin": "md"
+                        }
+                    ],
+                    "cornerRadius": "10px",
+                    "paddingAll": "10px",
+                    "margin": "md",
+                    "borderWidth": "1px",
+                    "borderColor": colors.get("border", "#E2E8F0")
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                create_glass_button("🏠 الرئيسية", "بداية", "primary")
+            ],
+            "paddingAll": "20px"
+        }
+    }
+
+    return attach_quick_reply_to_message(
+        FlexMessage(alt_text="مساعدة", contents=FlexContainer.from_dict(bubble))
+    )
+
+
+def build_multiplayer_help_window(theme: str = DEFAULT_THEME) -> FlexMessage:
+    """نافذة مساعدة المجموعة"""
+    colors = _safe_get_colors(theme)
+
+    bubble = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "👥",
+                    "size": "xxl",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "وضع الفريقين",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": colors["primary"],
+                    "align": "center",
+                    "margin": "sm"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": "تم بدء وضع المجموعة !",
+                    "size": "md",
+                    "color": colors["text"],
+                    "align": "center",
+                    "wrap": True,
+                    "margin": "lg"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "الخطوات:",
+                            "size": "md",
+                            "weight": "bold",
+                            "color": colors["text"]
+                        },
+                        {
+                            "type": "text",
+                            "text": "1️⃣ اكتب 'انضم' للانضمام\n2️⃣ انتظر اللاعبين\n3️⃣ اختر اللعبة لبدء المنافسة\n4️⃣ سيتم تقسيمكم لفريقين",
+                            "size": "sm",
+                            "color": colors["text2"],
+                            "wrap": True,
+                            "margin": "md"
+                        }
+                    ],
+                    "cornerRadius": "10px",
+                    "paddingAll": "10px",
+                    "margin": "md",
+                    "borderWidth": "1px",
+                    "borderColor": colors.get("border", "#E2E8F0")
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                create_glass_button("✅ انضم", "انضم", "primary"),
+                create_glass_button("🎮 اختر لعبة", "ألعاب", "link")
+            ],
+            "paddingAll": "20px"
+        }
+    }
+
+    return attach_quick_reply_to_message(
+        FlexMessage(alt_text="فريقين", contents=FlexContainer.from_dict(bubble))
+    )
+
+
+def build_team_game_end(team_points: Dict[str, int], theme: str = DEFAULT_THEME) -> FlexMessage:
+    """نافذة نهاية لعبة الفرق"""
+    colors = _safe_get_colors(theme)
+
+    team1_pts = team_points.get("team1", 0)
+    team2_pts = team_points.get("team2", 0)
+
+    if team1_pts > team2_pts:
+        winner = "🥇 الفريق الأول"
+        winner_color = colors["success"]
+    elif team2_pts > team1_pts:
+        winner = "🥈 الفريق الثاني"
+        winner_color = colors["success"]
+    else:
+        winner = "⚖️ تعادل"
+        winner_color = colors["warning"]
+
+    bubble = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🏆",
+                    "size": "xxl",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "انتهت اللعبة",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": colors["primary"],
+                    "align": "center",
+                    "margin": "sm"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "النتيجة النهائية",
+                            "size": "md",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "الفريق الأول",
+                                    "size": "sm",
+                                    "color": colors["text2"],
+                                    "flex": 1
+                                },
+                                {
+                                    "type": "text",
+                                    "text": str(team1_pts),
+                                    "size": "md",
+                                    "weight": "bold",
+                                    "color": colors["primary"],
+                                    "align": "end",
+                                    "flex": 0
+                                }
+                            ],
+                            "margin": "md"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "الفريق الثاني",
+                                    "size": "sm",
+                                    "color": colors["text2"],
+                                    "flex": 1
+                                },
+                                {
+                                    "type": "text",
+                                    "text": str(team2_pts),
+                                    "size": "md",
+                                    "weight": "bold",
+                                    "color": colors["primary"],
+                                    "align": "end",
+                                    "flex": 0
+                                }
+                            ],
+                            "margin": "sm"
+                        }
+                    ],
+                    "cornerRadius": "10px",
+                    "paddingAll": "10px",
+                    "margin": "md",
+                    "borderWidth": "1px",
+                    "borderColor": colors.get("border", "#E2E8F0")
+                },
+                {
+                    "type": "text",
+                    "text": winner,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": winner_color,
+                    "align": "center",
+                    "margin": "lg"
+                },
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
+                create_glass_button("🎮 العب مرة أخرى", "ألعاب", "primary"),
+                create_glass_button("🏠 الرئيسية", "بداية", "link")
+            ],
+            "paddingAll": "20px"
+        }
+    }
+
+    return attach_quick_reply_to_message(
+        FlexMessage(alt_text="نهاية اللعبة", contents=FlexContainer.from_dict(bubble))
+    )
+
+
+def build_answer_feedback(message: str, theme: str = DEFAULT_THEME) -> FlexMessage:
+    """نافذة ردود فعل الإجابات"""
+    colors = _safe_get_colors(theme)
+    
+    is_correct = "✅" in message or "صحيح" in message
+    icon = "✅" if is_correct else "❌"
+    title_color = colors["success"] if is_correct else colors["error"]
+
+    bubble = {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": icon,
+                    "size": "xxl",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": message,
+                    "size": "md",
+                    "color": title_color,
+                    "align": "center",
+                    "wrap": True,
+                    "margin": "lg"
+                }
+            ],
+            "paddingAll": "15px"
+        }
+    }
+
+    return attach_quick_reply_to_message(
+        FlexMessage(alt_text="نتيجة", contents=FlexContainer.from_dict(bubble))
+    )
+
 
 # ============================================================================
 # Export All
@@ -952,9 +1396,17 @@ __all__ = [
     "build_leaderboard",
     "build_theme_selector",
     "build_registration_required",
+    "build_registration_success",
+    "build_join_confirmation",
+    "build_error_message",
+    "build_theme_change_success",
+    "build_game_stopped",
     "build_winner_announcement",
     "build_help_window",
     "build_multiplayer_help_window",
+    "build_team_game_end",
+    "build_answer_feedback",
     "attach_quick_reply_to_message",
+    "attach_quick_reply",
     "create_games_quick_reply"
 ]
