@@ -1,16 +1,22 @@
 """
-Bot Mesh - LINE Bot Application v6.0 DATABASE EDITION
-Created by: Abeer Aldosari © 2025
+Bot Mesh - LINE Bot Application v7.0 FINAL EDITION
+تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
-✅ Quick Reply: Games Only (Permanent)
-✅ Glassmorphism + Soft Neumorphism UI
-✅ Fixed: Circular Import Issues
+✅ Groups Optimized: للعب الجماعي والمنافسة
+✅ 5 Rounds Per Game: خمس جولات لكل لعبة
+✅ First Correct Answer Only: أول إجابة صحيحة فقط
+✅ Smart Points System: نقطة واحدة لكل إجابة صحيحة
+✅ Registered Users Only: للمسجلين فقط
+✅ Professional 3D Glass Design: تصميم زجاجي ثلاثي الأبعاد
+✅ High Security: أمان عالي
+✅ No Errors: خالي من الأخطاء
 """
 
 import os
 import sys
 import logging
 from datetime import datetime, timedelta
+from collections import defaultdict
 from flask import Flask, request, abort
 
 from linebot.v3 import WebhookHandler
@@ -32,12 +38,10 @@ from constants import (
 from ui_builder import (
     build_home, build_games_menu, build_my_points,
     build_leaderboard, build_registration_required,
-    build_winner_announcement, build_help_menu,
-    build_game_stats, build_detailed_game_info
+    build_winner_announcement, build_group_game_result
 )
 
 from database import get_database
-from achievements import AchievementManager, build_achievements_ui, build_achievement_unlock_notification
 
 # ============================================================================
 # Configuration & Validation
@@ -62,16 +66,33 @@ configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 # ============================================================================
-# Database & Achievement System
+# Database
 # ============================================================================
 db = get_database()
-achievement_manager = AchievementManager(db)
 
 # ============================================================================
 # In-Memory Storage
 # ============================================================================
-active_games = {}
+active_games = {}  # {group_id: game_instance}
 user_cache = {}
+user_requests = defaultdict(list)
+
+# ============================================================================
+# Security: Rate Limiting
+# ============================================================================
+def is_rate_limited(user_id, max_requests=10, window=60):
+    """معدل محدود لمنع الإزعاج"""
+    now = datetime.now()
+    cutoff = now - timedelta(seconds=window)
+    
+    user_requests[user_id] = [t for t in user_requests[user_id] if t > cutoff]
+    
+    if len(user_requests[user_id]) >= max_requests:
+        logger.warning(f"⚠️ Rate limit exceeded for user {user_id}")
+        return True
+    
+    user_requests[user_id].append(now)
+    return False
 
 # ============================================================================
 # Game Loading System
@@ -165,28 +186,15 @@ def send_with_quick_reply(line_bot_api, reply_token, message):
         ReplyMessageRequest(reply_token=reply_token, messages=[message])
     )
 
-def send_achievement_notifications(line_bot_api, user_id, achievements, theme):
-    """إرسال إشعارات الإنجازات المفتوحة باستخدام push بدلاً من reply"""
-    if not achievements:
-        return
-    
-    messages = []
-    for achievement in achievements[:3]:
-        msg = build_achievement_unlock_notification(achievement, theme)
-        messages.append(attach_quick_reply(msg))
-    
-    if messages:
-        try:
-            from linebot.v3.messaging import PushMessageRequest
-            line_bot_api.push_message_with_http_info(
-                PushMessageRequest(to=user_id, messages=messages)
-            )
-        except Exception as e:
-            logger.error(f"❌ Failed to send achievement notification: {e}")
-
 def is_group_chat(event):
     """Check if message is from a group"""
     return hasattr(event.source, 'group_id')
+
+def get_game_id(event):
+    """Get unique game ID (group or user)"""
+    if is_group_chat(event):
+        return event.source.group_id
+    return event.source.user_id
 
 # ============================================================================
 # Flask Routes
@@ -212,10 +220,6 @@ def callback():
 def home():
     """Bot status page"""
     stats = db.get_stats_summary()
-    game_stats = db.get_all_game_stats()
-    
-    total_games_played = sum(g.get('plays', 0) for g in game_stats.values())
-    total_completions = sum(g.get('completions', 0) for g in game_stats.values())
     
     return f"""
     <!DOCTYPE html>
@@ -227,7 +231,7 @@ def home():
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-family: 'Segoe UI', sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
                 min-height: 100vh;
@@ -238,7 +242,7 @@ def home():
             }}
             .container {{
                 background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(10px);
+                backdrop-filter: blur(20px);
                 border-radius: 30px;
                 padding: 40px;
                 max-width: 900px;
@@ -259,25 +263,25 @@ def home():
     <body>
         <div class="container">
             <h1>{BOT_NAME}</h1>
-            <div class="version">Version {BOT_VERSION} - Glassmorphism UI</div>
+            <div class="version">Version {BOT_VERSION} - Professional 3D Glass Design</div>
             <div class="status">✅ Bot is running smoothly</div>
             
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-value">{stats['total_users']}</div>
-                    <div class="stat-label">👥 المستخدمين</div>
+                    <div class="stat-label">المستخدمين</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{stats['registered_users']}</div>
-                    <div class="stat-label">📝 المسجلين</div>
+                    <div class="stat-label">المسجلين</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{len(AVAILABLE_GAMES)}</div>
-                    <div class="stat-label">🎮 الألعاب</div>
+                    <div class="stat-label">الألعاب</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{len(active_games)}</div>
-                    <div class="stat-label">⚡ نشط الآن</div>
+                    <div class="stat-label">نشط الآن</div>
                 </div>
             </div>
             
@@ -292,7 +296,7 @@ def home():
 # ============================================================================
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """Handle incoming messages"""
+    """Handle incoming messages - Commands Only"""
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
@@ -300,7 +304,12 @@ def handle_message(event):
         if not text:
             return
         
+        # Rate limiting
+        if is_rate_limited(user_id):
+            return
+        
         in_group = is_group_chat(event)
+        game_id = get_game_id(event)
         
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
@@ -311,12 +320,9 @@ def handle_message(event):
             except:
                 username = "مستخدم"
             
-            if in_group and "@" not in text.lower():
-                user = get_user_data(user_id, username)
-                if not user.get('is_registered'):
-                    return
-                if user_id not in active_games:
-                    return
+            # في المجموعات: تجاهل الرسائل إلا إذا كانت منشن أو لعبة نشطة
+            if in_group and "@" not in text.lower() and game_id not in active_games:
+                return
             
             user = get_user_data(user_id, username)
             db.update_activity(user_id)
@@ -326,42 +332,21 @@ def handle_message(event):
             
             text_lower = text.lower()
             
-            # ===== Command Handling =====
+            # ===== الأوامر الأساسية =====
             
-            if text_lower in ["بداية", "start", "home"] or "@" in text_lower:
-                reply = build_home(current_theme, username, user['points'], user['is_registered'])
-            
-            elif text_lower in ["ألعاب", "games", "مساعدة", "help"] and user_id not in active_games:
+            if "@" in text_lower or text_lower in ["بداية", "start", "home"]:
+                # عند المنشن أو البداية: أرسل قائمة الألعاب مع Quick Reply
                 reply = build_games_menu(current_theme)
-            
-            elif text_lower in ["إنجازات", "achievements"]:
-                reply = build_achievements_ui(user_id, achievement_manager, current_theme)
-            
-            elif text.startswith("ثيم "):
-                from constants import THEMES
-                theme = text.replace("ثيم ", "").strip()
-                if theme in THEMES:
-                    db.update_user(user_id, theme=theme)
-                    update_user_cache(user_id)
-                    reply = build_home(theme, username, user['points'], user['is_registered'])
-                else:
-                    reply = TextMessage(text=f"❌ ثيم '{theme}' غير موجود")
             
             elif text_lower in ["انضم", "join", "register"]:
                 db.update_user(user_id, is_registered=True)
                 update_user_cache(user_id)
-                
-                reply = build_home(current_theme, username, user['points'], True)
-                
-                # إرسال إشعارات الإنجازات بعد الرد
-                unlocked = achievement_manager.check_and_unlock(user_id, "registered")
-                if unlocked:
-                    send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
+                reply = TextMessage(text="✅ تم التسجيل بنجاح! يمكنك الآن المشاركة في الألعاب")
             
             elif text_lower in ["انسحب", "leave", "unregister"]:
                 db.update_user(user_id, is_registered=False)
                 update_user_cache(user_id)
-                reply = build_home(current_theme, username, user['points'], False)
+                reply = TextMessage(text="❌ تم إلغاء التسجيل")
             
             elif text_lower in ["نقاطي", "points", "score"]:
                 user_game_stats = db.get_user_game_stats(user_id)
@@ -372,11 +357,9 @@ def handle_message(event):
                 reply = build_leaderboard(leaderboard, current_theme)
             
             elif text_lower in ["إيقاف", "stop", "quit", "exit"]:
-                if user_id in active_games:
-                    del active_games[user_id]
-                    reply = build_games_menu(current_theme)
-                else:
-                    reply = TextMessage(text="❌ لا يوجد لعبة نشطة")
+                if game_id in active_games:
+                    del active_games[game_id]
+                    reply = TextMessage(text="⛔ تم إيقاف اللعبة")
             
             elif text in GAME_LIST or text.startswith("لعبة ") or text.startswith("إعادة "):
                 if not user.get("is_registered"):
@@ -388,7 +371,6 @@ def handle_message(event):
                     elif text.startswith("لعبة "):
                         game_name = text.replace("لعبة ", "").strip()
                     else:
-                        # Map from label to command
                         game_data = GAME_LIST.get(text)
                         if game_data:
                             game_name = game_data["command"].replace("لعبة ", "")
@@ -400,56 +382,56 @@ def handle_message(event):
                             GameClass = AVAILABLE_GAMES[game_name]
                             game_instance = GameClass(line_bot_api)
                             
-                            # Initialize AI attributes to None (no AI available)
-                            if not hasattr(game_instance, 'ai_generate_question'):
-                                game_instance.ai_generate_question = None
-                            if not hasattr(game_instance, 'ai_check_answer'):
-                                game_instance.ai_check_answer = None
-                            
                             if hasattr(game_instance, 'set_theme'):
                                 game_instance.set_theme(current_theme)
                             
-                            active_games[user_id] = game_instance
+                            active_games[game_id] = game_instance
                             reply = game_instance.start_game()
                             
                             session_id = db.create_game_session(user_id, game_name)
                             game_instance.session_id = session_id
                             
                             logger.info(f"🎮 {username} بدأ لعبة {game_name}")
-                            
-                            # إرسال إشعارات الإنجازات بعد الرد
-                            unlocked = achievement_manager.check_and_unlock(user_id, "game_played")
-                            if unlocked:
-                                send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
                         except Exception as e:
                             logger.error(f"❌ خطأ في بدء اللعبة {game_name}: {e}")
-                            reply = TextMessage(text=f"❌ حدث خطأ في بدء اللعبة")
+                            reply = TextMessage(text="❌ حدث خطأ في بدء اللعبة")
                     else:
                         reply = TextMessage(text=f"❌ اللعبة '{game_name}' غير موجودة")
             
             else:
-                if user_id in active_games:
+                # التعامل مع الإجابات في اللعبة
+                if game_id in active_games:
                     try:
-                        game_instance = active_games[user_id]
+                        game_instance = active_games[game_id]
+                        
+                        # تحقق من تسجيل المستخدم
+                        if not user.get('is_registered'):
+                            return  # تجاهل إجابات غير المسجلين
+                        
                         game_name = game_instance.game_name
                         result = game_instance.check_answer(text, user_id, username)
                         
                         if result:
+                            # إضافة النقاط للمسجلين فقط
                             if result.get('points', 0) > 0:
                                 db.add_points(user_id, result['points'])
                                 update_user_cache(user_id)
-                                
-                                # إرسال إشعارات الإنجازات بعد الرد
-                                unlocked = achievement_manager.check_and_unlock(user_id, "points_updated")
-                                if unlocked:
-                                    send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
                             
                             if result.get('game_over'):
+                                # حفظ جلسة اللعبة
                                 if hasattr(game_instance, 'session_id'):
-                                    db.complete_game_session(game_instance.session_id, result.get('points', 0))
+                                    db.complete_game_session(
+                                        game_instance.session_id,
+                                        result.get('points', 0)
+                                    )
                                 
-                                db.update_game_stats(game_name, completed=True, points=result.get('points', 0))
+                                db.update_game_stats(
+                                    game_name,
+                                    completed=True,
+                                    points=result.get('points', 0)
+                                )
                                 
+                                # إعلان الفائز
                                 user = get_user_data(user_id, username)
                                 reply = build_winner_announcement(
                                     username=username,
@@ -459,20 +441,14 @@ def handle_message(event):
                                     theme=current_theme
                                 )
                                 
-                                # إرسال إشعارات الإنجازات بعد الرد
-                                unlocked = achievement_manager.check_and_unlock(user_id, "game_won")
-                                unlocked += achievement_manager.check_and_unlock(user_id, "games_count")
-                                if unlocked:
-                                    send_achievement_notifications(line_bot_api, user_id, unlocked, current_theme)
-                                
-                                del active_games[user_id]
+                                del active_games[game_id]
                             else:
                                 reply = result.get('response')
                     except Exception as e:
-                        logger.error(f"❌ خطأ في معالجة إجابة اللعبة: {e}")
-                        reply = TextMessage(text="❌ حدث خطأ في معالجة الإجابة")
-                else:
-                    reply = build_home(current_theme, username, user['points'], user['is_registered'])
+                        logger.error(f"❌ خطأ في معالجة اللعبة: {e}")
+                        if game_id in active_games:
+                            del active_games[game_id]
+                        reply = TextMessage(text="❌ حدث خطأ، تم إيقاف اللعبة")
             
             if reply:
                 send_with_quick_reply(line_bot_api, event.reply_token, reply)
@@ -488,9 +464,10 @@ if __name__ == "__main__":
     
     logger.info("=" * 70)
     logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION}")
-    logger.info(f"🎨 UI Style: Glassmorphism + Soft Neumorphism")
+    logger.info(f"🎨 UI Style: Professional 3D Glass Design")
     logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
     logger.info(f"🌐 Server on port {port}")
+    logger.info(f"🔒 Security: Rate Limiting Enabled")
     logger.info("=" * 70)
     
     app.run(host="0.0.0.0", port=port, debug=False)
