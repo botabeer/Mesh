@@ -2,9 +2,8 @@
 Bot Mesh - Constants & Configuration v7.0
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
-✅ Professional 3D Glass Design
-✅ Minimal Emojis
-✅ Groups Optimized
+✅ 9 ثيمات زجاجية احترافية
+✅ تصميم موحد لجميع الألعاب
 """
 
 import os
@@ -34,7 +33,7 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# Professional 3D Glass Themes (Minimal Colors)
+# Professional Glass Themes - 9 ثيمات زجاجية احترافية
 # ============================================================================
 THEMES = {
     "أبيض": {
@@ -78,13 +77,97 @@ THEMES = {
         "button": "#2563EB",
         "success": "#10B981",
         "error": "#EF4444"
+    },
+    "أخضر": {
+        "name": "أخضر",
+        "bg": "#F0FDF4",
+        "card": "#FFFFFF",
+        "primary": "#10B981",
+        "secondary": "#34D399",
+        "text": "#064E3B",
+        "text2": "#059669",
+        "shadow1": "#D1FAE5",
+        "shadow2": "#FFFFFF",
+        "button": "#10B981",
+        "success": "#10B981",
+        "error": "#EF4444"
+    },
+    "وردي": {
+        "name": "وردي",
+        "bg": "#FDF2F8",
+        "card": "#FFFFFF",
+        "primary": "#EC4899",
+        "secondary": "#F472B6",
+        "text": "#831843",
+        "text2": "#DB2777",
+        "shadow1": "#FCE7F3",
+        "shadow2": "#FFFFFF",
+        "button": "#EC4899",
+        "success": "#10B981",
+        "error": "#EF4444"
+    },
+    "بنفسجي": {
+        "name": "بنفسجي",
+        "bg": "#F5F3FF",
+        "card": "#FFFFFF",
+        "primary": "#8B5CF6",
+        "secondary": "#A78BFA",
+        "text": "#4C1D95",
+        "text2": "#7C3AED",
+        "shadow1": "#EDE9FE",
+        "shadow2": "#FFFFFF",
+        "button": "#8B5CF6",
+        "success": "#10B981",
+        "error": "#EF4444"
+    },
+    "برتقالي": {
+        "name": "برتقالي",
+        "bg": "#FFF7ED",
+        "card": "#FFFFFF",
+        "primary": "#F97316",
+        "secondary": "#FB923C",
+        "text": "#7C2D12",
+        "text2": "#EA580C",
+        "shadow1": "#FFEDD5",
+        "shadow2": "#FFFFFF",
+        "button": "#F97316",
+        "success": "#10B981",
+        "error": "#EF4444"
+    },
+    "سماوي": {
+        "name": "سماوي",
+        "bg": "#ECFEFF",
+        "card": "#FFFFFF",
+        "primary": "#06B6D4",
+        "secondary": "#22D3EE",
+        "text": "#164E63",
+        "text2": "#0891B2",
+        "shadow1": "#CFFAFE",
+        "shadow2": "#FFFFFF",
+        "button": "#06B6D4",
+        "success": "#10B981",
+        "error": "#EF4444"
+    },
+    "ذهبي": {
+        "name": "ذهبي",
+        "bg": "#FFFBEB",
+        "card": "#FFFFFF",
+        "primary": "#F59E0B",
+        "secondary": "#FBBF24",
+        "text": "#78350F",
+        "text2": "#D97706",
+        "shadow1": "#FEF3C7",
+        "shadow2": "#FFFFFF",
+        "button": "#F59E0B",
+        "success": "#10B981",
+        "error": "#EF4444"
     }
 }
 
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# Games List - Clean Labels (Minimal Emojis)
+# Games List
 # ============================================================================
 GAME_LIST = {
     "أسرع": {
@@ -150,15 +233,13 @@ GAME_LIST = {
 }
 
 # ============================================================================
-# Fixed Buttons (Minimal Emojis)
+# Fixed Buttons
 # ============================================================================
 FIXED_BUTTONS = {
     "home": {"label": "البداية", "text": "بداية"},
     "games": {"label": "الألعاب", "text": "ألعاب"},
     "points": {"label": "نقاطي", "text": "نقاطي"},
     "leaderboard": {"label": "الصدارة", "text": "صدارة"},
-    "groups": {"label": "المجموعة", "text": "مجموعة"},
-    "help": {"label": "مساعدة", "text": "مساعدة"},
     "stop": {"label": "إيقاف", "text": "إيقاف"}
 }
 
