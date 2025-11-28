@@ -533,3 +533,500 @@ def build_game_stats(theme):
 def build_detailed_game_info(theme):
     """Dummy"""
     return build_games_menu(theme)
+    """
+نافذة المساعدة والبداية - تصميم زجاجي احترافي
+تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
+
+الإضافة إلى ui_builder.py
+"""
+
+def build_help_window(theme="أبيض"):
+    """نافذة المساعدة - تصميم زجاجي"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    flex_content = {
+        "type": "carousel",
+        "contents": [
+            # البطاقة الأولى: مرحباً
+            {
+                "type": "bubble",
+                "size": "kilo",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "مرحباً",
+                            "size": "xxl",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "text",
+                            "text": "Bot Mesh",
+                            "size": "lg",
+                            "color": colors["primary"],
+                            "align": "center",
+                            "margin": "sm"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "12 لعبة متنوعة",
+                                    "size": "md",
+                                    "color": colors["text"],
+                                    "align": "center",
+                                    "weight": "bold"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "للعب الجماعي والمنافسة",
+                                    "size": "sm",
+                                    "color": colors["text2"],
+                                    "align": "center",
+                                    "margin": "sm"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "12px",
+                            "paddingAll": "16px",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "للبدء:",
+                                    "size": "sm",
+                                    "color": colors["text"],
+                                    "weight": "bold"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "1. اكتب: انضم\n2. اختر لعبة من القائمة\n3. ابدأ اللعب!",
+                                    "size": "xs",
+                                    "color": colors["text2"],
+                                    "wrap": True,
+                                    "margin": "sm"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "الألعاب",
+                                "text": "ألعاب"
+                            },
+                            "style": "primary",
+                            "height": "sm",
+                            "color": colors["primary"],
+                            "margin": "xl"
+                        }
+                    ],
+                    "backgroundColor": colors["bg"],
+                    "paddingAll": "24px"
+                },
+                "styles": {
+                    "body": {"backgroundColor": colors["bg"]}
+                }
+            },
+            
+            # البطاقة الثانية: الألعاب
+            {
+                "type": "bubble",
+                "size": "kilo",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "الألعاب",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "ألعاب ذكاء:",
+                                    "size": "sm",
+                                    "color": colors["text"],
+                                    "weight": "bold"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "• ذكاء (IQ)\n• رياضيات\n• تخمين",
+                                    "size": "xs",
+                                    "color": colors["text2"],
+                                    "wrap": True,
+                                    "margin": "xs"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "ألعاب سرعة:",
+                                    "size": "sm",
+                                    "color": colors["text"],
+                                    "weight": "bold"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "• كتابة سريعة\n• لون الكلمة\n• كلمة مبعثرة",
+                                    "size": "xs",
+                                    "color": colors["text2"],
+                                    "wrap": True,
+                                    "margin": "xs"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "sm"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "ألعاب كلمات:",
+                                    "size": "sm",
+                                    "color": colors["text"],
+                                    "weight": "bold"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "• سلسلة كلمات\n• عكس\n• حروف وكلمات",
+                                    "size": "xs",
+                                    "color": colors["text2"],
+                                    "wrap": True,
+                                    "margin": "xs"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "sm"
+                        }
+                    ],
+                    "backgroundColor": colors["bg"],
+                    "paddingAll": "24px"
+                },
+                "styles": {
+                    "body": {"backgroundColor": colors["bg"]}
+                }
+            },
+            
+            # البطاقة الثالثة: قواعد اللعب
+            {
+                "type": "bubble",
+                "size": "kilo",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "قواعد اللعب",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "5 جولات لكل لعبة",
+                                    "size": "md",
+                                    "color": colors["text"],
+                                    "weight": "bold",
+                                    "align": "center"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "ما عدا لعبة التوافق",
+                                    "size": "xs",
+                                    "color": colors["text2"],
+                                    "align": "center",
+                                    "margin": "xs"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "12px",
+                            "paddingAll": "16px",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "نقطة واحدة لكل إجابة صحيحة",
+                                    "size": "sm",
+                                    "color": colors["text"],
+                                    "align": "center",
+                                    "wrap": True
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "أول إجابة صحيحة فقط",
+                                    "size": "sm",
+                                    "color": colors["text"],
+                                    "align": "center",
+                                    "wrap": True
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "sm"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "للمسجلين فقط",
+                                    "size": "sm",
+                                    "color": colors["text"],
+                                    "align": "center",
+                                    "wrap": True
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "sm"
+                        }
+                    ],
+                    "backgroundColor": colors["bg"],
+                    "paddingAll": "24px"
+                },
+                "styles": {
+                    "body": {"backgroundColor": colors["bg"]}
+                }
+            },
+            
+            # البطاقة الرابعة: الأوامر
+            {
+                "type": "bubble",
+                "size": "kilo",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "الأوامر",
+                            "size": "xl",
+                            "weight": "bold",
+                            "color": colors["text"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "separator",
+                            "margin": "lg",
+                            "color": colors["shadow1"]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "box",
+                                    "layout": "horizontal",
+                                    "contents": [
+                                        {
+                                            "type": "text",
+                                            "text": "انضم",
+                                            "size": "sm",
+                                            "color": colors["primary"],
+                                            "weight": "bold",
+                                            "flex": 2
+                                        },
+                                        {
+                                            "type": "text",
+                                            "text": "التسجيل في البوت",
+                                            "size": "xs",
+                                            "color": colors["text2"],
+                                            "flex": 3
+                                        }
+                                    ],
+                                    "margin": "sm"
+                                },
+                                {
+                                    "type": "box",
+                                    "layout": "horizontal",
+                                    "contents": [
+                                        {
+                                            "type": "text",
+                                            "text": "نقاطي",
+                                            "size": "sm",
+                                            "color": colors["primary"],
+                                            "weight": "bold",
+                                            "flex": 2
+                                        },
+                                        {
+                                            "type": "text",
+                                            "text": "عرض نقاطك",
+                                            "size": "xs",
+                                            "color": colors["text2"],
+                                            "flex": 3
+                                        }
+                                    ],
+                                    "margin": "sm"
+                                },
+                                {
+                                    "type": "box",
+                                    "layout": "horizontal",
+                                    "contents": [
+                                        {
+                                            "type": "text",
+                                            "text": "صدارة",
+                                            "size": "sm",
+                                            "color": colors["primary"],
+                                            "weight": "bold",
+                                            "flex": 2
+                                        },
+                                        {
+                                            "type": "text",
+                                            "text": "لوحة الصدارة",
+                                            "size": "xs",
+                                            "color": colors["text2"],
+                                            "flex": 3
+                                        }
+                                    ],
+                                    "margin": "sm"
+                                },
+                                {
+                                    "type": "box",
+                                    "layout": "horizontal",
+                                    "contents": [
+                                        {
+                                            "type": "text",
+                                            "text": "إيقاف",
+                                            "size": "sm",
+                                            "color": colors["primary"],
+                                            "weight": "bold",
+                                            "flex": 2
+                                        },
+                                        {
+                                            "type": "text",
+                                            "text": "إيقاف اللعبة",
+                                            "size": "xs",
+                                            "color": colors["text2"],
+                                            "flex": 3
+                                        }
+                                    ],
+                                    "margin": "sm"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "lg"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "في المجموعات:",
+                                    "size": "xs",
+                                    "color": colors["text"],
+                                    "weight": "bold"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "منشن البوت @Bot لعرض الألعاب",
+                                    "size": "xs",
+                                    "color": colors["text2"],
+                                    "wrap": True,
+                                    "margin": "xs"
+                                }
+                            ],
+                            "backgroundColor": colors["card"],
+                            "cornerRadius": "10px",
+                            "paddingAll": "12px",
+                            "margin": "md"
+                        }
+                    ],
+                    "backgroundColor": colors["bg"],
+                    "paddingAll": "24px"
+                },
+                "styles": {
+                    "body": {"backgroundColor": colors["bg"]}
+                }
+            }
+        ]
+    }
+    
+    return FlexMessage(
+        alt_text="المساعدة",
+        contents=FlexContainer.from_dict(flex_content)
+    )
+
+
+# إضافة إلى app.py:
+# في handle_message، أضف:
+"""
+elif text_lower in ["مساعدة", "help", "بداية", "start"]:
+    reply = build_help_window(current_theme)
+"""
