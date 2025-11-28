@@ -180,7 +180,7 @@ def create_glass_card(
                         "color": "#FFFFFF" if highlight else colors["primary"]
                     }
                 ],
-                "backgroundColor": colors["primary"] if highlight else colors["card"],
+                "backgroundColor": colors.get("primary", "#000000") if highlight else colors.get("card", "#FFFFFF"),
                 "cornerRadius": "15px",
                 "width": "50px",
                 "height": "50px",
@@ -212,12 +212,12 @@ def create_glass_card(
                 "paddingStart": "md"
             }
         ],
-        "backgroundColor": colors["glass"],
+        "backgroundColor": colors.get("glass", colors.get("card", "#FFFFFF")),
         "cornerRadius": "20px",
         "paddingAll": "15px",
         "margin": "sm",
         "borderWidth": "2px" if highlight else "1px",
-        "borderColor": colors["primary"] if highlight else colors["border"]
+        "borderColor": colors.get("primary", "#000000") if highlight else colors.get("border", colors.get("shadow1", "#E2E8F0"))
     }
 
 
@@ -278,7 +278,7 @@ def create_section_title(
             },
             {
                 "type": "separator",
-                "color": colors["primary"],
+                "color": colors.get("primary", "#3B82F6"),
                 "margin": "sm"
             }
         ],
@@ -345,7 +345,7 @@ def build_enhanced_home(
                             "type": "text",
                             "text": f"⭐ {points}",
                             "size": "sm",
-                            "color": colors["primary"],
+                            "color": colors.get("primary", "#3B82F6"),
                             "align": "end",
                             "flex": 1,
                             "weight": "bold"
@@ -354,11 +354,11 @@ def build_enhanced_home(
                     "margin": "md"
                 }
             ],
-            "backgroundColor": colors["glass"],
+            "backgroundColor": colors.get("glass", colors.get("card", "#FFFFFF")),
             "cornerRadius": "20px",
             "paddingAll": "20px",
             "borderWidth": "2px",
-            "borderColor": colors["primary"]
+            "borderColor": colors.get("primary", "#3B82F6")
         }
         
         # Body content
@@ -368,7 +368,7 @@ def build_enhanced_home(
             create_glass_card(colors, "🎮", "الألعاب", "اختر من مجموعة ألعاب متنوعة"),
             create_glass_card(colors, "⭐", "نقاطي", "راجع رصيد نقاطك وإحصائياتك"),
             create_glass_card(colors, "🏆", "الصدارة", "تنافس مع اللاعبين الآخرين"),
-            create_glass_card(colors, "🎨", "الثيمات",
+            create_glass_card(colors, "🎨", "الثيمات", "غيّر مظهر التطبيق"),
             create_glass_card(colors, "🎯", "الأهداف", "اربح النقاط وتصدر القائمة"),
         ]
 
@@ -377,22 +377,22 @@ def build_enhanced_home(
         
         # زر الألعاب
         action_buttons.append(
-            create_glass_button("الألعاب", "ألعاب", colors["primary"], "🎮")
+            create_glass_button("الألعاب", "ألعاب", colors.get("primary", "#3B82F6"), "🎮")
         )
         
         # زر نقاطي
         action_buttons.append(
-            create_glass_button("نقاطي", "نقاطي", colors["secondary"], "⭐", style="secondary")
+            create_glass_button("نقاطي", "نقاطي", colors.get("secondary", colors.get("primary", "#3B82F6")), "⭐", style="secondary")
         )
         
         # زر الصدارة
         action_buttons.append(
-            create_glass_button("الصدارة", "صدارة", colors["secondary"], "🏆", style="secondary")
+            create_glass_button("الصدارة", "صدارة", colors.get("secondary", colors.get("primary", "#3B82F6")), "🏆", style="secondary")
         )
         
         # زر الثيمات
         action_buttons.append(
-            create_glass_button("الثيمات", "ثيمات", colors["secondary"], "🎨", style="secondary")
+            create_glass_button("الثيمات", "ثيمات", colors.get("secondary", colors.get("primary", "#3B82F6")), "🎨", style="secondary")
         )
 
         # إضافة الأزرار للواجهة
@@ -413,7 +413,7 @@ def build_enhanced_home(
                     "align": "center"
                 }
             ],
-            "backgroundColor": colors["card"],
+            "backgroundColor": colors.get("card", "#FFFFFF"),
             "cornerRadius": "15px",
             "paddingAll": "12px",
             "margin": "lg"
@@ -423,7 +423,7 @@ def build_enhanced_home(
         footer = [
             {
                 "type": "separator",
-                "color": colors["border"],
+                "color": colors.get("border", colors.get("shadow1", "#E2E8F0")),
                 "margin": "md"
             },
             {
@@ -446,7 +446,7 @@ def build_enhanced_home(
                 "contents": header + [
                     {
                         "type": "separator",
-                        "color": colors["border"],
+                        "color": colors.get("border", colors.get("shadow1", "#E2E8F0")),
                         "margin": "lg"
                     }
                 ] + body,
