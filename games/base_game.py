@@ -1,9 +1,10 @@
-# games/base_game.py - ENHANCED VERSION
 """
-Bot Mesh - Base Game System ENHANCED
-✅ إصلاح جميع المشاكل
+Bot Mesh - Base Game System v9.0 FINAL
+Created by: Abeer Aldosari © 2025
+✅ نظام أساسي محسّن
 ✅ دعم كامل للفرق
 ✅ نظام session متكامل
+✅ مؤقت مدمج
 """
 
 from typing import Dict, Any, Optional
@@ -11,8 +12,9 @@ from datetime import datetime
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 import re
 
+
 class BaseGame:
-    """BaseGame - نظام اللعبة الأساسي المحسّن"""
+    """BaseGame - نظام اللعبة الأساسي"""
     
     game_name = "لعبة"
     game_icon = "🎮"
@@ -114,6 +116,7 @@ class BaseGame:
         
         team = "team1" if team1_count <= team2_count else "team2"
         self.user_teams[user_id] = team
+        self.joined_users.add(user_id)
         return team
 
     def get_user_team(self, user_id: str) -> Optional[str]:
@@ -164,7 +167,7 @@ class BaseGame:
         raise NotImplementedError("يجب تطبيق check_answer في اللعبة")
 
     def end_game(self) -> Dict[str, Any]:
-        """إنهاء اللعبة"""
+        """إنهاء اللعبة وإعلان الفائز"""
         self.game_active = False
         
         if self.team_mode:
@@ -173,17 +176,18 @@ class BaseGame:
             team2_score = self.team_scores.get("team2", 0)
             
             if team1_score > team2_score:
-                winner = "الفريق الأول"
+                winner = "الفريق الأول 🥇"
             elif team2_score > team1_score:
-                winner = "الفريق الثاني"
+                winner = "الفريق الثاني 🥈"
             else:
-                winner = "تعادل"
+                winner = "تعادل ⚖️"
             
             message = (
-                f"🏆 انتهت اللعبة\n\n"
-                f"الفريق الأول: {team1_score}\n"
-                f"الفريق الثاني: {team2_score}\n\n"
-                f"النتيجة: {winner}"
+                f"🏆 انتهت اللعبة!\n\n"
+                f"النتيجة النهائية:\n"
+                f"▫️ الفريق الأول: {team1_score}\n"
+                f"▫️ الفريق الثاني: {team2_score}\n\n"
+                f"الفائز: {winner}"
             )
             
             return {
@@ -210,12 +214,13 @@ class BaseGame:
         winner_text = (
             f"🏆 الفائز: {winner[1]['name']}\n"
             f"▫️ النقاط: {winner[1]['score']}\n\n"
-            f"📊 الترتيب:\n"
         )
         
-        for i, (uid, data) in enumerate(leaderboard[:5], 1):
-            medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
-            winner_text += f"{medal} {data['name']}: {data['score']}\n"
+        if len(leaderboard) > 1:
+            winner_text += "📊 الترتيب:\n"
+            for i, (uid, data) in enumerate(leaderboard[:5], 1):
+                medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
+                winner_text += f"{medal} {data['name']}: {data['score']}\n"
         
         return {
             "game_over": True,
@@ -275,7 +280,6 @@ class BaseGame:
             },
             {
                 "type": "separator",
-                "color": colors["border"],
                 "margin": "lg"
             },
             {
@@ -291,7 +295,6 @@ class BaseGame:
                         "wrap": True
                     }
                 ],
-                "backgroundColor": colors["glass"],
                 "cornerRadius": "15px",
                 "paddingAll": "20px",
                 "margin": "lg"
@@ -316,8 +319,7 @@ class BaseGame:
                 "type": "box",
                 "layout": "vertical",
                 "contents": contents,
-                "paddingAll": "20px",
-                "backgroundColor": colors["bg"]
+                "paddingAll": "20px"
             }
         }
         
