@@ -1,11 +1,9 @@
 """
-Bot Mesh - Constants & Configuration v8.5 ENHANCED
+Bot Mesh - Constants & Configuration v9.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ تصميم زجاجي ثلاثي الأبعاد
-✅ 9 ثيمات احترافية
-✅ Quick Reply للألعاب فقط
-✅ دعم فردي + مجموعة + فريقين
-✅ محسّن ومترابط مع database و ui_builder
+✅ متوافق مع جميع الألعاب
+✅ ثيمات زجاجية
+✅ Quick Reply للألعاب
 """
 
 import os
@@ -18,7 +16,7 @@ load_dotenv()
 # Bot Information
 # ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "8.5"
+BOT_VERSION = "9.0"
 BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
 # ============================================================================
@@ -35,7 +33,7 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# Glass 3D Themes - Official Final Set (9 Themes)
+# Glass 3D Themes (9 Themes)
 # ============================================================================
 THEMES = {
     "أبيض": {
@@ -187,12 +185,12 @@ THEMES = {
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# Games Configuration (Ordered List)
+# Games Configuration (ترتيب نهائي)
 # ============================================================================
 GAME_LIST: List[Tuple[str, str, str]] = [
-    ("fast_typing", "أسرع", "⚡"),
+    ("fast_typing", "كتابة سريعة", "⚡"),
     ("iq", "ذكاء", "🧠"),
-    ("human_animal_plant", "لعبة", "🌿"),
+    ("human_animal_plant", "إنسان حيوان نبات", "🌿"),
     ("song", "أغنية", "🎵"),
     ("guess", "تخمين", "🔮"),
     ("chain_words", "سلسلة كلمات", "🔗"),
@@ -204,7 +202,7 @@ GAME_LIST: List[Tuple[str, str, str]] = [
     ("compatibility", "توافق", "💕")
 ]
 
-# Game names mapping (for easy lookup)
+# Game names mapping
 GAME_NAMES = {internal: display for internal, display, icon in GAME_LIST}
 GAME_ICONS = {internal: icon for internal, display, icon in GAME_LIST}
 
@@ -217,52 +215,11 @@ FIXED_GAME_QR = [
 ]
 
 # ============================================================================
-# Group Actions (للمجموعات)
-# ============================================================================
-FIXED_ACTIONS = {
-    "join": {"label": "انضم", "text": "انضم", "icon": "✅"},
-    "leave": {"label": "انسحب", "text": "انسحب", "icon": "❌"},
-    "teams": {"label": "فريقين", "text": "فريقين", "icon": "👥"}
-}
-
-# ============================================================================
-# Rate Limiting Configuration
-# ============================================================================
-RATE_LIMIT_CONFIG = {
-    "max_requests": 10,
-    "window_seconds": 60,
-    "cleanup_interval": 300
-}
-
-# ============================================================================
-# Game Logic Settings
-# ============================================================================
-GAME_CONFIG = {
-    "questions_per_game": 5,
-    "points_per_correct": 10,
-    "timeout_seconds": 120,
-    "max_active_games_per_user": 1,
-    "hint_cost": 0,  # النقاط المخصومة عند طلب لمحة
-    "reveal_cost": 0  # النقاط المخصومة عند كشف الإجابة
-}
-
-# ============================================================================
-# Session Types
-# ============================================================================
-SESSION_TYPES = {
-    "SOLO": "solo",
-    "GROUP": "group",
-    "TEAM": "team"
-}
-
-# ============================================================================
 # Helper Functions
 # ============================================================================
 
 def normalize_text(text: str) -> str:
-    """
-    Normalize Arabic text for comparison
-    """
+    """Normalize Arabic text for comparison"""
     if not text:
         return ""
     
@@ -286,25 +243,19 @@ def normalize_text(text: str) -> str:
 
 
 def get_theme_colors(theme_name: Optional[str] = None) -> Dict[str, str]:
-    """
-    Get theme colors dictionary
-    """
+    """Get theme colors dictionary"""
     if theme_name is None:
         theme_name = DEFAULT_THEME
     return THEMES.get(theme_name, THEMES[DEFAULT_THEME])
 
 
 def validate_theme(theme_name: str) -> str:
-    """
-    Validate theme name and return valid theme
-    """
+    """Validate theme name and return valid theme"""
     return theme_name if theme_name in THEMES else DEFAULT_THEME
 
 
 def get_username(profile) -> str:
-    """
-    Extract username from LINE profile
-    """
+    """Extract username from LINE profile"""
     try:
         return profile.display_name if hasattr(profile, 'display_name') and profile.display_name else "مستخدم"
     except:
@@ -312,23 +263,17 @@ def get_username(profile) -> str:
 
 
 def get_game_display_name(internal_name: str) -> str:
-    """
-    Get display name for game
-    """
+    """Get display name for game"""
     return GAME_NAMES.get(internal_name, internal_name)
 
 
 def get_game_icon(internal_name: str) -> str:
-    """
-    Get icon for game
-    """
+    """Get icon for game"""
     return GAME_ICONS.get(internal_name, "🎮")
 
 
 def is_valid_game(game_name: str) -> bool:
-    """
-    Check if game name is valid
-    """
+    """Check if game name is valid"""
     return game_name in GAME_NAMES.values()
 
 
@@ -340,8 +285,7 @@ __all__ = [
     'LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN',
     'THEMES', 'DEFAULT_THEME',
     'GAME_LIST', 'GAME_NAMES', 'GAME_ICONS',
-    'FIXED_GAME_QR', 'FIXED_ACTIONS',
-    'RATE_LIMIT_CONFIG', 'GAME_CONFIG', 'SESSION_TYPES',
+    'FIXED_GAME_QR',
     'validate_env', 'normalize_text', 'get_theme_colors',
     'validate_theme', 'get_username', 'get_game_display_name',
     'get_game_icon', 'is_valid_game'
