@@ -1,540 +1,240 @@
 """
-Bot Mesh - UI Builder v11.0 FLAT DESIGN (LINE Style)
+ui_glass_flat.py
+Bot Mesh - Flat + Glass Flex UI (LINE-compatible)
 Created by: Abeer Aldosari © 2025
-✅ تصميم مسطح يطابق الصور تماماً
-✅ أزرار دائرية ناعمة
-✅ شبكات منظمة
-✅ ألوان LINE الأصلية
+وصف: مجموعة دوال لبناء نوافذ فلكس زجاجية/مسطحة متوافقة مع LINE Messaging API v3
+ملاحظة: لا تضع "backgroundColor" داخل body مباشرةً (تسبب خطأ). استخدم bubble["styles"]["body"]["backgroundColor"] بدلاً من ذلك.
 """
 
-from typing import List, Optional, Dict, Any, Tuple
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
-from constants import BOT_NAME, BOT_VERSION, BOT_RIGHTS, GAME_LIST, DEFAULT_THEME
+from typing import List, Tuple, Dict, Any, Optional
+from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction, TextMessage
 
-# ============================================================================
-# FLAT THEMES - ألوان مسطحة ناعمة كالصور
-# ============================================================================
+# استورد ثيمات / ثوابت من ملف constants لديك (أو ضف هنا مباشرة إذا تبي)
+try:
+    from constants import BOT_NAME, BOT_VERSION, BOT_RIGHTS, GAME_LIST, DEFAULT_THEME
+except Exception:
+    BOT_NAME = "Bot Mesh"
+    BOT_VERSION = "v1"
+    BOT_RIGHTS = "© 2025 Abeer Aldosari - All Rights Reserved"
+    # GAME_LIST: قائمة ألعاب بصيغة [(id, display_name, icon), ...]
+    GAME_LIST = [
+        ("id_guess", "تخمين", "🔮"),
+        ("id_song", "أغنية", "🎵"),
+        ("id_scramble", "كلمة مبعثرة", "🔤"),
+        ("id_opposite", "أضداد", "⚖️"),
+        ("id_fast", "أسرع", "⚡"),
+        ("id_logic", "ذكاء", "🧠"),
+    ]
+    DEFAULT_THEME = "رمادي"
 
-FLAT_THEMES = {
+# ------------------------------------------------------------------
+# ثيمات مسطحة مع لمسة زجاجية
+# ------------------------------------------------------------------
+FLAT_THEMES: Dict[str, Dict[str, str]] = {
     "رمادي": {
-        "bg": "#F5F5F5",           # خلفية رمادية فاتحة جداً
-        "card": "#FFFFFF",          # بطاقات بيضاء
-        "primary": "#6B7C93",       # رمادي-أزرق للعناوين
-        "secondary": "#8B9BAE",     # رمادي فاتح
-        "text": "#2C3E50",          # نص داكن
-        "text2": "#7F8C8D",         # نص ثانوي
-        "text3": "#95A5A6",         # نص باهت
-        "button": "#F0F2F5",        # خلفية أزرار
-        "button_text": "#6B7C93",   # نص الأزرار
-        "border": "#E8EAED",        # حدود خفيفة
-        "success": "#27AE60",       # أخضر
-        "error": "#E74C3C",         # أحمر
-        "warning": "#F39C12",       # برتقالي
-        "info": "#3498DB"           # أزرق
-    },
-    "أبيض": {
-        "bg": "#FFFFFF",
-        "card": "#F8F9FA",
+        "bg": "#F0F4F8",
+        "card": "#FFFFFF",
         "primary": "#5B6B7A",
-        "secondary": "#8B9BAE",
-        "text": "#212529",
-        "text2": "#6C757D",
-        "text3": "#ADB5BD",
-        "button": "#F0F2F5",
-        "button_text": "#5B6B7A",
-        "border": "#DEE2E6",
-        "success": "#28A745",
-        "error": "#DC3545",
-        "warning": "#FFC107",
-        "info": "#17A2B8"
-    },
-    "أسود": {
-        "bg": "#1C1E21",
-        "card": "#242527",
-        "primary": "#7B8FA3",
-        "secondary": "#9BABBE",
-        "text": "#E4E6EB",
-        "text2": "#B0B3B8",
-        "text3": "#8A8D91",
-        "button": "#3A3B3C",
-        "button_text": "#B0B3B8",
-        "border": "#3E4042",
-        "success": "#2ECC71",
+        "accent": "#6B7C93",
+        "text": "#233040",
+        "muted": "#7F8C93",
+        "faint": "#E9EEF3",
+        "success": "#27AE60",
         "error": "#E74C3C",
-        "warning": "#F39C12",
-        "info": "#3498DB"
-    }
+        "border": "#E0E6EB"
+    },
+    "أزرق": {
+        "bg": "#EBF5FB",
+        "card": "#FFFFFF",
+        "primary": "#2E86DE",
+        "accent": "#54A0FF",
+        "text": "#12385A",
+        "muted": "#5DADE2",
+        "faint": "#DFF3FF",
+        "success": "#27AE60",
+        "error": "#E74C3C",
+        "border": "#AED6F1"
+    },
+    # يمكنك إضافة ثيمات أخرى
 }
 
-def get_theme(theme_name: str = "رمادي") -> Dict[str, str]:
-    """الحصول على ألوان الثيم"""
-    return FLAT_THEMES.get(theme_name, FLAT_THEMES["رمادي"])
+def get_theme(name: str = DEFAULT_THEME) -> Dict[str, str]:
+    return FLAT_THEMES.get(name, FLAT_THEMES["رمادي"])
 
-# ============================================================================
-# QUICK REPLY - كما في الصور
-# ============================================================================
-
-def create_games_quick_reply() -> QuickReply:
-    """Quick Reply للألعاب (12 لعبة)"""
+# ------------------------------------------------------------------
+# Quick Reply (ثابت للأسفل)
+# ------------------------------------------------------------------
+def create_games_quick_reply(limit: int = 12) -> QuickReply:
     try:
         items = []
-        for _, display_name, icon in GAME_LIST[:12]:  # 12 لعبة فقط
+        for _, display_name, icon in GAME_LIST[:limit]:
             items.append(QuickReplyItem(
-                action=MessageAction(
-                    label=f"{icon} {display_name}",
-                    text=display_name
-                )
+                action=MessageAction(label=f"{icon} {display_name}", text=display_name)
             ))
         return QuickReply(items=items)
-    except:
+    except Exception:
         return QuickReply(items=[])
 
-def attach_quick_reply(message):
-    """إضافة Quick Reply دائماً"""
+def attach_quick_reply_to_flex(flex: FlexMessage) -> FlexMessage:
     try:
-        message.quick_reply = create_games_quick_reply()
-    except:
+        # بعض إصدارات SDK تسمح بإضافة quick_reply على FlexMessage مباشرة
+        setattr(flex, "quick_reply", create_games_quick_reply())
+    except Exception:
         pass
-    return message
+    return flex
 
-# ============================================================================
-# HOME SCREEN - الشاشة الرئيسية (الصورة 1 و 2)
-# ============================================================================
-
-def build_enhanced_home(username: str, points: int, is_registered: bool, theme: str = "رمادي") -> FlexMessage:
-    """
-    🏠 الشاشة الرئيسية - نفس تصميم الصور تماماً
-    - أيقونة اللعبة أعلى
-    - اختيار الثيم (grid 3x3)
-    - حالة التسجيل
-    - الأزرار الرئيسية
-    """
-    colors = get_theme(theme)
-    
-    contents = []
-    
-    # ==================== HEADER - الأيقونة والعنوان ====================
-    contents.append({
+# ------------------------------------------------------------------
+# Utilities: أزرار سفلية ثابتة (التي تطلبتها)
+# ------------------------------------------------------------------
+def _bottom_fixed_buttons(colors: Dict[str, str]) -> Dict[str, Any]:
+    # تصميم شبيه بالصورة: صفين أزرار ثابتة في الأسفل
+    return {
         "type": "box",
         "layout": "vertical",
         "contents": [
             {
-                "type": "image",
-                "url": "https://scdn.line-apps.com/n/channel_devcenter/img/fx/01_1_cafe.png",  # placeholder
-                "size": "md",
-                "aspectRatio": "1:1",
-                "aspectMode": "cover"
-            },
-            {
-                "type": "text",
-                "text": "Bot Mesh",
-                "size": "xl",
-                "weight": "bold",
-                "color": colors["text"],
-                "align": "center",
-                "margin": "md"
-            }
-        ],
-        "spacing": "none"
-    })
-    
-    # ==================== REGISTRATION STATUS ====================
-    status_text = "✅ مسجل" if is_registered else "⚪ غير مسجل"
-    status_color = colors["success"] if is_registered else colors["text3"]
-    
-    contents.append({
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "text",
-                "text": "نقطة | ",
-                "size": "sm",
-                "color": colors["text2"],
-                "flex": 0
-            },
-            {
-                "type": "text",
-                "text": status_text,
-                "size": "sm",
-                "color": status_color,
-                "flex": 0
-            },
-            {
-                "type": "text",
-                "text": f" {points}",
-                "size": "sm",
-                "color": colors["text"],
-                "align": "end"
-            }
-        ],
-        "margin": "lg"
-    })
-    
-    # ==================== THEME SELECTOR - شبكة 3x3 ====================
-    contents.append({
-        "type": "text",
-        "text": "🎨 :اختر الثيم",
-        "size": "sm",
-        "color": colors["text2"],
-        "margin": "xl",
-        "align": "start"
-    })
-    
-    # الثيمات في شبكة 3x3
-    theme_names = ["رمادي", "أسود", "أبيض", "وردي", "بنفسجي", "أزرق", "أخضر", "برتقالي", "بني"]
-    theme_colors_map = {
-        "رمادي": "#95A5A6",
-        "أسود": "#34495E",
-        "أبيض": "#ECF0F1",
-        "وردي": "#FFC0CB",
-        "بنفسجي": "#9B59B6",
-        "أزرق": "#3498DB",
-        "أخضر": "#2ECC71",
-        "برتقالي": "#E67E22",
-        "بني": "#8B4513"
-    }
-    
-    for row_start in range(0, 9, 3):
-        row_contents = []
-        for i in range(row_start, min(row_start + 3, 9)):
-            if i < len(theme_names):
-                theme_name = theme_names[i]
-                theme_color = theme_colors_map.get(theme_name, "#95A5A6")
-                
-                row_contents.append({
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "filler"
-                                }
-                            ],
-                            "backgroundColor": theme_color,
-                            "cornerRadius": "15px",
-                            "height": "60px"
-                        },
-                        {
-                            "type": "text",
-                            "text": theme_name,
-                            "size": "xs",
-                            "color": colors["text2"],
-                            "align": "center",
-                            "margin": "sm"
-                        }
-                    ],
-                    "action": {
-                        "type": "message",
-                        "text": theme_name
-                    },
-                    "flex": 1
-                })
-        
-        if row_contents:
-            contents.append({
                 "type": "box",
                 "layout": "horizontal",
-                "contents": row_contents,
                 "spacing": "sm",
-                "margin": "md"
-            })
-    
-    # ==================== MAIN BUTTONS - الأزرار الرئيسية ====================
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "الألعاب  🎮", "text": "ألعاب"},
+                        "style": "primary",
+                        "color": colors["accent"],
+                        "height": "sm",
+                        "flex": 1
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "نقاطي  ⭐", "text": "نقاطي"},
+                        "style": "secondary",
+                        "height": "sm",
+                        "flex": 1
+                    }
+                ],
+                "margin": "sm"
+            },
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "الصدارة  🏆", "text": "صدارة"},
+                        "style": "link",
+                        "height": "sm",
+                        "flex": 1
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "مساعدة ❓", "text": "مساعدة"},
+                        "style": "link",
+                        "height": "sm",
+                        "flex": 1
+                    }
+                ],
+                "margin": "sm"
+            }
+        ],
+        "spacing": "sm",
+        "margin": "xl"
+    }
+
+# ------------------------------------------------------------------
+# شاشة البداية (Home)
+# ------------------------------------------------------------------
+def build_home(username: str, points: int, is_registered: bool, theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = get_theme(theme)
+    status_text = "✅ مسجل" if is_registered else "⚪ غير مسجل"
+    status_color = colors["success"] if is_registered else colors["muted"]
+
+    contents: List[Dict[str, Any]] = []
+
+    # Header
+    contents.append({
+        "type": "text",
+        "text": f"🎮 {BOT_NAME}",
+        "size": "xxl",
+        "weight": "bold",
+        "color": colors["primary"],
+        "align": "center"
+    })
+
+    # Card (points/status) — NOTE: لا تضيف backgroundColor داخل body مباشرة
     contents.append({
         "type": "box",
         "layout": "vertical",
         "contents": [
-            # زر انضم
+            {"type": "text", "text": f"نقطة | {status_text}", "size": "sm", "color": status_color, "align": "center"},
+            {"type": "text", "text": str(points), "size": "lg", "weight": "bold", "color": colors["text"], "align": "center", "margin": "sm"}
+        ],
+        "cornerRadius": "12px",
+        "paddingAll": "18px",
+        "margin": "lg",
+        "backgroundColor": colors["card"]
+    })
+
+    # Theme selector grid (مبسط)
+    contents.append({
+        "type": "text",
+        "text": "🎨 اختر الثيم",
+        "size": "sm",
+        "color": colors["muted"],
+        "margin": "md"
+    })
+
+    theme_names = list(get_theme().keys()) if False else ["رمادي", "أزرق", "أبيض", "وردي"]
+    # عرض مبسط لثيمات كأزرار
+    row = {"type": "box", "layout": "horizontal", "contents": [], "spacing": "sm", "margin": "md"}
+    for name in theme_names[:3]:
+        row["contents"].append({
+            "type": "button",
+            "action": {"type": "message", "label": name, "text": f"ثيم {name}"},
+            "style": "secondary",
+            "height": "sm",
+            "flex": 1
+        })
+    contents.append(row)
+
+    # Main action buttons (بزرار زجاجي)
+    contents.append({
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
             {
                 "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "انضم  ✅",
-                    "text": "انضم"
-                },
+                "action": {"type": "message", "label": "انضم ✅", "text": "انضم"},
                 "style": "primary",
-                "color": colors["success"],
-                "height": "sm"
+                "height": "sm",
+                "color": colors["accent"]
             },
-            # زر انسحب
             {
                 "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "انسحب  ❌",
-                    "text": "انسحب"
-                },
+                "action": {"type": "message", "label": "انسحب ❌", "text": "انسحب"},
                 "style": "secondary",
                 "height": "sm",
                 "margin": "sm"
             }
         ],
-        "margin": "xl"
-    })
-    
-    # ==================== BOTTOM BUTTONS - أزرار سفلية ====================
-    contents.append({
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "الألعاب  🎮",
-                    "text": "ألعاب"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            },
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "نقاطي  ⭐",
-                    "text": "نقاطي"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            }
-        ],
-        "spacing": "sm",
-        "margin": "md"
-    })
-    
-    contents.append({
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "الصدارة  🏆",
-                    "text": "صدارة"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            },
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "فريقين",
-                    "text": "فريقين"
-                },
-                "style": "link",
-                "color": colors["secondary"],
-                "height": "sm",
-                "flex": 1
-            }
-        ],
-        "spacing": "sm",
-        "margin": "sm"
-    })
-    
-    # ==================== COPYRIGHT ====================
-    contents.append({
-        "type": "text",
-        "text": BOT_RIGHTS,
-        "size": "xxs",
-        "color": colors["text3"],
-        "align": "center",
-        "wrap": True,
-        "margin": "xl"
-    })
-    
-    bubble = {
-        "type": "bubble",
-        "size": "kilo",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": contents,
-            "paddingAll": "20px",
-            "backgroundColor": colors["bg"]
-        }
-    }
-    
-    return attach_quick_reply(
-        FlexMessage(
-            alt_text="🏠 Bot Mesh",
-            contents=FlexContainer.from_dict(bubble)
-        )
-    )
-
-# ============================================================================
-# GAMES MENU - قائمة الألعاب (الصورة 3)
-# ============================================================================
-
-def build_games_menu(theme: str = "رمادي") -> FlexMessage:
-    """
-    🎮 قائمة الألعاب - شبكة 3 أعمدة
-    كما في الصورة 3 بالضبط
-    """
-    colors = get_theme(theme)
-    
-    contents = []
-    
-    # ==================== HEADER ====================
-    contents.append({
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-            {
-                "type": "image",
-                "url": "https://scdn.line-apps.com/n/channel_devcenter/img/fx/01_1_cafe.png",
-                "size": "md",
-                "aspectRatio": "1:1",
-                "aspectMode": "cover"
-            },
-            {
-                "type": "text",
-                "text": "🎮 الألعاب المتاحة",
-                "size": "lg",
-                "weight": "bold",
-                "color": colors["text"],
-                "align": "center",
-                "margin": "md"
-            }
-        ]
-    })
-    
-    contents.append({
-        "type": "text",
-        "text": f"عدد الألعاب: {len(GAME_LIST)}",
-        "size": "sm",
-        "color": colors["text2"],
-        "align": "center",
-        "margin": "sm"
-    })
-    
-    contents.append({
-        "type": "separator",
-        "margin": "lg",
-        "color": colors["border"]
-    })
-    
-    # ==================== GAMES GRID - 3 أعمدة ====================
-    # تقسيم الألعاب إلى صفوف (كل صف 3 ألعاب)
-    for row_start in range(0, len(GAME_LIST), 3):
-        row_contents = []
-        
-        for i in range(row_start, min(row_start + 3, len(GAME_LIST))):
-            _, display_name, icon = GAME_LIST[i]
-            
-            row_contents.append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    # الأيقونة في دائرة
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": icon,
-                                "size": "xxl",
-                                "align": "center"
-                            }
-                        ],
-                        "backgroundColor": colors["button"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "15px",
-                        "height": "70px",
-                        "justifyContent": "center"
-                    },
-                    # اسم اللعبة
-                    {
-                        "type": "text",
-                        "text": display_name,
-                        "size": "xs",
-                        "color": colors["text"],
-                        "align": "center",
-                        "wrap": True,
-                        "margin": "sm",
-                        "weight": "bold"
-                    }
-                ],
-                "action": {
-                    "type": "message",
-                    "text": display_name
-                },
-                "flex": 1
-            })
-        
-        # إضافة الصف
-        if row_contents:
-            contents.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": row_contents,
-                "spacing": "sm",
-                "margin": "md"
-            })
-    
-    # ==================== BOTTOM BUTTONS ====================
-    contents.append({
-        "type": "separator",
-        "margin": "xl",
-        "color": colors["border"]
-    })
-    
-    contents.append({
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "⛔ إيقاف",
-                    "text": "إيقاف"
-                },
-                "style": "link",
-                "color": colors["error"],
-                "height": "sm",
-                "flex": 1
-            },
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "🏠 البداية",
-                    "text": "بداية"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            }
-        ],
-        "spacing": "sm",
         "margin": "lg"
     })
-    
-    # ==================== COPYRIGHT ====================
+
+    # bottom fixed buttons (مطلوب)
+    contents.append(_bottom_fixed_buttons(colors))
+
+    # Footer rights
     contents.append({
         "type": "text",
         "text": BOT_RIGHTS,
         "size": "xxs",
-        "color": colors["text3"],
+        "color": colors["muted"],
         "align": "center",
-        "wrap": True,
-        "margin": "md"
+        "margin": "md",
+        "wrap": True
     })
-    
+
     bubble = {
         "type": "bubble",
         "size": "kilo",
@@ -542,376 +242,266 @@ def build_games_menu(theme: str = "رمادي") -> FlexMessage:
             "type": "box",
             "layout": "vertical",
             "contents": contents,
-            "paddingAll": "20px",
-            "backgroundColor": colors["bg"]
-        }
+            "paddingAll": "18px"
+        },
+        # ضع لون الخلفية عبر styles (متوافق مع API)
+        "styles": {"body": {"backgroundColor": colors["bg"]}}
     }
-    
-    return attach_quick_reply(
-        FlexMessage(
-            alt_text="🎮 الألعاب",
-            contents=FlexContainer.from_dict(bubble)
-        )
-    )
 
-# ============================================================================
-# MY POINTS - نقاطي (الصورة 4 أعلى)
-# ============================================================================
+    flex = FlexMessage(alt_text="الصفحة الرئيسية", contents=FlexContainer.from_dict(bubble))
+    return attach_quick_reply_to_flex(flex)
 
-def build_my_points(username: str, total_points: int, stats: Dict, theme: str = "رمادي") -> FlexMessage:
-    """
-    ⭐ لوحة النقاط - كما في الصورة 4 أعلى
-    """
+# ------------------------------------------------------------------
+# قائمة الألعاب (شبكة)
+# ------------------------------------------------------------------
+def build_games_menu(theme: str = DEFAULT_THEME) -> FlexMessage:
     colors = get_theme(theme)
-    
-    contents = []
-    
-    # ==================== HEADER ====================
+    contents: List[Dict[str, Any]] = []
+
     contents.append({
         "type": "text",
-        "text": "🏆 لوحة الصدارة",
-        "size": "lg",
+        "text": "🎮 الألعاب المتاحة",
+        "size": "xl",
         "weight": "bold",
-        "color": colors["text"],
+        "color": colors["primary"],
         "align": "center"
     })
-    
-    contents.append({
-        "type": "separator",
-        "margin": "lg",
-        "color": colors["border"]
-    })
-    
-    # ==================== USER INFO BOX ====================
-    contents.append({
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            # الأيقونة
-            {
+
+    # separator
+    contents.append({"type": "separator", "margin": "lg"})
+
+    # grid: 3 أعمدة
+    per_row = 3
+    for i in range(0, len(GAME_LIST), per_row):
+        row = {"type": "box", "layout": "horizontal", "contents": [], "spacing": "sm", "margin": "md"}
+        for j in range(i, min(i + per_row, len(GAME_LIST))):
+            _, name, icon = GAME_LIST[j]
+            row["contents"].append({
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {
-                        "type": "text",
-                        "text": "👤",
-                        "size": "xxl"
-                    }
-                ],
-                "flex": 0,
-                "paddingAll": "10px",
-                "backgroundColor": colors["button"],
-                "cornerRadius": "15px"
-            },
-            # المعلومات
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "النقاط الكلية",
-                        "size": "xs",
-                        "color": colors["text3"]
-                    },
-                    {
-                        "type": "text",
-                        "text": str(total_points),
-                        "size": "xxl",
-                        "weight": "bold",
-                        "color": colors["text"]
-                    }
-                ],
-                "margin": "md"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "15px",
-        "paddingAll": "15px",
-        "margin": "lg"
-    })
-    
-    # ==================== LEVEL ====================
-    contents.append({
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-            {
-                "type": "text",
-                "text": "المستوى الحالي",
-                "size": "xs",
-                "color": colors["text3"],
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": "🔥 متقدم",
-                "size": "lg",
-                "weight": "bold",
-                "color": colors["warning"],
-                "align": "center",
-                "margin": "sm"
-            }
-        ],
-        "backgroundColor": colors["card"],
-        "cornerRadius": "15px",
-        "paddingAll": "15px",
-        "margin": "md"
-    })
-    
-    # ==================== WARNING ====================
-    contents.append({
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "text",
-                "text": "⚠️",
-                "size": "sm",
-                "flex": 0
-            },
-            {
-                "type": "text",
-                "text": "سيتم حذف بياناتك بعد 7 أيام من عدم النشاط",
-                "size": "xs",
-                "color": colors["warning"],
-                "wrap": True,
-                "margin": "sm"
-            }
-        ],
-        "backgroundColor": "#FFF3CD",
-        "cornerRadius": "12px",
-        "paddingAll": "12px",
-        "margin": "lg"
-    })
-    
-    # ==================== BOTTOM BUTTONS ====================
-    contents.append({
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "🏠 البداية",
-                    "text": "بداية"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            },
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "الألعاب  🎮",
-                    "text": "ألعاب"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            }
-        ],
-        "spacing": "sm",
-        "margin": "xl"
-    })
-    
-    # ==================== COPYRIGHT ====================
-    contents.append({
-        "type": "text",
-        "text": BOT_RIGHTS,
-        "size": "xxs",
-        "color": colors["text3"],
-        "align": "center",
-        "wrap": True,
-        "margin": "md"
-    })
-    
-    bubble = {
-        "type": "bubble",
-        "size": "kilo",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": contents,
-            "paddingAll": "20px",
-            "backgroundColor": colors["bg"]
-        }
-    }
-    
-    return attach_quick_reply(
-        FlexMessage(
-            alt_text="⭐ نقاطي",
-            contents=FlexContainer.from_dict(bubble)
-        )
-    )
-
-# ============================================================================
-# LEADERBOARD - لوحة الصدارة (الصورة 4 أسفل)
-# ============================================================================
-
-def build_leaderboard(top_users: List[Tuple[str, int]], theme: str = "رمادي") -> FlexMessage:
-    """
-    🏆 لوحة الصدارة - تصميم بسيط وواضح
-    """
-    colors = get_theme(theme)
-    
-    contents = []
-    
-    # ==================== HEADER ====================
-    contents.append({
-        "type": "text",
-        "text": "⭐ نقاطي",
-        "size": "lg",
-        "weight": "bold",
-        "color": colors["text"],
-        "align": "center"
-    })
-    
-    contents.append({
-        "type": "separator",
-        "margin": "lg",
-        "color": colors["border"]
-    })
-    
-    # ==================== USER ICON ====================
-    contents.append({
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-            {
-                "type": "text",
-                "text": "👤",
-                "size": "xxl",
-                "align": "center"
-            }
-        ],
-        "margin": "lg"
-    })
-    
-    # ==================== TOP USERS ====================
-    medals = ["🥇", "🥈", "🥉"]
-    
-    if not top_users:
-        contents.append({
-            "type": "text",
-            "text": "لا يوجد متصدرين بعد",
-            "size": "sm",
-            "color": colors["text3"],
-            "align": "center",
-            "margin": "lg"
-        })
-    else:
-        for i, (name, pts) in enumerate(top_users[:3]):
-            medal = medals[i] if i < 3 else f"{i+1}."
-            
-            contents.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": medal,
-                        "size": "lg",
-                        "flex": 0
-                    },
-                    {
-                        "type": "text",
-                        "text": name,
-                        "size": "sm",
-                        "color": colors["text"],
-                        "margin": "md",
-                        "flex": 3
-                    },
-                    {
-                        "type": "text",
-                        "text": str(pts),
-                        "size": "sm",
-                        "color": colors["primary"],
-                        "weight": "bold",
-                        "align": "end",
-                        "flex": 1
-                    }
+                    {"type": "text", "text": icon, "size": "xxl", "align": "center"},
+                    {"type": "text", "text": name, "size": "sm", "align": "center", "margin": "sm"}
                 ],
                 "backgroundColor": colors["card"],
                 "cornerRadius": "12px",
                 "paddingAll": "12px",
-                "margin": "sm"
+                "action": {"type": "message", "text": name},
+                "flex": 1
             })
-    
-    # ==================== BUTTONS ====================
+        contents.append(row)
+
+    # help box
+    contents.append({
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {"type": "text", "text": "💡 أوامر اللعبة:", "weight": "bold"},
+            {"type": "text", "text": "اكتب 'لمح' للتلميح • اكتب 'جاوب' لكشف الإجابة • اكتب 'إيقاف' لإنهاء", "size": "xs", "color": colors["muted"], "wrap": True, "margin": "sm"}
+        ],
+        "backgroundColor": colors["faint"],
+        "cornerRadius": "12px",
+        "paddingAll": "12px",
+        "margin": "lg"
+    })
+
+    # bottom buttons
     contents.append({
         "type": "box",
         "layout": "horizontal",
         "contents": [
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "🏠 البداية",
-                    "text": "بداية"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            },
-            {
-                "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": "الألعاب  🎮",
-                    "text": "ألعاب"
-                },
-                "style": "link",
-                "color": colors["primary"],
-                "height": "sm",
-                "flex": 1
-            }
+            {"type": "button", "action": {"type": "message", "label": "إيقاف ⛔", "text": "إيقاف"}, "style": "secondary", "height": "sm", "flex": 1},
+            {"type": "button", "action": {"type": "message", "label": "البداية 🏠", "text": "بداية"}, "style": "primary", "height": "sm", "flex": 1, "color": colors["accent"]}
         ],
         "spacing": "sm",
-        "margin": "xl"
+        "margin": "lg"
     })
-    
-    contents.append({
-        "type": "text",
-        "text": BOT_RIGHTS,
-        "size": "xxs",
-        "color": colors["text3"],
-        "align": "center",
-        "wrap": True,
-        "margin": "md"
-    })
-    
+
     bubble = {
         "type": "bubble",
-        "size": "kilo",
-        "body": {
+        "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "18px"},
+        "styles": {"body": {"backgroundColor": colors["bg"]}}
+    }
+    flex = FlexMessage(alt_text="قائمة الألعاب", contents=FlexContainer.from_dict(bubble))
+    return attach_quick_reply_to_flex(flex)
+
+# ------------------------------------------------------------------
+# شاشة أثناء اللعب (قالب زجاجي) — تستخدم لبناء أي لعبة
+# params:
+#   title, subtitle, main_content (list), hint_buttons (bool)
+# ------------------------------------------------------------------
+def build_in_game_screen(
+    title: str,
+    subtitle: Optional[str],
+    main_content: List[Dict[str, Any]],
+    hint_buttons: bool,
+    theme: str = DEFAULT_THEME
+) -> FlexMessage:
+    colors = get_theme(theme)
+    contents: List[Dict[str, Any]] = []
+
+    # Header
+    contents.append({
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {"type": "text", "text": title, "size": "xl", "weight": "bold", "color": colors["primary"], "align": "start"},
+            {"type": "text", "text": subtitle or "", "size": "xs", "color": colors["muted"], "align": "start", "margin": "sm"}
+        ]
+    })
+
+    contents.append({"type": "separator", "margin": "md"})
+
+    # main content (سؤال / كلمات / قائمة)
+    contents.extend(main_content)
+
+    # hint buttons (لمح / جاوب)
+    if hint_buttons:
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {"type": "button", "action": {"type": "message", "label": "لمح 💡", "text": "لمح"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "جاوب 🔍", "text": "جاوب"}, "style": "secondary", "height": "sm", "flex": 1}
+            ],
+            "margin": "md"
+        })
+
+    # stop button big
+    contents.append({
+        "type": "button",
+        "action": {"type": "message", "label": "إيقاف ⛔", "text": "إيقاف"},
+        "style": "primary",
+        "color": colors["error"],
+        "height": "sm",
+        "margin": "lg"
+    })
+
+    # fixed bottom nav
+    contents.append(_bottom_fixed_buttons(colors))
+
+    bubble = {
+        "type": "bubble",
+        "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "18px"},
+        "styles": {"body": {"backgroundColor": colors["bg"]}}
+    }
+    return FlexMessage(alt_text=title, contents=FlexContainer.from_dict(bubble))
+
+# ------------------------------------------------------------------
+# شاشة السؤال لعناصر (مثال: لعبة أغنية تعرض كلمات)
+# ------------------------------------------------------------------
+def build_song_question(lyrics: str, round_info: str, theme: str = DEFAULT_THEME) -> FlexMessage:
+    # main_content مبني حسب التصميم الموجود بالصور
+    colors = get_theme(theme)
+    main = [
+        {
             "type": "box",
             "layout": "vertical",
-            "contents": contents,
-            "paddingAll": "20px",
-            "backgroundColor": colors["bg"]
-        }
+            "contents": [
+                {"type": "text", "text": lyrics, "size": "md", "weight": "bold", "align": "center"},
+            ],
+            "backgroundColor": colors["card"],
+            "cornerRadius": "12px",
+            "paddingAll": "14px",
+            "margin": "md"
+        },
+        {"type": "text", "text": round_info, "size": "xs", "color": colors["muted"], "align": "center", "margin": "md"}
+    ]
+    return build_in_game_screen("أغنية 🎵", "من المغني؟", main, hint_buttons=True, theme=theme)
+
+# ------------------------------------------------------------------
+# شاشة فوز / نهاية اللعبة
+# ------------------------------------------------------------------
+def build_result_screen(username: str, points_gained: int, total_points: int, theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = get_theme(theme)
+    contents: List[Dict[str, Any]] = []
+
+    contents.append({
+        "type": "text",
+        "text": "🎉 تهانينا!",
+        "size": "xxl",
+        "weight": "bold",
+        "color": colors["primary"],
+        "align": "center"
+    })
+    contents.append({"type": "text", "text": "أنهيت اللعبة", "size": "sm", "color": colors["muted"], "align": "center", "margin": "md"})
+
+    contents.append({"type": "separator", "margin": "lg"})
+
+    contents.append({
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {"type": "text", "text": username, "size": "md", "align": "center", "margin": "md"},
+            {"type": "text", "text": f"+{points_gained}", "size": "xxl", "weight": "bold", "color": colors["success"], "align": "center", "margin": "md"},
+            {"type": "text", "text": f"الإجمالي: {total_points}", "size": "sm", "color": colors["muted"], "align": "center", "margin": "md"}
+        ],
+        "backgroundColor": colors["card"],
+        "cornerRadius": "12px",
+        "paddingAll": "16px",
+        "margin": "lg"
+    })
+
+    # actions: replay / games / home
+    contents.append({
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+            {"type": "button", "action": {"type": "message", "label": "إعادة نفس اللعبة 🔁", "text": "إعادة"}, "style": "primary", "height": "sm"},
+            {"type": "box", "layout": "horizontal", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "الألعاب 🎮", "text": "ألعاب"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "البداية 🏠", "text": "بداية"}, "style": "secondary", "height": "sm", "flex": 1}
+            ], "spacing": "sm", "margin": "md"}
+        ],
+        "margin": "md"
+    })
+
+    contents.append(_bottom_fixed_buttons(colors))
+
+    bubble = {
+        "type": "bubble",
+        "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "18px"},
+        "styles": {"body": {"backgroundColor": colors["bg"]}}
     }
-    
-    return attach_quick_reply(
-        FlexMessage(
-            alt_text="🏆 الصدارة",
-            contents=FlexContainer.from_dict(bubble)
-        )
-    )
+    return FlexMessage(alt_text="نتيجة اللعبة", contents=FlexContainer.from_dict(bubble))
 
-# ============================================================================
-# GAME SCREEN - شاشة اللعبة (الصورة 5 و 6)
-# ============================================================================
+# ------------------------------------------------------------------
+# نافذة المساعدة
+# ------------------------------------------------------------------
+def build_help(theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = get_theme(theme)
+    contents = [
+        {"type": "text", "text": "❓ مساعدة", "size": "xl", "weight": "bold", "color": colors["primary"], "align": "start"},
+        {"type": "separator", "margin": "md"},
+        {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "• اضغط على اسم اللعبة لبدء", "size": "sm", "color": colors["muted"], "margin": "sm"},
+                {"type": "text", "text": "• اكتب 'لمح' للتلميح", "size": "sm", "color": colors["muted"], "margin": "sm"},
+                {"type": "text", "text": "• اكتب 'جاوب' لكشف الإجابة", "size": "sm", "color": colors["muted"], "margin": "sm"},
+                {"type": "text", "text": "• اكتب 'إيقاف' لإنهاء اللعبة", "size": "sm", "color": colors["muted"], "margin": "sm"}
+            ],
+            "backgroundColor": colors["card"],
+            "cornerRadius": "12px",
+            "paddingAll": "12px",
+            "margin": "md"
+        }
+    ]
+    contents.append(_bottom_fixed_buttons(colors))
+    bubble = {
+        "type": "bubble",
+        "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "18px"},
+        "styles": {"body": {"backgroundColor": colors["bg"]}}
+    }
+    return FlexMessage(alt_text="مساعدة", contents=FlexContainer.from_dict(bubble))
 
-def build_game_window(
-    game_name: str,
-    game_icon: str,
-    question_number: int,
-    total_questions: int,
-    ques
+# ------------------------------------------------------------------
+# أمثلة سريعة للاستخدام (تعطيك فكرة)
+# ------------------------------------------------------------------
+if __name__ == "__main__":
+    # مثال: طباعة هيكل JSON لفلكس الشاشة الرئيسية (للتجريب محلياً)
+    import json
+    f = build_home("اسم المستخدم", 90, True, theme="رمادي")
+    print(json.dumps(f.contents.to_dict(), ensure_ascii=False, indent=2))
