@@ -1,7 +1,11 @@
 """
-Bot Mesh v7.0 - Base Game System
-نظام الألعاب الأساسي - 9 ثيمات زجاجية احترافية
+Bot Mesh v7.1 - Base Game System PROFESSIONAL
+نظام الألعاب الأساسي المحسّن
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
+
+✅ تصميم زجاجي احترافي موحد
+✅ بدون إيموجي زائد
+✅ أداء محسّن
 """
 
 from typing import Dict, Any, Optional
@@ -11,14 +15,14 @@ import re
 
 
 class BaseGame:
-    """القاعدة الأساسية لجميع الألعاب"""
+    """القاعدة الأساسية المحسّنة لجميع الألعاب"""
 
     game_name = "لعبة"
     game_icon = ""
     supports_hint = True
     supports_reveal = True
     
-    # 9 ثيمات زجاجية احترافية
+    # 9 ثيمات زجاجية احترافية (رمادي بدلاً من سماوي)
     THEMES = {
         "أبيض": {
             "bg": "#F8FAFC", "card": "#FFFFFF", "primary": "#3B82F6",
@@ -55,9 +59,9 @@ class BaseGame:
             "text": "#7C2D12", "text2": "#EA580C", "shadow1": "#FFEDD5",
             "success": "#10B981", "error": "#EF4444"
         },
-        "سماوي": {
-            "bg": "#ECFEFF", "card": "#FFFFFF", "primary": "#06B6D4",
-            "text": "#164E63", "text2": "#0891B2", "shadow1": "#CFFAFE",
+        "رمادي": {
+            "bg": "#F9FAFB", "card": "#FFFFFF", "primary": "#6B7280",
+            "text": "#111827", "text2": "#6B7280", "shadow1": "#E5E7EB",
             "success": "#10B981", "error": "#EF4444"
         },
         "ذهبي": {
@@ -81,6 +85,7 @@ class BaseGame:
         self.current_theme = "أبيض"
 
     def start_game(self):
+        """بدء اللعبة"""
         self.current_question = 0
         self.scores.clear()
         self.answered_users.clear()
@@ -91,19 +96,23 @@ class BaseGame:
         return self.get_question()
 
     def get_question(self):
+        """الحصول على السؤال - يجب تطبيقه في الألعاب الفرعية"""
         return {"text": "سؤال", "round": self.current_question + 1}
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str):
+        """التحقق من الإجابة - يجب تطبيقه في الألعاب الفرعية"""
         return None
 
     def end_game(self) -> Dict[str, Any]:
+        """إنهاء اللعبة"""
         self.game_active = False
         if not self.scores:
             return {"game_over": True, "points": 0, "message": "انتهت اللعبة"}
         max_score = max(s["score"] for s in self.scores.values())
-        return {"game_over": True, "points": max_score, "message": f"انتهت اللعبة\nالنقاط: {max_score}"}
+        return {"game_over": True, "points": max_score, "message": f"انتهت اللعبة • النقاط: {max_score}"}
 
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
+        """إضافة نقاط للمستخدم"""
         if user_id in self.answered_users:
             return 0
         if user_id not in self.scores:
@@ -113,96 +122,231 @@ class BaseGame:
         return 1
 
     def get_hint(self) -> str:
+        """الحصول على تلميح"""
         if not self.current_answer:
             return "لا يوجد تلميح"
         answer = str(self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer)
-        return f"💡 عدد الحروف: {len(answer)}"
+        return f"عدد الحروف: {len(answer)}"
 
     def normalize_text(self, text: str) -> str:
+        """تنظيف وتوحيد النص"""
         if not text:
             return ""
         text = text.strip().lower()
-        replacements = {'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ى': 'ي', 'ة': 'ه', 'ؤ': 'و', 'ئ': 'ي'}
+        replacements = {
+            'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ى': 'ي',
+            'ة': 'ه', 'ؤ': 'و', 'ئ': 'ي'
+        }
         for old, new in replacements.items():
             text = text.replace(old, new)
         return re.sub(r'[\u064B-\u065F\u0670]', '', text)
 
     def get_theme_colors(self, theme_name: str = None):
+        """الحصول على ألوان الثيم"""
         return self.THEMES.get(theme_name or self.current_theme, self.THEMES["أبيض"])
     
     def set_theme(self, theme_name: str):
+        """تعيين الثيم"""
         if theme_name in self.THEMES:
             self.current_theme = theme_name
 
     def _create_text_message(self, text: str):
+        """إنشاء رسالة نصية"""
         return TextMessage(text=text)
 
     def _create_flex_with_buttons(self, alt_text: str, flex_content: dict):
+        """إنشاء رسالة Flex"""
         return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
 
     def build_question_flex(self, question_text: str, additional_info: str = None):
+        """بناء واجهة السؤال الموحدة - تصميم احترافي"""
         colors = self.get_theme_colors()
+        
+        # Header
+        header_contents = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": self.game_name,
+                        "size": "xl",
+                        "weight": "bold",
+                        "color": colors["text"],
+                        "flex": 3
+                    },
+                    {
+                        "type": "text",
+                        "text": f"جولة {self.current_question + 1}/5",
+                        "size": "sm",
+                        "color": colors["text2"],
+                        "align": "end",
+                        "flex": 2
+                    }
+                ]
+            }
+        ]
+        
+        # Body
         body_contents = []
         
+        # السؤال السابق (إن وجد)
         if self.previous_question and self.previous_answer:
             body_contents.extend([
                 {
-                    "type": "box", "layout": "vertical",
+                    "type": "box",
+                    "layout": "vertical",
                     "contents": [
-                        {"type": "text", "text": "السؤال السابق:", "size": "xs", "color": colors["text2"], "weight": "bold"},
-                        {"type": "text", "text": str(self.previous_question)[:50], "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
-                        {"type": "text", "text": f"الإجابة: {self.previous_answer}", "size": "xs", "color": colors["success"], "wrap": True, "margin": "xs"}
+                        {
+                            "type": "text",
+                            "text": "السؤال السابق",
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": str(self.previous_question)[:60],
+                            "size": "xs",
+                            "color": colors["text2"],
+                            "wrap": True,
+                            "margin": "xs"
+                        },
+                        {
+                            "type": "text",
+                            "text": f"الإجابة: {self.previous_answer}",
+                            "size": "xs",
+                            "color": colors["success"],
+                            "wrap": True,
+                            "margin": "xs"
+                        }
                     ],
-                    "backgroundColor": colors["card"], "cornerRadius": "10px", "paddingAll": "10px", "margin": "md"
+                    "backgroundColor": colors["card"],
+                    "cornerRadius": "10px",
+                    "paddingAll": "10px"
                 },
                 {"type": "separator", "color": colors["shadow1"], "margin": "md"}
             ])
         
+        # السؤال الحالي
         body_contents.append({
-            "type": "box", "layout": "vertical",
-            "contents": [{"type": "text", "text": question_text, "size": "lg", "weight": "bold", "color": colors["text"], "align": "center", "wrap": True}],
-            "backgroundColor": colors["card"], "cornerRadius": "15px", "paddingAll": "20px", "margin": "md"
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": question_text,
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "align": "center",
+                    "wrap": True
+                }
+            ],
+            "backgroundColor": colors["card"],
+            "cornerRadius": "15px",
+            "paddingAll": "20px",
+            "margin": "md"
         })
         
+        # معلومات إضافية
         if additional_info:
-            body_contents.append({"type": "text", "text": additional_info, "size": "xs", "color": colors["text2"], "align": "center", "wrap": True, "margin": "md"})
+            body_contents.append({
+                "type": "text",
+                "text": additional_info,
+                "size": "xs",
+                "color": colors["text2"],
+                "align": "center",
+                "wrap": True,
+                "margin": "md"
+            })
         
+        # Footer
         footer_buttons = []
         if self.supports_hint:
-            footer_buttons.append({"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]})
+            footer_buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                "style": "secondary",
+                "height": "sm",
+                "color": colors["shadow1"]
+            })
         if self.supports_reveal:
-            footer_buttons.append({"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]})
+            footer_buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                "style": "secondary",
+                "height": "sm",
+                "color": colors["shadow1"]
+            })
         
+        footer_contents = []
+        if footer_buttons:
+            footer_contents.append({
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": footer_buttons
+            })
+        
+        footer_contents.append({
+            "type": "button",
+            "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"},
+            "style": "primary",
+            "height": "sm",
+            "color": colors["error"],
+            "margin": "sm" if footer_buttons else "none"
+        })
+        
+        # Bubble Structure
         flex_content = {
-            "type": "bubble", "size": "mega",
+            "type": "bubble",
+            "size": "mega",
             "header": {
-                "type": "box", "layout": "vertical",
-                "contents": [{
-                    "type": "box", "layout": "horizontal",
-                    "contents": [
-                        {"type": "text", "text": self.game_name, "size": "xl", "weight": "bold", "color": colors["text"], "flex": 3},
-                        {"type": "text", "text": f"جولة {self.current_question + 1}/5", "size": "sm", "color": colors["text2"], "align": "end", "flex": 2}
-                    ]
-                }],
-                "backgroundColor": colors["card"], "paddingAll": "15px"
+                "type": "box",
+                "layout": "vertical",
+                "contents": header_contents,
+                "backgroundColor": colors["card"],
+                "paddingAll": "15px"
             },
-            "body": {"type": "box", "layout": "vertical", "spacing": "md", "contents": body_contents, "backgroundColor": colors["bg"], "paddingAll": "15px"},
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": body_contents,
+                "backgroundColor": colors["bg"],
+                "paddingAll": "15px"
+            },
             "footer": {
-                "type": "box", "layout": "vertical", "spacing": "sm",
-                "contents": [
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": footer_buttons} if footer_buttons else {"type": "spacer", "size": "xs"},
-                    {"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "primary", "height": "sm", "color": colors["error"]}
-                ],
-                "backgroundColor": colors["card"], "paddingAll": "12px"
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": footer_contents,
+                "backgroundColor": colors["card"],
+                "paddingAll": "12px"
+            },
+            "styles": {
+                "header": {"backgroundColor": colors["card"]},
+                "body": {"backgroundColor": colors["bg"]},
+                "footer": {"backgroundColor": colors["card"]}
             }
         }
         
-        return self._create_flex_with_buttons(f"{self.game_name} - جولة {self.current_question + 1}", flex_content)
+        return self._create_flex_with_buttons(
+            f"{self.game_name} - جولة {self.current_question + 1}",
+            flex_content
+        )
 
     def get_game_info(self):
+        """معلومات اللعبة"""
         return {
-            "name": self.game_name, "icon": self.game_icon,
-            "questions_count": self.questions_count, "current_question": self.current_question,
-            "supports_hint": self.supports_hint, "supports_reveal": self.supports_reveal,
-            "active": self.game_active, "players_count": len(self.scores)
+            "name": self.game_name,
+            "icon": self.game_icon,
+            "questions_count": self.questions_count,
+            "current_question": self.current_question,
+            "supports_hint": self.supports_hint,
+            "supports_reveal": self.supports_reveal,
+            "active": self.game_active,
+            "players_count": len(self.scores)
         }
