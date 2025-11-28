@@ -1,11 +1,12 @@
 """
-Bot Mesh - UI Builder v7.3 COMPLETE
+Bot Mesh - UI Builder v8.0 ENHANCED
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
 ✅ Glass iOS Style
 ✅ Complete Theme System
 ✅ Help Window (5 cards)
-✅ Fixed backgroundColor error
+✅ نافذة مساعدة مستقلة متعددة اللاعبين
+✅ حساب النسبة المئوية بدلاً من النقاط
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
@@ -16,7 +17,7 @@ from constants import BOT_RIGHTS, THEMES, DEFAULT_THEME, GAME_LIST
 # ============================================================================
 
 def create_glass_bubble(colors, header, body, footer=None):
-    """Create glass bubble (FIXED - no backgroundColor in boxes)"""
+    """Create glass bubble"""
     bubble = {
         "type": "bubble", "size": "mega",
         "header": {
@@ -46,7 +47,316 @@ def create_button(label, text, color, style="primary"):
     }
 
 # ============================================================================
-# Games Menu
+# نافذة المساعدة المستقلة - متعددة اللاعبين
+# ============================================================================
+
+def build_multiplayer_help_window(theme="أبيض"):
+    """نافذة مساعدة مستقلة - حساب بالنسبة المئوية"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    cards = [
+        # البطاقة 1: القائمة الرئيسية
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "🎮 Bot Mesh", "size": "xxl", "weight": "bold", 
+                     "color": colors["primary"], "align": "center"},
+                    {"type": "text", "text": "نافذة المساعدة", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "box", "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "نسبة النجاح: 0%", "size": "xl", 
+                             "weight": "bold", "color": colors["success"], "align": "center"},
+                            {"type": "text", "text": "يبدأ من الصفر", "size": "sm", 
+                             "color": colors["text2"], "align": "center", "margin": "xs"}
+                        ],
+                        "cornerRadius": "20px", "paddingAll": "20px", "margin": "lg"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "اختر وضع اللعب:", "size": "md", 
+                     "color": colors["text"], "weight": "bold", "align": "center", "margin": "lg"},
+                    create_button("👤 لعب فردي", "مساعدة فردي", colors["primary"]),
+                    create_button("👥 لعب جماعي", "مساعدة جماعي", colors["primary"]),
+                    {"type": "box", "layout": "horizontal", "spacing": "sm",
+                     "contents": [
+                         create_button("🎮 الألعاب", "ألعاب", colors["shadow1"], "secondary"),
+                         create_button("❓ مساعدة", "مساعدة", colors["shadow1"], "secondary")
+                     ], "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "© 2025 Abeer Aldosari", "size": "xxs", 
+                     "color": colors["text2"], "align": "center"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # البطاقة 2: اللعب الفردي
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "👤 اللعب الفردي", "size": "xl", "weight": "bold", 
+                     "color": colors["primary"], "align": "center"},
+                    {"type": "text", "text": "تدرب بدون ضغط", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "box", "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "غير مسجل", "size": "md", 
+                             "color": colors["text2"], "align": "center"},
+                            {"type": "text", "text": "نسبة 0%", "size": "xxl", "weight": "bold", 
+                             "color": colors["primary"], "align": "center", "margin": "sm"}
+                        ],
+                        "cornerRadius": "20px", "paddingAll": "20px", "margin": "lg"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "⚡ المميزات", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", 
+                     "text": "• لا يوجد نقاط أو إنجازات\n• حساب النسبة المئوية فقط\n• تلميحات ومساعدة متاحة\n• مستقل تماماً عن النظام الرئيسي", 
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    create_button("🎮 ابدأ اللعب", "ألعاب", colors["primary"]),
+                    create_button("🔙 رجوع", "مساعدة مستقلة", colors["shadow1"], "secondary"),
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "© 2025 Abeer Aldosari", "size": "xxs", 
+                     "color": colors["text2"], "align": "center"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # البطاقة 3: اللعب الجماعي
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "👥 اللعب الجماعي", "size": "xl", "weight": "bold", 
+                     "color": colors["primary"], "align": "center"},
+                    {"type": "text", "text": "منافسة حقيقية", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "box", "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "متعدد اللاعبين", "size": "md", 
+                             "color": colors["text2"], "align": "center"},
+                            {"type": "text", "text": "نسبة الفوز", "size": "xl", "weight": "bold", 
+                             "color": colors["primary"], "align": "center", "margin": "sm"}
+                        ],
+                        "cornerRadius": "20px", "paddingAll": "20px", "margin": "lg"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "⚡ المميزات", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", 
+                     "text": "• منافسة لحظية بين اللاعبين\n• حساب نسبة الإجابات الصحيحة\n• أول إجابة صحيحة تفوز\n• يدعم عدد كبير من اللاعبين", 
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "🎯 كيفية اللعب", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", "text": "1. منشن البوت في المجموعة\n2. اختر اللعبة\n3. أجب بسرعة", 
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    create_button("🎮 ابدأ اللعب", "ألعاب", colors["primary"]),
+                    create_button("🔙 رجوع", "مساعدة مستقلة", colors["shadow1"], "secondary"),
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "© 2025 Abeer Aldosari", "size": "xxs", 
+                     "color": colors["text2"], "align": "center"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # البطاقة 4: الألعاب المتاحة
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "🎮 الألعاب", "size": "xl", "weight": "bold", 
+                     "color": colors["primary"], "align": "center"},
+                    {"type": "text", "text": "12 لعبة متنوعة", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("ذكاء", "ذكاء", colors["shadow1"], "secondary"),
+                            create_button("أسرع", "أسرع", colors["shadow1"], "secondary"),
+                            create_button("لعبة", "لعبة", colors["shadow1"], "secondary")
+                        ], "margin": "lg"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("رياضيات", "رياضيات", colors["shadow1"], "secondary"),
+                            create_button("لون", "لون", colors["shadow1"], "secondary"),
+                            create_button("ضد", "ضد", colors["shadow1"], "secondary")
+                        ], "margin": "xs"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("ترتيب", "ترتيب", colors["shadow1"], "secondary"),
+                            create_button("تكوين", "تكوين", colors["shadow1"], "secondary"),
+                            create_button("سلسلة", "سلسلة", colors["shadow1"], "secondary")
+                        ], "margin": "xs"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("خمن", "خمن", colors["shadow1"], "secondary"),
+                            create_button("أغنية", "أغنية", colors["shadow1"], "secondary"),
+                            create_button("توافق", "توافق", colors["shadow1"], "secondary")
+                        ], "margin": "xs"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "📝 الأوامر", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", 
+                     "text": "• لمح: للحصول على تلميح\n• جاوب: لكشف الإجابة\n• إيقاف: لإنهاء اللعبة", 
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    create_button("🔙 رجوع", "مساعدة مستقلة", colors["shadow1"], "secondary"),
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "© 2025 Abeer Aldosari", "size": "xxs", 
+                     "color": colors["text2"], "align": "center"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # البطاقة 5: النتائج
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "📊 النتائج", "size": "xl", "weight": "bold", 
+                     "color": colors["primary"], "align": "center"},
+                    {"type": "text", "text": "حساب النسبة المئوية", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "box", "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "نسبة النجاح", "size": "md", 
+                             "color": colors["text2"], "align": "center"},
+                            {"type": "text", "text": "0%", "size": "xxl", "weight": "bold", 
+                             "color": colors["success"], "align": "center", "margin": "sm"},
+                            {"type": "text", "text": "0 من 0 إجابات صحيحة", "size": "sm", 
+                             "color": colors["text2"], "align": "center", "margin": "sm"}
+                        ],
+                        "cornerRadius": "20px", "paddingAll": "20px", "margin": "lg"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "ℹ️ ملاحظات", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", 
+                     "text": "• لا يوجد نقاط تراكمية\n• كل جلسة مستقلة\n• حساب النسبة فقط\n• مناسب للتدريب", 
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    create_button("🎮 ابدأ من جديد", "ألعاب", colors["primary"]),
+                    create_button("🔙 رجوع", "مساعدة مستقلة", colors["shadow1"], "secondary"),
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "© 2025 Abeer Aldosari", "size": "xxs", 
+                     "color": colors["text2"], "align": "center"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        }
+    ]
+    
+    return FlexMessage(
+        alt_text="نافذة المساعدة المستقلة",
+        contents=FlexContainer.from_dict({"type": "carousel", "contents": cards})
+    )
+
+# ============================================================================
+# إعلان النتيجة المئوية (للنافذة المستقلة)
+# ============================================================================
+
+def build_percentage_result(username, game_name, correct_answers, total_questions, percentage, theme="أبيض"):
+    """إعلان النتيجة بالنسبة المئوية - للنافذة المستقلة"""
+    colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
+    
+    # تحديد المستوى حسب النسبة
+    if percentage >= 90:
+        level_text = "ممتاز جداً"
+        level_color = colors["success"]
+        emoji = "🏆"
+    elif percentage >= 75:
+        level_text = "ممتاز"
+        level_color = colors["primary"]
+        emoji = "⭐"
+    elif percentage >= 60:
+        level_text = "جيد"
+        level_color = colors["primary"]
+        emoji = "✅"
+    elif percentage >= 40:
+        level_text = "مقبول"
+        level_color = colors["warning"]
+        emoji = "📊"
+    else:
+        level_text = "يحتاج تحسين"
+        level_color = colors["error"]
+        emoji = "💪"
+    
+    header = [
+        {"type": "text", "text": f"{emoji} النتيجة", "size": "xxl", "weight": "bold", 
+         "color": level_color, "align": "center"}
+    ]
+    
+    body = [
+        {
+            "type": "box", "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": username, "size": "xl", "weight": "bold", 
+                 "color": colors["text"], "align": "center"},
+                {"type": "text", "text": f"لعبة {game_name}", "size": "md", 
+                 "color": colors["text2"], "align": "center", "wrap": True, "margin": "sm"}
+            ],
+            "cornerRadius": "15px", "paddingAll": "20px", "margin": "md"
+        },
+        create_separator(colors["shadow1"]),
+        {
+            "type": "box", "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": f"{percentage}%", "size": "xxl", "weight": "bold", 
+                 "color": level_color, "align": "center"},
+                {"type": "text", "text": level_text, "size": "lg", 
+                 "color": level_color, "align": "center", "margin": "sm"},
+                {"type": "text", "text": f"{correct_answers} من {total_questions} صحيحة", 
+                 "size": "sm", "color": colors["text2"], "align": "center", "margin": "sm"}
+            ],
+            "cornerRadius": "20px", "paddingAll": "25px", "margin": "md"
+        }
+    ]
+    
+    footer = [
+        {"type": "box", "layout": "horizontal", "spacing": "sm",
+         "contents": [
+             create_button("🔄 إعادة", f"إعادة {game_name}", colors["primary"]),
+             create_button("🎮 الألعاب", "ألعاب", colors["shadow1"], "secondary")
+         ]},
+        create_separator(colors["shadow1"]),
+        {"type": "text", "text": "© 2025 Abeer Aldosari", "size": "xxs", 
+         "color": colors["text2"], "align": "center"}
+    ]
+    
+    bubble = create_glass_bubble(colors, header, body, footer)
+    return FlexMessage(alt_text="النتيجة", contents=FlexContainer.from_dict(bubble))
+
+# ============================================================================
+# الوظائف الأصلية (محسّنة)
 # ============================================================================
 
 def build_games_menu(theme="أبيض"):
@@ -87,10 +397,6 @@ def build_games_menu(theme="أبيض"):
     
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="الألعاب", contents=FlexContainer.from_dict(bubble))
-
-# ============================================================================
-# My Points
-# ============================================================================
 
 def build_my_points(username, points, game_stats, theme="أبيض"):
     """Points page"""
@@ -146,10 +452,6 @@ def build_my_points(username, points, game_stats, theme="أبيض"):
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(bubble))
 
-# ============================================================================
-# Leaderboard
-# ============================================================================
-
 def build_leaderboard(leaderboard, theme="أبيض"):
     """Leaderboard"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
@@ -197,10 +499,6 @@ def build_leaderboard(leaderboard, theme="أبيض"):
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="الصدارة", contents=FlexContainer.from_dict(bubble))
 
-# ============================================================================
-# Registration Required
-# ============================================================================
-
 def build_registration_required(theme="أبيض"):
     """Registration required"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
@@ -225,10 +523,6 @@ def build_registration_required(theme="أبيض"):
     
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="تسجيل مطلوب", contents=FlexContainer.from_dict(bubble))
-
-# ============================================================================
-# Winner Announcement
-# ============================================================================
 
 def build_winner_announcement(username, game_name, total_score, final_points, theme="أبيض"):
     """Winner announcement"""
@@ -269,16 +563,12 @@ def build_winner_announcement(username, game_name, total_score, final_points, th
     bubble = create_glass_bubble(colors, header, body, footer)
     return FlexMessage(alt_text="الفائز", contents=FlexContainer.from_dict(bubble))
 
-# ============================================================================
-# Help Window (5 Cards)
-# ============================================================================
-
 def build_help_window(theme="أبيض"):
     """Help window - matches design exactly"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     cards = [
-        # Card 1: البداية (matches image 1)
+        # Card 1: البداية
         {
             "type": "bubble", "size": "mega",
             "body": {
@@ -339,7 +629,7 @@ def build_help_window(theme="أبيض"):
                     {
                         "type": "box", "layout": "horizontal", "spacing": "sm",
                         "contents": [
-                            create_button("اللعب فردي", "help", colors["shadow1"], "secondary"),
+                            create_button("مساعدة مستقلة", "مساعدة مستقلة", colors["shadow1"], "secondary"),
                             create_button("مساعدة", "مساعدة", colors["shadow1"], "secondary")
                         ],
                         "margin": "sm"
@@ -352,7 +642,7 @@ def build_help_window(theme="أبيض"):
             }
         },
         
-        # Card 2: الألعاب المتاحة (matches image 2)
+        # Card 2: الألعاب المتاحة
         {
             "type": "bubble", "size": "mega",
             "body": {
@@ -487,10 +777,6 @@ def build_help_window(theme="أبيض"):
         contents=FlexContainer.from_dict({"type": "carousel", "contents": cards})
     )
 
-# ============================================================================
-# Theme Selector
-# ============================================================================
-
 def build_theme_selector(current_theme="أبيض"):
     """Theme selector"""
     colors = THEMES.get(current_theme, THEMES[DEFAULT_THEME])
@@ -535,10 +821,6 @@ def build_theme_selector(current_theme="أبيض"):
     bubble = create_glass_bubble(colors, header, body)
     return FlexMessage(alt_text="اختيار الثيم", contents=FlexContainer.from_dict(bubble))
 
-# ============================================================================
-# Enhanced Home
-# ============================================================================
-
 def build_enhanced_home(username, points, is_registered, theme="أبيض"):
     """Enhanced home page"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
@@ -546,7 +828,6 @@ def build_enhanced_home(username, points, is_registered, theme="أبيض"):
     registration_emoji = "✅" if is_registered else "⭕"
     registration_text = f"مسجل • {points} نقطة" if is_registered else "غير مسجل"
     
-    # Theme buttons
     theme_buttons = []
     theme_names = list(THEMES.keys())
     for i in range(0, len(theme_names), 3):
@@ -591,7 +872,8 @@ def build_enhanced_home(username, points, is_registered, theme="أبيض"):
                 create_button("🎮 الألعاب", "ألعاب", colors["primary"]),
                 create_button("⭐ نقاطي", "نقاطي", colors["shadow1"], "secondary"),
                 create_button("🏆 الصدارة", "صدارة", colors["shadow1"], "secondary"),
-                create_button("❓ مساعدة", "مساعدة", colors["shadow1"], "secondary")
+                create_button("❓ مساعدة", "مساعدة", colors["shadow1"], "secondary"),
+                create_button("🆕 مساعدة مستقلة", "مساعدة مستقلة", colors["success"], "secondary")
             ],
             "margin": "lg"
         }
