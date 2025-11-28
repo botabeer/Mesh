@@ -1,5 +1,5 @@
 """
-لعبة الكتابة السريعة - ستايل زجاجي احترافي
+لعبة الكتابة السريعة - إصدار تنافسي متكامل
 Created by: Abeer Aldosari © 2025
 """
 
@@ -10,29 +10,48 @@ from typing import Dict, Any, Optional
 
 
 class FastTypingGame(BaseGame):
-    """لعبة الكتابة السريعة"""
+    """لعبة الكتابة السريعة التنافسية"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "كتابة سريعة"
         self.game_icon = "⚡"
-        self.supports_hint = False
-        self.supports_reveal = True
 
+        self.supports_hint = False
+        self.supports_reveal = False
+
+        # 50 عبارة (أذكار + أدعية + حكم)
         self.phrases = [
-            "السرعة والدقة مهمتان", "التركيز هو مفتاح النجاح",
-            "الممارسة تصنع الإتقان", "الوقت من ذهب",
-            "اكتب بسرعة ودقة", "التحدي يبدأ الآن",
-            "هيا اثبت مهارتك", "السرعة مع الدقة",
-            "لا تستسلم أبداً", "النجاح يحتاج صبر",
-            "الإبداع لا حدود له", "كن الأفضل دائماً",
-            "التميز هو هدفنا", "احلم واسعى وحقق",
-            "المثابرة طريق النجاح", "كل لحظة ثمينة"
+            "سبحان الله", "الحمد لله", "لا إله إلا الله", "الله أكبر",
+            "استغفر الله", "حسبي الله ونعم الوكيل", "لا حول ولا قوة إلا بالله",
+            "اللهم صل على محمد", "اللهم اغفر لي", "اللهم ارحمنا",
+            "رضيت بالله رباً", "اليقين لا يزول بالشك", "الصبر مفتاح الفرج",
+            "التوكل على الله", "الأمل حياة", "الصدق نجاة",
+            "كل تأخيرة فيها خيرة", "من جد وجد", "الصمت حكمة",
+            "النية أساس العمل", "بر الوالدين طريق الجنة",
+            "القناعة كنز", "الدعاء سلاح المؤمن",
+            "راحة البال كنز", "الإخلاص سر النجاح",
+            "العمل عبادة", "التواضع رفعة",
+            "من صبر ظفر", "العلم نور",
+            "ذكر الله طمأنينة", "الحكمة ضالة المؤمن",
+            "من توكل كُفي", "البسمة صدقة",
+            "القلب إذا صلح", "لا تيأس أبداً",
+            "الخير قادم", "الثبات نجاح",
+            "السعي عبادة", "العفو قوة",
+            "الزهد راحة", "العدل أساس الملك",
+            "الإحسان حياة", "الوفاء شيمة",
+            "الرضا سر الراحة", "التفاؤل عبادة",
+            "الأمانة شرف", "الصبر جميل",
+            "ذكر الله حياة", "الصدق أمان"
         ]
+
         random.shuffle(self.phrases)
         self.used_phrases = []
         self.question_start_time = None
 
+    # =========================
+    # بدء اللعبة
+    # =========================
     def start_game(self):
         self.current_question = 0
         self.game_active = True
@@ -41,6 +60,9 @@ class FastTypingGame(BaseGame):
         self.answered_users.clear()
         return self.get_question()
 
+    # =========================
+    # عرض السؤال
+    # =========================
     def get_question(self):
         available = [p for p in self.phrases if p not in self.used_phrases]
         if not available:
@@ -53,25 +75,6 @@ class FastTypingGame(BaseGame):
         self.question_start_time = datetime.now()
 
         colors = self.get_theme_colors()
-        
-        previous_section = []
-        if self.previous_question and self.previous_answer:
-            previous_section = [
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "العبارة السابقة:", "size": "xs", "color": colors["text2"], "weight": "bold"},
-                        {"type": "text", "text": self.previous_question, "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
-                        {"type": "text", "text": f"✅ {self.previous_answer}", "size": "xs", "color": colors["success"], "wrap": True, "margin": "xs"}
-                    ],
-                    "backgroundColor": colors["card"],
-                    "cornerRadius": "15px",
-                    "paddingAll": "12px",
-                    "margin": "md"
-                },
-                {"type": "separator", "color": colors["shadow1"], "margin": "md"}
-            ]
 
         flex_content = {
             "type": "bubble",
@@ -80,106 +83,104 @@ class FastTypingGame(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
+                    {"type": "text", "text": self.game_name, "size": "xl",
+                     "weight": "bold", "color": colors["text"], "align": "center"},
+                    {"type": "text", "text": f"جولة {self.current_question + 1} من {self.questions_count}",
+                     "size": "sm", "color": colors["text2"], "align": "center"},
+
+                    {"type": "separator", "margin": "lg"},
+
+                    {"type": "text", "text": "اكتب العبارة التالية كما هي ⏱️",
+                     "size": "md", "color": colors["text"], "align": "center"},
+
                     {
                         "type": "box",
                         "layout": "vertical",
                         "contents": [
-                            {"type": "text", "text": f"{self.game_icon} {self.game_name}", "size": "xl", "weight": "bold", "color": colors["text"], "align": "center"},
-                            {"type": "text", "text": f"جولة {self.current_question + 1} من {self.questions_count}", "size": "sm", "color": colors["text2"], "align": "center", "margin": "sm"}
-                        ]
-                    },
-                    {"type": "separator", "margin": "lg", "color": colors["shadow1"]}
-                ] + previous_section + [
-                    {"type": "text", "text": "⚡ اكتب النص التالي بالضبط:", "size": "md", "color": colors["text"], "weight": "bold", "align": "center", "wrap": True, "margin": "lg"},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [{"type": "text", "text": phrase, "size": "xl", "color": colors["primary"], "weight": "bold", "align": "center", "wrap": True}],
-                        "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "25px",
-                        "margin": "md"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "💡 نصائح:", "size": "sm", "color": colors["text"], "weight": "bold"},
-                            {"type": "text", "text": "• اكتب بدقة وسرعة\n• احذر من الأخطاء\n• أقل من 5 ثوانٍ = نقاط إضافية!", "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"}
+                            {"type": "text", "text": phrase, "size": "xl",
+                             "color": colors["primary"], "weight": "bold",
+                             "align": "center", "wrap": True}
                         ],
                         "backgroundColor": colors["card"],
-                        "cornerRadius": "15px",
-                        "paddingAll": "15px",
+                        "cornerRadius": "20px",
+                        "paddingAll": "24px",
                         "margin": "lg"
                     },
-                    {"type": "text", "text": "💡 اكتب 'جاوب' لتخطي السؤال", "size": "xs", "color": colors["text2"], "align": "center", "wrap": True, "margin": "md"},
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "spacing": "sm",
-                        "contents": [{"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "color": colors["shadow1"]}],
-                        "margin": "lg"
-                    },
-                    {"type": "button", "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"}, "style": "primary", "height": "sm", "color": colors["error"], "margin": "sm"}
+
+                    {"type": "text",
+                     "text": "أسرع إجابة صحيحة تحصد نقاطاً أعلى",
+                     "size": "xs", "align": "center", "color": colors["text2"]},
+
+                    {"type": "button",
+                     "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"},
+                     "style": "primary", "color": colors["error"], "margin": "lg"}
                 ],
-                "backgroundColor": colors["bg"],
                 "paddingAll": "24px"
-            },
-            "styles": {"body": {"backgroundColor": colors["bg"]}}
+            }
         }
 
-        return self._create_flex_with_buttons(f"{self.game_name}", flex_content)
+        return self._create_flex_with_buttons(self.game_name, flex_content)
 
+    # =========================
+    # التحقق من الإجابة
+    # =========================
     def check_answer(self, user_answer: str, user_id: str, display_name: str):
+
         if not self.game_active or user_id in self.answered_users:
             return None
 
         text = user_answer.strip()
-        normalized = self.normalize_text(text)
 
-        if normalized == 'لمح':
-            return {'message': "❌ هذه اللعبة لا تدعم التلميحات", 'response': self._create_text_message("❌ هذه اللعبة لا تدعم التلميحات"), 'points': 0}
+        time_taken = (datetime.now() - self.question_start_time).total_seconds()
 
-        if normalized == 'جاوب':
-            reveal = f"📝 العبارة: {self.current_answer}"
-            self.previous_question = self.current_answer
-            self.previous_answer = "تم التخطي"
-            self.current_question += 1
-            self.answered_users.clear()
-
-            if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result['message'] = f"{reveal}\n\n{result.get('message', '')}"
-                return result
-
-            return {'message': reveal, 'response': self.get_question(), 'points': 0}
-
-        time_taken = (datetime.now() - self.question_start_time).total_seconds() if self.question_start_time else 0
-
+        # ✅ إجابة صحيحة
         if text == self.current_answer:
-            points = 10
-            speed_bonus = 5 if time_taken < 5 else 0
-            points += speed_bonus
-            points = self.add_score(user_id, display_name, points)
 
-            if speed_bonus > 0:
-                self.previous_question = self.current_answer
-                self.previous_answer = f"أنجزت في {time_taken:.1f}ث مع مكافأة!"
+            base_points = 10
+            speed_bonus = 5 if time_taken <= 5 else 0
+            total_points = base_points + speed_bonus
+
+            # ✅ وضع الفريقين
+            if self.is_team_mode:
+                team = self.get_team_of_user(user_id)
+                points = self.add_team_score(team, total_points)
             else:
-                self.previous_question = self.current_answer
-                self.previous_answer = f"أنجزت في {time_taken:.1f}ث"
+                points = self.add_score(user_id, display_name, total_points)
 
+            self.previous_question = self.current_answer
+            self.previous_answer = f"{time_taken:.1f} ثانية"
+
+            self.answered_users.add(user_id)
             self.current_question += 1
             self.answered_users.clear()
 
+            # ✅ نهاية اللعبة
             if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result['points'] = points
-                msg = f"🎉 ممتاز! {time_taken:.1f} ثانية!\n⭐ +{speed_bonus} إضافية!\n+{points} نقطة\n\n{result.get('message', '')}" if speed_bonus else f"✅ صحيح! {time_taken:.1f}ث\n+{points} نقطة\n\n{result.get('message', '')}"
-                result['message'] = msg
-                return result
+                return self.end_game_with_leaderboard(points)
 
-            msg = f"🎉 ممتاز يا {display_name}!\n⚡ {time_taken:.1f}ث\n⭐ +{speed_bonus} إضافية!\n+{points} نقطة" if speed_bonus else f"✅ صحيح يا {display_name}!\n⏱️ {time_taken:.1f}ث\n+{points} نقطة"
-            return {'message': msg, 'response': self.get_question(), 'points': points}
+            return {
+                'message': f"صحيح ⏱️ {time_taken:.1f}ث +{total_points} نقطة",
+                'response': self.get_question(),
+                'points': total_points
+            }
 
-        return {'message': f"❌ خطأ! ⏱️ {time_taken:.1f}ث", 'response': self._create_text_message(f"❌ خطأ إملائي! ⏱️ {time_taken:.1f}ث"), 'points': 0}
+        # ❌ خطأ
+        return {
+            'message': f"خطأ إملائي ⏱️ {time_taken:.1f}ث",
+            'response': self._create_text_message("الإجابة غير مطابقة تماماً"),
+            'points': 0
+        }
+
+    # =========================
+    # معلومات اللعبة
+    # =========================
+    def get_game_info(self) -> Dict[str, Any]:
+        info = super().get_game_info()
+        info.update({
+            "description": "لعبة سرعة ودقة بنظام تنافسي فردي أو فرق",
+            "phrases_count": len(self.phrases),
+            "supports_teams": True,
+            "supports_timer": True,
+            "supports_leaderboard": True
+        })
+        return info
