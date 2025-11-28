@@ -1,11 +1,8 @@
 """
-Bot Mesh v7.1 - Base Game System PROFESSIONAL
-نظام الألعاب الأساسي المحسّن
-تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
-
-✅ تصميم زجاجي احترافي موحد
-✅ بدون إيموجي زائد
-✅ أداء محسّن
+Bot Mesh v7.3 - Base Game System FIXED
+✅ Fixed backgroundColor error
+✅ Enhanced hints (first letter + count)
+✅ Professional glass design
 """
 
 from typing import Dict, Any, Optional
@@ -22,7 +19,7 @@ class BaseGame:
     supports_hint = True
     supports_reveal = True
     
-    # 9 ثيمات زجاجية احترافية (رمادي بدلاً من سماوي)
+    # 9 ثيمات زجاجية احترافية
     THEMES = {
         "أبيض": {
             "bg": "#F8FAFC", "card": "#FFFFFF", "primary": "#3B82F6",
@@ -122,11 +119,15 @@ class BaseGame:
         return 1
 
     def get_hint(self) -> str:
-        """الحصول على تلميح"""
+        """الحصول على تلميح محسّن (أول حرف + عدد الحروف)"""
         if not self.current_answer:
-            return "لا يوجد تلميح"
+            return "💡 لا يوجد تلميح متاح"
+        
         answer = str(self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer)
-        return f"عدد الحروف: {len(answer)}"
+        first_letter = answer[0] if answer else "؟"
+        letter_count = len(answer)
+        
+        return f"💡 يبدأ بحرف '{first_letter}' • عدد الحروف: {letter_count}"
 
     def normalize_text(self, text: str) -> str:
         """تنظيف وتوحيد النص"""
@@ -163,30 +164,28 @@ class BaseGame:
         colors = self.get_theme_colors()
         
         # Header
-        header_contents = [
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": self.game_name,
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": colors["text"],
-                        "flex": 3
-                    },
-                    {
-                        "type": "text",
-                        "text": f"جولة {self.current_question + 1}/5",
-                        "size": "sm",
-                        "color": colors["text2"],
-                        "align": "end",
-                        "flex": 2
-                    }
-                ]
-            }
-        ]
+        header_contents = [{
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": self.game_name,
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": colors["text"],
+                    "flex": 3
+                },
+                {
+                    "type": "text",
+                    "text": f"جولة {self.current_question + 1}/5",
+                    "size": "sm",
+                    "color": colors["text2"],
+                    "align": "end",
+                    "flex": 2
+                }
+            ]
+        }]
         
         # Body
         body_contents = []
@@ -215,14 +214,14 @@ class BaseGame:
                         },
                         {
                             "type": "text",
-                            "text": f"الإجابة: {self.previous_answer}",
+                            "text": f"✅ الإجابة: {self.previous_answer}",
                             "size": "xs",
                             "color": colors["success"],
                             "wrap": True,
                             "margin": "xs"
                         }
                     ],
-                    "backgroundColor": colors["card"],
+                    # FIXED: Removed backgroundColor from box
                     "cornerRadius": "10px",
                     "paddingAll": "10px"
                 },
@@ -233,18 +232,16 @@ class BaseGame:
         body_contents.append({
             "type": "box",
             "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": question_text,
-                    "size": "lg",
-                    "weight": "bold",
-                    "color": colors["text"],
-                    "align": "center",
-                    "wrap": True
-                }
-            ],
-            "backgroundColor": colors["card"],
+            "contents": [{
+                "type": "text",
+                "text": question_text,
+                "size": "lg",
+                "weight": "bold",
+                "color": colors["text"],
+                "align": "center",
+                "wrap": True
+            }],
+            # FIXED: Removed backgroundColor from box
             "cornerRadius": "15px",
             "paddingAll": "20px",
             "margin": "md"
@@ -267,7 +264,7 @@ class BaseGame:
         if self.supports_hint:
             footer_buttons.append({
                 "type": "button",
-                "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                "action": {"type": "message", "label": "💡 لمح", "text": "لمح"},
                 "style": "secondary",
                 "height": "sm",
                 "color": colors["shadow1"]
@@ -275,7 +272,7 @@ class BaseGame:
         if self.supports_reveal:
             footer_buttons.append({
                 "type": "button",
-                "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                "action": {"type": "message", "label": "🔍 جاوب", "text": "جاوب"},
                 "style": "secondary",
                 "height": "sm",
                 "color": colors["shadow1"]
@@ -292,7 +289,7 @@ class BaseGame:
         
         footer_contents.append({
             "type": "button",
-            "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"},
+            "action": {"type": "message", "label": "⛔ إيقاف", "text": "إيقاف"},
             "style": "primary",
             "height": "sm",
             "color": colors["error"],
@@ -307,7 +304,6 @@ class BaseGame:
                 "type": "box",
                 "layout": "vertical",
                 "contents": header_contents,
-                "backgroundColor": colors["card"],
                 "paddingAll": "15px"
             },
             "body": {
@@ -315,7 +311,6 @@ class BaseGame:
                 "layout": "vertical",
                 "spacing": "md",
                 "contents": body_contents,
-                "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
             "footer": {
@@ -323,13 +318,7 @@ class BaseGame:
                 "layout": "vertical",
                 "spacing": "sm",
                 "contents": footer_contents,
-                "backgroundColor": colors["card"],
                 "paddingAll": "12px"
-            },
-            "styles": {
-                "header": {"backgroundColor": colors["card"]},
-                "body": {"backgroundColor": colors["bg"]},
-                "footer": {"backgroundColor": colors["card"]}
             }
         }
         
