@@ -1,11 +1,6 @@
 """
-Bot Mesh - Database Management System v7.1
+Bot Mesh - Database v7.2 with Themes & Auto Name Update
 Created by: Abeer Aldosari © 2025
-
-✅ أداء محسّن
-✅ Connection pooling
-✅ Better error handling
-✅ Optimized queries
 """
 
 import sqlite3
@@ -21,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    """نظام إدارة قاعدة البيانات المحسّن"""
+    """Database management with themes support"""
     
     def __init__(self, db_path='botmesh.db'):
         self.db_path = db_path
@@ -30,7 +25,7 @@ class Database:
         self.init_database()
     
     def _ensure_clean_db(self):
-        """التأكد من قاعدة بيانات نظيفة"""
+        """Ensure clean database"""
         if os.path.exists(self.db_path):
             try:
                 conn = sqlite3.connect(self.db_path, timeout=5)
@@ -39,13 +34,13 @@ class Database:
             except:
                 try:
                     os.remove(self.db_path)
-                    logger.warning("Removed locked database file")
+                    logger.warning("Removed locked database")
                 except:
                     pass
     
     @contextmanager
     def get_connection(self):
-        """Connection context manager with proper cleanup"""
+        """Connection context manager"""
         conn = None
         try:
             conn = sqlite3.connect(
@@ -55,12 +50,11 @@ class Database:
                 check_same_thread=False
             )
             conn.row_factory = sqlite3.Row
-            # Enable WAL mode for better concurrency
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
             yield conn
         except Exception as e:
-            logger.error(f"Database connection error: {e}")
+            logger.error(f"Database error: {e}")
             if conn:
                 conn.rollback()
             raise
@@ -69,26 +63,35 @@ class Database:
                 conn.close()
     
     def init_database(self):
-        """إنشاء جداول قاعدة البيانات المحسّنة"""
+        """Initialize database with themes support"""
         for attempt in range(3):
             try:
                 with self.get_connection() as conn:
                     cursor = conn.cursor()
                     
-                    # جدول المستخدمين - محسّن
+                    # Users table
                     cursor.execute('''
                         CREATE TABLE IF NOT EXISTS users (
                             user_id TEXT PRIMARY KEY,
                             name TEXT NOT NULL,
                             points INTEGER DEFAULT 0,
                             is_registered BOOLEAN DEFAULT 0,
-                            theme TEXT DEFAULT 'أبيض',
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     ''')
                     
-                    # جدول جلسات الألعاب
+                    # User preferences (themes)
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS user_preferences (
+                            user_id TEXT PRIMARY KEY,
+                            theme TEXT DEFAULT 'أبيض',
+                            last_theme_change TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(user_id)
+                        )
+                    ''')
+                    
+                    # Game sessions
                     cursor.execute('''
                         CREATE TABLE IF NOT EXISTS game_sessions (
                             session_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,7 +104,7 @@ class Database:
                         )
                     ''')
                     
-                    # جدول إحصائيات الألعاب
+                    # Game stats
                     cursor.execute('''
                         CREATE TABLE IF NOT EXISTS game_stats (
                             game_name TEXT PRIMARY KEY,
@@ -113,12 +116,12 @@ class Database:
                         )
                     ''')
                     
-                    # إنشاء indexes محسّنة
+                    # Indexes
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_registered ON users(is_registered)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_activity ON users(last_activity)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_prefs_theme ON user_preferences(theme)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user ON game_sessions(user_id)')
-                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_game ON game_sessions(game_name)')
                     
                     logger.info("Database initialized successfully")
                 return
@@ -131,10 +134,10 @@ class Database:
                     logger.error(f"DB init failed: {e}")
                     raise
     
-    # ==================== User Management - Optimized ====================
+    # ==================== User Management ====================
     
     def get_user(self, user_id: str) -> Optional[Dict]:
-        """الحصول على بيانات مستخدم"""
+        """Get user data"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -146,25 +149,31 @@ class Database:
             return None
     
     def create_user(self, user_id: str, name: str) -> bool:
-        """إنشاء مستخدم جديد"""
+        """Create new user"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    INSERT OR IGNORE INTO users (user_id, name, points, is_registered, theme, last_activity)
-                    VALUES (?, ?, 0, 0, 'أبيض', ?)
+                    INSERT OR IGNORE INTO users (user_id, name, points, is_registered, last_activity)
+                    VALUES (?, ?, 0, 0, ?)
                 ''', (user_id, name, datetime.now()))
+                
+                # Create default theme preference
+                cursor.execute('''
+                    INSERT OR IGNORE INTO user_preferences (user_id, theme)
+                    VALUES (?, 'أبيض')
+                ''', (user_id,))
                 return True
         except Exception as e:
             logger.error(f"Error creating user: {e}")
             return False
     
     def update_user(self, user_id: str, **kwargs) -> bool:
-        """تحديث بيانات مستخدم - محسّن"""
+        """Update user data"""
         if not kwargs:
             return False
         
-        allowed_fields = {'name', 'points', 'is_registered', 'theme'}
+        allowed_fields = {'name', 'points', 'is_registered'}
         fields = []
         values = []
         
@@ -189,8 +198,22 @@ class Database:
             logger.error(f"Error updating user: {e}")
             return False
     
+    def update_user_name(self, user_id: str, new_name: str) -> bool:
+        """Update username (auto-sync from LINE)"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'UPDATE users SET name = ?, last_activity = ? WHERE user_id = ?',
+                    (new_name, datetime.now(), user_id)
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error updating name: {e}")
+            return False
+    
     def add_points(self, user_id: str, points: int) -> bool:
-        """إضافة نقاط - محسّن"""
+        """Add points"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -205,7 +228,7 @@ class Database:
             return False
     
     def update_activity(self, user_id: str) -> bool:
-        """تحديث آخر نشاط"""
+        """Update last activity"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -219,7 +242,7 @@ class Database:
             return False
     
     def get_leaderboard(self, limit: int = 10) -> List[Tuple[str, int]]:
-        """الحصول على لوحة الصدارة - محسّن"""
+        """Get leaderboard"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -234,27 +257,44 @@ class Database:
             logger.error(f"Error getting leaderboard: {e}")
             return []
     
-    def get_user_rank(self, user_id: str) -> Optional[int]:
-        """الحصول على ترتيب المستخدم"""
+    # ==================== Theme Management ====================
+    
+    def get_user_theme(self, user_id: str) -> str:
+        """Get user's theme"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT theme FROM user_preferences WHERE user_id = ?',
+                    (user_id,)
+                )
+                row = cursor.fetchone()
+                return row['theme'] if row else 'أبيض'
+        except Exception as e:
+            logger.error(f"Error getting theme: {e}")
+            return 'أبيض'
+    
+    def set_user_theme(self, user_id: str, theme: str) -> bool:
+        """Set user's theme"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    SELECT COUNT(*) + 1 as rank FROM users 
-                    WHERE is_registered = 1 AND points > (
-                        SELECT points FROM users WHERE user_id = ?
-                    )
-                ''', (user_id,))
-                row = cursor.fetchone()
-                return row['rank'] if row else None
+                    INSERT INTO user_preferences (user_id, theme, last_theme_change)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(user_id) DO UPDATE SET
+                        theme = excluded.theme,
+                        last_theme_change = excluded.last_theme_change
+                ''', (user_id, theme, datetime.now()))
+                return True
         except Exception as e:
-            logger.error(f"Error getting rank: {e}")
-            return None
+            logger.error(f"Error setting theme: {e}")
+            return False
     
-    # ==================== Game Sessions - Optimized ====================
+    # ==================== Game Sessions ====================
     
     def create_game_session(self, user_id: str, game_name: str) -> int:
-        """إنشاء جلسة لعبة"""
+        """Create game session"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -268,7 +308,7 @@ class Database:
             return 0
     
     def complete_game_session(self, session_id: int, score: int) -> bool:
-        """إكمال جلسة لعبة"""
+        """Complete game session"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -282,7 +322,7 @@ class Database:
             return False
     
     def get_user_game_stats(self, user_id: str) -> Dict[str, int]:
-        """إحصائيات ألعاب المستخدم - محسّن"""
+        """Get user game stats"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -301,7 +341,7 @@ class Database:
     # ==================== Game Statistics ====================
     
     def update_game_stats(self, game_name: str, completed: bool = False, points: int = 0):
-        """تحديث إحصائيات لعبة"""
+        """Update game stats"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -329,7 +369,7 @@ class Database:
     # ==================== Maintenance ====================
     
     def cleanup_inactive_users(self, days: int = 30) -> int:
-        """حذف المستخدمين غير النشطين"""
+        """Cleanup inactive users"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -344,7 +384,7 @@ class Database:
             return 0
     
     def get_stats_summary(self) -> Dict:
-        """ملخص الإحصائيات"""
+        """Get stats summary"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -366,24 +406,15 @@ class Database:
         except Exception as e:
             logger.error(f"Error getting stats: {e}")
             return {'total_users': 0, 'registered_users': 0, 'total_points': 0}
-    
-    def vacuum(self):
-        """تحسين قاعدة البيانات"""
-        try:
-            with self.get_connection() as conn:
-                conn.execute("VACUUM")
-                logger.info("Database vacuumed successfully")
-        except Exception as e:
-            logger.error(f"Error vacuuming database: {e}")
 
 
-# ==================== Singleton Instance ====================
+# ==================== Singleton ====================
 
 _db_instance = None
 _db_lock = threading.Lock()
 
 def get_database() -> Database:
-    """الحصول على instance واحد من قاعدة البيانات - thread-safe"""
+    """Get singleton database instance"""
     global _db_instance
     if _db_instance is None:
         with _db_lock:
