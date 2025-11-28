@@ -14,9 +14,5 @@ services:
         sync: false
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
-      - key: GEMINI_API_KEY_1
-        sync: false
-      - key: GEMINI_API_KEY_2
-        sync: false
-      - key: GEMINI_API_KEY_3
-        sync: false
+    # Database will be stored in the container (ephemeral)
+    # For persistent storage, consider upgrading to a paid plan with disk
