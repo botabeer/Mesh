@@ -1,5 +1,5 @@
 """
-Bot Mesh - LINE Bot Application v7.0 FINAL EDITION
+Bot Mesh - LINE Bot Application v7.1 PROFESSIONAL EDITION
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
 ✅ Groups Optimized: للعب الجماعي والمنافسة
@@ -8,8 +8,8 @@ Bot Mesh - LINE Bot Application v7.0 FINAL EDITION
 ✅ Smart Points System: نقطة واحدة لكل إجابة صحيحة
 ✅ Registered Users Only: للمسجلين فقط
 ✅ Professional 3D Glass Design: تصميم زجاجي ثلاثي الأبعاد
-✅ High Security: أمان عالي
-✅ No Errors: خالي من الأخطاء
+✅ High Performance: أداء محسّن
+✅ No Emojis: بدون إيموجي زائد
 """
 
 import os
@@ -32,13 +32,14 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from constants import (
     BOT_NAME, BOT_VERSION, BOT_RIGHTS,
     LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
-    validate_env, get_username, GAME_LIST, DEFAULT_THEME
+    validate_env, get_username, GAME_LIST, DEFAULT_THEME,
+    RATE_LIMIT_CONFIG
 )
 
 from ui_builder import (
-    build_home, build_games_menu, build_my_points,
+    build_games_menu, build_my_points,
     build_leaderboard, build_registration_required,
-    build_winner_announcement, build_group_game_result
+    build_winner_announcement
 )
 
 from database import get_database
@@ -49,7 +50,7 @@ from database import get_database
 try:
     validate_env()
 except ValueError as e:
-    print(f"❌ Configuration Error: {e}")
+    print(f"Configuration Error: {e}")
     sys.exit(1)
 
 # ============================================================================
@@ -73,29 +74,40 @@ db = get_database()
 # ============================================================================
 # In-Memory Storage
 # ============================================================================
-active_games = {}  # {group_id: game_instance}
+active_games = {}  # {game_id: game_instance}
 user_cache = {}
 user_requests = defaultdict(list)
 
 # ============================================================================
-# Security: Rate Limiting
+# Security: Rate Limiting - Enhanced
 # ============================================================================
-def is_rate_limited(user_id, max_requests=10, window=60):
-    """معدل محدود لمنع الإزعاج"""
+def is_rate_limited(user_id, max_requests=None, window=None):
+    """معدل محدود محسّن لمنع الإزعاج"""
+    max_req = max_requests or RATE_LIMIT_CONFIG["max_requests"]
+    window_sec = window or RATE_LIMIT_CONFIG["window_seconds"]
+    
     now = datetime.now()
-    cutoff = now - timedelta(seconds=window)
+    cutoff = now - timedelta(seconds=window_sec)
     
     user_requests[user_id] = [t for t in user_requests[user_id] if t > cutoff]
     
-    if len(user_requests[user_id]) >= max_requests:
-        logger.warning(f"⚠️ Rate limit exceeded for user {user_id}")
+    if len(user_requests[user_id]) >= max_req:
+        logger.warning(f"Rate limit exceeded for user {user_id}")
         return True
     
     user_requests[user_id].append(now)
     return False
 
+def cleanup_rate_limits():
+    """تنظيف دوري لـ rate limits"""
+    cutoff = datetime.now() - timedelta(seconds=RATE_LIMIT_CONFIG["window_seconds"] * 2)
+    for user_id in list(user_requests.keys()):
+        user_requests[user_id] = [t for t in user_requests[user_id] if t > cutoff]
+        if not user_requests[user_id]:
+            del user_requests[user_id]
+
 # ============================================================================
-# Game Loading System
+# Game Loading System - Enhanced
 # ============================================================================
 AVAILABLE_GAMES = {}
 
@@ -128,41 +140,39 @@ try:
         "توافق": CompatibilityGame
     }
     
-    logger.info(f"✅ تم تحميل {len(AVAILABLE_GAMES)} لعبة بنجاح")
+    logger.info(f"Loaded {len(AVAILABLE_GAMES)} games successfully")
 except Exception as e:
-    logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
+    logger.error(f"Error loading games: {e}")
     import traceback
     traceback.print_exc()
 
 # ============================================================================
-# Quick Reply Helper - Games Only
+# Quick Reply Helper
 # ============================================================================
 def create_games_quick_reply():
-    """Create Quick Reply with Games Only"""
-    games_list = [
-        "أسرع", "ذكاء", "لعبة", "أغنية", "خمن", "سلسلة",
-        "ترتيب", "تكوين", "ضد", "لون", "رياضيات", "توافق"
-    ]
+    """Create Quick Reply with Games"""
+    games_list = ["أسرع", "ذكاء", "لعبة", "أغنية", "خمن", "سلسلة",
+                  "ترتيب", "تكوين", "ضد", "لون", "رياضيات", "توافق"]
     
-    items = []
-    for game in games_list:
-        items.append(QuickReplyItem(action=MessageAction(label=game, text=game)))
-    
+    items = [QuickReplyItem(action=MessageAction(label=game, text=game)) for game in games_list]
     return QuickReply(items=items)
 
 def attach_quick_reply(message):
-    """Attach Quick Reply to any message"""
+    """Attach Quick Reply to message"""
     if hasattr(message, 'quick_reply'):
         message.quick_reply = create_games_quick_reply()
     return message
 
 # ============================================================================
-# Helper Functions
+# Helper Functions - Enhanced
 # ============================================================================
 def get_user_data(user_id: str, username: str = "مستخدم") -> dict:
-    """الحصول على بيانات المستخدم مع cache"""
+    """الحصول على بيانات المستخدم مع cache محسّن"""
     if user_id in user_cache:
-        return user_cache[user_id]
+        # تحديث cache إذا كان قديماً
+        cache_time = user_cache.get(f"{user_id}_time", datetime.min)
+        if datetime.now() - cache_time < timedelta(minutes=5):
+            return user_cache[user_id]
     
     user = db.get_user(user_id)
     
@@ -171,30 +181,30 @@ def get_user_data(user_id: str, username: str = "مستخدم") -> dict:
         user = db.get_user(user_id)
     
     user_cache[user_id] = user
+    user_cache[f"{user_id}_time"] = datetime.now()
     return user
 
 def update_user_cache(user_id: str):
-    """تحديث الـ cache من قاعدة البيانات"""
+    """تحديث الـ cache"""
     user = db.get_user(user_id)
     if user:
         user_cache[user_id] = user
+        user_cache[f"{user_id}_time"] = datetime.now()
 
 def send_with_quick_reply(line_bot_api, reply_token, message):
-    """Send message with Quick Reply buttons"""
+    """Send message with Quick Reply"""
     message = attach_quick_reply(message)
     line_bot_api.reply_message_with_http_info(
         ReplyMessageRequest(reply_token=reply_token, messages=[message])
     )
 
 def is_group_chat(event):
-    """Check if message is from a group"""
+    """Check if in group"""
     return hasattr(event.source, 'group_id')
 
 def get_game_id(event):
-    """Get unique game ID (group or user)"""
-    if is_group_chat(event):
-        return event.source.group_id
-    return event.source.user_id
+    """Get unique game ID"""
+    return event.source.group_id if is_group_chat(event) else event.source.user_id
 
 # ============================================================================
 # Flask Routes
@@ -208,17 +218,17 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("❌ Invalid signature")
+        logger.error("Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"❌ Callback error: {e}")
+        logger.error(f"Callback error: {e}")
         abort(500)
     
     return 'OK'
 
 @app.route("/", methods=['GET'])
 def home():
-    """Bot status page"""
+    """Bot status page - Professional"""
     stats = db.get_stats_summary()
     
     return f"""
@@ -231,7 +241,7 @@ def home():
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{
-                font-family: 'Segoe UI', sans-serif;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
                 min-height: 100vh;
@@ -251,10 +261,12 @@ def home():
             }}
             h1 {{ font-size: 3em; margin-bottom: 10px; text-align: center; }}
             .version {{ font-size: 0.9em; opacity: 0.8; margin-bottom: 30px; text-align: center; }}
-            .status {{ font-size: 1.3em; margin: 30px 0; padding: 20px; background: rgba(255, 255, 255, 0.2);
-                      border-radius: 20px; text-align: center; }}
-            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin: 30px 0; }}
-            .stat-card {{ background: rgba(255, 255, 255, 0.2); padding: 25px; border-radius: 20px; text-align: center; }}
+            .status {{ font-size: 1.3em; margin: 30px 0; padding: 20px; 
+                      background: rgba(255, 255, 255, 0.2); border-radius: 20px; text-align: center; }}
+            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+                     gap: 20px; margin: 30px 0; }}
+            .stat-card {{ background: rgba(255, 255, 255, 0.2); padding: 25px; 
+                         border-radius: 20px; text-align: center; }}
             .stat-value {{ font-size: 2.5em; font-weight: bold; margin: 10px 0; }}
             .stat-label {{ font-size: 0.9em; opacity: 0.9; }}
             .footer {{ margin-top: 30px; font-size: 0.85em; opacity: 0.7; text-align: center; }}
@@ -264,7 +276,7 @@ def home():
         <div class="container">
             <h1>{BOT_NAME}</h1>
             <div class="version">Version {BOT_VERSION} - Professional 3D Glass Design</div>
-            <div class="status">✅ Bot is running smoothly</div>
+            <div class="status">Bot is running smoothly</div>
             
             <div class="stats">
                 <div class="stat-card">
@@ -292,11 +304,11 @@ def home():
     """
 
 # ============================================================================
-# Message Handler
+# Message Handler - Enhanced
 # ============================================================================
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """Handle incoming messages - Commands Only"""
+    """Handle incoming messages - Optimized"""
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
@@ -320,7 +332,7 @@ def handle_message(event):
             except:
                 username = "مستخدم"
             
-            # في المجموعات: تجاهل الرسائل إلا إذا كانت منشن أو لعبة نشطة
+            # في المجموعات: تجاهل إلا للمنشن أو لعبة نشطة
             if in_group and "@" not in text.lower() and game_id not in active_games:
                 return
             
@@ -332,21 +344,20 @@ def handle_message(event):
             
             text_lower = text.lower()
             
-            # ===== الأوامر الأساسية =====
+            # === الأوامر الأساسية ===
             
-            if "@" in text_lower or text_lower in ["بداية", "start", "home"]:
-                # عند المنشن أو البداية: أرسل قائمة الألعاب مع Quick Reply
+            if "@" in text_lower or text_lower in ["بداية", "start", "home", "ألعاب", "games"]:
                 reply = build_games_menu(current_theme)
             
             elif text_lower in ["انضم", "join", "register"]:
                 db.update_user(user_id, is_registered=True)
                 update_user_cache(user_id)
-                reply = TextMessage(text="✅ تم التسجيل بنجاح! يمكنك الآن المشاركة في الألعاب")
+                reply = TextMessage(text="تم التسجيل بنجاح")
             
             elif text_lower in ["انسحب", "leave", "unregister"]:
                 db.update_user(user_id, is_registered=False)
                 update_user_cache(user_id)
-                reply = TextMessage(text="❌ تم إلغاء التسجيل")
+                reply = TextMessage(text="تم إلغاء التسجيل")
             
             elif text_lower in ["نقاطي", "points", "score"]:
                 user_game_stats = db.get_user_game_stats(user_id)
@@ -359,13 +370,13 @@ def handle_message(event):
             elif text_lower in ["إيقاف", "stop", "quit", "exit"]:
                 if game_id in active_games:
                     del active_games[game_id]
-                    reply = TextMessage(text="⛔ تم إيقاف اللعبة")
+                    reply = TextMessage(text="تم إيقاف اللعبة")
             
             elif text in GAME_LIST or text.startswith("لعبة ") or text.startswith("إعادة "):
                 if not user.get("is_registered"):
                     reply = build_registration_required(current_theme)
                 else:
-                    # Extract game name
+                    # استخراج اسم اللعبة
                     if text.startswith("إعادة "):
                         game_name = text.replace("إعادة ", "").strip()
                     elif text.startswith("لعبة "):
@@ -391,34 +402,31 @@ def handle_message(event):
                             session_id = db.create_game_session(user_id, game_name)
                             game_instance.session_id = session_id
                             
-                            logger.info(f"🎮 {username} بدأ لعبة {game_name}")
+                            logger.info(f"{username} started {game_name}")
                         except Exception as e:
-                            logger.error(f"❌ خطأ في بدء اللعبة {game_name}: {e}")
-                            reply = TextMessage(text="❌ حدث خطأ في بدء اللعبة")
+                            logger.error(f"Error starting game {game_name}: {e}")
+                            reply = TextMessage(text="حدث خطأ في بدء اللعبة")
                     else:
-                        reply = TextMessage(text=f"❌ اللعبة '{game_name}' غير موجودة")
+                        reply = TextMessage(text=f"اللعبة '{game_name}' غير موجودة")
             
             else:
-                # التعامل مع الإجابات في اللعبة
+                # التعامل مع الإجابات
                 if game_id in active_games:
                     try:
                         game_instance = active_games[game_id]
                         
-                        # تحقق من تسجيل المستخدم
                         if not user.get('is_registered'):
-                            return  # تجاهل إجابات غير المسجلين
+                            return
                         
                         game_name = game_instance.game_name
                         result = game_instance.check_answer(text, user_id, username)
                         
                         if result:
-                            # إضافة النقاط للمسجلين فقط
                             if result.get('points', 0) > 0:
                                 db.add_points(user_id, result['points'])
                                 update_user_cache(user_id)
                             
                             if result.get('game_over'):
-                                # حفظ جلسة اللعبة
                                 if hasattr(game_instance, 'session_id'):
                                     db.complete_game_session(
                                         game_instance.session_id,
@@ -431,7 +439,6 @@ def handle_message(event):
                                     points=result.get('points', 0)
                                 )
                                 
-                                # إعلان الفائز
                                 user = get_user_data(user_id, username)
                                 reply = build_winner_announcement(
                                     username=username,
@@ -445,16 +452,37 @@ def handle_message(event):
                             else:
                                 reply = result.get('response')
                     except Exception as e:
-                        logger.error(f"❌ خطأ في معالجة اللعبة: {e}")
+                        logger.error(f"Error in game: {e}")
                         if game_id in active_games:
                             del active_games[game_id]
-                        reply = TextMessage(text="❌ حدث خطأ، تم إيقاف اللعبة")
+                        reply = TextMessage(text="حدث خطأ")
             
             if reply:
                 send_with_quick_reply(line_bot_api, event.reply_token, reply)
                 
     except Exception as e:
-        logger.error(f"❌ Error in handle_message: {e}", exc_info=True)
+        logger.error(f"Error in handle_message: {e}", exc_info=True)
+
+# ============================================================================
+# Periodic Cleanup
+# ============================================================================
+def periodic_cleanup():
+    """تنظيف دوري للذاكرة والقاعدة"""
+    import threading
+    
+    def cleanup():
+        while True:
+            try:
+                import time
+                time.sleep(300)  # كل 5 دقائق
+                cleanup_rate_limits()
+                db.cleanup_inactive_users(days=30)
+                logger.info("Periodic cleanup completed")
+            except Exception as e:
+                logger.error(f"Cleanup error: {e}")
+    
+    thread = threading.Thread(target=cleanup, daemon=True)
+    thread.start()
 
 # ============================================================================
 # Run Application
@@ -463,11 +491,14 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     
     logger.info("=" * 70)
-    logger.info(f"🚀 Starting {BOT_NAME} v{BOT_VERSION}")
-    logger.info(f"🎨 UI Style: Professional 3D Glass Design")
-    logger.info(f"📦 Loaded {len(AVAILABLE_GAMES)} games")
-    logger.info(f"🌐 Server on port {port}")
-    logger.info(f"🔒 Security: Rate Limiting Enabled")
+    logger.info(f"Starting {BOT_NAME} v{BOT_VERSION}")
+    logger.info(f"UI Style: Professional 3D Glass Design")
+    logger.info(f"Loaded {len(AVAILABLE_GAMES)} games")
+    logger.info(f"Server on port {port}")
+    logger.info(f"Security: Enhanced Rate Limiting")
     logger.info("=" * 70)
+    
+    # بدء التنظيف الدوري
+    periodic_cleanup()
     
     app.run(host="0.0.0.0", port=port, debug=False)
