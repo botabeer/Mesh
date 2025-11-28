@@ -1,9 +1,9 @@
-# app.py - ENHANCED VERSION
+# app.py - FULL FLEX UI VERSION
 """
-Bot Mesh - LINE Bot Application v9.0 ENHANCED
-✅ إصلاح جميع الأخطاء
-✅ دعم session_type محسّن
-✅ معالجة أخطاء شاملة
+Bot Mesh - LINE Bot Application v10.0 FULL FLEX
+✅ كل شيء نوافذ فلكس وأزرار
+✅ Quick Reply دائم للألعاب فقط
+✅ نافذة بداية ومساعدة
 Created by: Abeer Aldosari © 2025
 """
 
@@ -117,7 +117,7 @@ try:
         "أضداد": OppositeGame,
         "تكوين": LettersWordsGame,
         "أغنية": SongGame,
-        "لعبة": HumanAnimalPlantGame,
+        "إنسان حيوان نبات": HumanAnimalPlantGame,
         "سلسلة كلمات": ChainWordsGame,
         "تخمين": GuessGame,
         "توافق": CompatibilitySystem
@@ -295,15 +295,6 @@ def status_page():
     </html>
     """
 
-@app.route("/debug/logs", methods=['GET'])
-def debug_logs():
-    """عرض السجلات"""
-    try:
-        logs = db.get_logs(limit=100)
-        return jsonify({"logs": logs})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route("/health", methods=['GET'])
 def health_check():
     """فحص الصحة"""
@@ -315,11 +306,11 @@ def health_check():
     })
 
 # -------------------------
-# معالج الرسائل
+# معالج الرسائل - FULL FLEX
 # -------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """معالج الرسائل الرئيسي"""
+    """معالج الرسائل - كل شيء فلكس وأزرار"""
     try:
         user_id = event.source.user_id
         text = event.message.text.strip()
@@ -354,7 +345,7 @@ def handle_message(event):
             lowered = text.lower()
             reply_message = None
 
-            # ===== الأوامر الأساسية =====
+            # ===== الأوامر الأساسية - كلها FLEX =====
             
             if lowered in ["مساعدة", "help", "؟"]:
                 reply_message = build_help_window(current_theme)
@@ -378,16 +369,22 @@ def handle_message(event):
                 meta = ensure_session_meta(game_id)
                 if meta.get("join_phase"):
                     meta["joined_users"].add(user_id)
-                    reply_message = TextMessage(text=f"✅ {username} انضم للعبة")
+                    # نافذة فلكس للانضمام
+                    from ui_builder import build_join_confirmation
+                    reply_message = build_join_confirmation(username, current_theme)
                 else:
-                    reply_message = TextMessage(text="✅ تم التسجيل بنجاح")
+                    # نافذة فلكس للتسجيل
+                    from ui_builder import build_registration_success
+                    reply_message = build_registration_success(username, current_theme)
             
             elif lowered in ["فريقين", "teams", "فرق"]:
                 if in_group:
                     start_join_phase(game_id, owner_id=user_id)
                     reply_message = build_multiplayer_help_window(current_theme)
                 else:
-                    reply_message = TextMessage(text="⚠️ هذا الأمر للمجموعات فقط")
+                    # نافذة تحذير
+                    from ui_builder import build_error_message
+                    reply_message = build_error_message("⚠️ هذا الأمر للمجموعات فقط", current_theme)
             
             elif lowered.startswith("ثيم "):
                 theme_name = text.replace("ثيم ", "").strip()
@@ -395,7 +392,9 @@ def handle_message(event):
                 if theme_name in THEMES:
                     db.set_user_theme(user_id, theme_name)
                     user_cache.pop(user_id, None)
-                    reply_message = TextMessage(text=f"✅ تم التغيير إلى ثيم {theme_name}")
+                    # نافذة تأكيد
+                    from ui_builder import build_theme_change_success
+                    reply_message = build_theme_change_success(theme_name, current_theme)
                 else:
                     reply_message = build_theme_selector(current_theme)
             
@@ -407,9 +406,12 @@ def handle_message(event):
                     game_name = session_meta.get(game_id, {}).get("current_game_name", "اللعبة")
                     del active_games[game_id]
                     session_meta.pop(game_id, None)
-                    reply_message = TextMessage(text=f"⛔ تم إيقاف {game_name}")
+                    # نافذة إيقاف
+                    from ui_builder import build_game_stopped
+                    reply_message = build_game_stopped(game_name, current_theme)
                 else:
-                    reply_message = TextMessage(text="⚠️ لا توجد لعبة نشطة")
+                    from ui_builder import build_error_message
+                    reply_message = build_error_message("⚠️ لا توجد لعبة نشطة", current_theme)
             
             # ===== بدء اللعبة =====
             elif text in AVAILABLE_GAMES:
@@ -437,17 +439,16 @@ def handle_message(event):
                         
                         start_msg = game_instance.start_game()
                         
-                        if hasattr(start_msg, 'quick_reply'):
-                            line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
-                        else:
-                            attach_quick_reply_to_message(start_msg)
-                            line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
+                        # ✅ إضافة Quick Reply دائماً
+                        attach_quick_reply_to_message(start_msg)
+                        line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
                         return
                     
                     except Exception as e:
                         logger.error(f"❌ خطأ في بدء اللعبة: {e}")
                         logger.error(traceback.format_exc())
-                        reply_message = TextMessage(text=f"❌ حدث خطأ في بدء اللعبة: {str(e)[:100]}")
+                        from ui_builder import build_error_message
+                        reply_message = build_error_message(f"❌ حدث خطأ في بدء اللعبة", current_theme)
             
             # ===== معالجة الإجابة =====
             elif game_id in active_games:
@@ -485,11 +486,8 @@ def handle_message(event):
                         
                         if meta.get("team_mode"):
                             team_pts = db.get_team_points(meta["session_id"])
-                            t1 = team_pts.get("team1", 0)
-                            t2 = team_pts.get("team2", 0)
-                            winner = "الفريق الأول" if t1 > t2 else ("الفريق الثاني" if t2 > t1 else "تعادل")
-                            winner_text = f"🏆 {winner}\n\nالنتيجة:\nالفريق 1: {t1}\nالفريق 2: {t2}"
-                            reply_message = TextMessage(text=winner_text)
+                            from ui_builder import build_team_game_end
+                            reply_message = build_team_game_end(team_pts, current_theme)
                         else:
                             reply_message = build_winner_announcement(
                                 username, 
@@ -504,24 +502,27 @@ def handle_message(event):
                     else:
                         if result.get('response'):
                             response_msg = result['response']
-                            if not hasattr(response_msg, 'quick_reply'):
-                                attach_quick_reply_to_message(response_msg)
+                            # ✅ إضافة Quick Reply دائماً
+                            attach_quick_reply_to_message(response_msg)
                             line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
                             return
                         else:
-                            reply_message = TextMessage(text=result.get('message', '✅'))
+                            # نافذة فلكس للنتيجة
+                            from ui_builder import build_answer_feedback
+                            reply_message = build_answer_feedback(result.get('message', '✅'), current_theme)
                 
                 except Exception as e:
                     logger.error(f"❌ خطأ في check_answer: {e}")
                     logger.error(traceback.format_exc())
                     if game_id in active_games:
                         del active_games[game_id]
-                    reply_message = TextMessage(text=f"❌ حدث خطأ: {str(e)[:100]}")
+                    from ui_builder import build_error_message
+                    reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
 
-            # إرسال الرد
+            # إرسال الرد مع Quick Reply دائماً
             if reply_message:
-                if not hasattr(reply_message, 'quick_reply'):
-                    attach_quick_reply_to_message(reply_message)
+                # ✅ إضافة Quick Reply لكل رسالة
+                attach_quick_reply_to_message(reply_message)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply_message]))
 
     except Exception as e:
@@ -569,9 +570,8 @@ periodic_cleanup()
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info("=" * 70)
-    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION}")
+    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION} - FULL FLEX UI")
     logger.info(f"✅ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
-    logger.info(f"✅ الثيمات: {len(THEMES)}")
     logger.info(f"🌐 المنفذ: {port}")
     logger.info("=" * 70)
     app.run(host="0.0.0.0", port=port, debug=False)
