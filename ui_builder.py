@@ -274,140 +274,208 @@ def build_winner_announcement(username, game_name, total_score, final_points, th
 # ============================================================================
 
 def build_help_window(theme="أبيض"):
-    """Help window - 5 cards"""
+    """Help window - matches design exactly"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     cards = [
-        # Card 1: Welcome
+        # Card 1: البداية (matches image 1)
         {
             "type": "bubble", "size": "mega",
             "body": {
                 "type": "box", "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "🎮", "size": "xxl", "align": "center"},
                     {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", 
-                     "color": colors["text"], "align": "center", "margin": "md"},
-                    {"type": "text", "text": "بوت ألعاب احترافي", "size": "sm", 
-                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                     "color": colors["text"], "align": "center"},
                     create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "نقطة | مسجل 520", "size": "md",
+                     "color": colors["text"], "align": "center", "margin": "lg"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "اختر الثيم:", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "align": "center", "margin": "lg"},
                     {
-                        "type": "text", "text": "12 لعبة متنوعة", "size": "lg",
-                        "color": colors["text"], "weight": "bold", "align": "center", "margin": "lg"
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("أبيض", "ثيم أبيض", colors["shadow1"], "secondary"),
+                            create_button("أسود", "ثيم أسود", colors["shadow1"], "secondary"),
+                            create_button("رمادي", "ثيم رمادي", colors["primary"])
+                        ],
+                        "margin": "md"
                     },
                     {
-                        "type": "text", "text": "للمنافسة الجماعية والفردية", "size": "sm",
-                        "color": colors["text2"], "align": "center", "margin": "sm", "wrap": True
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("أزرق", "ثيم أزرق", colors["shadow1"], "secondary"),
+                            create_button("بنفسجي", "ثيم بنفسجي", colors["shadow1"], "secondary"),
+                            create_button("وردي", "ثيم وردي", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "xs"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("بني", "ثيم ذهبي", colors["shadow1"], "secondary"),
+                            create_button("برتقالي", "ثيم برتقالي", colors["shadow1"], "secondary"),
+                            create_button("أخضر", "ثيم أخضر", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "xs"
                     },
                     create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "للبدء:", "size": "sm", "color": colors["text"], 
-                     "weight": "bold", "margin": "lg"},
-                    {"type": "text", "text": "1. اكتب: انضم\n2. اختر اللعبة\n3. ابدأ المنافسة", 
-                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"},
-                    create_button("🎮 الألعاب", "ألعاب", colors["primary"], "primary")
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("انسحب", "انسحب", colors["error"]),
+                            create_button("الألعاب", "ألعاب", colors["primary"])
+                        ],
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("نقاطي", "نقاطي", colors["shadow1"], "secondary"),
+                            create_button("الصدارة", "صدارة", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "sm"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("اللعب فردي", "help", colors["shadow1"], "secondary"),
+                            create_button("مساعدة", "مساعدة", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "sm"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+                     "color": colors["text2"], "align": "center", "margin": "md"}
                 ],
                 "paddingAll": "24px", "spacing": "none"
             }
         },
         
-        # Card 2: Group Play
+        # Card 2: الألعاب المتاحة (matches image 2)
         {
             "type": "bubble", "size": "mega",
             "body": {
                 "type": "box", "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "👥", "size": "xxl", "align": "center"},
+                    {"type": "text", "text": "الألعاب المتاحة", "size": "xl", "weight": "bold", 
+                     "color": colors["text"], "align": "center"},
+                    {"type": "text", "text": "عدد الألعاب: 12", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("أسرع", "أسرع", colors["shadow1"], "secondary"),
+                            create_button("ذكاء", "ذكاء", colors["shadow1"], "secondary"),
+                            create_button("لعبة", "لعبة", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("أغنية", "أغنية", colors["shadow1"], "secondary"),
+                            create_button("خمن", "خمن", colors["shadow1"], "secondary"),
+                            create_button("سلسلة", "سلسلة", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "xs"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("ترتيب", "ترتيب", colors["shadow1"], "secondary"),
+                            create_button("تكوين", "تكوين", colors["shadow1"], "secondary"),
+                            create_button("ضد", "ضد", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "xs"
+                    },
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("لون", "لون", colors["shadow1"], "secondary"),
+                            create_button("رياضيات", "رياضيات", colors["shadow1"], "secondary"),
+                            create_button("توافق", "توافق", colors["shadow1"], "secondary")
+                        ],
+                        "margin": "xs"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "أوامر اللعب", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "align": "center", "margin": "lg"},
+                    {"type": "text", "text": "• اضغط على اسم اللعبة لبدء اللعب\n• اكتب 'لمح' للتلميح\n• اكتب 'جاوب' لكشف الإجابة\n• اكتب 'إيقاف' لإنهاء اللعبة", 
+                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "box", "layout": "horizontal", "spacing": "sm",
+                        "contents": [
+                            create_button("البداية", "home", colors["shadow1"], "secondary"),
+                            create_button("إيقاف", "إيقاف", colors["error"])
+                        ],
+                        "margin": "lg"
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+                     "color": colors["text2"], "align": "center", "margin": "md"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # Card 3: اللعب الجماعي
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
                     {"type": "text", "text": "اللعب الجماعي", "size": "xl", "weight": "bold", 
-                     "color": colors["text"], "align": "center", "margin": "md"},
+                     "color": colors["text"], "align": "center"},
                     {"type": "text", "text": "نافس أصدقاءك في المجموعات", "size": "sm", 
                      "color": colors["text2"], "align": "center", "margin": "sm"},
                     create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "المميزات:", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
                     {"type": "text", "text": "• المنافسة الحية بين الأعضاء\n• أول إجابة صحيحة تفوز\n• 5 جولات للمنافسة\n• نقاط تراكمية للصدارة", 
-                     "size": "sm", "color": colors["text"], "wrap": True, "margin": "lg"},
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
                     create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "كيفية البدء:", "size": "sm", "color": colors["text"], 
+                    {"type": "text", "text": "كيفية البدء:", "size": "md", "color": colors["text"], 
                      "weight": "bold", "margin": "lg"},
                     {"type": "text", "text": "منشن البوت @Bot ثم اختر اللعبة", 
-                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    create_button("الألعاب", "ألعاب", colors["primary"]),
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+                     "color": colors["text2"], "align": "center", "margin": "md"}
                 ],
                 "paddingAll": "24px", "spacing": "none"
             }
         },
         
-        # Card 3: Solo Play
+        # Card 4: اللعب الفردي
         {
             "type": "bubble", "size": "mega",
             "body": {
                 "type": "box", "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "🎯", "size": "xxl", "align": "center"},
                     {"type": "text", "text": "اللعب الفردي", "size": "xl", "weight": "bold", 
-                     "color": colors["text"], "align": "center", "margin": "md"},
+                     "color": colors["text"], "align": "center"},
                     {"type": "text", "text": "تدرب وطور مهاراتك", "size": "sm", 
                      "color": colors["text2"], "align": "center", "margin": "sm"},
                     create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "المميزات:", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
                     {"type": "text", "text": "• تدرب بدون ضغط الوقت\n• تلميحات ومساعدة متاحة\n• تتبع تقدمك ونقاطك\n• جاهز للمنافسة الجماعية", 
-                     "size": "sm", "color": colors["text"], "wrap": True, "margin": "lg"},
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
                     create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "كيفية البدء:", "size": "sm", "color": colors["text"], 
+                    {"type": "text", "text": "كيفية البدء:", "size": "md", "color": colors["text"], 
                      "weight": "bold", "margin": "lg"},
                     {"type": "text", "text": "راسل البوت مباشرة واختر اللعبة", 
-                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
-                ],
-                "paddingAll": "24px", "spacing": "none"
-            }
-        },
-        
-        # Card 4: Rules
-        {
-            "type": "bubble", "size": "mega",
-            "body": {
-                "type": "box", "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "📋", "size": "xxl", "align": "center"},
-                    {"type": "text", "text": "قواعد اللعب", "size": "xl", "weight": "bold", 
-                     "color": colors["text"], "align": "center", "margin": "md"},
+                     "size": "sm", "color": colors["text2"], "wrap": True, "margin": "sm"},
                     create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "5 جولات", "size": "md", "color": colors["text"], 
-                     "weight": "bold", "align": "center", "margin": "lg"},
-                    {"type": "text", "text": "كل لعبة تحتوي على 5 جولات", "size": "xs", 
-                     "color": colors["text2"], "align": "center", "margin": "xs"},
+                    create_button("الألعاب", "ألعاب", colors["primary"]),
                     create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "نقطة واحدة", "size": "md", "color": colors["text"], 
-                     "weight": "bold", "align": "center", "margin": "md"},
-                    {"type": "text", "text": "لكل إجابة صحيحة", "size": "xs", 
-                     "color": colors["text2"], "align": "center", "margin": "xs"},
-                    create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "الأسرع يفوز", "size": "md", "color": colors["text"], 
-                     "weight": "bold", "align": "center", "margin": "md"},
-                    {"type": "text", "text": "أول إجابة صحيحة تحصل على النقطة", "size": "xs", 
-                     "color": colors["text2"], "align": "center", "wrap": True, "margin": "xs"}
-                ],
-                "paddingAll": "24px", "spacing": "none"
-            }
-        },
-        
-        # Card 5: Commands
-        {
-            "type": "bubble", "size": "mega",
-            "body": {
-                "type": "box", "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "⌨️", "size": "xxl", "align": "center"},
-                    {"type": "text", "text": "الأوامر", "size": "xl", "weight": "bold", 
-                     "color": colors["text"], "align": "center", "margin": "md"},
-                    create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "انضم - التسجيل\nنقاطي - عرض نقاطك\nصدارة - لوحة الصدارة\nإيقاف - إيقاف اللعبة", 
-                     "size": "sm", "color": colors["text"], "wrap": True, "margin": "lg"},
-                    create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "أثناء اللعب:", "size": "sm", "color": colors["text"], 
-                     "weight": "bold", "margin": "lg"},
-                    {"type": "text", "text": "• لمح - للحصول على تلميح\n• جاوب - لكشف الإجابة", 
-                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"},
-                    create_separator(colors["shadow1"]),
-                    {"type": "text", "text": "في المجموعات:", "size": "xs", "color": colors["text"], 
-                     "weight": "bold", "margin": "lg"},
-                    {"type": "text", "text": "منشن البوت @Bot لعرض القائمة", 
-                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"}
+                    {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
+                     "color": colors["text2"], "align": "center", "margin": "md"}
                 ],
                 "paddingAll": "24px", "spacing": "none"
             }
