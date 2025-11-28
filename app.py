@@ -1,12 +1,12 @@
 """
-Bot Mesh - LINE Bot Application v7.2 FINAL EDITION
+Bot Mesh - LINE Bot Application v7.3 FINAL
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
 ✅ Glass iOS Style Design
 ✅ Auto Name Update from LINE
 ✅ Complete Theme System
-✅ Help Window with Group/Solo Play
-✅ Professional & Clean
+✅ Fixed backgroundColor error
+✅ Enhanced hints with first letter + count
 """
 
 import os
@@ -201,7 +201,7 @@ background:rgba(255,255,255,0.2);border-radius:20px;text-align:center}}
 .footer{{margin-top:30px;font-size:0.85em;opacity:0.7;text-align:center}}
 </style></head><body><div class="container"><h1>{BOT_NAME}</h1>
 <div class="version">Version {BOT_VERSION} - Glass iOS Style</div>
-<div class="status">Bot is running smoothly</div>
+<div class="status">✅ Bot is running smoothly</div>
 <div class="stats">
 <div class="stat-card"><div class="stat-value">{stats['total_users']}</div><div class="stat-label">المستخدمين</div></div>
 <div class="stat-card"><div class="stat-value">{stats['registered_users']}</div><div class="stat-label">المسجلين</div></div>
@@ -228,12 +228,12 @@ def handle_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             
-            # Get and update username
+            # Get and update username from LINE
             try:
                 profile = line_bot_api.get_profile(user_id)
                 username = get_username(profile)
                 
-                # Auto update name
+                # Auto update name if changed
                 cached_user = user_cache.get(user_id)
                 if cached_user and cached_user.get('name') != username:
                     db.update_user_name(user_id, username)
@@ -272,7 +272,7 @@ def handle_message(event):
                 theme_name = text.replace("ثيم ", "").strip()
                 if theme_name in THEMES:
                     db.set_user_theme(user_id, theme_name)
-                    reply = TextMessage(text=f"تم تغيير الثيم إلى {theme_name}")
+                    reply = TextMessage(text=f"✅ تم تغيير الثيم إلى {theme_name}")
                 else:
                     available = ", ".join(THEMES.keys())
                     reply = TextMessage(text=f"الثيمات المتاحة:\n{available}")
@@ -285,12 +285,12 @@ def handle_message(event):
             elif text_lower in ["انضم", "join", "register"]:
                 db.update_user(user_id, is_registered=True)
                 update_user_cache(user_id)
-                reply = TextMessage(text="تم التسجيل بنجاح")
+                reply = TextMessage(text="✅ تم التسجيل بنجاح")
             
             elif text_lower in ["انسحب", "leave", "unregister"]:
                 db.update_user(user_id, is_registered=False)
                 update_user_cache(user_id)
-                reply = TextMessage(text="تم إلغاء التسجيل")
+                reply = TextMessage(text="❌ تم إلغاء التسجيل")
             
             # Stats
             elif text_lower in ["نقاطي", "points", "score"]:
@@ -305,7 +305,7 @@ def handle_message(event):
             elif text_lower in ["إيقاف", "stop", "quit", "exit"]:
                 if game_id in active_games:
                     del active_games[game_id]
-                    reply = TextMessage(text="تم إيقاف اللعبة")
+                    reply = TextMessage(text="⛔ تم إيقاف اللعبة")
             
             # Start Game
             elif text in GAME_LIST or text.startswith("لعبة ") or text.startswith("إعادة "):
@@ -338,9 +338,9 @@ def handle_message(event):
                             logger.info(f"{username} started {game_name}")
                         except Exception as e:
                             logger.error(f"Error starting game {game_name}: {e}")
-                            reply = TextMessage(text="حدث خطأ في بدء اللعبة")
+                            reply = TextMessage(text="❌ حدث خطأ في بدء اللعبة")
                     else:
-                        reply = TextMessage(text=f"اللعبة '{game_name}' غير موجودة")
+                        reply = TextMessage(text=f"❌ اللعبة '{game_name}' غير موجودة")
             
             # Game Answers
             else:
@@ -376,7 +376,7 @@ def handle_message(event):
                         logger.error(f"Error in game: {e}")
                         if game_id in active_games:
                             del active_games[game_id]
-                        reply = TextMessage(text="حدث خطأ")
+                        reply = TextMessage(text="❌ حدث خطأ")
             
             if reply:
                 send_with_quick_reply(line_bot_api, event.reply_token, reply)
