@@ -297,7 +297,7 @@ def build_games_menu(theme="أبيض"):
     return FlexMessage(alt_text=f"{BOT_NAME} - الألعاب", contents=FlexContainer.from_dict(card))
 
 
-def build_my_points(username, points, theme="أبيض"):
+def build_my_points(username, points, user_game_stats=None, theme="أبيض"):
     """Build my points window with level system"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
@@ -694,3 +694,19 @@ def build_winner_announcement(username, game_name, total_score, final_points, th
     
     card = create_neumorphic_card(colors, contents, footer)
     return FlexMessage(alt_text="🎉 تهانينا!", contents=FlexContainer.from_dict(card))
+
+
+# Dummy functions to satisfy imports (not used)
+def build_help_menu(theme="أبيض"):
+    """Alias for build_games_menu"""
+    return build_games_menu(theme)
+
+
+def build_game_stats(theme="أبيض"):
+    """Placeholder for game stats"""
+    return build_games_menu(theme)
+
+
+def build_detailed_game_info(theme="أبيض"):
+    """Placeholder for detailed game info"""
+    return build_games_menu(theme)
