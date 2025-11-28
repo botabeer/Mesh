@@ -1,26 +1,30 @@
 """
-لعبة الرياضيات - Bot Mesh v3.2
-أسئلة حسابية ذكية مع صعوبة متدرجة
+لعبة الرياضيات - Bot Mesh v9.0 FINAL
 Created by: Abeer Aldosari © 2025
+✅ فردي: لمح + جاوب + مؤقت
+✅ فريقين: مؤقت فقط
 """
 
 from games.base_game import BaseGame
 import random
+import time
 from typing import Dict, Any, Optional
 
 
 class MathGame(BaseGame):
-    """لعبة الرياضيات المحسّنة"""
+    """لعبة الرياضيات - حسابات ذكية"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "رياضيات"
-        self.game_icon = None
+        self.game_icon = "🔢"
+        self.supports_hint = True
+        self.supports_reveal = True
 
-        self.team_mode = False
-        self.team_a = set()
-        self.team_b = set()
+        self.round_time = 25  # ⏱️ 25 ثانية
+        self.round_start_time = None
 
+        # مستويات الصعوبة
         self.difficulty_levels = {
             1: {"name": "سهل", "min": 1, "max": 20, "ops": ['+', '-']},
             2: {"name": "متوسط", "min": 10, "max": 50, "ops": ['+', '-', '×']},
@@ -32,6 +36,7 @@ class MathGame(BaseGame):
         self.current_question_data = None
 
     def generate_math_question(self):
+        """توليد سؤال رياضي"""
         level = min(self.current_question + 1, 5)
         config = self.difficulty_levels[level]
         operation = random.choice(config["ops"])
@@ -55,7 +60,7 @@ class MathGame(BaseGame):
             answer = a * b
             question = f"{a} × {b} = ؟"
 
-        else:
+        else:  # ÷
             result = random.randint(2, 20)
             divisor = random.randint(2, 15)
             a = result * divisor
@@ -81,95 +86,125 @@ class MathGame(BaseGame):
         q_data = self.generate_math_question()
         self.current_question_data = q_data
         self.current_answer = q_data["answer"]
-        colors = self.get_theme_colors()
+        self.round_start_time = time.time()
 
-        footer_buttons = []
-        if not self.team_mode:
-            footer_buttons = [
-                {
-                    "type": "button",
-                    "action": {"type": "message", "label": "لمح", "text": "لمح"},
-                    "style": "secondary",
-                    "height": "sm",
-                    "color": colors["shadow1"]
-                },
-                {
-                    "type": "button",
-                    "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
-                    "style": "secondary",
-                    "height": "sm",
-                    "color": colors["shadow1"]
-                }
-            ]
+        # ✅ النص الإضافي حسب الوضع
+        if self.team_mode:
+            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}"
+        else:
+            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}\n💡 اكتب 'لمح' أو 'جاوب'"
 
-        flex_content = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": f"رياضيات ▫️ {q_data['level_name']}", "align": "center", "weight": "bold"},
-                    {"type": "text", "text": q_data["question"], "align": "center", "size": "xl", "margin": "md"},
-                ],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": footer_buttons,
-                "backgroundColor": colors["bg"]
-            }
-        }
+        return self.build_question_flex(
+            question_text=q_data["question"],
+            additional_info=additional_info
+        )
 
-        return self._create_flex_with_buttons("رياضيات", flex_content)
+    def _time_expired(self) -> bool:
+        """التحقق من انتهاء الوقت"""
+        if not self.round_start_time:
+            return False
+        return (time.time() - self.round_start_time) > self.round_time
 
-    def check_answer(self, user_answer: str, user_id: str, display_name: str):
-
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active:
             return None
 
-        if self.team_mode:
-            if user_id not in self.team_a and user_id not in self.team_b:
-                return None
+        # ✅ التحقق من الوقت
+        if self._time_expired():
+            self.current_question += 1
+            self.answered_users.clear()
 
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"⏱️ انتهى الوقت!\nالإجابة: {self.current_answer}\n\n{result.get('message', '')}"
+                return result
+
+            return {
+                "message": f"⏱️ انتهى الوقت!\nالإجابة: {self.current_answer}",
+                "response": self.get_question(),
+                "points": 0
+            }
+
+        # تجاهل من أجاب أو غير منضم
         if user_id in self.answered_users:
+            return None
+
+        if self.team_mode and user_id not in self.joined_users:
             return None
 
         answer = user_answer.strip()
         normalized = self.normalize_text(answer)
 
+        # ✅ لمح وجاوب للفردي فقط
         if not self.team_mode:
             if normalized == "لمح":
-                hint = f"الجواب من {len(self.current_answer)} خانات"
-                return {'message': hint, 'response': self._create_text_message(hint), 'points': 0}
+                hint = f"💡 الجواب من {len(self.current_answer)} خانات"
+                return {
+                    "message": hint,
+                    "response": self._create_text_message(hint),
+                    "points": 0
+                }
 
             if normalized == "جاوب":
                 reveal = f"الجواب: {self.current_answer}"
-                self.previous_question = self.current_question_data["question"]
-                self.previous_answer = self.current_answer
                 self.current_question += 1
                 self.answered_users.clear()
-                return {'message': reveal, 'response': self.get_question(), 'points': 0}
 
+                if self.current_question >= self.questions_count:
+                    result = self.end_game()
+                    result["message"] = f"{reveal}\n\n{result.get('message', '')}"
+                    return result
+
+                return {
+                    "message": reveal,
+                    "response": self.get_question(),
+                    "points": 0
+                }
+
+        # التحقق من الإجابة
         try:
             user_num = int(answer)
         except:
-            return None
+            return {
+                "message": "❌ يرجى إدخال رقم صحيح",
+                "response": self._create_text_message("❌ يرجى إدخال رقم صحيح"),
+                "points": 0
+            }
 
         if user_num == int(self.current_answer):
+            # حساب النقاط مع بونص الوقت
+            base_points = 10
+            elapsed = int(time.time() - self.round_start_time)
+            remaining = max(0, self.round_time - elapsed)
+            time_bonus = max(0, remaining // 2)  # بونص 1 نقطة لكل ثانيتين
+            total_points = base_points + time_bonus
 
+            # توزيع النقاط
             if self.team_mode:
-                team = "A" if user_id in self.team_a else "B"
-                self.add_team_score(team, 10)
-                self.current_question += 1
-                self.answered_users.clear()
-                return {'message': f"نقطة لفريق {team}", 'response': self.get_question(), 'points': 0}
+                team = self.get_user_team(user_id)
+                if not team:
+                    team = self.assign_to_team(user_id)
+                self.add_team_score(team, total_points)
+            else:
+                self.add_score(user_id, display_name, total_points)
 
-            points = self.add_score(user_id, display_name, 10)
             self.current_question += 1
             self.answered_users.clear()
-            return {'message': f"إجابة صحيحة +{points}", 'response': self.get_question(), 'points': points}
 
-        return None
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["points"] = total_points
+                return result
+
+            bonus_msg = f" +{time_bonus} بونص" if time_bonus > 0 else ""
+            return {
+                "message": f"✅ إجابة صحيحة!\n+{total_points} نقطة{bonus_msg}",
+                "response": self.get_question(),
+                "points": total_points
+            }
+
+        return {
+            "message": "❌ إجابة خاطئة",
+            "response": self._create_text_message("❌ إجابة خاطئة"),
+            "points": 0
+        }
