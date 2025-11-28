@@ -1,12 +1,11 @@
 """
-Bot Mesh - UI Builder v7.2 COMPLETE
+Bot Mesh - UI Builder v7.3 COMPLETE
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
 ✅ Glass iOS Style
 ✅ Complete Theme System
-✅ Help Window
-✅ Theme Selector
-✅ Enhanced Home
+✅ Help Window (5 cards)
+✅ Fixed backgroundColor error
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
@@ -17,25 +16,23 @@ from constants import BOT_RIGHTS, THEMES, DEFAULT_THEME, GAME_LIST
 # ============================================================================
 
 def create_glass_bubble(colors, header, body, footer=None):
-    """Create glass bubble"""
+    """Create glass bubble (FIXED - no backgroundColor in boxes)"""
     bubble = {
         "type": "bubble", "size": "mega",
         "header": {
             "type": "box", "layout": "vertical", "contents": header,
-            "backgroundColor": colors["card"], "paddingAll": "20px"
+            "paddingAll": "20px"
         },
         "body": {
             "type": "box", "layout": "vertical", "contents": body,
-            "backgroundColor": colors["bg"], "paddingAll": "20px", "spacing": "md"
-        },
-        "styles": {"header": {"backgroundColor": colors["card"]}, "body": {"backgroundColor": colors["bg"]}}
+            "paddingAll": "20px", "spacing": "md"
+        }
     }
     if footer:
         bubble["footer"] = {
             "type": "box", "layout": "vertical", "contents": footer,
-            "backgroundColor": colors["card"], "paddingAll": "15px", "spacing": "sm"
+            "paddingAll": "15px", "spacing": "sm"
         }
-        bubble["styles"]["footer"] = {"backgroundColor": colors["card"]}
     return bubble
 
 def create_separator(color):
@@ -59,10 +56,10 @@ def build_games_menu(theme="أبيض"):
                    "ترتيب", "تكوين", "ضد", "لون", "رياضيات", "توافق"]
     
     header = [
-        {"type": "text", "text": "الألعاب المتاحة", "size": "xl", "weight": "bold", 
+        {"type": "text", "text": "🎮 الألعاب المتاحة", "size": "xl", "weight": "bold", 
          "color": colors["primary"], "align": "center"},
         {"type": "text", "text": f"اختر من {len(games_order)} لعبة", "size": "sm", 
-         "color": colors["text2"], "align": "center"}
+         "color": colors["text2"], "align": "center", "margin": "sm"}
     ]
     
     game_buttons = []
@@ -75,14 +72,10 @@ def build_games_menu(theme="أبيض"):
     body = [create_separator(colors["shadow1"])] + game_buttons + [
         create_separator(colors["shadow1"]),
         {
-            "type": "box", "layout": "vertical",
-            "contents": [{
-                "type": "text",
-                "text": "5 جولات • نقطة لكل إجابة • أول إجابة صحيحة فقط",
-                "size": "xs", "color": colors["text2"], "align": "center", "wrap": True
-            }],
-            "backgroundColor": f"rgba(255,255,255,0.85)",
-            "cornerRadius": "12px", "paddingAll": "12px"
+            "type": "text",
+            "text": "5 جولات • نقطة لكل إجابة • أول إجابة صحيحة فقط",
+            "size": "xs", "color": colors["text2"], "align": "center", "wrap": True,
+            "margin": "md"
         }
     ]
     
@@ -105,7 +98,7 @@ def build_my_points(username, points, game_stats, theme="أبيض"):
     total_games = sum(game_stats.values())
     
     header = [
-        {"type": "text", "text": "نقاطي", "size": "xl", "weight": "bold", 
+        {"type": "text", "text": "⭐ نقاطي", "size": "xl", "weight": "bold", 
          "color": colors["primary"], "align": "center"}
     ]
     
@@ -115,18 +108,17 @@ def build_my_points(username, points, game_stats, theme="أبيض"):
             {"type": "text", "text": username, "size": "lg", "weight": "bold", 
              "color": colors["text"], "align": "center"},
             {"type": "text", "text": str(points), "size": "xxl", "weight": "bold", 
-             "color": colors["primary"], "align": "center"},
+             "color": colors["primary"], "align": "center", "margin": "sm"},
             {"type": "text", "text": f"إجمالي الألعاب: {total_games}", "size": "sm", 
-             "color": colors["text2"], "align": "center"}
+             "color": colors["text2"], "align": "center", "margin": "sm"}
         ],
-        "backgroundColor": f"rgba(255,255,255,0.85)",
         "cornerRadius": "15px", "paddingAll": "20px"
     }]
     
     if game_stats:
         body.append(create_separator(colors["shadow1"]))
-        body.append({"type": "text", "text": "أكثر الألعاب", "size": "md", 
-                    "color": colors["text"], "weight": "bold"})
+        body.append({"type": "text", "text": "🎯 أكثر الألعاب", "size": "md", 
+                    "color": colors["text"], "weight": "bold", "margin": "md"})
         
         for game_name, plays in sorted(game_stats.items(), key=lambda x: x[1], reverse=True)[:5]:
             body.append({
@@ -135,17 +127,16 @@ def build_my_points(username, points, game_stats, theme="أبيض"):
                     {"type": "text", "text": game_name, "size": "sm", 
                      "color": colors["text"], "flex": 3},
                     {"type": "text", "text": str(plays), "size": "sm", 
-                     "color": colors["primary"], "align": "end", "flex": 1}
+                     "color": colors["primary"], "align": "end", "flex": 1, "weight": "bold"}
                 ],
-                "backgroundColor": f"rgba(255,255,255,0.85)",
                 "cornerRadius": "8px", "paddingAll": "10px", "margin": "xs"
             })
     
     footer = [
         {"type": "box", "layout": "horizontal", "spacing": "sm",
          "contents": [
-             create_button("الصدارة", "صدارة", colors["primary"]),
-             create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
+             create_button("🏆 الصدارة", "صدارة", colors["primary"]),
+             create_button("🎮 الألعاب", "ألعاب", colors["shadow1"], "secondary")
          ]},
         create_separator(colors["shadow1"]),
         {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
@@ -164,39 +155,39 @@ def build_leaderboard(leaderboard, theme="أبيض"):
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     header = [
-        {"type": "text", "text": "الصدارة", "size": "xl", "weight": "bold", 
+        {"type": "text", "text": "🏆 الصدارة", "size": "xl", "weight": "bold", 
          "color": colors["primary"], "align": "center"},
         {"type": "text", "text": f"أفضل {len(leaderboard)} لاعبين", "size": "sm", 
-         "color": colors["text2"], "align": "center"}
+         "color": colors["text2"], "align": "center", "margin": "sm"}
     ]
     
     body = [create_separator(colors["shadow1"])]
     
     if leaderboard:
+        medals = ["🥇", "🥈", "🥉"]
         for i, (name, points) in enumerate(leaderboard):
-            rank_display = ["المركز الأول", "المركز الثاني", "المركز الثالث"][i] if i < 3 else f"المركز {i+1}"
+            medal = medals[i] if i < 3 else f"{i+1}."
             body.append({
                 "type": "box", "layout": "horizontal",
                 "contents": [
-                    {"type": "text", "text": rank_display, "size": "xs", 
-                     "color": colors["text2"], "flex": 2},
+                    {"type": "text", "text": medal, "size": "sm", 
+                     "color": colors["text"], "flex": 1},
                     {"type": "text", "text": name[:20], "size": "sm", 
-                     "color": colors["text"], "flex": 3},
+                     "color": colors["text"], "flex": 4},
                     {"type": "text", "text": str(points), "size": "sm", 
                      "color": colors["primary"], "weight": "bold", "align": "end", "flex": 1}
                 ],
-                "backgroundColor": f"rgba(255,255,255,0.85)",
                 "cornerRadius": "10px", "paddingAll": "12px", "margin": "xs"
             })
     else:
         body.append({"type": "text", "text": "لا يوجد لاعبين بعد", "size": "sm", 
-                    "color": colors["text2"], "align": "center"})
+                    "color": colors["text2"], "align": "center", "margin": "md"})
     
     footer = [
         {"type": "box", "layout": "horizontal", "spacing": "sm",
          "contents": [
-             create_button("نقاطي", "نقاطي", colors["primary"]),
-             create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
+             create_button("⭐ نقاطي", "نقاطي", colors["primary"]),
+             create_button("🎮 الألعاب", "ألعاب", colors["shadow1"], "secondary")
          ]},
         create_separator(colors["shadow1"]),
         {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
@@ -215,22 +206,18 @@ def build_registration_required(theme="أبيض"):
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     header = [
-        {"type": "text", "text": "تسجيل مطلوب", "size": "xl", "weight": "bold", 
+        {"type": "text", "text": "⭕ تسجيل مطلوب", "size": "xl", "weight": "bold", 
          "color": colors["error"], "align": "center"}
     ]
     
     body = [{
-        "type": "box", "layout": "vertical",
-        "contents": [{
-            "type": "text", "text": "يجب التسجيل للمشاركة في الألعاب",
-            "size": "md", "color": colors["text"], "align": "center", "wrap": True
-        }],
-        "backgroundColor": f"rgba(255,255,255,0.85)",
-        "cornerRadius": "15px", "paddingAll": "20px"
+        "type": "text", "text": "يجب التسجيل للمشاركة في الألعاب",
+        "size": "md", "color": colors["text"], "align": "center", "wrap": True,
+        "margin": "lg"
     }]
     
     footer = [
-        create_button("انضم الآن", "انضم", colors["primary"]),
+        create_button("✅ انضم الآن", "انضم", colors["success"]),
         create_separator(colors["shadow1"]),
         {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
          "color": colors["text2"], "align": "center"}
@@ -248,7 +235,7 @@ def build_winner_announcement(username, game_name, total_score, final_points, th
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
     
     header = [
-        {"type": "text", "text": "تهانينا", "size": "xxl", "weight": "bold", 
+        {"type": "text", "text": "🎉 تهانينا", "size": "xxl", "weight": "bold", 
          "color": colors["success"], "align": "center"}
     ]
     
@@ -258,22 +245,21 @@ def build_winner_announcement(username, game_name, total_score, final_points, th
             {"type": "text", "text": username, "size": "xl", "weight": "bold", 
              "color": colors["text"], "align": "center"},
             {"type": "text", "text": f"أنهيت لعبة {game_name}", "size": "md", 
-             "color": colors["text2"], "align": "center", "wrap": True},
+             "color": colors["text2"], "align": "center", "wrap": True, "margin": "sm"},
             create_separator(colors["shadow1"]),
             {"type": "text", "text": f"+{total_score}", "size": "xxl", "weight": "bold", 
-             "color": colors["primary"], "align": "center"},
+             "color": colors["primary"], "align": "center", "margin": "md"},
             {"type": "text", "text": f"الإجمالي: {final_points}", "size": "md", 
-             "color": colors["text2"], "align": "center"}
+             "color": colors["text2"], "align": "center", "margin": "sm"}
         ],
-        "backgroundColor": f"rgba(255,255,255,0.85)",
         "cornerRadius": "15px", "paddingAll": "20px"
     }]
     
     footer = [
         {"type": "box", "layout": "horizontal", "spacing": "sm",
          "contents": [
-             create_button("إعادة", f"إعادة {game_name}", colors["primary"]),
-             create_button("الألعاب", "ألعاب", colors["shadow1"], "secondary")
+             create_button("🔄 إعادة", f"إعادة {game_name}", colors["primary"]),
+             create_button("🎮 الألعاب", "ألعاب", colors["shadow1"], "secondary")
          ]},
         create_separator(colors["shadow1"]),
         {"type": "text", "text": BOT_RIGHTS, "size": "xxs", 
@@ -284,22 +270,154 @@ def build_winner_announcement(username, game_name, total_score, final_points, th
     return FlexMessage(alt_text="الفائز", contents=FlexContainer.from_dict(bubble))
 
 # ============================================================================
-# Help Window (من الكود السابق)
+# Help Window (5 Cards)
 # ============================================================================
 
 def build_help_window(theme="أبيض"):
-    """Help window - Glass iOS Style"""
+    """Help window - 5 cards"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    glass_bg = f"rgba(255,255,255,0.85)"
-    glass_border = colors["shadow1"]
     
-    # هنا يتم استخدام الكود الكامل من artifacts السابق
-    # (الكود طويل جداً، تم اختصاره هنا)
+    cards = [
+        # Card 1: Welcome
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "🎮", "size": "xxl", "align": "center"},
+                    {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", 
+                     "color": colors["text"], "align": "center", "margin": "md"},
+                    {"type": "text", "text": "بوت ألعاب احترافي", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {
+                        "type": "text", "text": "12 لعبة متنوعة", "size": "lg",
+                        "color": colors["text"], "weight": "bold", "align": "center", "margin": "lg"
+                    },
+                    {
+                        "type": "text", "text": "للمنافسة الجماعية والفردية", "size": "sm",
+                        "color": colors["text2"], "align": "center", "margin": "sm", "wrap": True
+                    },
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "للبدء:", "size": "sm", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", "text": "1. اكتب: انضم\n2. اختر اللعبة\n3. ابدأ المنافسة", 
+                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_button("🎮 الألعاب", "ألعاب", colors["primary"], "primary")
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # Card 2: Group Play
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "👥", "size": "xxl", "align": "center"},
+                    {"type": "text", "text": "اللعب الجماعي", "size": "xl", "weight": "bold", 
+                     "color": colors["text"], "align": "center", "margin": "md"},
+                    {"type": "text", "text": "نافس أصدقاءك في المجموعات", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "• المنافسة الحية بين الأعضاء\n• أول إجابة صحيحة تفوز\n• 5 جولات للمنافسة\n• نقاط تراكمية للصدارة", 
+                     "size": "sm", "color": colors["text"], "wrap": True, "margin": "lg"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "كيفية البدء:", "size": "sm", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", "text": "منشن البوت @Bot ثم اختر اللعبة", 
+                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # Card 3: Solo Play
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "🎯", "size": "xxl", "align": "center"},
+                    {"type": "text", "text": "اللعب الفردي", "size": "xl", "weight": "bold", 
+                     "color": colors["text"], "align": "center", "margin": "md"},
+                    {"type": "text", "text": "تدرب وطور مهاراتك", "size": "sm", 
+                     "color": colors["text2"], "align": "center", "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "• تدرب بدون ضغط الوقت\n• تلميحات ومساعدة متاحة\n• تتبع تقدمك ونقاطك\n• جاهز للمنافسة الجماعية", 
+                     "size": "sm", "color": colors["text"], "wrap": True, "margin": "lg"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "كيفية البدء:", "size": "sm", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", "text": "راسل البوت مباشرة واختر اللعبة", 
+                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # Card 4: Rules
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "📋", "size": "xxl", "align": "center"},
+                    {"type": "text", "text": "قواعد اللعب", "size": "xl", "weight": "bold", 
+                     "color": colors["text"], "align": "center", "margin": "md"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "5 جولات", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "align": "center", "margin": "lg"},
+                    {"type": "text", "text": "كل لعبة تحتوي على 5 جولات", "size": "xs", 
+                     "color": colors["text2"], "align": "center", "margin": "xs"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "نقطة واحدة", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "align": "center", "margin": "md"},
+                    {"type": "text", "text": "لكل إجابة صحيحة", "size": "xs", 
+                     "color": colors["text2"], "align": "center", "margin": "xs"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "الأسرع يفوز", "size": "md", "color": colors["text"], 
+                     "weight": "bold", "align": "center", "margin": "md"},
+                    {"type": "text", "text": "أول إجابة صحيحة تحصل على النقطة", "size": "xs", 
+                     "color": colors["text2"], "align": "center", "wrap": True, "margin": "xs"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        },
+        
+        # Card 5: Commands
+        {
+            "type": "bubble", "size": "mega",
+            "body": {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "⌨️", "size": "xxl", "align": "center"},
+                    {"type": "text", "text": "الأوامر", "size": "xl", "weight": "bold", 
+                     "color": colors["text"], "align": "center", "margin": "md"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "انضم - التسجيل\nنقاطي - عرض نقاطك\nصدارة - لوحة الصدارة\nإيقاف - إيقاف اللعبة", 
+                     "size": "sm", "color": colors["text"], "wrap": True, "margin": "lg"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "أثناء اللعب:", "size": "sm", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", "text": "• لمح - للحصول على تلميح\n• جاوب - لكشف الإجابة", 
+                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "sm"},
+                    create_separator(colors["shadow1"]),
+                    {"type": "text", "text": "في المجموعات:", "size": "xs", "color": colors["text"], 
+                     "weight": "bold", "margin": "lg"},
+                    {"type": "text", "text": "منشن البوت @Bot لعرض القائمة", 
+                     "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"}
+                ],
+                "paddingAll": "24px", "spacing": "none"
+            }
+        }
+    ]
     
-    return FlexMessage(alt_text="المساعدة", contents=FlexContainer.from_dict({
-        "type": "carousel",
-        "contents": []  # البطاقات الخمس من الكود السابق
-    }))
+    return FlexMessage(
+        alt_text="المساعدة",
+        contents=FlexContainer.from_dict({"type": "carousel", "contents": cards})
+    )
 
 # ============================================================================
 # Theme Selector
@@ -308,7 +426,6 @@ def build_help_window(theme="أبيض"):
 def build_theme_selector(current_theme="أبيض"):
     """Theme selector"""
     colors = THEMES.get(current_theme, THEMES[DEFAULT_THEME])
-    glass_bg = f"rgba(255,255,255,0.85)"
     
     theme_buttons = []
     theme_names = list(THEMES.keys())
@@ -338,22 +455,12 @@ def build_theme_selector(current_theme="أبيض"):
     
     body = [
         create_separator(colors["shadow1"]),
-        {
-            "type": "box", "layout": "vertical",
-            "contents": [{
-                "type": "text", "text": "معاينة الثيم",
-                "size": "md", "color": colors["text"], "weight": "bold", "align": "center"
-            }],
-            "backgroundColor": glass_bg,
-            "cornerRadius": "15px", "paddingAll": "20px", "margin": "lg"
-        }
+        {"type": "text", "text": "اختر ثيمك المفضل", "size": "md", 
+         "color": colors["text"], "weight": "bold", "align": "center", "margin": "lg"}
     ] + theme_buttons + [{
-        "type": "box", "layout": "vertical",
-        "contents": [{
-            "type": "text",
-            "text": "الثيم سيُطبق على جميع الأزرار والقوائم",
-            "size": "xs", "color": colors["text2"], "align": "center", "wrap": True
-        }],
+        "type": "text",
+        "text": "الثيم سيُطبق على جميع القوائم والأزرار",
+        "size": "xs", "color": colors["text2"], "align": "center", "wrap": True,
         "margin": "lg"
     }]
     
@@ -367,12 +474,11 @@ def build_theme_selector(current_theme="أبيض"):
 def build_enhanced_home(username, points, is_registered, theme="أبيض"):
     """Enhanced home page"""
     colors = THEMES.get(theme, THEMES[DEFAULT_THEME])
-    glass_bg = f"rgba(255,255,255,0.85)"
     
     registration_emoji = "✅" if is_registered else "⭕"
-    registration_text = f"مسجل {points}" if is_registered else "غير مسجل"
+    registration_text = f"مسجل • {points} نقطة" if is_registered else "غير مسجل"
     
-    # Theme buttons (compact)
+    # Theme buttons
     theme_buttons = []
     theme_names = list(THEMES.keys())
     for i in range(0, len(theme_names), 3):
@@ -401,7 +507,6 @@ def build_enhanced_home(username, points, is_registered, theme="أبيض"):
                  "size": "sm", "color": colors["success"] if is_registered else colors["text2"], 
                  "align": "center", "margin": "sm"}
             ],
-            "backgroundColor": glass_bg,
             "cornerRadius": "20px", "paddingAll": "20px", "margin": "lg"
         },
         {
@@ -410,7 +515,6 @@ def build_enhanced_home(username, points, is_registered, theme="أبيض"):
                 {"type": "text", "text": "🎨 اختر الثيم", "size": "sm", 
                  "color": colors["text"], "weight": "bold"}
             ] + theme_buttons,
-            "backgroundColor": glass_bg,
             "cornerRadius": "15px", "paddingAll": "12px", "margin": "lg"
         },
         {
