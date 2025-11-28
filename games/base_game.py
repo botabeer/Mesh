@@ -1,7 +1,9 @@
-# games/base_game.py - FIXED VERSION
+# games/base_game.py - ENHANCED VERSION
 """
-Bot Mesh - Base Game System FIXED
-تم إصلاح التعارضات
+Bot Mesh - Base Game System ENHANCED
+✅ إصلاح جميع المشاكل
+✅ دعم كامل للفرق
+✅ نظام session متكامل
 """
 
 from typing import Dict, Any, Optional
@@ -10,7 +12,7 @@ from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 import re
 
 class BaseGame:
-    """BaseGame - نظام اللعبة الأساسي"""
+    """BaseGame - نظام اللعبة الأساسي المحسّن"""
     
     game_name = "لعبة"
     game_icon = "🎮"
@@ -57,6 +59,17 @@ class BaseGame:
         self.game_active = False
         self.game_start_time: Optional[datetime] = None
         self.current_theme = "أبيض"
+        
+        # ✅ دعم الفرق
+        self.team_mode = False
+        self.joined_users = set()
+        self.user_teams: Dict[str, str] = {}
+        self.team_scores: Dict[str, int] = {"team1": 0, "team2": 0}
+        
+        # ✅ دعم الجلسات
+        self.session_id = None
+        self.session_type = "solo"  # solo, group, teams
+        self.db = None  # سيتم تعيينه من app.py
 
     def normalize_text(self, text: str) -> str:
         """تطبيع النص العربي"""
@@ -84,6 +97,40 @@ class BaseGame:
         self.answered_users.add(user_id)
         return points
 
+    def add_team_score(self, team_name: str, points: int):
+        """إضافة نقاط للفريق"""
+        if team_name in self.team_scores:
+            self.team_scores[team_name] += points
+        return points
+
+    def assign_to_team(self, user_id: str) -> str:
+        """تعيين المستخدم لفريق"""
+        if user_id in self.user_teams:
+            return self.user_teams[user_id]
+        
+        # توزيع متوازن
+        team1_count = sum(1 for t in self.user_teams.values() if t == "team1")
+        team2_count = sum(1 for t in self.user_teams.values() if t == "team2")
+        
+        team = "team1" if team1_count <= team2_count else "team2"
+        self.user_teams[user_id] = team
+        return team
+
+    def get_user_team(self, user_id: str) -> Optional[str]:
+        """الحصول على فريق المستخدم"""
+        return self.user_teams.get(user_id)
+
+    def is_user_joined(self, user_id: str) -> bool:
+        """التحقق من انضمام المستخدم"""
+        return user_id in self.joined_users
+
+    def join_user(self, user_id: str):
+        """انضمام مستخدم"""
+        self.joined_users.add(user_id)
+        if self.team_mode:
+            return self.assign_to_team(user_id)
+        return None
+
     def get_theme_colors(self) -> Dict[str, str]:
         """الحصول على ألوان الثيم"""
         return self.THEMES.get(self.current_theme, self.THEMES["أبيض"])
@@ -92,6 +139,10 @@ class BaseGame:
         """تعيين الثيم"""
         if theme_name in self.THEMES:
             self.current_theme = theme_name
+
+    def set_database(self, db):
+        """تعيين قاعدة البيانات"""
+        self.db = db
 
     def start_game(self):
         """بدء اللعبة"""
@@ -115,6 +166,33 @@ class BaseGame:
     def end_game(self) -> Dict[str, Any]:
         """إنهاء اللعبة"""
         self.game_active = False
+        
+        if self.team_mode:
+            # نهاية لعبة الفرق
+            team1_score = self.team_scores.get("team1", 0)
+            team2_score = self.team_scores.get("team2", 0)
+            
+            if team1_score > team2_score:
+                winner = "الفريق الأول"
+            elif team2_score > team1_score:
+                winner = "الفريق الثاني"
+            else:
+                winner = "تعادل"
+            
+            message = (
+                f"🏆 انتهت اللعبة\n\n"
+                f"الفريق الأول: {team1_score}\n"
+                f"الفريق الثاني: {team2_score}\n\n"
+                f"النتيجة: {winner}"
+            )
+            
+            return {
+                "game_over": True,
+                "points": max(team1_score, team2_score),
+                "message": message
+            }
+        
+        # نهاية لعبة فردية
         if not self.scores:
             return {
                 "game_over": True,
@@ -254,5 +332,7 @@ class BaseGame:
             "supports_reveal": self.supports_reveal,
             "active": self.game_active,
             "current_question": self.current_question,
-            "players_count": len(self.scores)
+            "players_count": len(self.scores),
+            "team_mode": self.team_mode,
+            "session_type": self.session_type
         }
