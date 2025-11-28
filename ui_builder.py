@@ -1,13 +1,5 @@
-"""
-Bot Mesh - UI Builder v8.5 COMPLETE FIXED
-Created by: Abeer Aldosari © 2025
-✅ واجهات زجاجية احترافية
-✅ Quick Reply للألعاب فقط
-✅ متوافق 100% مع آلية البوت
-✅ معالجة أخطاء محسّنة
-✅ دعم جميع الثيمات
-✅ إصلاح جميع مشاكل color في separators
-"""
+# Bot Mesh - UI Builder v8.5 COMPLETE FIXED
+# Created by: Abeer Aldosari © 2025
 
 import traceback
 from typing import List, Optional, Dict, Any, Tuple
@@ -102,13 +94,9 @@ def attach_quick_reply_to_message(message):
     """إضافة Quick Reply للرسالة"""
     try:
         qr = create_games_quick_reply()
-        if hasattr(message, "quick_reply"):
-            message.quick_reply = qr
-        else:
-            setattr(message, "quick_reply", qr)
+        message.quick_reply = qr
     except Exception:
         pass
-
     return message
 
 
@@ -157,156 +145,232 @@ def create_glass_header(colors: Dict, title: str, subtitle: str = None, icon: st
     return header_content
 
 
-def create_glass_card(colors: Dict, icon: str, title: str, description: str, highlight: bool = False) -> Dict:
-    """إنشاء بطاقة زجاجية"""
-    return {
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": icon,
-                        "size": "xl",
-                        "align": "center",
-                        "color": colors["text"] if not highlight else "#FFFFFF"
-                    }
-                ],
-                "backgroundColor": colors["primary"] if highlight else colors["card"],
-                "cornerRadius": "15px",
-                "width": "50px",
-                "height": "50px",
-                "justifyContent": "center",
-                "alignItems": "center"
-            },
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": title,
-                        "size": "md",
-                        "weight": "bold",
-                        "color": colors["text"]
-                    },
-                    {
-                        "type": "text",
-                        "text": description,
-                        "size": "xs",
-                        "wrap": True,
-                        "color": colors["text2"]
-                    }
-                ],
-                "flex": 1,
-                "paddingStart": "md",
-                "justifyContent": "center"
-            }
-        ],
-        "backgroundColor": colors["glass"],
-        "cornerRadius": "20px",
-        "paddingAll": "15px",
-        "margin": "sm"
-    }
-
-
-def create_glass_button(label: str, text_cmd: str, color: str, style: str = "primary") -> Dict:
-    """إنشاء زر زجاجي"""
-    return {
-        "type": "button",
-        "action": {
-            "type": "message",
-            "label": label,
-            "text": text_cmd
-        },
-        "style": style,
-        "height": "sm",
-        "color": color
-    }
-
-
-def create_button_grid(buttons: List[Dict], columns: int = 2) -> List[Dict]:
-    """إنشاء شبكة أزرار"""
-    rows = []
-
-    for i in range(0, len(buttons), columns):
-        row_buttons = buttons[i:i + columns]
-        rows.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": row_buttons,
-            "margin": "sm"
-        })
-
-    return rows
-
-
 # ============================================================================
 # Main UI Screens
 # ============================================================================
 
 def build_enhanced_home(username: str, points: int, is_registered: bool, theme: str = DEFAULT_THEME) -> FlexMessage:
-    """الصفحة الرئيسية المحسّنة"""
-    try:
-        colors = _safe_get_colors(theme)
+    """الصفحة الرئيسية"""
+    colors = _safe_get_colors(theme)
 
-        header = create_glass_header(
-            colors, f"مرحباً {username}", f"النقاط: {points}", "🎮"
-        )
+    header = create_glass_header(
+        colors, f"مرحباً {username}", f"النقاط: {points}", "🎮"
+    )
 
-        cards = [
-            create_glass_card(colors, "🎮", "الألعاب", "اختر لعبتك المفضلة"),
-            create_glass_card(colors, "⭐", "نقاطي", f"لديك {points} نقطة"),
-            create_glass_card(colors, "🏆", "الصدارة", "أفضل اللاعبين"),
-            create_glass_card(colors, "🎨", "الثيمات", "غيّر المظهر"),
-        ]
+    buttons = [
+        {"type": "button", "action": {"type": "message", "label": "🎮 ألعاب", "text": "ألعاب"}},
+        {"type": "button", "action": {"type": "message", "label": "⭐ نقاطي", "text": "نقاطي"}},
+        {"type": "button", "action": {"type": "message", "label": "🏆 صدارة", "text": "صدارة"}},
+        {"type": "button", "action": {"type": "message", "label": "🎨 ثيمات", "text": "ثيمات"}},
+    ]
 
-        buttons = create_button_grid([
-            create_glass_button("🎮 ألعاب", "ألعاب", colors["primary"]),
-            create_glass_button("⭐ نقاطي", "نقاطي", colors["primary"]),
-            create_glass_button("🏆 صدارة", "صدارة", colors["secondary"]),
-            create_glass_button("🎨 ثيمات", "ثيمات", colors["secondary"]),
-        ])
-
-        footer = [{
-            "type": "text",
-            "text": BOT_RIGHTS,
-            "size": "xxs",
-            "color": colors["text2"],
-            "align": "center",
-            "margin": "lg"
-        }]
-
-        bubble = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": header + cards + buttons + footer,
-                "paddingAll": "20px",
-                "backgroundColor": colors["bg"]
-            }
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": header + buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
         }
+    }
 
-        flex_msg = FlexMessage(
-            alt_text="الصفحة الرئيسية",
-            contents=FlexContainer.from_dict(bubble)
-        )
-
-        return attach_quick_reply_to_message(flex_msg)
-
-    except Exception as e:
-        return create_debug_report(e, {"username": username, "theme": theme})
+    return attach_quick_reply_to_message(
+        FlexMessage(alt_text="الرئيسية", contents=FlexContainer.from_dict(bubble))
+    )
 
 
-# ============================================================================
-# Export All
-# ============================================================================
+def build_games_menu(theme: str = DEFAULT_THEME) -> FlexMessage:
+    """قائمة الألعاب"""
+    colors = _safe_get_colors(theme)
+
+    header = create_glass_header(colors, "🎮 قائمة الألعاب")
+
+    buttons = []
+
+    for _, display_name, icon in GAME_LIST:
+        buttons.append({
+            "type": "button",
+            "action": {
+                "type": "message",
+                "label": f"{icon} {display_name}",
+                "text": display_name
+            }
+        })
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": header + buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(
+        alt_text="الألعاب",
+        contents=FlexContainer.from_dict(bubble)
+    )
+
+
+def build_my_points(username: str, total_points: int, stats: Dict, theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = _safe_get_colors(theme)
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": f"{username}", "weight": "bold"},
+                {"type": "text", "text": f"النقاط: {total_points}"}
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(bubble))
+
+
+def build_leaderboard(top_users: List[Tuple[str, int]], theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = _safe_get_colors(theme)
+
+    items = []
+    for name, pts in top_users:
+        items.append({"type": "text", "text": f"{name} - {pts}"})
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": items,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(alt_text="الصدارة", contents=FlexContainer.from_dict(bubble))
+
+
+def build_theme_selector(current_theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = _safe_get_colors(current_theme)
+
+    buttons = []
+    for name in THEMES.keys():
+        buttons.append({
+            "type": "button",
+            "action": {"type": "message", "label": name, "text": f"ثيم {name}"}
+        })
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": buttons,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(alt_text="الثيمات", contents=FlexContainer.from_dict(bubble))
+
+
+def build_registration_required(theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = _safe_get_colors(theme)
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "يجب التسجيل أولاً"},
+                {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم"}}
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(alt_text="تسجيل", contents=FlexContainer.from_dict(bubble))
+
+
+def build_winner_announcement(username: str, game_name: str, points: int, total_points: int, theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = _safe_get_colors(theme)
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "🏆 الفائز"},
+                {"type": "text", "text": username},
+                {"type": "text", "text": f"{game_name}"},
+                {"type": "text", "text": f"+{points}"},
+                {"type": "text", "text": f"الإجمالي: {total_points}"}
+            ],
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(alt_text="الفائز", contents=FlexContainer.from_dict(bubble))
+
+
+def build_help_window(theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = _safe_get_colors(theme)
+
+    items = [
+        {"type": "text", "text": "ألعاب"},
+        {"type": "text", "text": "نقاطي"},
+        {"type": "text", "text": "صدارة"},
+        {"type": "text", "text": "ثيمات"},
+        {"type": "text", "text": "انضم"},
+        {"type": "text", "text": "إيقاف"}
+    ]
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": items,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(alt_text="مساعدة", contents=FlexContainer.from_dict(bubble))
+
+
+def build_multiplayer_help_window(theme: str = DEFAULT_THEME) -> FlexMessage:
+    colors = _safe_get_colors(theme)
+
+    steps = [
+        {"type": "text", "text": "1 اكتب فريقين"},
+        {"type": "text", "text": "2 اكتب انضم"},
+        {"type": "text", "text": "3 ابدأ اللعبة"}
+    ]
+
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": steps,
+            "backgroundColor": colors["bg"],
+            "paddingAll": "20px"
+        }
+    }
+
+    return FlexMessage(alt_text="فريقين", contents=FlexContainer.from_dict(bubble))
+
 
 __all__ = [
     "build_enhanced_home",
