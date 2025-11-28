@@ -1,12 +1,12 @@
 """
-Bot Mesh - LINE Bot Application v7.3 FINAL
+Bot Mesh - LINE Bot Application v8.0 ENHANCED
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
 ✅ Glass iOS Style Design
 ✅ Auto Name Update from LINE
 ✅ Complete Theme System
-✅ Fixed backgroundColor error
-✅ Enhanced hints with first letter + count
+✅ نافذة مساعدة مستقلة متعددة اللاعبين
+✅ حساب نسبة الإجابات الصحيحة
 """
 
 import os
@@ -35,7 +35,8 @@ from constants import (
 from ui_builder import (
     build_games_menu, build_my_points, build_leaderboard,
     build_registration_required, build_winner_announcement,
-    build_help_window, build_theme_selector, build_enhanced_home
+    build_help_window, build_theme_selector, build_enhanced_home,
+    build_multiplayer_help_window, build_percentage_result
 )
 
 from database import get_database
@@ -62,6 +63,9 @@ db = get_database()
 active_games = {}
 user_cache = {}
 user_requests = defaultdict(list)
+
+# نظام النافذة المستقلة
+standalone_sessions = {}  # تخزين جلسات اللعب المستقلة
 
 # Rate Limiting
 def is_rate_limited(user_id, max_requests=None, window=None):
@@ -200,7 +204,7 @@ background:rgba(255,255,255,0.2);border-radius:20px;text-align:center}}
 .stat-value{{font-size:2.5em;font-weight:bold;margin:10px 0}}.stat-label{{font-size:0.9em;opacity:0.9}}
 .footer{{margin-top:30px;font-size:0.85em;opacity:0.7;text-align:center}}
 </style></head><body><div class="container"><h1>{BOT_NAME}</h1>
-<div class="version">Version {BOT_VERSION} - Glass iOS Style</div>
+<div class="version">Version {BOT_VERSION} - Enhanced with Standalone Help</div>
 <div class="status">✅ Bot is running smoothly</div>
 <div class="stats">
 <div class="stat-card"><div class="stat-value">{stats['total_users']}</div><div class="stat-label">المستخدمين</div></div>
@@ -256,8 +260,19 @@ def handle_message(event):
             
             # === Commands ===
             
+            # نافذة المساعدة المستقلة
+            if text_lower in ["مساعدة مستقلة", "standalone help", "نافذة مستقلة"]:
+                reply = build_multiplayer_help_window(current_theme)
+            
+            # فردي/جماعي للنافذة المستقلة
+            elif text_lower in ["مساعدة فردي", "solo help"]:
+                reply = build_multiplayer_help_window(current_theme)
+                
+            elif text_lower in ["مساعدة جماعي", "group help"]:
+                reply = build_multiplayer_help_window(current_theme)
+            
             # Home / Help
-            if text_lower in ["مساعدة", "help", "بداية", "start"]:
+            elif text_lower in ["مساعدة", "help", "بداية", "start"]:
                 reply = build_help_window(current_theme)
             
             # Enhanced Home
@@ -306,6 +321,9 @@ def handle_message(event):
                 if game_id in active_games:
                     del active_games[game_id]
                     reply = TextMessage(text="⛔ تم إيقاف اللعبة")
+                if game_id in standalone_sessions:
+                    del standalone_sessions[game_id]
+                    reply = TextMessage(text="⛔ تم إيقاف الجلسة المستقلة")
             
             # Start Game
             elif text in GAME_LIST or text.startswith("لعبة ") or text.startswith("إعادة "):
@@ -404,7 +422,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info("=" * 70)
     logger.info(f"Starting {BOT_NAME} v{BOT_VERSION}")
-    logger.info(f"Style: Glass iOS Design")
+    logger.info(f"Style: Glass iOS Design + Standalone Help")
     logger.info(f"Games: {len(AVAILABLE_GAMES)}")
     logger.info(f"Port: {port}")
     logger.info("=" * 70)
