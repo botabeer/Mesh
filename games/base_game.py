@@ -1,26 +1,48 @@
-# games/base_game.py
+# games/base_game.py - FIXED VERSION
 """
-Bot Mesh v7.3 - Base Game System EXTENDED
-- Adds team-mode, per-round timer, persistent leaderboard hooks
+Bot Mesh - Base Game System FIXED
+تم إصلاح التعارضات
 """
+
 from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 import re
-import threading
-import sqlite3
-import os
 
 class BaseGame:
-    """BaseGame extended with team-mode and timer"""
+    """BaseGame - نظام اللعبة الأساسي"""
+    
     game_name = "لعبة"
-    game_icon = ""
+    game_icon = "🎮"
     supports_hint = True
     supports_reveal = True
 
-    # (THEMES kept unchanged - omitted here for brevity; reuse your THEMES)
+    # ثيمات زجاجية
     THEMES = {
-        # ... copy your THEMES dict here unchanged ...
+        "أبيض": {
+            "bg": "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#3B82F6",
+            "text": "#1E293B",
+            "text2": "#64748B",
+            "shadow1": "rgba(59,130,246,0.1)",
+            "border": "rgba(59,130,246,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "أسود": {
+            "bg": "linear-gradient(135deg,#0F172A 0%,#1E293B 100%)",
+            "card": "#1E293B",
+            "glass": "rgba(30,41,59,0.85)",
+            "primary": "#60A5FA",
+            "text": "#F1F5F9",
+            "text2": "#CBD5E1",
+            "shadow1": "rgba(96,165,250,0.1)",
+            "border": "rgba(96,165,250,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        }
     }
 
     def __init__(self, line_bot_api=None, questions_count: int = 5):
@@ -30,137 +52,49 @@ class BaseGame:
         self.current_answer = None
         self.previous_question = None
         self.previous_answer = None
-        self.scores: Dict[str, Dict[str, Any]] = {}  # user_id -> {name, score}
+        self.scores: Dict[str, Dict[str, Any]] = {}
         self.answered_users = set()
         self.game_active = False
         self.game_start_time: Optional[datetime] = None
         self.current_theme = "أبيض"
 
-        # --- Team mode ---
-        self.team_mode = False            # if True, scoring is per-team
-        self.teams = {"A": {"name": "فريق 1", "members": set(), "score": 0},
-                      "B": {"name": "فريق 2", "members": set(), "score": 0}}
-        self.player_team: Dict[str, str] = {}  # user_id -> "A"/"B"
+    def normalize_text(self, text: str) -> str:
+        """تطبيع النص العربي"""
+        if not text:
+            return ""
+        text = text.strip().lower()
+        replacements = {
+            'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 
+            'ى': 'ي', 'ة': 'ه', 
+            'ؤ': 'و', 'ئ': 'ي'
+        }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        return re.sub(r'[\u064B-\u065F\u0670]', '', text)
 
-        # --- Timer ---
-        self.round_duration = None        # seconds or None
-        self.round_end_time: Optional[datetime] = None
-        self._timer_thread = None
-        self._timer_lock = threading.Lock()
-        self.on_timer_expire = None       # optional callback
-
-    # ---------------- Team management ----------------
-    def enable_team_mode(self, enable: bool = True):
-        self.team_mode = enable
-
-    def join_team(self, user_id: str, display_name: str, team_key: str) -> bool:
-        """join user to team_key = 'A' or 'B'"""
-        if team_key not in self.teams:
-            return False
-        # remove from other team
-        prev = self.player_team.get(user_id)
-        if prev:
-            self.teams[prev]["members"].discard(user_id)
-        self.teams[team_key]["members"].add(user_id)
-        self.player_team[user_id] = team_key
-        # ensure user present in scores map for display
-        if user_id not in self.scores:
-            self.scores[user_id] = {"name": display_name, "score": 0}
-        return True
-
-    def leave_team(self, user_id: str):
-        prev = self.player_team.get(user_id)
-        if prev:
-            self.teams[prev]["members"].discard(user_id)
-        self.player_team.pop(user_id, None)
-
-    def is_user_in_team(self, user_id: str) -> bool:
-        return user_id in self.player_team
-
-    def get_user_team(self, user_id: str) -> Optional[str]:
-        return self.player_team.get(user_id)
-
-    # ---------------- Timer management ----------------
-    def start_round_timer(self, seconds: int, on_expire_callback=None):
-        """Start per-round timer (non-blocking)"""
-        with self._timer_lock:
-            self.round_duration = seconds
-            self.round_end_time = datetime.now() + timedelta(seconds=seconds)
-            self.on_timer_expire = on_expire_callback
-            if self._timer_thread and self._timer_thread.is_alive():
-                # existing timer will check end time
-                return
-            self._timer_thread = threading.Thread(target=self._timer_worker, daemon=True)
-            self._timer_thread.start()
-
-    def cancel_round_timer(self):
-        with self._timer_lock:
-            self.round_end_time = None
-            self.round_duration = None
-            self.on_timer_expire = None
-
-    def _timer_worker(self):
-        while True:
-            with self._timer_lock:
-                if not self.round_end_time:
-                    return
-                now = datetime.now()
-                if now >= self.round_end_time:
-                    cb = self.on_timer_expire
-                    # clear before calling to avoid re-entrance
-                    self.round_end_time = None
-                    self.round_duration = None
-                    self.on_timer_expire = None
-                    if cb:
-                        try:
-                            cb()
-                        except Exception:
-                            pass
-                    return
-            # sleep small interval
-            import time
-            time.sleep(0.5)
-
-    def get_time_left(self) -> Optional[int]:
-        if not self.round_end_time:
-            return None
-        left = (self.round_end_time - datetime.now()).total_seconds()
-        return max(0, int(left))
-
-    # ---------------- Scoring ----------------
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
-        """
-        Adds points. If team_mode: adds to team and optionally to player record.
-        Returns points actually awarded to the player (0 if already answered).
-        """
-        # if user already answered this round -> ignore
+        """إضافة نقاط"""
         if user_id in self.answered_users:
             return 0
-
-        # Ensure basic user record
+        
         if user_id not in self.scores:
             self.scores[user_id] = {"name": display_name, "score": 0}
-
-        if self.team_mode:
-            team = self.get_user_team(user_id)
-            if not team:
-                # user not joined -> ignore (in team mode only joined users count)
-                return 0
-            # add to team aggregate
-            self.teams[team]["score"] += points
-            # optionally add to individual (still store)
-            self.scores[user_id]["score"] += points
-        else:
-            # normal single-player scoring
-            self.scores[user_id]["score"] += points
-
-        # mark as answered this round
+        
+        self.scores[user_id]["score"] += points
         self.answered_users.add(user_id)
         return points
 
-    # ---------------- lifecycle ----------------
+    def get_theme_colors(self) -> Dict[str, str]:
+        """الحصول على ألوان الثيم"""
+        return self.THEMES.get(self.current_theme, self.THEMES["أبيض"])
+
+    def set_theme(self, theme_name: str):
+        """تعيين الثيم"""
+        if theme_name in self.THEMES:
+            self.current_theme = theme_name
+
     def start_game(self):
-        """Start game (overrides)"""
+        """بدء اللعبة"""
         self.current_question = 0
         self.scores.clear()
         self.answered_users.clear()
@@ -168,42 +102,157 @@ class BaseGame:
         self.previous_answer = None
         self.game_active = True
         self.game_start_time = datetime.now()
-        # reset teams if team mode
-        for k in self.teams:
-            self.teams[k]["members"].clear()
-            self.teams[k]["score"] = 0
-        self.player_team.clear()
         return self.get_question()
 
-    def end_game(self) -> Dict[str, Any]:
-        """End game and return winner info"""
-        self.game_active = False
-        # determine winner: in team mode, compare teams. else best player
-        if self.team_mode:
-            a = self.teams["A"]["score"]
-            b = self.teams["B"]["score"]
-            return {"game_over": True, "team_scores": {"A": a, "B": b}, "message": f"انتهت اللعبة • {self.teams['A']['name']} {a} - {b} {self.teams['B']['name']}"}
-        else:
-            if not self.scores:
-                return {"game_over": True, "points": 0, "message": "انتهت اللعبة"}
-            max_score = max(s["score"] for s in self.scores.values())
-            return {"game_over": True, "points": max_score, "message": f"انتهت اللعبة • النقاط: {max_score}"}
+    def get_question(self):
+        """الحصول على السؤال - يجب تطبيقه"""
+        raise NotImplementedError("يجب تطبيق get_question في اللعبة")
 
-    # ---------------- Helpers (unchanged) ----------------
-    def normalize_text(self, text: str) -> str:
-        if not text:
-            return ""
-        text = text.strip().lower()
-        replacements = {'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ى': 'ي', 'ة': 'ه', 'ؤ': 'و', 'ئ': 'ي'}
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        return re.sub(r'[\u064B-\u065F\u0670]', '', text)
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        """التحقق من الإجابة - يجب تطبيقه"""
+        raise NotImplementedError("يجب تطبيق check_answer في اللعبة")
+
+    def end_game(self) -> Dict[str, Any]:
+        """إنهاء اللعبة"""
+        self.game_active = False
+        if not self.scores:
+            return {
+                "game_over": True,
+                "points": 0,
+                "message": "🏁 انتهت اللعبة"
+            }
+        
+        leaderboard = sorted(
+            self.scores.items(),
+            key=lambda x: x[1]["score"],
+            reverse=True
+        )
+        
+        winner = leaderboard[0]
+        winner_text = (
+            f"🏆 الفائز: {winner[1]['name']}\n"
+            f"▫️ النقاط: {winner[1]['score']}\n\n"
+            f"📊 الترتيب:\n"
+        )
+        
+        for i, (uid, data) in enumerate(leaderboard[:5], 1):
+            medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
+            winner_text += f"{medal} {data['name']}: {data['score']}\n"
+        
+        return {
+            "game_over": True,
+            "points": winner[1]["score"],
+            "message": winner_text
+        }
+
+    def get_leaderboard(self) -> str:
+        """الحصول على الترتيب"""
+        if not self.scores:
+            return "لا يوجد لاعبون بعد"
+        
+        leaderboard = sorted(
+            self.scores.items(),
+            key=lambda x: x[1]["score"],
+            reverse=True
+        )
+        
+        text = "📊 الترتيب:\n"
+        for i, (uid, data) in enumerate(leaderboard, 1):
+            medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
+            text += f"{medal} {data['name']}: {data['score']}\n"
+        
+        return text
 
     def _create_text_message(self, text: str):
+        """إنشاء رسالة نصية"""
         return TextMessage(text=text)
 
     def _create_flex_with_buttons(self, alt_text: str, flex_content: dict):
-        return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
+        """إنشاء Flex Message"""
+        return FlexMessage(
+            alt_text=alt_text,
+            contents=FlexContainer.from_dict(flex_content)
+        )
 
-    # you can reuse your original build_question_flex method (copy it here)
-    # ...
+    def build_question_flex(self, question_text: str, additional_info: str = None):
+        """بناء Flex للسؤال"""
+        colors = self.get_theme_colors()
+        
+        contents = [
+            {
+                "type": "text",
+                "text": f"{self.game_icon} {self.game_name}",
+                "size": "xl",
+                "weight": "bold",
+                "color": colors["primary"],
+                "align": "center"
+            },
+            {
+                "type": "text",
+                "text": f"سؤال {self.current_question + 1} من {self.questions_count}",
+                "size": "sm",
+                "color": colors["text2"],
+                "align": "center",
+                "margin": "xs"
+            },
+            {
+                "type": "separator",
+                "color": colors["border"],
+                "margin": "lg"
+            },
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": question_text,
+                        "size": "lg",
+                        "color": colors["text"],
+                        "align": "center",
+                        "wrap": True
+                    }
+                ],
+                "backgroundColor": colors["glass"],
+                "cornerRadius": "15px",
+                "paddingAll": "20px",
+                "margin": "lg"
+            }
+        ]
+        
+        if additional_info:
+            contents.append({
+                "type": "text",
+                "text": additional_info,
+                "size": "xs",
+                "color": colors["text2"],
+                "align": "center",
+                "wrap": True,
+                "margin": "md"
+            })
+        
+        flex_content = {
+            "type": "bubble",
+            "size": "kilo",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "paddingAll": "20px",
+                "backgroundColor": colors["bg"]
+            }
+        }
+        
+        return self._create_flex_with_buttons(self.game_name, flex_content)
+
+    def get_game_info(self) -> Dict[str, Any]:
+        """معلومات اللعبة"""
+        return {
+            "name": self.game_name,
+            "questions_count": self.questions_count,
+            "supports_hint": self.supports_hint,
+            "supports_reveal": self.supports_reveal,
+            "active": self.game_active,
+            "current_question": self.current_question,
+            "players_count": len(self.scores)
+        }
