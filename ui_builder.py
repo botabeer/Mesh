@@ -72,6 +72,10 @@ def attach_quick_reply_to_message(message):
     return message
 
 
+# Alias for compatibility
+attach_quick_reply = attach_quick_reply_to_message
+
+
 # ============================================================================
 # Glass Components
 # ============================================================================
