@@ -229,6 +229,7 @@ class AchievementManager:
     def check_and_unlock(self, user_id: str, trigger: str, data: Dict = None) -> List[Dict]:
         """التحقق من الإنجازات وفتح ما ينطبق"""
         unlocked = []
+        data = data or {}
         
         # الحصول على بيانات المستخدم
         user = self.db.get_user(user_id)
@@ -268,7 +269,7 @@ class AchievementManager:
             if points >= 500 and self._unlock(user_id, "points_500"):
                 unlocked.append(ACHIEVEMENTS["points_500"])
         
-        elif trigger == "speed_record" and data:
+        elif trigger == "speed_record":
             # سرعة البرق
             if data.get('time', 999) < 3.0 and data.get('game') == 'كتابة سريعة':
                 if self._unlock(user_id, "speed_demon"):
@@ -370,7 +371,7 @@ class AchievementManager:
         # الإنجازات غير المفتوحة
         locked = [a for a in ACHIEVEMENTS.values() if a['id'] not in unlocked_ids]
         
-        # ترتيب حسب الأولوية (يمكن تحسينها بناءً على إحصائيات اللاعب)
+        # ترتيب حسب الأولوية
         priority_order = ['beginner', 'points', 'persistence', 'speed', 'intelligence', 'variety', 'accuracy', 'social', 'special']
         locked.sort(key=lambda x: priority_order.index(x['category']) if x['category'] in priority_order else 999)
         
@@ -379,7 +380,7 @@ class AchievementManager:
 
 # ==================== UI Builder for Achievements ====================
 
-def build_achievements_ui(user_id: str, achievement_manager: AchievementManager, theme: str = "أبيض"):
+def build_achievements_ui(user_id: str, achievement_manager: 'AchievementManager', theme: str = "أبيض"):
     """بناء واجهة الإنجازات"""
     from constants import THEMES, DEFAULT_THEME, BOT_RIGHTS
     from linebot.v3.messaging import FlexMessage, FlexContainer
