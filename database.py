@@ -1,12 +1,18 @@
 """
-Bot Mesh - Database v7.2 with Themes & Auto Name Update
+Bot Mesh - Database v8.5 ENHANCED
 Created by: Abeer Aldosari © 2025
+✅ دعم الثيمات
+✅ تحديث تلقائي للأسماء
+✅ نظام الجلسات المحسّن
+✅ إحصائيات الألعاب
+✅ نظام الفرق الكامل
+✅ معالجة أخطاء محسّنة
 """
 
 import sqlite3
 import os
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Tuple, Any
 from contextlib import contextmanager
 import logging
 import time
@@ -16,31 +22,32 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    """Database management with themes support"""
+    """Database management with enhanced features"""
     
     def __init__(self, db_path='botmesh.db'):
         self.db_path = db_path
         self._local = threading.local()
         self._ensure_clean_db()
         self.init_database()
+        logger.info(f"✅ Database initialized: {db_path}")
     
     def _ensure_clean_db(self):
-        """Ensure clean database"""
+        """Ensure database is accessible and clean"""
         if os.path.exists(self.db_path):
             try:
                 conn = sqlite3.connect(self.db_path, timeout=5)
                 conn.execute("SELECT 1")
                 conn.close()
-            except:
+            except sqlite3.OperationalError:
                 try:
                     os.remove(self.db_path)
-                    logger.warning("Removed locked database")
-                except:
-                    pass
+                    logger.warning("⚠️ Removed locked database")
+                except Exception as e:
+                    logger.error(f"❌ Failed to remove locked database: {e}")
     
     @contextmanager
     def get_connection(self):
-        """Connection context manager"""
+        """Thread-safe connection context manager"""
         conn = None
         try:
             conn = sqlite3.connect(
@@ -52,18 +59,25 @@ class Database:
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
+            conn.execute("PRAGMA foreign_keys=ON")
             yield conn
         except Exception as e:
-            logger.error(f"Database error: {e}")
+            logger.error(f"❌ Database error: {e}")
             if conn:
-                conn.rollback()
+                try:
+                    conn.rollback()
+                except:
+                    pass
             raise
         finally:
             if conn:
-                conn.close()
+                try:
+                    conn.close()
+                except:
+                    pass
     
     def init_database(self):
-        """Initialize database with themes support"""
+        """Initialize all database tables"""
         for attempt in range(3):
             try:
                 with self.get_connection() as conn:
@@ -86,86 +100,152 @@ class Database:
                         CREATE TABLE IF NOT EXISTS user_preferences (
                             user_id TEXT PRIMARY KEY,
                             theme TEXT DEFAULT 'أبيض',
+                            language TEXT DEFAULT 'ar',
+                            notifications BOOLEAN DEFAULT 1,
                             last_theme_change TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY (user_id) REFERENCES users(user_id)
+                            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
                         )
                     ''')
                     
-                    # Game sessions
+                    # Game sessions (enhanced)
                     cursor.execute('''
                         CREATE TABLE IF NOT EXISTS game_sessions (
                             session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            user_id TEXT NOT NULL,
+                            owner_id TEXT NOT NULL,
                             game_name TEXT NOT NULL,
+                            mode TEXT DEFAULT 'solo',
+                            team_mode BOOLEAN DEFAULT 0,
                             score INTEGER DEFAULT 0,
                             completed BOOLEAN DEFAULT 0,
-                            played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            FOREIGN KEY (owner_id) REFERENCES users(user_id)
+                        )
+                    ''')
+                    
+                    # Team members
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS team_members (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            session_id INTEGER NOT NULL,
+                            user_id TEXT NOT NULL,
+                            team_name TEXT NOT NULL,
+                            score INTEGER DEFAULT 0,
+                            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (session_id) REFERENCES game_sessions(session_id) ON DELETE CASCADE,
                             FOREIGN KEY (user_id) REFERENCES users(user_id)
                         )
                     ''')
                     
-                    # Game stats
+                    # Team scores
                     cursor.execute('''
-                        CREATE TABLE IF NOT EXISTS game_stats (
-                            game_name TEXT PRIMARY KEY,
-                            plays INTEGER DEFAULT 0,
-                            completions INTEGER DEFAULT 0,
-                            total_points INTEGER DEFAULT 0,
-                            avg_score REAL DEFAULT 0.0,
-                            last_played TIMESTAMP
+                        CREATE TABLE IF NOT EXISTS team_scores (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            session_id INTEGER NOT NULL,
+                            team_name TEXT NOT NULL,
+                            score INTEGER DEFAULT 0,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (session_id) REFERENCES game_sessions(session_id) ON DELETE CASCADE
                         )
                     ''')
                     
-                    # Indexes
+                    # Game statistics
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS game_stats (
+                            user_id TEXT NOT NULL,
+                            game_name TEXT NOT NULL,
+                            plays INTEGER DEFAULT 0,
+                            wins INTEGER DEFAULT 0,
+                            total_score INTEGER DEFAULT 0,
+                            best_score INTEGER DEFAULT 0,
+                            avg_score REAL DEFAULT 0.0,
+                            last_played TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            PRIMARY KEY (user_id, game_name),
+                            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                        )
+                    ''')
+                    
+                    # Activity logs
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS activity_logs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id TEXT NOT NULL,
+                            action TEXT NOT NULL,
+                            details TEXT,
+                            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(user_id)
+                        )
+                    ''')
+                    
+                    # Indexes for performance
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_registered ON users(is_registered)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_activity ON users(last_activity)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_prefs_theme ON user_preferences(theme)')
-                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user ON game_sessions(user_id)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_owner ON game_sessions(owner_id)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_game ON game_sessions(game_name)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_team_members_session ON team_members(session_id)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_game_stats_user ON game_stats(user_id)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_user ON activity_logs(user_id)')
                     
-                    logger.info("Database initialized successfully")
+                    logger.info("✅ Database tables initialized successfully")
                 return
                 
             except sqlite3.OperationalError as e:
                 if attempt < 2:
-                    logger.warning(f"DB init attempt {attempt + 1} failed, retrying...")
+                    logger.warning(f"⚠️ DB init attempt {attempt + 1} failed, retrying...")
                     time.sleep(1)
                 else:
-                    logger.error(f"DB init failed: {e}")
+                    logger.error(f"❌ DB init failed after 3 attempts: {e}")
                     raise
     
     # ==================== User Management ====================
     
     def get_user(self, user_id: str) -> Optional[Dict]:
-        """Get user data"""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
-                row = cursor.fetchone()
-                return dict(row) if row else None
-        except Exception as e:
-            logger.error(f"Error getting user: {e}")
-            return None
-    
-    def create_user(self, user_id: str, name: str) -> bool:
-        """Create new user"""
+        """Get user with preferences"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
+                    SELECT u.*, p.theme, p.language, p.notifications
+                    FROM users u
+                    LEFT JOIN user_preferences p ON u.user_id = p.user_id
+                    WHERE u.user_id = ?
+                ''', (user_id,))
+                row = cursor.fetchone()
+                if row:
+                    user_dict = dict(row)
+                    if not user_dict.get('theme'):
+                        user_dict['theme'] = 'أبيض'
+                    return user_dict
+                return None
+        except Exception as e:
+            logger.error(f"❌ Error getting user: {e}")
+            return None
+    
+    def create_user(self, user_id: str, name: str) -> bool:
+        """Create new user with default preferences"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now()
+                
+                # Insert user
+                cursor.execute('''
                     INSERT OR IGNORE INTO users (user_id, name, points, is_registered, last_activity)
                     VALUES (?, ?, 0, 0, ?)
-                ''', (user_id, name, datetime.now()))
+                ''', (user_id, name, now))
                 
-                # Create default theme preference
+                # Insert default preferences
                 cursor.execute('''
                     INSERT OR IGNORE INTO user_preferences (user_id, theme)
                     VALUES (?, 'أبيض')
                 ''', (user_id,))
+                
+                logger.info(f"✅ Created user: {user_id} ({name})")
                 return True
         except Exception as e:
-            logger.error(f"Error creating user: {e}")
+            logger.error(f"❌ Error creating user: {e}")
             return False
     
     def update_user(self, user_id: str, **kwargs) -> bool:
@@ -195,7 +275,7 @@ class Database:
                 cursor.execute(query, values)
                 return True
         except Exception as e:
-            logger.error(f"Error updating user: {e}")
+            logger.error(f"❌ Error updating user: {e}")
             return False
     
     def update_user_name(self, user_id: str, new_name: str) -> bool:
@@ -209,11 +289,11 @@ class Database:
                 )
                 return True
         except Exception as e:
-            logger.error(f"Error updating name: {e}")
+            logger.error(f"❌ Error updating name: {e}")
             return False
     
     def add_points(self, user_id: str, points: int) -> bool:
-        """Add points"""
+        """Add points to user"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -224,11 +304,11 @@ class Database:
                 ''', (points, datetime.now(), user_id))
                 return True
         except Exception as e:
-            logger.error(f"Error adding points: {e}")
+            logger.error(f"❌ Error adding points: {e}")
             return False
     
     def update_activity(self, user_id: str) -> bool:
-        """Update last activity"""
+        """Update last activity timestamp"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -238,7 +318,7 @@ class Database:
                 )
                 return True
         except Exception as e:
-            logger.error(f"Error updating activity: {e}")
+            logger.error(f"❌ Error updating activity: {e}")
             return False
     
     def get_leaderboard(self, limit: int = 10) -> List[Tuple[str, int]]:
@@ -254,7 +334,7 @@ class Database:
                 ''', (limit,))
                 return [(row['name'], row['points']) for row in cursor.fetchall()]
         except Exception as e:
-            logger.error(f"Error getting leaderboard: {e}")
+            logger.error(f"❌ Error getting leaderboard: {e}")
             return []
     
     # ==================== Theme Management ====================
@@ -271,7 +351,7 @@ class Database:
                 row = cursor.fetchone()
                 return row['theme'] if row else 'أبيض'
         except Exception as e:
-            logger.error(f"Error getting theme: {e}")
+            logger.error(f"❌ Error getting theme: {e}")
             return 'أبيض'
     
     def set_user_theme(self, user_id: str, theme: str) -> bool:
@@ -286,90 +366,207 @@ class Database:
                         theme = excluded.theme,
                         last_theme_change = excluded.last_theme_change
                 ''', (user_id, theme, datetime.now()))
+                logger.info(f"✅ Theme updated: {user_id} -> {theme}")
                 return True
         except Exception as e:
-            logger.error(f"Error setting theme: {e}")
+            logger.error(f"❌ Error setting theme: {e}")
             return False
     
     # ==================== Game Sessions ====================
     
-    def create_game_session(self, user_id: str, game_name: str) -> int:
+    def create_game_session(self, owner_id: str, game_name: str, mode: str = 'solo', team_mode: int = 0) -> int:
         """Create game session"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    INSERT INTO game_sessions (user_id, game_name, score, completed)
-                    VALUES (?, ?, 0, 0)
-                ''', (user_id, game_name))
-                return cursor.lastrowid
+                    INSERT INTO game_sessions (owner_id, game_name, mode, team_mode, started_at)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (owner_id, game_name, mode, team_mode, datetime.now()))
+                session_id = cursor.lastrowid
+                logger.info(f"✅ Session created: {session_id} ({game_name}, mode={mode})")
+                return session_id
         except Exception as e:
-            logger.error(f"Error creating session: {e}")
+            logger.error(f"❌ Error creating session: {e}")
             return 0
     
-    def complete_game_session(self, session_id: int, score: int) -> bool:
-        """Complete game session"""
+    def finish_session(self, session_id: int, score: int = 0) -> bool:
+        """Mark session as completed"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    'UPDATE game_sessions SET score = ?, completed = 1 WHERE session_id = ?',
-                    (score, session_id)
+                    'UPDATE game_sessions SET score = ?, completed = 1, completed_at = ? WHERE session_id = ?',
+                    (score, datetime.now(), session_id)
                 )
+                logger.info(f"✅ Session finished: {session_id} (score={score})")
                 return True
         except Exception as e:
-            logger.error(f"Error completing session: {e}")
+            logger.error(f"❌ Error finishing session: {e}")
             return False
     
-    def get_user_game_stats(self, user_id: str) -> Dict[str, int]:
-        """Get user game stats"""
+    # ==================== Team Management ====================
+    
+    def add_team_member(self, session_id: int, user_id: str, team_name: str) -> bool:
+        """Add member to team"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    SELECT game_name, COUNT(*) as plays
-                    FROM game_sessions 
-                    WHERE user_id = ? AND completed = 1
-                    GROUP BY game_name
-                    ORDER BY plays DESC
-                ''', (user_id,))
-                return {row['game_name']: row['plays'] for row in cursor.fetchall()}
+                    INSERT INTO team_members (session_id, user_id, team_name)
+                    VALUES (?, ?, ?)
+                ''', (session_id, user_id, team_name))
+                logger.info(f"✅ Team member added: {user_id} -> {team_name}")
+                return True
         except Exception as e:
-            logger.error(f"Error getting user stats: {e}")
+            logger.error(f"❌ Error adding team member: {e}")
+            return False
+    
+    def add_team_points(self, session_id: int, team_name: str, points: int) -> bool:
+        """Add points to team"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Check if team exists
+                cursor.execute(
+                    'SELECT id FROM team_scores WHERE session_id = ? AND team_name = ?',
+                    (session_id, team_name)
+                )
+                
+                if cursor.fetchone():
+                    cursor.execute('''
+                        UPDATE team_scores 
+                        SET score = score + ?, updated_at = ?
+                        WHERE session_id = ? AND team_name = ?
+                    ''', (points, datetime.now(), session_id, team_name))
+                else:
+                    cursor.execute('''
+                        INSERT INTO team_scores (session_id, team_name, score)
+                        VALUES (?, ?, ?)
+                    ''', (session_id, team_name, points))
+                
+                return True
+        except Exception as e:
+            logger.error(f"❌ Error adding team points: {e}")
+            return False
+    
+    def get_team_points(self, session_id: int) -> Dict[str, int]:
+        """Get team scores for session"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT team_name, score FROM team_scores WHERE session_id = ?',
+                    (session_id,)
+                )
+                return {row['team_name']: row['score'] for row in cursor.fetchall()}
+        except Exception as e:
+            logger.error(f"❌ Error getting team points: {e}")
             return {}
     
     # ==================== Game Statistics ====================
     
-    def update_game_stats(self, game_name: str, completed: bool = False, points: int = 0):
-        """Update game stats"""
+    def record_game_stat(self, user_id: str, game_name: str, score: int, won: bool = False) -> bool:
+        """Record game statistics"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
-                cursor.execute('SELECT 1 FROM game_stats WHERE game_name = ?', (game_name,))
-                exists = cursor.fetchone()
+                # Check if stat exists
+                cursor.execute(
+                    'SELECT plays, total_score, best_score FROM game_stats WHERE user_id = ? AND game_name = ?',
+                    (user_id, game_name)
+                )
+                row = cursor.fetchone()
                 
-                if exists:
+                if row:
+                    plays = row['plays'] + 1
+                    total_score = row['total_score'] + score
+                    best_score = max(row['best_score'], score)
+                    avg_score = total_score / plays
+                    
                     cursor.execute('''
                         UPDATE game_stats 
-                        SET plays = plays + 1, 
-                            completions = completions + ?,
-                            total_points = total_points + ?, 
-                            last_played = ?
-                        WHERE game_name = ?
-                    ''', (1 if completed else 0, points, datetime.now(), game_name))
+                        SET plays = ?, wins = wins + ?, total_score = ?, best_score = ?, avg_score = ?, last_played = ?
+                        WHERE user_id = ? AND game_name = ?
+                    ''', (plays, 1 if won else 0, total_score, best_score, avg_score, datetime.now(), user_id, game_name))
                 else:
                     cursor.execute('''
-                        INSERT INTO game_stats (game_name, plays, completions, total_points, last_played)
-                        VALUES (?, 1, ?, ?, ?)
-                    ''', (game_name, 1 if completed else 0, points, datetime.now()))
+                        INSERT INTO game_stats (user_id, game_name, plays, wins, total_score, best_score, avg_score)
+                        VALUES (?, ?, 1, ?, ?, ?, ?)
+                    ''', (user_id, game_name, 1 if won else 0, score, score, float(score)))
+                
+                return True
         except Exception as e:
-            logger.error(f"Error updating game stats: {e}")
+            logger.error(f"❌ Error recording game stat: {e}")
+            return False
+    
+    def get_user_game_stats(self, user_id: str) -> Dict[str, Dict]:
+        """Get user's game statistics"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT game_name, plays, wins, total_score, best_score, avg_score
+                    FROM game_stats 
+                    WHERE user_id = ?
+                    ORDER BY plays DESC
+                ''', (user_id,))
+                
+                stats = {}
+                for row in cursor.fetchall():
+                    stats[row['game_name']] = {
+                        'plays': row['plays'],
+                        'wins': row['wins'],
+                        'total_score': row['total_score'],
+                        'best_score': row['best_score'],
+                        'avg_score': round(row['avg_score'], 1)
+                    }
+                return stats
+        except Exception as e:
+            logger.error(f"❌ Error getting user game stats: {e}")
+            return {}
+    
+    # ==================== Activity Logs ====================
+    
+    def log_activity(self, user_id: str, action: str, details: Optional[str] = None) -> bool:
+        """Log user activity"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    'INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)',
+                    (user_id, action, details)
+                )
+                return True
+        except Exception as e:
+            logger.error(f"❌ Error logging activity: {e}")
+            return False
+    
+    def get_logs(self, limit: int = 100, user_id: Optional[str] = None) -> List[Dict]:
+        """Get activity logs"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                if user_id:
+                    cursor.execute(
+                        'SELECT * FROM activity_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?',
+                        (user_id, limit)
+                    )
+                else:
+                    cursor.execute(
+                        'SELECT * FROM activity_logs ORDER BY timestamp DESC LIMIT ?',
+                        (limit,)
+                    )
+                return [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            logger.error(f"❌ Error getting logs: {e}")
+            return []
     
     # ==================== Maintenance ====================
     
     def cleanup_inactive_users(self, days: int = 30) -> int:
-        """Cleanup inactive users"""
+        """Cleanup inactive unregistered users"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -378,13 +575,15 @@ class Database:
                     'DELETE FROM users WHERE last_activity < ? AND is_registered = 0',
                     (cutoff,)
                 )
-                return cursor.rowcount
+                deleted = cursor.rowcount
+                logger.info(f"✅ Cleaned {deleted} inactive users")
+                return deleted
         except Exception as e:
-            logger.error(f"Error cleaning users: {e}")
+            logger.error(f"❌ Error cleaning users: {e}")
             return 0
     
     def get_stats_summary(self) -> Dict:
-        """Get stats summary"""
+        """Get database statistics summary"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -398,14 +597,28 @@ class Database:
                 cursor.execute('SELECT SUM(points) as total_points FROM users')
                 total_points = cursor.fetchone()['total_points'] or 0
                 
+                cursor.execute('SELECT COUNT(*) as sessions FROM game_sessions')
+                total_sessions = cursor.fetchone()['sessions']
+                
+                cursor.execute('SELECT COUNT(*) as completed FROM game_sessions WHERE completed = 1')
+                completed_sessions = cursor.fetchone()['completed']
+                
                 return {
                     'total_users': total_users,
                     'registered_users': registered_users,
-                    'total_points': total_points
+                    'total_points': total_points,
+                    'total_sessions': total_sessions,
+                    'completed_sessions': completed_sessions
                 }
         except Exception as e:
-            logger.error(f"Error getting stats: {e}")
-            return {'total_users': 0, 'registered_users': 0, 'total_points': 0}
+            logger.error(f"❌ Error getting stats: {e}")
+            return {
+                'total_users': 0,
+                'registered_users': 0,
+                'total_points': 0,
+                'total_sessions': 0,
+                'completed_sessions': 0
+            }
 
 
 # ==================== Singleton ====================
@@ -421,3 +634,8 @@ def get_database() -> Database:
             if _db_instance is None:
                 _db_instance = Database()
     return _db_instance
+
+
+# ==================== Export ====================
+
+__all__ = ['Database', 'get_database']
