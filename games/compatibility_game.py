@@ -1,52 +1,47 @@
 """
-لعبة التوافق - نسخة محسّنة بدون أزرار لمح/جاوب
-Created by: Abeer Aldosari © 2025
+لعبة التوافق v7.0 - للترفيه فقط
+تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
-التحسينات:
-- لعبة ترفيهية بدون أزرار لمح/جاوب
-- نفس النسبة لـ (اسم1 اسم2) أو (اسم2 اسم1)
-- واجهة Flex احترافية
+Features:
+✅ No Points
+✅ No Hints/Reveal
+✅ One Round Only
+✅ Clean UI
 """
 
 from games.base_game import BaseGame
 from typing import Dict, Any, Optional
 
 class CompatibilityGame(BaseGame):
-    """لعبة التوافق المحسّنة"""
+    """لعبة التوافق - للترفيه فقط"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
+        self.game_name = "توافق"
         self.supports_hint = False
         self.supports_reveal = False
 
     def calculate_compatibility(self, name1: str, name2: str) -> int:
-        """حساب نسبة التوافق - نفس النسبة بغض النظر عن الترتيب"""
-        # تطبيع الأسماء
+        """حساب نسبة التوافق"""
         n1 = self.normalize_text(name1)
         n2 = self.normalize_text(name2)
-
-        # ترتيب الأسماء أبجدياً لضمان نفس النسبة
         names = sorted([n1, n2])
         combined = ''.join(names)
-
-        # حساب seed فريد
         seed = sum(ord(c) * (i + 1) for i, c in enumerate(combined))
-
-        # نسبة بين 20 و 100
         return (seed % 81) + 20
 
     def get_compatibility_message(self, percentage: int) -> str:
         """رسالة التوافق"""
         if percentage >= 90:
-            return "✨ توافق رائع جداً! علاقة مثالية 💕"
+            return "توافق رائع"
         elif percentage >= 75:
-            return "💪 توافق ممتاز! علاقة قوية 💖"
+            return "توافق ممتاز"
         elif percentage >= 60:
-            return "🌟 توافق جيد! علاقة واعدة 💗"
+            return "توافق جيد"
         elif percentage >= 45:
-            return "🔧 توافق متوسط! يحتاج عمل 💛"
+            return "توافق متوسط"
         else:
-            return "⚠️ توافق ضعيف! قد تكون هناك تحديات 💔"
+            return "توافق ضعيف"
 
     def start_game(self):
         self.current_question = 0
@@ -54,7 +49,6 @@ class CompatibilityGame(BaseGame):
         return self.get_question()
 
     def get_question(self):
-        """سؤال بسيط بدون أزرار"""
         colors = self.get_theme_colors()
 
         flex_content = {
@@ -66,28 +60,26 @@ class CompatibilityGame(BaseGame):
                 "contents": [
                     {
                         "type": "text",
-                        "text": "🖤 لعبة التوافق",
+                        "text": "لعبة التوافق",
                         "size": "xl",
                         "weight": "bold",
-                        "color": "#FF69B4",
+                        "color": colors["primary"],
                         "align": "center"
                     },
                     {
                         "type": "text",
-                        "text": "اكتشف نسبة التوافق!",
+                        "text": "للترفيه فقط",
                         "size": "sm",
                         "color": colors["text2"],
-                        "align": "center",
-                        "margin": "sm"
+                        "align": "center"
                     }
                 ],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
+                "backgroundColor": colors["card"],
+                "paddingAll": "15px"
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "spacing": "lg",
                 "contents": [
                     {
                         "type": "box",
@@ -95,7 +87,7 @@ class CompatibilityGame(BaseGame):
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "📝 اكتب اسمين مفصولين بمسافة",
+                                "text": "اكتب اسمين مفصولين بمسافة",
                                 "size": "lg",
                                 "color": colors["text"],
                                 "align": "center",
@@ -104,7 +96,7 @@ class CompatibilityGame(BaseGame):
                             },
                             {
                                 "type": "text",
-                                "text": "مثال: أحمد سارة",
+                                "text": "مثال: ميش عبير",
                                 "size": "md",
                                 "color": colors["primary"],
                                 "align": "center",
@@ -112,52 +104,27 @@ class CompatibilityGame(BaseGame):
                             }
                         ],
                         "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "25px"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "💘",
-                                "size": "xl",
-                                "flex": 0
-                            },
-                            {
-                                "type": "text",
-                                "text": "النتيجة للترفيه فقط!\nسواء كتبت (أحمد سارة) أو (سارة أحمد) ستحصل على نفس النسبة",
-                                "size": "xs",
-                                "color": colors["text2"],
-                                "flex": 1,
-                                "margin": "sm",
-                                "wrap": True
-                            }
-                        ]
-                    }
-                ],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "🏠 البداية", "text": "بداية"},
-                        "style": "secondary",
-                        "height": "sm"
+                        "cornerRadius": "15px",
+                        "paddingAll": "20px"
                     }
                 ],
                 "backgroundColor": colors["bg"],
                 "paddingAll": "15px"
             },
-            "styles": {
-                "body": {"backgroundColor": colors["bg"]},
-                "footer": {"backgroundColor": colors["bg"]}
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "إيقاف", "text": "إيقاف"},
+                        "style": "primary",
+                        "height": "sm",
+                        "color": colors["error"]
+                    }
+                ],
+                "backgroundColor": colors["card"],
+                "paddingAll": "12px"
             }
         }
 
@@ -167,26 +134,20 @@ class CompatibilityGame(BaseGame):
         if not self.game_active:
             return None
 
-        # تقسيم الأسماء
         names = user_answer.strip().split()
 
         if len(names) < 2:
-            hint = "⚠️ يرجى كتابة اسمين مفصولين بمسافة\nمثال: أحمد سارة"
             return {
-                'message': hint,
-                'response': self._create_text_message(hint),
+                'response': self._create_text_message("يرجى كتابة اسمين مفصولين بمسافة"),
                 'points': 0
             }
 
         name1, name2 = names[0], names[1]
-
-        # حساب التوافق
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
 
         colors = self.get_theme_colors()
 
-        # نافذة النتيجة
         flex_content = {
             "type": "bubble",
             "size": "kilo",
@@ -196,20 +157,19 @@ class CompatibilityGame(BaseGame):
                 "contents": [
                     {
                         "type": "text",
-                        "text": "🖤 نتيجة التوافق",
+                        "text": "نتيجة التوافق",
                         "size": "xl",
                         "weight": "bold",
-                        "color": "#FFFFFF",
+                        "color": colors["primary"],
                         "align": "center"
                     }
                 ],
-                "backgroundColor": "#FF69B4",
-                "paddingAll": "20px"
+                "backgroundColor": colors["card"],
+                "paddingAll": "15px"
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "spacing": "lg",
                 "contents": [
                     {
                         "type": "box",
@@ -217,17 +177,14 @@ class CompatibilityGame(BaseGame):
                         "contents": [
                             {
                                 "type": "text",
-                                "text": f"{name1} 💘 {name2}",
+                                "text": f"{name1} و {name2}",
                                 "size": "xl",
                                 "weight": "bold",
                                 "color": colors["text"],
                                 "align": "center",
                                 "wrap": True
                             },
-                            {
-                                "type": "separator",
-                                "margin": "lg"
-                            },
+                            {"type": "separator", "margin": "lg", "color": colors["shadow1"]},
                             {
                                 "type": "text",
                                 "text": "نسبة التوافق:",
@@ -241,9 +198,8 @@ class CompatibilityGame(BaseGame):
                                 "text": f"{percentage}%",
                                 "size": "xxl",
                                 "weight": "bold",
-                                "color": "#FF69B4",
-                                "align": "center",
-                                "margin": "sm"
+                                "color": colors["primary"],
+                                "align": "center"
                             },
                             {
                                 "type": "text",
@@ -252,29 +208,20 @@ class CompatibilityGame(BaseGame):
                                 "color": colors["text"],
                                 "align": "center",
                                 "wrap": True,
-                                "margin": "lg"
+                                "margin": "md"
                             }
                         ],
                         "backgroundColor": colors["card"],
-                        "cornerRadius": "20px",
-                        "paddingAll": "25px"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"✨ نفس النسبة لو كتبت: {name2} {name1}",
-                        "size": "xs",
-                        "color": colors["text2"],
-                        "align": "center",
-                        "wrap": True
+                        "cornerRadius": "15px",
+                        "paddingAll": "20px"
                     }
                 ],
                 "backgroundColor": colors["bg"],
-                "paddingAll": "20px"
+                "paddingAll": "15px"
             },
             "footer": {
                 "type": "box",
                 "layout": "vertical",
-                "spacing": "sm",
                 "contents": [
                     {
                         "type": "box",
@@ -283,48 +230,34 @@ class CompatibilityGame(BaseGame):
                         "contents": [
                             {
                                 "type": "button",
-                                "action": {"type": "message", "label": "🔄 إعادة", "text": "لعبة توافق"},
+                                "action": {"type": "message", "label": "إعادة", "text": "لعبة توافق"},
                                 "style": "primary",
                                 "height": "sm",
-                                "color": "#FF69B4"
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "🏠 البداية", "text": "بداية"},
-                                "style": "secondary",
-                                "height": "sm"
+                                "color": colors["primary"]
                             }
                         ]
                     }
                 ],
-                "backgroundColor": colors["bg"],
-                "paddingAll": "15px"
-            },
-            "styles": {
-                "body": {"backgroundColor": colors["bg"]},
-                "footer": {"backgroundColor": colors["bg"]}
+                "backgroundColor": colors["card"],
+                "paddingAll": "12px"
             }
         }
 
         result_message = self._create_flex_with_buttons("نتيجة التوافق", flex_content)
-        points = self.add_score(user_id, display_name, 5)
         self.game_active = False
 
         return {
-            'message': f"🖤 نسبة التوافق: {percentage}%",
             'response': result_message,
-            'points': points,
+            'points': 0,  # بدون نقاط
             'game_over': True
         }
 
     def get_game_info(self) -> Dict[str, Any]:
         return {
             "name": "لعبة التوافق",
-            "emoji": "🖤",
-            "description": "اكتشف نسبة التوافق بين اسمين",
+            "description": "للترفيه فقط - بدون نقاط",
             "questions_count": 1,
             "supports_hint": False,
             "supports_reveal": False,
-            "active": self.game_active,
-            "players_count": len(self.scores)
+            "active": self.game_active
         }
