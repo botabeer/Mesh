@@ -8,6 +8,7 @@ Features:
 - Game sessions tracking
 - Statistics and leaderboard
 - Auto cleanup for inactive users
+- FIXED: Database locking issues with multiple workers
 """
 
 import sqlite3
@@ -15,6 +16,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Tuple
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +26,22 @@ class Database:
     
     def __init__(self, db_path='botmesh.db'):
         self.db_path = db_path
+        self.local = threading.local()
         self.init_database()
     
     def get_connection(self):
-        """إنشاء اتصال بقاعدة البيانات"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # للوصول بالأسماء
-        return conn
+        """إنشاء اتصال بقاعدة البيانات مع timeout وتحسينات"""
+        if not hasattr(self.local, 'conn') or self.local.conn is None:
+            self.local.conn = sqlite3.connect(
+                self.db_path,
+                timeout=30.0,  # انتظار 30 ثانية قبل الفشل
+                check_same_thread=False
+            )
+            self.local.conn.row_factory = sqlite3.Row
+            # تفعيل WAL mode لتحسين الأداء
+            self.local.conn.execute('PRAGMA journal_mode=WAL')
+            self.local.conn.execute('PRAGMA busy_timeout=30000')
+        return self.local.conn
     
     def init_database(self):
         """إنشاء جداول قاعدة البيانات"""
@@ -105,7 +116,6 @@ class Database:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_game ON game_sessions(game_name)')
         
         conn.commit()
-        conn.close()
         
         logger.info("✅ Database initialized successfully")
     
@@ -118,7 +128,6 @@ class Database:
         
         cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
         row = cursor.fetchone()
-        conn.close()
         
         if row:
             return dict(row)
@@ -136,7 +145,6 @@ class Database:
             ''', (user_id, name, datetime.now()))
             
             conn.commit()
-            conn.close()
             
             logger.info(f"✅ User created: {name} ({user_id})")
             return True
@@ -172,7 +180,6 @@ class Database:
         cursor.execute(query, values)
         
         conn.commit()
-        conn.close()
         return True
     
     def add_points(self, user_id: str, points: int) -> bool:
@@ -187,7 +194,6 @@ class Database:
         ''', (points, datetime.now(), user_id))
         
         conn.commit()
-        conn.close()
         return True
     
     def update_activity(self, user_id: str) -> bool:
@@ -202,7 +208,6 @@ class Database:
         ''', (datetime.now(), user_id))
         
         conn.commit()
-        conn.close()
         return True
     
     def get_leaderboard(self, limit: int = 10) -> List[Tuple[str, int]]:
@@ -219,7 +224,6 @@ class Database:
         ''', (limit,))
         
         leaderboard = cursor.fetchall()
-        conn.close()
         
         return [(row['name'], row['points']) for row in leaderboard]
     
@@ -236,7 +240,6 @@ class Database:
         ''', (user_id,))
         
         row = cursor.fetchone()
-        conn.close()
         
         return row['rank'] if row else None
     
@@ -254,7 +257,6 @@ class Database:
         
         session_id = cursor.lastrowid
         conn.commit()
-        conn.close()
         
         return session_id
     
@@ -270,7 +272,6 @@ class Database:
         ''', (score, session_id))
         
         conn.commit()
-        conn.close()
         return True
     
     def get_user_game_stats(self, user_id: str) -> Dict[str, int]:
@@ -286,7 +287,6 @@ class Database:
         ''', (user_id,))
         
         stats = {row['game_name']: row['plays'] for row in cursor.fetchall()}
-        conn.close()
         
         return stats
     
@@ -328,7 +328,6 @@ class Database:
                   float(points) if completed else 0.0, datetime.now()))
         
         conn.commit()
-        conn.close()
     
     def get_game_stats(self, game_name: str) -> Optional[Dict]:
         """الحصول على إحصائيات لعبة"""
@@ -337,7 +336,6 @@ class Database:
         
         cursor.execute('SELECT * FROM game_stats WHERE game_name = ?', (game_name,))
         row = cursor.fetchone()
-        conn.close()
         
         return dict(row) if row else None
     
@@ -348,7 +346,6 @@ class Database:
         
         cursor.execute('SELECT * FROM game_stats')
         rows = cursor.fetchall()
-        conn.close()
         
         return {row['game_name']: dict(row) for row in rows}
     
@@ -362,12 +359,11 @@ class Database:
             cursor = conn.cursor()
             
             cursor.execute('''
-                INSERT INTO achievements (achievement_id, name, description, points_reward, icon)
+                INSERT OR IGNORE INTO achievements (achievement_id, name, description, points_reward, icon)
                 VALUES (?, ?, ?, ?, ?)
             ''', (achievement_id, name, description, points_reward, icon))
             
             conn.commit()
-            conn.close()
             return True
         except sqlite3.IntegrityError:
             return False
@@ -385,7 +381,6 @@ class Database:
             ''', (user_id, achievement_id))
             
             if cursor.fetchone():
-                conn.close()
                 return False
             
             # فتح الإنجاز
@@ -404,7 +399,6 @@ class Database:
             ''', (achievement_id, user_id))
             
             conn.commit()
-            conn.close()
             return True
         except:
             return False
@@ -423,7 +417,6 @@ class Database:
         ''', (user_id,))
         
         achievements = [dict(row) for row in cursor.fetchall()]
-        conn.close()
         
         return achievements
     
@@ -443,7 +436,6 @@ class Database:
         
         deleted = cursor.rowcount
         conn.commit()
-        conn.close()
         
         logger.info(f"🧹 Cleaned up {deleted} inactive users")
         return deleted
@@ -462,7 +454,6 @@ class Database:
         
         deleted = cursor.rowcount
         conn.commit()
-        conn.close()
         
         logger.info(f"🧹 Cleaned up {deleted} old game sessions")
         return deleted
@@ -499,8 +490,6 @@ class Database:
         
         cursor.execute('SELECT SUM(points) as total_points FROM users')
         total_points = cursor.fetchone()['total_points'] or 0
-        
-        conn.close()
         
         return {
             'total_users': total_users,
