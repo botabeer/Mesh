@@ -1,9 +1,10 @@
 """
-Bot Mesh - Constants & Configuration v7.0
+Bot Mesh - Constants & Configuration v7.1
 تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
 
-✅ 9 ثيمات زجاجية احترافية
-✅ تصميم موحد لجميع الألعاب
+✅ 9 ثيمات زجاجية احترافية (رمادي بدلاً من سماوي)
+✅ تصميم موحد بدون إيموجي زائد
+✅ أداء محسّن
 """
 
 import os
@@ -16,7 +17,7 @@ load_dotenv()
 # Bot Information
 # ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "7.0"
+BOT_VERSION = "7.1"
 BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
 # ============================================================================
@@ -33,7 +34,7 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# Professional Glass Themes - 9 ثيمات زجاجية احترافية
+# Professional Glass Themes - 9 ثيمات محسّنة
 # ============================================================================
 THEMES = {
     "أبيض": {
@@ -45,10 +46,11 @@ THEMES = {
         "text": "#1E293B",
         "text2": "#64748B",
         "shadow1": "#E2E8F0",
-        "shadow2": "#FFFFFF",
+        "shadow2": "#F1F5F9",
         "button": "#3B82F6",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
     "أسود": {
         "name": "أسود",
@@ -59,10 +61,11 @@ THEMES = {
         "text": "#F1F5F9",
         "text2": "#CBD5E1",
         "shadow1": "#334155",
-        "shadow2": "#1E293B",
+        "shadow2": "#475569",
         "button": "#60A5FA",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
     "أزرق": {
         "name": "أزرق",
@@ -73,10 +76,11 @@ THEMES = {
         "text": "#1E3A8A",
         "text2": "#3B82F6",
         "shadow1": "#BFDBFE",
-        "shadow2": "#FFFFFF",
+        "shadow2": "#DBEAFE",
         "button": "#2563EB",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
     "أخضر": {
         "name": "أخضر",
@@ -87,10 +91,11 @@ THEMES = {
         "text": "#064E3B",
         "text2": "#059669",
         "shadow1": "#D1FAE5",
-        "shadow2": "#FFFFFF",
+        "shadow2": "#A7F3D0",
         "button": "#10B981",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
     "وردي": {
         "name": "وردي",
@@ -101,10 +106,11 @@ THEMES = {
         "text": "#831843",
         "text2": "#DB2777",
         "shadow1": "#FCE7F3",
-        "shadow2": "#FFFFFF",
+        "shadow2": "#FBCFE8",
         "button": "#EC4899",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
     "بنفسجي": {
         "name": "بنفسجي",
@@ -115,10 +121,11 @@ THEMES = {
         "text": "#4C1D95",
         "text2": "#7C3AED",
         "shadow1": "#EDE9FE",
-        "shadow2": "#FFFFFF",
+        "shadow2": "#DDD6FE",
         "button": "#8B5CF6",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
     "برتقالي": {
         "name": "برتقالي",
@@ -129,24 +136,26 @@ THEMES = {
         "text": "#7C2D12",
         "text2": "#EA580C",
         "shadow1": "#FFEDD5",
-        "shadow2": "#FFFFFF",
+        "shadow2": "#FED7AA",
         "button": "#F97316",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
-    "سماوي": {
-        "name": "سماوي",
-        "bg": "#ECFEFF",
+    "رمادي": {
+        "name": "رمادي",
+        "bg": "#F9FAFB",
         "card": "#FFFFFF",
-        "primary": "#06B6D4",
-        "secondary": "#22D3EE",
-        "text": "#164E63",
-        "text2": "#0891B2",
-        "shadow1": "#CFFAFE",
-        "shadow2": "#FFFFFF",
-        "button": "#06B6D4",
+        "primary": "#6B7280",
+        "secondary": "#9CA3AF",
+        "text": "#111827",
+        "text2": "#6B7280",
+        "shadow1": "#E5E7EB",
+        "shadow2": "#D1D5DB",
+        "button": "#6B7280",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     },
     "ذهبي": {
         "name": "ذهبي",
@@ -157,90 +166,111 @@ THEMES = {
         "text": "#78350F",
         "text2": "#D97706",
         "shadow1": "#FEF3C7",
-        "shadow2": "#FFFFFF",
+        "shadow2": "#FDE68A",
         "button": "#F59E0B",
         "success": "#10B981",
-        "error": "#EF4444"
+        "error": "#EF4444",
+        "warning": "#F59E0B"
     }
 }
 
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# Games List
+# Games Configuration
 # ============================================================================
 GAME_LIST = {
     "أسرع": {
         "label": "أسرع",
         "command": "لعبة كتابة سريعة",
-        "description": "اختبار سرعة الكتابة"
+        "description": "اختبار سرعة الكتابة",
+        "class": "FastTypingGame"
     },
     "ذكاء": {
         "label": "ذكاء",
         "command": "لعبة IQ",
-        "description": "ألغاز ذكية"
+        "description": "ألغاز ذكية",
+        "class": "IqGame"
     },
     "لعبة": {
         "label": "لعبة",
         "command": "لعبة إنسان حيوان نبات",
-        "description": "إنسان حيوان نبات جماد بلاد"
+        "description": "إنسان حيوان نبات جماد بلاد",
+        "class": "HumanAnimalPlantGame"
     },
     "أغنية": {
         "label": "أغنية",
         "command": "لعبة أغنية",
-        "description": "خمن المغني"
+        "description": "خمن المغني",
+        "class": "SongGame"
     },
     "خمن": {
         "label": "خمن",
         "command": "لعبة تخمين",
-        "description": "خمن الكلمة"
+        "description": "خمن الكلمة",
+        "class": "GuessGame"
     },
     "سلسلة": {
         "label": "سلسلة",
         "command": "لعبة سلسلة كلمات",
-        "description": "كلمة تبدأ بآخر حرف"
+        "description": "كلمة تبدأ بآخر حرف",
+        "class": "ChainWordsGame"
     },
     "ترتيب": {
         "label": "ترتيب",
         "command": "لعبة كلمة مبعثرة",
-        "description": "رتب الحروف"
+        "description": "رتب الحروف",
+        "class": "ScrambleWordGame"
     },
     "تكوين": {
         "label": "تكوين",
         "command": "لعبة حروف وكلمات",
-        "description": "كون كلمات"
+        "description": "كون كلمات",
+        "class": "LettersWordsGame"
     },
     "ضد": {
         "label": "ضد",
         "command": "لعبة عكس",
-        "description": "اكتشف عكس الكلمة"
+        "description": "اكتشف عكس الكلمة",
+        "class": "OppositeGame"
     },
     "لون": {
         "label": "لون",
         "command": "لعبة لون الكلمة",
-        "description": "اختبار Stroop"
+        "description": "اختبار Stroop",
+        "class": "WordColorGame"
     },
     "رياضيات": {
         "label": "رياضيات",
         "command": "لعبة رياضيات",
-        "description": "أسئلة حسابية"
+        "description": "أسئلة حسابية",
+        "class": "MathGame"
     },
     "توافق": {
         "label": "توافق",
         "command": "لعبة توافق",
-        "description": "اختبار التوافق"
+        "description": "اختبار التوافق",
+        "class": "CompatibilityGame"
     }
 }
 
 # ============================================================================
-# Fixed Buttons
+# Rate Limiting Configuration
 # ============================================================================
-FIXED_BUTTONS = {
-    "home": {"label": "البداية", "text": "بداية"},
-    "games": {"label": "الألعاب", "text": "ألعاب"},
-    "points": {"label": "نقاطي", "text": "نقاطي"},
-    "leaderboard": {"label": "الصدارة", "text": "صدارة"},
-    "stop": {"label": "إيقاف", "text": "إيقاف"}
+RATE_LIMIT_CONFIG = {
+    "max_requests": 10,
+    "window_seconds": 60,
+    "cleanup_interval": 300  # 5 minutes
+}
+
+# ============================================================================
+# Game Configuration
+# ============================================================================
+GAME_CONFIG = {
+    "questions_per_game": 5,
+    "points_per_correct": 1,
+    "timeout_seconds": 120,
+    "max_active_games_per_user": 1
 }
 
 # ============================================================================
@@ -249,12 +279,16 @@ FIXED_BUTTONS = {
 def get_username(profile) -> str:
     """Get username from LINE profile"""
     try:
-        return profile.display_name
+        return profile.display_name if profile.display_name else "مستخدم"
     except:
         return "مستخدم"
 
 def get_theme_colors(theme_name: str = None) -> Dict[str, str]:
-    """Get colors for a theme"""
+    """Get colors for a theme with fallback"""
     if theme_name is None:
         theme_name = DEFAULT_THEME
     return THEMES.get(theme_name, THEMES[DEFAULT_THEME])
+
+def validate_theme(theme_name: str) -> str:
+    """Validate and return theme name"""
+    return theme_name if theme_name in THEMES else DEFAULT_THEME
