@@ -42,7 +42,7 @@ THEMES = {
     "أبيض": {
         "name": "أبيض",
         "bg": "#F7FAFC",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#4299E1",
         "secondary": "#63B3ED",
         "text": "#2D3748",
@@ -56,7 +56,7 @@ THEMES = {
     "أسود": {
         "name": "أسود",
         "bg": "#1A202C",
-        "card": "rgba(45, 55, 72, 0.85)",
+        "card": "#2D3748",
         "primary": "#667EEA",
         "secondary": "#7F9CF5",
         "text": "#F7FAFC",
@@ -70,7 +70,7 @@ THEMES = {
     "رمادي": {
         "name": "رمادي",
         "bg": "#F7FAFC",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#4A5568",
         "secondary": "#718096",
         "text": "#2D3748",
@@ -84,7 +84,7 @@ THEMES = {
     "أزرق": {
         "name": "أزرق",
         "bg": "#EBF8FF",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#2B6CB0",
         "secondary": "#3182CE",
         "text": "#2C5282",
@@ -98,7 +98,7 @@ THEMES = {
     "بنفسجي": {
         "name": "بنفسجي",
         "bg": "#FAF5FF",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#805AD5",
         "secondary": "#9F7AEA",
         "text": "#5B21B6",
@@ -112,7 +112,7 @@ THEMES = {
     "وردي": {
         "name": "وردي",
         "bg": "#FFF5F7",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#B83280",
         "secondary": "#D53F8C",
         "text": "#702459",
@@ -126,7 +126,7 @@ THEMES = {
     "أخضر": {
         "name": "أخضر",
         "bg": "#F0FDF4",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#38A169",
         "secondary": "#48BB78",
         "text": "#064E3B",
@@ -140,7 +140,7 @@ THEMES = {
     "برتقالي": {
         "name": "برتقالي",
         "bg": "#FFFAF0",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#C05621",
         "secondary": "#DD6B20",
         "text": "#7C2D12",
@@ -154,7 +154,7 @@ THEMES = {
     "بني": {
         "name": "بني",
         "bg": "#FEFCF9",
-        "card": "rgba(255, 255, 255, 0.85)",
+        "card": "#FFFFFF",
         "primary": "#744210",
         "secondary": "#8B4513",
         "text": "#5C2E00",
