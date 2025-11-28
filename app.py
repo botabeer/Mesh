@@ -1,9 +1,10 @@
-# app.py - FULL FLEX UI VERSION
+# app.py - FULL FLEX UI VERSION (FIXED)
 """
 Bot Mesh - LINE Bot Application v10.0 FULL FLEX
 ✅ كل شيء نوافذ فلكس وأزرار
 ✅ Quick Reply دائم للألعاب فقط
 ✅ نافذة بداية ومساعدة
+✅ تم إصلاح خطأ الاستيراد
 Created by: Abeer Aldosari © 2025
 """
 
@@ -35,11 +36,12 @@ from constants import (
     validate_env, get_username, GAME_LIST, DEFAULT_THEME
 )
 
+# ✅ تصحيح الاستيراد - استخدام attach_quick_reply بدلاً من attach_quick_reply_to_message
 from ui_builder import (
     build_games_menu, build_my_points, build_leaderboard,
     build_registration_required, build_winner_announcement,
     build_help_window, build_theme_selector, build_enhanced_home,
-    build_multiplayer_help_window, attach_quick_reply_to_message
+    build_multiplayer_help_window, attach_quick_reply
 )
 
 from database import get_database
@@ -440,7 +442,7 @@ def handle_message(event):
                         start_msg = game_instance.start_game()
                         
                         # ✅ إضافة Quick Reply دائماً
-                        attach_quick_reply_to_message(start_msg)
+                        attach_quick_reply(start_msg)
                         line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
                         return
                     
@@ -503,7 +505,7 @@ def handle_message(event):
                         if result.get('response'):
                             response_msg = result['response']
                             # ✅ إضافة Quick Reply دائماً
-                            attach_quick_reply_to_message(response_msg)
+                            attach_quick_reply(response_msg)
                             line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
                             return
                         else:
@@ -522,7 +524,7 @@ def handle_message(event):
             # إرسال الرد مع Quick Reply دائماً
             if reply_message:
                 # ✅ إضافة Quick Reply لكل رسالة
-                attach_quick_reply_to_message(reply_message)
+                attach_quick_reply(reply_message)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply_message]))
 
     except Exception as e:
@@ -570,7 +572,7 @@ periodic_cleanup()
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info("=" * 70)
-    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION} - FULL FLEX UI")
+    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION} - FULL FLEX UI (FIXED)")
     logger.info(f"✅ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
     logger.info(f"🌐 المنفذ: {port}")
     logger.info("=" * 70)
