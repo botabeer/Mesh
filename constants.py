@@ -257,7 +257,7 @@ GAME_CONFIG = {
     "أضداد": {"display": "ضد", "icon": "↔️", "hint": True, "reveal": True, "timer": 0},
     "لون": {"display": "لون", "icon": "🎨", "hint": True, "reveal": True, "timer": 15},
     "رياضيات": {"display": "رياضيات", "icon": "➕", "hint": True, "reveal": True, "timer": 25},
-    "توافق": {"display": "🖤 توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
+    "توافق": {"display": "توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
 }
 
 GAME_LIST = [(k, v["display"], v["icon"]) for k, v in GAME_CONFIG.items()]
