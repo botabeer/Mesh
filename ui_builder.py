@@ -1,4 +1,4 @@
-"""Bot Mesh - UI Builder v20.0 REGISTRATION STATUS | © 2025 Abeer Aldosari"""
+"""Bot Mesh - UI Builder v18.1 WITHDRAWAL SYSTEM | © 2025 Abeer Aldosari"""
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from constants import GAME_LIST, DEFAULT_THEME, THEMES, BOT_NAME, BOT_RIGHTS, FIXED_GAME_QR
 
@@ -12,41 +12,27 @@ def attach_quick_reply(m):
     return m
 
 def build_unregister_confirmation(username, points, theme=DEFAULT_THEME):
-    """ نافذة تأكيد الانسحاب مع الاحتفاظ بالنقاط"""
+    """☑️ نافذة مختصرة: تم الانسحاب"""
     c = _c(theme)
     body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
-        {"type":"text","text":"▫️ تم إلغاء التسجيل","size":"xl","weight":"bold","color":c["warning"],"align":"center"},
+        {"type":"text","text":"☑️ تم الانسحاب","size":"xl","weight":"bold","color":c["warning"],"align":"center"},
         {"type":"separator","margin":"lg","color":c["border"]},
         _glass([
-            {"type":"text","text":username,"size":"lg","color":c["text"],"align":"center","weight":"bold"},
-            {"type":"text","text":"نقاطك المحفوظة","size":"sm","color":c["text2"],"align":"center","margin":"md"},
-            {"type":"text","text":str(points),"size":"xxl","weight":"bold","color":c["primary"],"align":"center","margin":"xs"}
+            {"type":"text","text":"تم الاحتفاظ بنقاطك","size":"sm","color":c["success"],"align":"center","weight":"bold"},
+            {"type":"text","text":str(points),"size":"xxl","weight":"bold","color":c["primary"],"align":"center","margin":"sm"}
         ],theme,"15px","20px"),
-        _glass([
-            {"type":"text","text":" تم الاحتفاظ بـ:","size":"sm","color":c["success"],"weight":"bold"},
-            {"type":"text","text":"• جميع النقاط","size":"xs","color":c["text2"],"margin":"sm"},
-            {"type":"text","text":"• الترتيب في الصدارة","size":"xs","color":c["text2"],"margin":"xs"},
-            {"type":"text","text":"• الإحصائيات","size":"xs","color":c["text2"],"margin":"xs"},
-            {"type":"separator","margin":"md","color":c["border"]},
-            {"type":"text","text":"▫️ لن تتمكن من:","size":"sm","color":c["warning"],"weight":"bold","margin":"md"},
-            {"type":"text","text":"• اللعب وتجميع نقاط جديدة","size":"xs","color":c["text2"],"margin":"sm"},
-            {"type":"text","text":"• الانضمام للألعاب الجماعية","size":"xs","color":c["text2"],"margin":"xs"}
-        ],theme,"15px","15px"),
-        {"type":"text","text":"يمكنك العودة في أي وقت بكتابة: انضم","size":"sm","color":c["success"],"align":"center","wrap":True,"margin":"lg","weight":"bold"},
+        {"type":"text","text":"للعودة: اكتب انضم","size":"sm","color":c["text2"],"align":"center","margin":"md"},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[
-            _btn(" انضم مرة أخرى","انضم","primary",theme),
             _btn("البداية","بداية","secondary",theme)
-        ]},
-        {"type":"separator","margin":"lg","color":c["border"]},
-        {"type":"text","text":"سيتم حذف بياناتك نهائياً بعد 30 يوم من عدم النشاط","size":"xxs","color":c["text3"],"align":"center","wrap":True,"margin":"sm"}
+        ]}
     ]}
-    return attach_quick_reply(_flex("إلغاء التسجيل",{"type":"bubble","size":"mega","body":body}))
+    return attach_quick_reply(_flex("انسحاب",{"type":"bubble","size":"mega","body":body}))
 
 def build_registration_status(username, points, theme=DEFAULT_THEME):
-    """ نافذة: عرض حالة التسجيل"""
+    """☑️ نافذة: عرض حالة التسجيل"""
     c = _c(theme)
     body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
-        {"type":"text","text":" أنت مسجل","size":"xl","weight":"bold","color":c["success"],"align":"center"},
+        {"type":"text","text":"☑️ أنت مسجل","size":"xl","weight":"bold","color":c["success"],"align":"center"},
         {"type":"separator","margin":"lg","color":c["border"]},
         _glass([
             {"type":"text","text":username,"size":"lg","color":c["text"],"align":"center","weight":"bold"},
@@ -54,7 +40,7 @@ def build_registration_status(username, points, theme=DEFAULT_THEME):
             {"type":"text","text":str(points),"size":"xxl","weight":"bold","color":c["primary"],"align":"center","margin":"xs"}
         ],theme,"15px","20px"),
         _glass([
-            {"type":"text","text":" ميزات التسجيل","size":"sm","color":c["text"],"weight":"bold"},
+            {"type":"text","text":"☑️ ميزات التسجيل","size":"sm","color":c["text"],"weight":"bold"},
             {"type":"text","text":"• تجميع النقاط","size":"xs","color":c["text2"],"margin":"sm"},
             {"type":"text","text":"• الظهور في الصدارة","size":"xs","color":c["text2"],"margin":"xs"},
             {"type":"text","text":"• حفظ الإحصائيات","size":"xs","color":c["text2"],"margin":"xs"},
@@ -70,7 +56,7 @@ def build_registration_status(username, points, theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("حالة التسجيل",{"type":"bubble","size":"mega","body":body}))
 
 def build_registration_required(theme=DEFAULT_THEME):
-    """ نافذة: التسجيل مطلوب"""
+    """☑️ نافذة: التسجيل مطلوب"""
     c = _c(theme)
     body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
         {"type":"text","text":"⚠️ التسجيل مطلوب","size":"xl","weight":"bold","color":c["warning"],"align":"center"},
@@ -80,15 +66,15 @@ def build_registration_required(theme=DEFAULT_THEME):
             {"type":"text","text":"اكتب: انضم","size":"lg","color":c["primary"],"align":"center","weight":"bold","margin":"md"}
         ],theme,"15px","20px"),
         _glass([
-            {"type":"text","text":" ميزات التسجيل:","size":"sm","color":c["text"],"weight":"bold"},
+            {"type":"text","text":"☑️ ميزات التسجيل:","size":"sm","color":c["text"],"weight":"bold"},
             {"type":"text","text":"• تجميع النقاط من الألعاب","size":"xs","color":c["text2"],"margin":"sm"},
             {"type":"text","text":"• الظهور في لوحة الصدارة","size":"xs","color":c["text2"],"margin":"xs"},
             {"type":"text","text":"• حفظ إحصائياتك","size":"xs","color":c["text2"],"margin":"xs"},
             {"type":"text","text":"• اللعب الجماعي","size":"xs","color":c["text2"],"margin":"xs"}
         ],theme,"15px","15px"),
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[
-            _btn(" انضم الآن","انضم","primary",theme),
-            _btn(" البداية","بداية","secondary",theme)
+            _btn("☑️ انضم الآن","انضم","primary",theme),
+            _btn("البداية","بداية","secondary",theme)
         ]},
         {"type":"separator","margin":"lg","color":c["border"]},
         {"type":"text","text":"ملاحظة: لعبة التوافق لا تحتاج تسجيل","size":"xxs","color":c["text3"],"align":"center","wrap":True,"margin":"sm"}
@@ -97,7 +83,7 @@ def build_registration_required(theme=DEFAULT_THEME):
 
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
     c = _c(theme)
-    status = "مسجل" if is_registered else "غير مسجل"
+    status = " مسجل" if is_registered else " غير مسجل"
     themes = list(THEMES.keys())
     rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(t,f"ثيم {t}","primary" if t==theme else "secondary",theme) for t in themes[i:i+3]]} for i in range(0,len(themes),3)]
     join = "انسحب" if is_registered else "انضم"
@@ -107,7 +93,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
         _glass([{"type":"box","layout":"horizontal","contents":[{"type":"text","text":"النقاط","size":"md","color":c["text"],"flex":2,"weight":"bold"},{"type":"text","text":status,"size":"md","color":c["text2"],"align":"end","flex":1}]},{"type":"text","text":str(points),"size":"xxl","color":c["primary"],"margin":"sm","weight":"bold"}],theme,"15px","15px"),
         {"type":"text","text":"اختر الثيم","size":"md","weight":"bold","color":c["text"],"margin":"xl"},
         *rows,
-        {"type":"box","layout":"horizontal","spacing":"sm","margin":"xl","contents":[_btn(f"{join}",join,"primary" if is_registered else "secondary",theme),_btn("الألعاب","ألعاب","secondary",theme)]},
+        {"type":"box","layout":"horizontal","spacing":"sm","margin":"xl","contents":[_btn(f" {join}",join,"primary" if is_registered else "secondary",theme),_btn("الألعاب","ألعاب","secondary",theme)]},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("نقاطي","نقاطي","secondary",theme),_btn("الصدارة","صدارة","secondary",theme)]},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("فريقين","فريقين","secondary",theme),_btn("مساعدة","مساعدة","secondary",theme)]},
         {"type":"separator","margin":"lg","color":c["border"]},
@@ -140,7 +126,7 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
         _glass([{"type":"text","text":"النقاط الكلية","size":"sm","color":c["text2"],"align":"center"},{"type":"text","text":str(points),"size":"xxl","weight":"bold","color":c["primary"],"align":"center","margin":"sm"}],theme,"20px","25px"),
         _glass([{"type":"text","text":"المستوى الحالي","size":"sm","color":c["text2"],"align":"center"},{"type":"text","text":level,"size":"lg","weight":"bold","color":c["success"],"align":"center","margin":"sm"}],theme,"15px","15px"),
         {"type":"separator","margin":"lg","color":c["border"]},
-        {"type":"text","text":"سيتم حذف بياناتك بعد 30 يوم من عدم النشاط","size":"xs","color":c["error"],"wrap":True,"align":"center"},
+        {"type":"text","text":"سيتم حذف بياناتك بعد 30 يوم من عدم النشاط (بدون نقاط)","size":"xs","color":c["error"],"wrap":True,"align":"center"},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[_btn("البداية","بداية","secondary",theme),_btn("الألعاب","ألعاب","secondary",theme)]},
         {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text3"],"align":"center","margin":"sm"}
     ]}
@@ -149,15 +135,15 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
 def build_leaderboard(top_users, theme=DEFAULT_THEME):
     c = _c(theme)
     medals = ["🥇","🥈","🥉"]
-    items = [{"type":"box","layout":"vertical","spacing":"xs","paddingAll":"sm","borderWidth":"1px","borderColor":c["border"],"cornerRadius":"10px","margin":"sm","contents":[{"type":"box","layout":"horizontal","contents":[{"type":"text","text":medals[i-1] if i<=3 else f"{i}.","size":"lg","flex":0,"color":c["primary"] if i<=3 else c["text"],"weight":"bold"},{"type":"text","text":name,"size":"sm","color":c["text"],"flex":3,"margin":"sm","weight":"bold"},{"type":"text","text":str(pts),"size":"sm","color":c["primary"],"align":"end","flex":1,"weight":"bold"}]},{"type":"text","text":"▪️ متصل" if is_online else "▫️ غير نشط","size":"xxs","color":c["success"] if is_online else c["text3"],"align":"start","margin":"xs"}]} for i,(name,pts,is_online) in enumerate(top_users[:10],1)]
+    items = [{"type":"box","layout":"vertical","spacing":"xs","paddingAll":"sm","borderWidth":"1px","borderColor":c["border"],"cornerRadius":"10px","margin":"sm","contents":[{"type":"box","layout":"horizontal","contents":[{"type":"text","text":medals[i-1] if i<=3 else f"{i}.","size":"lg","flex":0,"color":c["primary"] if i<=3 else c["text"],"weight":"bold"},{"type":"text","text":name,"size":"sm","color":c["text"],"flex":3,"margin":"sm","weight":"bold"},{"type":"text","text":str(pts),"size":"sm","color":c["primary"],"align":"end","flex":1,"weight":"bold"}]},{"type":"text","text":"▪️ نشط" if is_registered else "▫️ غير نشط","size":"xxs","color":c["success"] if is_registered else c["text3"],"align":"start","margin":"xs"}]} for i,(name,pts,is_registered) in enumerate(top_users[:10],1)]
     if not items: items = [{"type":"text","text":"لا يوجد لاعبين بعد","size":"sm","color":c["text2"],"align":"center"}]
     body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
         {"type":"text","text":"🏆 لوحة الصدارة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
-        {"type":"text","text":"جميع المستخدمين (نشطين وغير نشطين)","size":"xs","color":c["text2"],"align":"center","margin":"xs"},
+        {"type":"text","text":"المستخدمون الذين لديهم نقاط","size":"xs","color":c["text2"],"align":"center","margin":"xs"},
         {"type":"separator","margin":"lg","color":c["border"]},
         {"type":"box","layout":"vertical","contents":items,"margin":"lg"},
         {"type":"separator","margin":"lg","color":c["border"]},
-        {"type":"text","text":" متصل = مسجل ونشط\n غير نشط = ألغى التسجيل","size":"xxs","color":c["text3"],"align":"center","wrap":True,"margin":"sm"},
+        {"type":"text","text":" نشط = مسجل\n غير نشط = ألغى التسجيل (محتفظ بالنقاط)","size":"xxs","color":c["text3"],"align":"center","wrap":True,"margin":"sm"},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[_btn("البداية","بداية","secondary",theme),_btn("نقاطي","نقاطي","secondary",theme)]},
         {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text3"],"align":"center","margin":"sm"}
     ]}
@@ -175,7 +161,7 @@ def build_help_window(theme=DEFAULT_THEME):
 
 def build_winner_announcement(username, game_name, round_points, total_points, theme=DEFAULT_THEME):
     c = _c(theme)
-    body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[{"type":"text","text":"🏆 مبروك!","size":"xxl","weight":"bold","align":"center","color":c["success"]},{"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":f"أنهيت لعبة {game_name}","size":"lg","color":c["text"],"align":"center","wrap":True,"margin":"md","weight":"bold"},_glass([{"type":"text","text":"النقاط المكتسبة","size":"sm","color":c["text2"],"align":"center"},{"type":"text","text":f"+{round_points}","size":"xxl","weight":"bold","color":c["success"],"align":"center","margin":"sm"}],theme,"20px","20px"),{"type":"text","text":f"إجمالي: {total_points}","size":"md","color":c["text"],"align":"center","margin":"md","weight":"bold"},{"type":"box","layout":"vertical","spacing":"sm","margin":"lg","contents":[_btn(f"{game_name}",game_name,"primary",theme),{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("الألعاب","ألعاب","secondary",theme),_btn("البداية","بداية","secondary",theme)]}]}]}
+    body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[{"type":"text","text":"🏆 مبروك!","size":"xxl","weight":"bold","align":"center","color":c["success"]},{"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":f"أنهيت لعبة {game_name}","size":"lg","color":c["text"],"align":"center","wrap":True,"margin":"md","weight":"bold"},_glass([{"type":"text","text":"النقاط المكتسبة","size":"sm","color":c["text2"],"align":"center"},{"type":"text","text":f"+{round_points}","size":"xxl","weight":"bold","color":c["success"],"align":"center","margin":"sm"}],theme,"20px","20px"),{"type":"text","text":f"إجمالي: {total_points}","size":"md","color":c["text"],"align":"center","margin":"md","weight":"bold"},{"type":"box","layout":"vertical","spacing":"sm","margin":"lg","contents":[_btn(f"▪️ {game_name}",game_name,"primary",theme),{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("الألعاب","ألعاب","secondary",theme),_btn("البداية","بداية","secondary",theme)]}]}]}
     return attach_quick_reply(_flex("فوز",{"type":"bubble","size":"mega","body":body}))
 
 def build_theme_selector(theme=DEFAULT_THEME):
