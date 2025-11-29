@@ -1,5 +1,5 @@
 """
-🧠 لعبة الذكاء - Bot Mesh v9.0 FINAL
+🧠 لعبة الذكاء - Bot Mesh v9.1 FIXED
 Created by: Abeer Aldosari © 2025
 ✅ فردي: لمح + جاوب + مؤقت
 ✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
@@ -113,17 +113,11 @@ class IqGame(BaseGame):
         # بدء العداد
         self.round_start_time = time.time()
 
-        # حساب الوقت المتبقي
-        elapsed = int(time.time() - self.round_start_time)
-        remaining = max(0, self.round_time - elapsed)
-
-        # ✅ تحديد النص الإضافي حسب الوضع
-        if self.team_mode:
-            # وضع الفريقين: فقط المؤقت
-            additional_info = f"⏱️ {self.round_time} ثانية"
-        else:
-            # وضع فردي: المؤقت + لمح/جاوب
+        # ✅ استخدام can_use_hint() و can_reveal_answer()
+        if self.can_use_hint() and self.can_reveal_answer():
             additional_info = f"⏱️ {self.round_time} ثانية\n💡 اكتب 'لمح' أو 'جاوب'"
+        else:
+            additional_info = f"⏱️ {self.round_time} ثانية"
 
         return self.build_question_flex(
             question_text=f"🧩 {riddle['q']}",
@@ -157,50 +151,57 @@ class IqGame(BaseGame):
                 "points": 0
             }
 
-        # تجاهل من أجاب أو غير منضم في الفريقين
+        # تجاهل من أجاب
         if user_id in self.answered_users:
             return None
         
+        # في وضع الفريقين: تجاهل غير المنضمين
         if self.team_mode and user_id not in self.joined_users:
             return None
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ لمح وجاوب للوضع الفردي فقط
-        if not self.team_mode:
-            # التلميح
-            if normalized == "لمح":
-                if not self.current_answer:
-                    return {"message": "لا توجد تلميحات", "response": self._create_text_message("لا توجد تلميحات"), "points": 0}
-                
-                answer = self.current_answer[0]
-                if len(answer) <= 2:
-                    hint = f"💡 الكلمة قصيرة: {answer[0]}_"
-                else:
-                    hint = f"💡 تلميح: {answer[0]}{answer[1]}{'_' * (len(answer) - 2)}"
-                
+        # ✅ التلميح (فردي فقط)
+        if self.can_use_hint() and normalized == "لمح":
+            if not self.current_answer:
                 return {
-                    "message": hint,
-                    "response": self._create_text_message(hint),
+                    "message": "لا توجد تلميحات",
+                    "response": self._create_text_message("لا توجد تلميحات"),
                     "points": 0
                 }
+            
+            answer = self.current_answer[0]
+            if len(answer) <= 2:
+                hint = f"💡 الكلمة قصيرة: {answer[0]}_"
+            else:
+                hint = f"💡 تلميح: {answer[0]}{answer[1]}{'_' * (len(answer) - 2)}"
+            
+            return {
+                "message": hint,
+                "response": self._create_text_message(hint),
+                "points": 0
+            }
 
-            # كشف الإجابة
-            if normalized == "جاوب":
-                answers_text = " أو ".join(self.current_answer)
-                self.current_question += 1
-                self.answered_users.clear()
+        # ✅ كشف الإجابة (فردي فقط)
+        if self.can_reveal_answer() and normalized == "جاوب":
+            answers_text = " أو ".join(self.current_answer)
+            self.current_question += 1
+            self.answered_users.clear()
 
-                if self.current_question >= self.questions_count:
-                    result = self.end_game()
-                    result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
-                    return result
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                return result
 
-                return {
-                    "message": f"الإجابة: {answers_text}",
-                    "response": self.get_question(),
-                    "points": 0
-                }
+            return {
+                "message": f"الإجابة: {answers_text}",
+                "response": self.get_question(),
+                "points": 0
+            }
+
+        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
+        if self.team_mode and normalized in ["لمح", "جاوب"]:
+            return None
 
         # التحقق من الإجابة
         for correct in self.current_answer:
@@ -209,7 +210,7 @@ class IqGame(BaseGame):
                 base_points = 10
                 elapsed = int(time.time() - self.round_start_time)
                 remaining = max(0, self.round_time - elapsed)
-                time_bonus = max(0, remaining // 3)  # بونص 1 نقطة لكل 3 ثواني متبقية
+                time_bonus = max(0, remaining // 3)
                 total_points = base_points + time_bonus
 
                 # توزيع النقاط
