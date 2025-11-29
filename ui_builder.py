@@ -1,10 +1,10 @@
 """
-Bot Mesh - UI Builder v13.0 FINAL ENHANCED
+Bot Mesh - UI Builder v17.1 WHITE THEME FIXED + CAROUSEL HELP
 Created by: Abeer Aldosari © 2025
-✅ حالة الاتصال نصية: "متصل الآن" / "غير متصل"
-✅ نوافذ موحدة Mega Size
-✅ الإيموجي المحدود: ▫️▪️⏱️🥇🥈🥉🎖️🏅🏆🖤
-✅ الثيم يطبق على كل شيء
+✅ نظام التباين التلقائي للثيم الأبيض
+✅ ظلال واضحة وحدود قوية
+✅ المساعدة كاروسيل احترافي
+✅ جميع النوافذ محسّنة
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
@@ -15,28 +15,43 @@ def _c(theme=None):
     return THEMES.get(theme or DEFAULT_THEME, THEMES[DEFAULT_THEME])
 
 def _glass_box(contents, theme, radius="20px", padding="20px"):
-    """صندوق زجاجي"""
+    """صندوق زجاجي مع ظل واضح"""
     c = _c(theme)
-    return {
+    
+    box_style = {
         "type": "box",
         "layout": "vertical",
         "contents": contents,
         "cornerRadius": radius,
         "paddingAll": padding,
-        "borderWidth": "1px",
+        "borderWidth": "2px" if theme == "أبيض" else "1px",
         "borderColor": c["border"]
     }
+    
+    if theme == "أبيض":
+        box_style["backgroundColor"] = c["card"]
+    
+    return box_style
 
 def _btn(label, text, style="primary", theme=None):
-    """زر مع ألوان الثيم"""
+    """زر مع ألوان الثيم وتباين محسّن"""
     c = _c(theme)
-    return {
+    
+    btn_config = {
         "type": "button",
         "action": {"type": "message", "label": label, "text": text},
         "style": style,
-        "height": "sm",
-        "color": c["primary"] if style == "primary" else c["text"]
+        "height": "sm"
     }
+    
+    if style == "primary":
+        btn_config["color"] = c["primary"]
+    elif style == "secondary":
+        btn_config["color"] = c["secondary"]
+    else:
+        btn_config["color"] = c["text"]
+    
+    return btn_config
 
 def _flex(alt, bubble):
     """إنشاء Flex Message"""
@@ -56,13 +71,12 @@ def attach_quick_reply(msg):
     return msg
 
 # ============================================================================
-# البداية - بدون تغيير
+# البداية - محسّنة
 # ============================================================================
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
     c = _c(theme)
     status_text = "مسجل" if is_registered else "غير مسجل"
     
-    # أزرار الثيمات 3×3
     theme_list = list(THEMES.keys())
     theme_rows = []
     for i in range(0, len(theme_list), 3):
@@ -77,59 +91,58 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
     
     join_text = "انسحب" if is_registered else "انضم"
     
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": f"▪️ {BOT_NAME}", "weight": "bold", "size": "xxl", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                
-                _glass_box([
-                    {"type": "box", "layout": "horizontal", "contents": [
-                        {"type": "text", "text": "▪️ نقطة", "size": "md", "color": c["text"], "flex": 2},
-                        {"type": "text", "text": status_text, "size": "md", "color": c["text2"], "align": "end", "flex": 1}
-                    ]},
-                    {"type": "text", "text": str(points), "size": "xxl", "color": c["primary"], "margin": "sm"}
-                ], theme, "15px", "15px"),
-                
-                {"type": "text", "text": "▪️ اختر الثيم", "size": "md", "weight": "bold", "color": c["text"], "margin": "xl"},
-                *theme_rows,
-                
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xl", "contents": [
-                    _btn(f"▪️ {join_text}", join_text, "primary" if is_registered else "secondary", theme),
-                    _btn("▪️ الألعاب", "ألعاب", "secondary", theme)
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": f"▪️ {BOT_NAME}", "weight": "bold", "size": "xxl", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            
+            _glass_box([
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": "▪️ نقطة", "size": "md", "color": c["text"], "flex": 2, "weight": "bold"},
+                    {"type": "text", "text": status_text, "size": "md", "color": c["text2"], "align": "end", "flex": 1}
                 ]},
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
-                    _btn("▪️ نقاطي", "نقاطي", "secondary", theme),
-                    _btn("🏆 الصدارة", "صدارة", "secondary", theme)
-                ]},
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
-                    _btn("▪️ فريقين", "فريقين", "secondary", theme),
-                    _btn("▪️ مساعدة", "مساعدة", "secondary", theme)
-                ]},
-                
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "md"}
-            ]
-        }
+                {"type": "text", "text": str(points), "size": "xxl", "color": c["primary"], "margin": "sm", "weight": "bold"}
+            ], theme, "15px", "15px"),
+            
+            {"type": "text", "text": "▪️ اختر الثيم", "size": "md", "weight": "bold", "color": c["text"], "margin": "xl"},
+            *theme_rows,
+            
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xl", "contents": [
+                _btn(f"▪️ {join_text}", join_text, "primary" if is_registered else "secondary", theme),
+                _btn("▪️ الألعاب", "ألعاب", "secondary", theme)
+            ]},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
+                _btn("▪️ نقاطي", "نقاطي", "secondary", theme),
+                _btn("🏆 الصدارة", "صدارة", "secondary", theme)
+            ]},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
+                _btn("▪️ فريقين", "فريقين", "secondary", theme),
+                _btn("▪️ مساعدة", "مساعدة", "secondary", theme)
+            ]},
+            
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "md"}
+        ]
     }
+    
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("البداية", bubble))
 
 # ============================================================================
-# قائمة الألعاب - Mega Size
+# قائمة الألعاب - Mega Size محسّنة
 # ============================================================================
 def build_games_menu(theme=DEFAULT_THEME):
     c = _c(theme)
     
-    # الألعاب بالترتيب المعتمد
-    games_order = ["ذكاء", "رياضيات", "تخمين", "سرعة", "كلمات", "سلسلة", 
-                   "أضداد", "أغنية", "تكوين", "ألوان", "لعبة", "توافق"]
+    games_order = ["أسرع", "ذكاء", "لعبة", "أغنيه", "خمن", "سلسلة", 
+                   "ترتيب", "تكوين", "ضد", "لون", "رياضيات", "توافق"]
     
-    # إنشاء الأزرار 3×4
     game_rows = []
     for i in range(0, 12, 3):
         row = {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": []}
@@ -139,84 +152,86 @@ def build_games_menu(theme=DEFAULT_THEME):
                 row["contents"].append(_btn(games_order[idx], games_order[idx], "primary", theme))
         game_rows.append(row)
     
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ الألعاب المتاحة", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
-                {"type": "text", "text": "عدد الألعاب: 12", "size": "sm", "color": c["text2"], "align": "center", "margin": "xs"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                
-                *game_rows,
-                
-                _glass_box([
-                    {"type": "text", "text": "▪️ أوامر اللعب", "size": "sm", "color": c["text"], "weight": "bold"},
-                    {"type": "text", "text": "• اضغط على اسم اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• اكتب 'لمح' للتلميح", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• اكتب 'جاوب' لكشف الإجابة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• اكتب 'إيقاف' لإنهاء اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "md", "contents": [
-                    _btn("▪️ البداية", "بداية", "secondary", theme),
-                    _btn("▪️ إيقاف", "إيقاف", "secondary", theme)
-                ]},
-                
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "sm"}
-            ]
-        }
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ الألعاب المتاحة", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+            {"type": "text", "text": "عدد الألعاب: 12", "size": "sm", "color": c["text2"], "align": "center", "margin": "xs"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            
+            *game_rows,
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ أوامر اللعب", "size": "sm", "color": c["text"], "weight": "bold"},
+                {"type": "text", "text": "• اضغط على اسم اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "• اكتب 'لمح' للتلميح", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• اكتب 'جاوب' لكشف الإجابة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• اكتب 'إيقاف' لإنهاء اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "15px", "15px"),
+            
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "md", "contents": [
+                _btn("▪️ البداية", "بداية", "secondary", theme),
+                _btn("▪️ إيقاف", "إيقاف", "secondary", theme)
+            ]},
+            
+            {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "sm"}
+        ]
     }
+    
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("الألعاب", bubble))
 
 # ============================================================================
-# نقاطي - Mega Size
+# نقاطي - محسّنة
 # ============================================================================
 def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
     c = _c(theme)
     level = "▪️ مبتدئ" if points<50 else "▪️ متوسط" if points<150 else "▪️ متقدم" if points<300 else "🏆 محترف"
     
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ نقاطي", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                {"type": "text", "text": f"▪️ {username}", "size": "lg", "color": c["text"], "weight": "bold", "align": "center", "margin": "lg"},
-                
-                _glass_box([
-                    {"type": "text", "text": "النقاط الكلية", "size": "sm", "color": c["text2"], "align": "center"},
-                    {"type": "text", "text": str(points), "size": "xxl", "weight": "bold", "color": c["primary"], "align": "center", "margin": "sm"}
-                ], theme, "20px", "25px"),
-                
-                _glass_box([
-                    {"type": "text", "text": "المستوى الحالي", "size": "sm", "color": c["text2"], "align": "center"},
-                    {"type": "text", "text": level, "size": "lg", "weight": "bold", "color": c["success"], "align": "center", "margin": "sm"}
-                ], theme, "15px", "15px"),
-                
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                {"type": "text", "text": "▪️ سيتم حذف بياناتك بعد 30 يوم من عدم النشاط", "size": "xs", "color": c["error"], "wrap": True, "align": "center"},
-                
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "md", "contents": [
-                    _btn("▪️ البداية", "بداية", "secondary", theme),
-                    _btn("▪️ الألعاب", "ألعاب", "secondary", theme)
-                ]},
-                
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "sm"}
-            ]
-        }
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ نقاطي", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "text", "text": f"▪️ {username}", "size": "lg", "color": c["text"], "weight": "bold", "align": "center", "margin": "lg"},
+            
+            _glass_box([
+                {"type": "text", "text": "النقاط الكلية", "size": "sm", "color": c["text2"], "align": "center"},
+                {"type": "text", "text": str(points), "size": "xxl", "weight": "bold", "color": c["primary"], "align": "center", "margin": "sm"}
+            ], theme, "20px", "25px"),
+            
+            _glass_box([
+                {"type": "text", "text": "المستوى الحالي", "size": "sm", "color": c["text2"], "align": "center"},
+                {"type": "text", "text": level, "size": "lg", "weight": "bold", "color": c["success"], "align": "center", "margin": "sm"}
+            ], theme, "15px", "15px"),
+            
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "text", "text": "▪️ سيتم حذف بياناتك بعد 30 يوم من عدم النشاط", "size": "xs", "color": c["error"], "wrap": True, "align": "center"},
+            
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "md", "contents": [
+                _btn("▪️ البداية", "بداية", "secondary", theme),
+                _btn("▪️ الألعاب", "ألعاب", "secondary", theme)
+            ]},
+            
+            {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "sm"}
+        ]
     }
+    
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("نقاطي", bubble))
 
 # ============================================================================
-# لوحة الصدارة - مع حالة نصية
+# لوحة الصدارة - محسّنة
 # ============================================================================
 def build_leaderboard(top_users, theme=DEFAULT_THEME):
     c = _c(theme)
@@ -232,18 +247,19 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
             "layout": "vertical",
             "spacing": "xs",
             "paddingAll": "sm",
-            "borderWidth": "1px",
+            "borderWidth": "2px" if theme == "أبيض" else "1px",
             "borderColor": c["border"],
             "cornerRadius": "10px",
             "margin": "sm",
+            "backgroundColor": c["card"] if theme == "أبيض" else None,
             "contents": [
                 {
                     "type": "box",
                     "layout": "horizontal",
                     "contents": [
-                        {"type": "text", "text": medals[i-1] if i<=3 else f"{i}.", "size": "lg", "flex": 0, "color": c["primary"] if i<=3 else c["text"]},
-                        {"type": "text", "text": name, "size": "sm", "color": c["text"], "flex": 3, "margin": "sm"},
-                        {"type": "text", "text": str(pts), "size": "sm", "color": c["primary"], "align": "end", "flex": 1}
+                        {"type": "text", "text": medals[i-1] if i<=3 else f"{i}.", "size": "lg", "flex": 0, "color": c["primary"] if i<=3 else c["text"], "weight": "bold"},
+                        {"type": "text", "text": name, "size": "sm", "color": c["text"], "flex": 3, "margin": "sm", "weight": "bold"},
+                        {"type": "text", "text": str(pts), "size": "sm", "color": c["primary"], "align": "end", "flex": 1, "weight": "bold"}
                     ]
                 },
                 {
@@ -260,178 +276,219 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
     if not items:
         items = [{"type": "text", "text": "لا يوجد لاعبين مسجلين بعد", "size": "sm", "color": c["text2"], "align": "center"}]
     
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "🏆 لوحة الصدارة", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                
-                _glass_box(items, theme, "20px", "15px"),
-                
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "md", "contents": [
-                    _btn("▪️ البداية", "بداية", "secondary", theme),
-                    _btn("▪️ نقاطي", "نقاطي", "secondary", theme)
-                ]},
-                
-                {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "sm"}
-            ]
-        }
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "🏆 لوحة الصدارة", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            
+            {"type": "box", "layout": "vertical", "contents": items, "margin": "lg"},
+            
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "md", "contents": [
+                _btn("▪️ البداية", "بداية", "secondary", theme),
+                _btn("▪️ نقاطي", "نقاطي", "secondary", theme)
+            ]},
+            
+            {"type": "text", "text": BOT_RIGHTS, "size": "xxs", "color": c["text3"], "align": "center", "margin": "sm"}
+        ]
     }
+    
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("الصدارة", bubble))
 
 # ============================================================================
-# باقي النوافذ - Mega Size موحد
+# المساعدة - كاروسيل احترافي 🎨
+# ============================================================================
+def build_help_window(theme=DEFAULT_THEME):
+    """نافذة المساعدة كاروسيل احترافي"""
+    c = _c(theme)
+    
+    # بطاقة 1: مقدمة وأوامر التنقل
+    card1_body = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "📚 المساعدة", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+            {"type": "text", "text": "دليل شامل للبوت", "size": "xs", "color": c["text2"], "align": "center", "margin": "xs"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ أوامر التنقل", "weight": "bold", "color": c["text"], "size": "md"},
+                {"type": "text", "text": "• بداية / home", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "• ألعاب / games", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• نقاطي / points", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• صدارة / leaderboard", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "12px", "12px"),
+            
+            {"type": "text", "text": "← اسحب لليسار للمزيد", "size": "xxs", "color": c["accent"], "align": "center", "margin": "md"}
+        ]
+    }
+    if theme == "أبيض":
+        card1_body["backgroundColor"] = c["bg"]
+    
+    # بطاقة 2: أوامر اللعب
+    card2_body = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "🎮 أوامر اللعب", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ بدء اللعب", "weight": "bold", "color": c["text"], "size": "md"},
+                {"type": "text", "text": "• [اسم اللعبة] - بدء", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "• لمح / hint - تلميح", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• جاوب / reveal - كشف", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• إيقاف / stop - إيقاف", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "12px", "12px"),
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ الحساب", "weight": "bold", "color": c["text"], "size": "md"},
+                {"type": "text", "text": "• انضم / join", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "• انسحب / leave", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "12px", "12px")
+        ]
+    }
+    if theme == "أبيض":
+        card2_body["backgroundColor"] = c["bg"]
+    
+    # بطاقة 3: نظام النقاط
+    card3_body = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "🏆 نظام النقاط", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ كسب النقاط", "weight": "bold", "color": c["text"], "size": "md"},
+                {"type": "text", "text": "• 1 نقطة لكل إجابة صحيحة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "• للمسجلين فقط", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• إجابة واحدة لكل سؤال", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "12px", "12px"),
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ المستويات", "weight": "bold", "color": c["text"], "size": "md"},
+                {"type": "text", "text": "• 0-49: ▪️ مبتدئ", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "• 50-149: ▪️ متوسط", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• 150-299: ▪️ متقدم", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• 300+: 🏆 محترف", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "12px", "12px")
+        ]
+    }
+    if theme == "أبيض":
+        card3_body["backgroundColor"] = c["bg"]
+    
+    # بطاقة 4: وضع الفريقين
+    card4_body = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "👥 وضع الفريقين", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ كيفية اللعب", "weight": "bold", "color": c["text"], "size": "md"},
+                {"type": "text", "text": "1. اكتب: فريقين", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "2. الجميع يكتب: انضم", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "3. اختر اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "4. تقسيم تلقائي", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "12px", "12px"),
+            
+            _glass_box([
+                {"type": "text", "text": "▪️ الميزات", "weight": "bold", "color": c["text"], "size": "md"},
+                {"type": "text", "text": "• تقسيم عادل", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                {"type": "text", "text": "• نقاط منفصلة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• بدون لمح أو جاوب", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "• إعلان الفائز", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+            ], theme, "12px", "12px"),
+            
+            _btn("▪️ البداية", "بداية", "primary", theme)
+        ]
+    }
+    if theme == "أبيض":
+        card4_body["backgroundColor"] = c["bg"]
+    
+    carousel = {
+        "type": "carousel",
+        "contents": [
+            {"type": "bubble", "size": "mega", "body": card1_body},
+            {"type": "bubble", "size": "mega", "body": card2_body},
+            {"type": "bubble", "size": "mega", "body": card3_body},
+            {"type": "bubble", "size": "mega", "body": card4_body}
+        ]
+    }
+    
+    return attach_quick_reply(_flex("المساعدة", carousel))
+
+# ============================================================================
+# باقي النوافذ - محسّنة
 # ============================================================================
 def build_registration_required(theme=DEFAULT_THEME):
     c = _c(theme)
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ يجب التسجيل أولاً", "weight": "bold", "size": "lg", "color": c["warning"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                _glass_box([
-                    {"type": "text", "text": "اضغط 'انضم' للتسجيل والبدء باللعب", "size": "sm", "color": c["text2"], "align": "center", "wrap": True}
-                ], theme, "15px", "15px"),
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "lg", "contents": [
-                    _btn("▪️ انضم", "انضم", "primary", theme),
-                    _btn("▪️ البداية", "بداية", "secondary", theme)
-                ]}
-            ]
-        }
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ يجب التسجيل أولاً", "weight": "bold", "size": "lg", "color": c["warning"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            _glass_box([
+                {"type": "text", "text": "اضغط 'انضم' للتسجيل والبدء باللعب", "size": "sm", "color": c["text2"], "align": "center", "wrap": True}
+            ], theme, "15px", "15px"),
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "lg", "contents": [
+                _btn("▪️ انضم", "انضم", "primary", theme),
+                _btn("▪️ البداية", "بداية", "secondary", theme)
+            ]}
+        ]
     }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("تسجيل مطلوب", bubble))
 
 def build_winner_announcement(username, game_name, round_points, total_points, theme=DEFAULT_THEME):
     c = _c(theme)
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ مبروك!", "size": "xxl", "weight": "bold", "align": "center", "color": c["success"]},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                {"type": "text", "text": f"أنهيت لعبة {game_name}", "size": "lg", "color": c["text"], "align": "center", "wrap": True, "margin": "md"},
-                
-                _glass_box([
-                    {"type": "text", "text": "النقاط المكتسبة", "size": "sm", "color": c["text2"], "align": "center"},
-                    {"type": "text", "text": f"+{round_points}", "size": "xxl", "weight": "bold", "color": c["success"], "align": "center", "margin": "sm"}
-                ], theme, "20px", "20px"),
-                
-                {"type": "text", "text": f"▪️ إجمالي: {total_points}", "size": "md", "color": c["text"], "align": "center", "margin": "md"},
-                
-                {"type": "box", "layout": "vertical", "spacing": "sm", "margin": "lg", "contents": [
-                    _btn(f"▪️ {game_name}", game_name, "primary", theme),
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
-                        _btn("▪️ الألعاب", "ألعاب", "secondary", theme),
-                        _btn("▪️ البداية", "بداية", "secondary", theme)
-                    ]}
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ مبروك!", "size": "xxl", "weight": "bold", "align": "center", "color": c["success"]},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "text", "text": f"أنهيت لعبة {game_name}", "size": "lg", "color": c["text"], "align": "center", "wrap": True, "margin": "md", "weight": "bold"},
+            
+            _glass_box([
+                {"type": "text", "text": "النقاط المكتسبة", "size": "sm", "color": c["text2"], "align": "center"},
+                {"type": "text", "text": f"+{round_points}", "size": "xxl", "weight": "bold", "color": c["success"], "align": "center", "margin": "sm"}
+            ], theme, "20px", "20px"),
+            
+            {"type": "text", "text": f"▪️ إجمالي: {total_points}", "size": "md", "color": c["text"], "align": "center", "margin": "md", "weight": "bold"},
+            
+            {"type": "box", "layout": "vertical", "spacing": "sm", "margin": "lg", "contents": [
+                _btn(f"▪️ {game_name}", game_name, "primary", theme),
+                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
+                    _btn("▪️ الألعاب", "ألعاب", "secondary", theme),
+                    _btn("▪️ البداية", "بداية", "secondary", theme)
                 ]}
-            ]
-        }
+            ]}
+        ]
     }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("فوز", bubble))
-
-def build_help_window(theme=DEFAULT_THEME):
-    """نافذة المساعدة المحسّنة ✅"""
-    c = _c(theme)
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ المساعدة", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                
-                # أوامر التنقل
-                _glass_box([
-                    {"type": "text", "text": "▪️ أوامر التنقل", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "• بداية / home / start", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• ألعاب / games", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• نقاطي / points", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• صدارة / leaderboard", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• مساعدة / help", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                # أوامر الحساب
-                _glass_box([
-                    {"type": "text", "text": "▪️ أوامر الحساب", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "• انضم / join", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• انسحب / leave", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                # أوامر اللعب
-                _glass_box([
-                    {"type": "text", "text": "▪️ أوامر اللعب", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "• [اسم اللعبة] - بدء اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• لمح / hint - تلميح", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• جاوب / reveal - كشف الإجابة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• إيقاف / stop - إيقاف اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                # أوامر الفريقين
-                _glass_box([
-                    {"type": "text", "text": "▪️ أوامر الفريقين (مجموعات)", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "• فريقين / teams", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• انضم - الانضمام", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• ثم اختر اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                # نظام النقاط
-                _glass_box([
-                    {"type": "text", "text": "▪️ نظام النقاط", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "• 1 نقطة لكل إجابة صحيحة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• للمسجلين فقط", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• إجابة واحدة لكل سؤال", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                # المستويات
-                _glass_box([
-                    {"type": "text", "text": "▪️ المستويات", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "• 0-49: ▪️ مبتدئ", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• 50-149: ▪️ متوسط", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• 150-299: ▪️ متقدم", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• 300+: 🏆 محترف", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                # وضع الفريقين
-                _glass_box([
-                    {"type": "text", "text": "▪️ وضع الفريقين", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "1. اكتب: فريقين", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "2. الجميع يكتب: انضم", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "3. اختر اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "4. تقسيم تلقائي لفريقين", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                # الميزات
-                _glass_box([
-                    {"type": "text", "text": "▪️ ميزات الفريقين", "weight": "bold", "color": c["text"], "size": "md"},
-                    {"type": "text", "text": "• تقسيم عادل تلقائي", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
-                    {"type": "text", "text": "• نقاط منفصلة لكل فريق", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• بدون لمح أو جاوب", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": "• إعلان الفائز بعد الانتهاء", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
-                ], theme, "15px", "15px"),
-                
-                _btn("▪️ البداية", "بداية", "primary", theme)
-            ]
-        }
-    }
-    return attach_quick_reply(_flex("المساعدة", bubble))
 
 def build_theme_selector(theme=DEFAULT_THEME):
     c = _c(theme)
@@ -445,97 +502,97 @@ def build_theme_selector(theme=DEFAULT_THEME):
             "contents": [_btn(t, f"ثيم {t}", "primary" if t==theme else "secondary", theme) for t in list(THEMES.keys())[i:i+3]]
         })
     
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ اختر الثيم", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                *rows,
-                _btn("▪️ البداية", "بداية", "secondary", theme)
-            ]
-        }
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ اختر الثيم", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            *rows,
+            _btn("▪️ البداية", "بداية", "secondary", theme)
+        ]
     }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("الثيمات", bubble))
 
 def build_multiplayer_help_window(theme=DEFAULT_THEME):
     c = _c(theme)
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ وضع الفريقين", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                _glass_box([
-                    {"type": "text", "text": "1. اكتب 'انضم'", "size": "sm", "color": c["text2"]},
-                    {"type": "text", "text": "2. اختر اللعبة", "size": "sm", "color": c["text2"], "margin": "sm"},
-                    {"type": "text", "text": "3. تقسيم تلقائي", "size": "sm", "color": c["text2"], "margin": "sm"}
-                ], theme, "15px", "15px"),
-                _btn("▪️ انضم", "انضم", "primary", theme)
-            ]
-        }
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ وضع الفريقين", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            _glass_box([
+                {"type": "text", "text": "1. اكتب 'انضم'", "size": "sm", "color": c["text2"], "weight": "bold"},
+                {"type": "text", "text": "2. اختر اللعبة", "size": "sm", "color": c["text2"], "margin": "sm", "weight": "bold"},
+                {"type": "text", "text": "3. تقسيم تلقائي", "size": "sm", "color": c["text2"], "margin": "sm", "weight": "bold"}
+            ], theme, "15px", "15px"),
+            _btn("▪️ انضم", "انضم", "primary", theme)
+        ]
     }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    bubble = {"type": "bubble", "size": "mega", "body": body_style}
     return attach_quick_reply(_flex("فريقين", bubble))
 
 def build_join_confirmation(username, theme=DEFAULT_THEME):
     c = _c(theme)
-    return attach_quick_reply(_flex("انضمام", {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ انضممت", "size": "lg", "weight": "bold", "color": c["success"], "align": "center"},
-                {"type": "text", "text": "انتظر اللعبة", "size": "sm", "color": c["text2"], "align": "center", "margin": "md"}
-            ]
-        }
-    }))
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ انضممت", "size": "lg", "weight": "bold", "color": c["success"], "align": "center"},
+            {"type": "text", "text": "انتظر اللعبة", "size": "sm", "color": c["text2"], "align": "center", "margin": "md"}
+        ]
+    }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    return attach_quick_reply(_flex("انضمام", {"type": "bubble", "size": "mega", "body": body_style}))
 
 def build_error_message(error_text, theme=DEFAULT_THEME):
     c = _c(theme)
-    return attach_quick_reply(_flex("خطأ", {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": error_text, "size": "md", "color": c["error"], "align": "center", "wrap": True},
-                _btn("▪️ البداية", "بداية", "secondary", theme)
-            ]
-        }
-    }))
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": error_text, "size": "md", "color": c["error"], "align": "center", "wrap": True, "weight": "bold"},
+            _btn("▪️ البداية", "بداية", "secondary", theme)
+        ]
+    }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    return attach_quick_reply(_flex("خطأ", {"type": "bubble", "size": "mega", "body": body_style}))
 
 def build_game_stopped(game_name, theme=DEFAULT_THEME):
     c = _c(theme)
-    return attach_quick_reply(_flex("إيقاف", {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "▪️ تم إيقاف اللعبة", "size": "lg", "weight": "bold", "color": c["error"], "align": "center"},
-                {"type": "text", "text": f"لعبة {game_name}", "size": "sm", "color": c["text2"], "align": "center", "margin": "sm"},
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "lg", "contents": [
-                    _btn("▪️ الألعاب", "ألعاب", "primary", theme),
-                    _btn("▪️ البداية", "بداية", "secondary", theme)
-                ]}
-            ]
-        }
-    }))
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "▪️ تم إيقاف اللعبة", "size": "lg", "weight": "bold", "color": c["error"], "align": "center"},
+            {"type": "text", "text": f"لعبة {game_name}", "size": "sm", "color": c["text2"], "align": "center", "margin": "sm"},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "lg", "contents": [
+                _btn("▪️ الألعاب", "ألعاب", "primary", theme),
+                _btn("▪️ البداية", "بداية", "secondary", theme)
+            ]}
+        ]
+    }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    return attach_quick_reply(_flex("إيقاف", {"type": "bubble", "size": "mega", "body": body_style}))
 
 def build_team_game_end(team_points, theme=DEFAULT_THEME):
     c = _c(theme)
@@ -543,49 +600,49 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
     t2 = team_points.get("team2", 0)
     winner = "الفريق الأول 🥇" if t1>t2 else "الفريق الثاني 🥈" if t2>t1 else "تعادل"
     
-    return attach_quick_reply(_flex("نتيجة", {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": "🏆 انتهت اللعبة!", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                
-                _glass_box([
-                    {"type": "box", "layout": "horizontal", "contents": [
-                        {"type": "text", "text": f"الفريق 1\n{t1}", "size": "lg", "color": c["primary"], "align": "center", "flex": 1},
-                        {"type": "text", "text": "VS", "size": "sm", "color": c["text2"], "align": "center", "flex": 0},
-                        {"type": "text", "text": f"الفريق 2\n{t2}", "size": "lg", "color": c["primary"], "align": "center", "flex": 1}
-                    ]},
-                    {"type": "text", "text": f"الفائز: {winner}", "size": "md", "weight": "bold", "color": c["success"], "align": "center", "margin": "md"}
-                ], theme, "20px", "20px"),
-                
-                {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "lg", "contents": [
-                    _btn("▪️ الألعاب", "ألعاب", "primary", theme),
-                    _btn("▪️ البداية", "بداية", "secondary", theme)
-                ]}
-            ]
-        }
-    }))
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": "🏆 انتهت اللعبة!", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            
+            _glass_box([
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": f"الفريق 1\n{t1}", "size": "lg", "color": c["primary"], "align": "center", "flex": 1, "weight": "bold"},
+                    {"type": "text", "text": "VS", "size": "sm", "color": c["text2"], "align": "center", "flex": 0, "weight": "bold"},
+                    {"type": "text", "text": f"الفريق 2\n{t2}", "size": "lg", "color": c["primary"], "align": "center", "flex": 1, "weight": "bold"}
+                ]},
+                {"type": "text", "text": f"الفائز: {winner}", "size": "md", "weight": "bold", "color": c["success"], "align": "center", "margin": "md"}
+            ], theme, "20px", "20px"),
+            
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "lg", "contents": [
+                _btn("▪️ الألعاب", "ألعاب", "primary", theme),
+                _btn("▪️ البداية", "بداية", "secondary", theme)
+            ]}
+        ]
+    }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    return attach_quick_reply(_flex("نتيجة", {"type": "bubble", "size": "mega", "body": body_style}))
 
 def build_answer_feedback(message, theme=DEFAULT_THEME):
     """رسالة تأكيد الإجابة"""
     c = _c(theme)
-    return attach_quick_reply(_flex("إجابة", {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {"type": "text", "text": message, "size": "md", "color": c["text"], "align": "center", "wrap": True}
-            ]
-        }
-    }))
+    body_style = {
+        "type": "box",
+        "layout": "vertical",
+        "paddingAll": "20px",
+        "contents": [
+            {"type": "text", "text": message, "size": "md", "color": c["text"], "align": "center", "wrap": True, "weight": "bold"}
+        ]
+    }
+    if theme == "أبيض":
+        body_style["backgroundColor"] = c["bg"]
+    
+    return attach_quick_reply(_flex("إجابة", {"type": "bubble", "size": "mega", "body": body_style}))
 
 __all__ = [
     'build_enhanced_home', 'build_games_menu', 'build_my_points', 'build_leaderboard',
