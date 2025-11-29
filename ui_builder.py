@@ -18,7 +18,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
     rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(t,f"ثيم {t}","primary" if t==theme else "secondary",theme) for t in themes[i:i+3]]} for i in range(0,len(themes),3)]
     join = "انسحب" if is_registered else "انضم"
     body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
-        {"type":"text","text":f"🏆 {BOT_NAME}","weight":"bold","size":"xxl","color":c["primary"],"align":"center"},
+        {"type":"text","text":f" {BOT_NAME}","weight":"bold","size":"xxl","color":c["primary"],"align":"center"},
         {"type":"separator","margin":"lg","color":c["border"]},
         _glass([{"type":"box","layout":"horizontal","contents":[{"type":"text","text":"النقاط","size":"md","color":c["text"],"flex":2,"weight":"bold"},{"type":"text","text":status,"size":"md","color":c["text2"],"align":"end","flex":1}]},{"type":"text","text":str(points),"size":"xxl","color":c["primary"],"margin":"sm","weight":"bold"}],theme,"15px","15px"),
         {"type":"text","text":"اختر الثيم","size":"md","weight":"bold","color":c["text"],"margin":"xl"},
