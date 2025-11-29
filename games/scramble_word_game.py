@@ -1,10 +1,3 @@
-"""
-لعبة الكلمة المبعثرة (كلمات) - Bot Mesh v13.0 FINAL
-Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة فقط
-✅ عرض السؤال السابق
-"""
-
 from games.base_game import BaseGame
 import random
 import time
@@ -17,7 +10,7 @@ class ScrambleWordGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "كلمات"
-        self.game_icon = "▪️"
+        self.game_icon = "▫️"
         self.supports_hint = True
         self.supports_reveal = True
 
@@ -74,9 +67,9 @@ class ScrambleWordGame(BaseGame):
         self.round_start_time = time.time()
 
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\nعدد الحروف: {len(word)}\n▪️ اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"الوقت {self.round_time} ثانية\nعدد الحروف: {len(word)}\n اكتب 'لمح' أو 'جاوب'"
         else:
-            additional_info = f"⏱️ {self.round_time} ثانية\nعدد الحروف: {len(word)}"
+            additional_info = f"الوقت {self.round_time} ثانية\nعدد الحروف: {len(word)}"
 
         return self.build_question_flex(
             question_text=f"رتب الحروف:\n{self.current_scrambled}",
@@ -100,11 +93,11 @@ class ScrambleWordGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}\n\n{result.get('message', '')}"
+                result["message"] = f"انتهى الوقت\n الإجابة: {self.current_answer}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}",
+                "message": f"انتهى الوقت\n الإجابة: {self.current_answer}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -118,7 +111,7 @@ class ScrambleWordGame(BaseGame):
         normalized = self.normalize_text(user_answer)
 
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"▪️ تبدأ بـ: {self.current_answer[0]}\nعدد الحروف: {len(self.current_answer)}"
+            hint = f"تبدأ بـ: {self.current_answer[0]}\nعدد الحروف: {len(self.current_answer)}"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
@@ -126,7 +119,7 @@ class ScrambleWordGame(BaseGame):
             }
 
         if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"▪️ الإجابة: {self.current_answer}"
+            reveal = f"الإجابة: {self.current_answer}"
             self.previous_question = self.current_scrambled
             self.previous_answer = self.current_answer
             self.current_question += 1
@@ -169,13 +162,13 @@ class ScrambleWordGame(BaseGame):
                 return result
 
             return {
-                "message": f"▪️ صحيح!\n+{total_points} نقطة",
+                "message": f"صحيح\n+{total_points} نقطة",
                 "response": self.get_question(),
                 "points": total_points
             }
 
         return {
-            "message": "▪️ خطأ",
-            "response": self._create_text_message("▪️ خطأ"),
+            "message": "خطأ",
+            "response": self._create_text_message("خطأ"),
             "points": 0
         }
