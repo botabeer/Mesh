@@ -1,10 +1,10 @@
-# app.py - FULL FLEX UI VERSION (FIXED)
+# app.py - FINAL COMPLETE VERSION
 """
-Bot Mesh - LINE Bot Application v10.0 FULL FLEX
+Bot Mesh - LINE Bot Application v11.0 FINAL
+✅ وضع الفريقين: بدون لمح/جاوب - أول إجابة صحيحة تفوز
+✅ وضع فردي: مع لمح/جاوب حسب اللعبة
+✅ لعبة التوافق: بدون نقاط، بدون إعلان فائز
 ✅ كل شيء نوافذ فلكس وأزرار
-✅ Quick Reply دائم للألعاب فقط
-✅ نافذة بداية ومساعدة
-✅ تم إصلاح خطأ الاستيراد
 Created by: Abeer Aldosari © 2025
 """
 
@@ -36,7 +36,6 @@ from constants import (
     validate_env, get_username, GAME_LIST, DEFAULT_THEME
 )
 
-# ✅ تصحيح الاستيراد - استخدام attach_quick_reply بدلاً من attach_quick_reply_to_message
 from ui_builder import (
     build_games_menu, build_my_points, build_leaderboard,
     build_registration_required, build_winner_announcement,
@@ -208,11 +207,16 @@ def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, tea
     except Exception as e:
         logger.warning(f"⚠️ لم يتم ربط قاعدة البيانات: {e}")
 
-    # تعيين session_type
+    # ✅ تعيين session_type
     if source_type == "group":
         game_instance.session_type = "teams" if team_mode else "group"
     else:
         game_instance.session_type = "solo"
+
+    # ✅ في وضع الفريقين: تعطيل لمح وجاوب
+    if team_mode:
+        game_instance.supports_hint = False
+        game_instance.supports_reveal = False
 
     active_games[game_id] = game_instance
     meta = ensure_session_meta(game_id)
@@ -229,7 +233,7 @@ def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, tea
     meta["session_id"] = session_id
     meta["team_mode"] = team_mode
     
-    logger.info(f"✅ تم إطلاق اللعبة: {game_name} (نوع={game_instance.session_type})")
+    logger.info(f"✅ تم إطلاق اللعبة: {game_name} (نوع={game_instance.session_type}, لمح={game_instance.supports_hint})")
     return game_instance
 
 # -------------------------
@@ -308,7 +312,7 @@ def health_check():
     })
 
 # -------------------------
-# معالج الرسائل - FULL FLEX
+# معالج الرسائل
 # -------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -347,7 +351,7 @@ def handle_message(event):
             lowered = text.lower()
             reply_message = None
 
-            # ===== الأوامر الأساسية - كلها FLEX =====
+            # ===== الأوامر الأساسية =====
             
             if lowered in ["مساعدة", "help", "؟"]:
                 reply_message = build_help_window(current_theme)
@@ -371,11 +375,9 @@ def handle_message(event):
                 meta = ensure_session_meta(game_id)
                 if meta.get("join_phase"):
                     meta["joined_users"].add(user_id)
-                    # نافذة فلكس للانضمام
                     from ui_builder import build_join_confirmation
                     reply_message = build_join_confirmation(username, current_theme)
                 else:
-                    # نافذة فلكس للتسجيل
                     from ui_builder import build_registration_success
                     reply_message = build_registration_success(username, current_theme)
             
@@ -384,7 +386,6 @@ def handle_message(event):
                     start_join_phase(game_id, owner_id=user_id)
                     reply_message = build_multiplayer_help_window(current_theme)
                 else:
-                    # نافذة تحذير
                     from ui_builder import build_error_message
                     reply_message = build_error_message("⚠️ هذا الأمر للمجموعات فقط", current_theme)
             
@@ -394,7 +395,6 @@ def handle_message(event):
                 if theme_name in THEMES:
                     db.set_user_theme(user_id, theme_name)
                     user_cache.pop(user_id, None)
-                    # نافذة تأكيد
                     from ui_builder import build_theme_change_success
                     reply_message = build_theme_change_success(theme_name, current_theme)
                 else:
@@ -408,7 +408,6 @@ def handle_message(event):
                     game_name = session_meta.get(game_id, {}).get("current_game_name", "اللعبة")
                     del active_games[game_id]
                     session_meta.pop(game_id, None)
-                    # نافذة إيقاف
                     from ui_builder import build_game_stopped
                     reply_message = build_game_stopped(game_name, current_theme)
                 else:
@@ -417,7 +416,25 @@ def handle_message(event):
             
             # ===== بدء اللعبة =====
             elif text in AVAILABLE_GAMES:
-                if not user.get('is_registered'):
+                # ✅ لعبة التوافق: لا تحتاج تسجيل
+                if text == "توافق":
+                    try:
+                        game_instance = launch_game_instance(
+                            game_id, user_id, text, line_api, 
+                            current_theme, False, source_type
+                        )
+                        start_msg = game_instance.start_game()
+                        attach_quick_reply(start_msg)
+                        line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
+                        return
+                    except Exception as e:
+                        logger.error(f"❌ خطأ في بدء التوافق: {e}")
+                        logger.error(traceback.format_exc())
+                        from ui_builder import build_error_message
+                        reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
+                
+                # باقي الألعاب تحتاج تسجيل
+                elif not user.get('is_registered'):
                     reply_message = build_registration_required(current_theme)
                 else:
                     meta = ensure_session_meta(game_id)
@@ -440,8 +457,6 @@ def handle_message(event):
                             game_instance.user_teams = meta.get("teams", {})
                         
                         start_msg = game_instance.start_game()
-                        
-                        # ✅ إضافة Quick Reply دائماً
                         attach_quick_reply(start_msg)
                         line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
                         return
@@ -457,6 +472,9 @@ def handle_message(event):
                 game_instance = active_games[game_id]
                 meta = ensure_session_meta(game_id)
                 
+                # ✅ لعبة التوافق: لا نقاط ولا إعلان فائز
+                is_compatibility = meta.get("current_game_name") == "توافق"
+                
                 # في وضع الفريقين: تجاهل غير المنضمين
                 if meta.get("team_mode"):
                     all_joined = meta.get("joined_users", set()) | set(meta.get("teams", {}).keys())
@@ -471,8 +489,8 @@ def handle_message(event):
                     
                     pts = result.get('points', 0)
                     
-                    # حفظ النقاط
-                    if pts:
+                    # ✅ حفظ النقاط (ما عدا التوافق)
+                    if pts and not is_compatibility:
                         if meta.get("team_mode"):
                             team_name = meta["teams"].get(user_id, "team1")
                             db.add_team_points(meta["session_id"], team_name, pts)
@@ -481,35 +499,43 @@ def handle_message(event):
                             game_name = meta.get("current_game_name", "unknown")
                             db.record_game_stat(user_id, game_name, pts, result.get('game_over', False))
                     
-                    # نهاية اللعبة
+                    # ✅ نهاية اللعبة
                     if result.get('game_over'):
                         if meta.get("session_id"):
                             db.finish_session(meta["session_id"], pts)
                         
-                        if meta.get("team_mode"):
-                            team_pts = db.get_team_points(meta["session_id"])
-                            from ui_builder import build_team_game_end
-                            reply_message = build_team_game_end(team_pts, current_theme)
+                        # ✅ لعبة التوافق: بدون إعلان فائز
+                        if is_compatibility:
+                            # إرسال النتيجة مباشرة
+                            if result.get('response'):
+                                response_msg = result['response']
+                                attach_quick_reply(response_msg)
+                                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
+                                return
                         else:
-                            reply_message = build_winner_announcement(
-                                username, 
-                                meta.get("current_game_name", "اللعبة"), 
-                                pts, 
-                                user['points'] + pts, 
-                                current_theme
-                            )
+                            # باقي الألعاب: إعلان فائز
+                            if meta.get("team_mode"):
+                                team_pts = db.get_team_points(meta["session_id"])
+                                from ui_builder import build_team_game_end
+                                reply_message = build_team_game_end(team_pts, current_theme)
+                            else:
+                                reply_message = build_winner_announcement(
+                                    username, 
+                                    meta.get("current_game_name", "اللعبة"), 
+                                    pts, 
+                                    user['points'] + pts, 
+                                    current_theme
+                                )
                         
                         del active_games[game_id]
                         session_meta.pop(game_id, None)
                     else:
                         if result.get('response'):
                             response_msg = result['response']
-                            # ✅ إضافة Quick Reply دائماً
                             attach_quick_reply(response_msg)
                             line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
                             return
                         else:
-                            # نافذة فلكس للنتيجة
                             from ui_builder import build_answer_feedback
                             reply_message = build_answer_feedback(result.get('message', '✅'), current_theme)
                 
@@ -523,7 +549,6 @@ def handle_message(event):
 
             # إرسال الرد مع Quick Reply دائماً
             if reply_message:
-                # ✅ إضافة Quick Reply لكل رسالة
                 attach_quick_reply(reply_message)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply_message]))
 
@@ -572,8 +597,10 @@ periodic_cleanup()
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info("=" * 70)
-    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION} - FULL FLEX UI (FIXED)")
+    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION} - FINAL COMPLETE")
     logger.info(f"✅ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
+    logger.info(f"✅ وضع الفريقين: بدون لمح/جاوب")
+    logger.info(f"✅ لعبة التوافق: بدون نقاط/إعلان")
     logger.info(f"🌐 المنفذ: {port}")
     logger.info("=" * 70)
     app.run(host="0.0.0.0", port=port, debug=False)
