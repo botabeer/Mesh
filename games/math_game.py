@@ -1,8 +1,8 @@
 """
-لعبة الرياضيات - Bot Mesh v9.1 FIXED
+لعبة الرياضيات - Bot Mesh v13.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ فردي: لمح + جاوب + مؤقت
-✅ فريقين: مؤقت فقط
+✅ نقطة واحدة فقط
+✅ عرض السؤال السابق
 """
 
 from games.base_game import BaseGame
@@ -12,19 +12,18 @@ from typing import Dict, Any, Optional
 
 
 class MathGame(BaseGame):
-    """لعبة الرياضيات - حسابات ذكية"""
+    """لعبة الرياضيات"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "رياضيات"
-        self.game_icon = "🔢"
+        self.game_icon = "▪️"
         self.supports_hint = True
         self.supports_reveal = True
 
-        self.round_time = 25  # ⏱️ 25 ثانية
+        self.round_time = 25
         self.round_start_time = None
 
-        # مستويات الصعوبة
         self.difficulty_levels = {
             1: {"name": "سهل", "min": 1, "max": 20, "ops": ['+', '-']},
             2: {"name": "متوسط", "min": 10, "max": 50, "ops": ['+', '-', '×']},
@@ -36,7 +35,6 @@ class MathGame(BaseGame):
         self.current_question_data = None
 
     def generate_math_question(self):
-        """توليد سؤال رياضي"""
         level = min(self.current_question + 1, 5)
         config = self.difficulty_levels[level]
         operation = random.choice(config["ops"])
@@ -46,21 +44,18 @@ class MathGame(BaseGame):
             b = random.randint(config["min"], config["max"])
             answer = a + b
             question = f"{a} + {b} = ؟"
-
         elif operation == '-':
             a = random.randint(config["min"] + 10, config["max"])
             b = random.randint(config["min"], a - 1)
             answer = a - b
             question = f"{a} - {b} = ؟"
-
         elif operation == '×':
             max_factor = min(20, config["max"] // 10)
             a = random.randint(2, max_factor)
             b = random.randint(2, max_factor)
             answer = a * b
             question = f"{a} × {b} = ؟"
-
-        else:  # ÷
+        else:
             result = random.randint(2, 20)
             divisor = random.randint(2, 15)
             a = result * divisor
@@ -88,9 +83,8 @@ class MathGame(BaseGame):
         self.current_answer = q_data["answer"]
         self.round_start_time = time.time()
 
-        # ✅ استخدام can_use_hint() و can_reveal_answer()
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}\n💡 اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}\n▪️ اكتب 'لمح' أو 'جاوب'"
         else:
             additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}"
 
@@ -100,7 +94,6 @@ class MathGame(BaseGame):
         )
 
     def _time_expired(self) -> bool:
-        """التحقق من انتهاء الوقت"""
         if not self.round_start_time:
             return False
         return (time.time() - self.round_start_time) > self.round_time
@@ -109,23 +102,23 @@ class MathGame(BaseGame):
         if not self.game_active:
             return None
 
-        # ✅ التحقق من الوقت
         if self._time_expired():
+            self.previous_question = self.current_question_data["question"] if self.current_question_data else None
+            self.previous_answer = self.current_answer
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\nالإجابة: {self.current_answer}\n\n{result.get('message', '')}"
+                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\nالإجابة: {self.current_answer}",
+                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}",
                 "response": self.get_question(),
                 "points": 0
             }
 
-        # تجاهل من أجاب أو غير منضم
         if user_id in self.answered_users:
             return None
 
@@ -135,18 +128,18 @@ class MathGame(BaseGame):
         answer = user_answer.strip()
         normalized = self.normalize_text(answer)
 
-        # ✅ التلميح (فردي فقط)
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"💡 الجواب من {len(self.current_answer)} خانات"
+            hint = f"▪️ الجواب من {len(self.current_answer)} خانات"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
                 "points": 0
             }
 
-        # ✅ كشف الإجابة (فردي فقط)
         if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"الجواب: {self.current_answer}"
+            reveal = f"▪️ الجواب: {self.current_answer}"
+            self.previous_question = self.current_question_data["question"] if self.current_question_data else None
+            self.previous_answer = self.current_answer
             self.current_question += 1
             self.answered_users.clear()
 
@@ -161,29 +154,21 @@ class MathGame(BaseGame):
                 "points": 0
             }
 
-        # ✅ تجاهل لمح/جاوب في وضع الفريقين
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
 
-        # التحقق من الإجابة
         try:
             user_num = int(answer)
         except:
             return {
-                "message": "❌ يرجى إدخال رقم صحيح",
-                "response": self._create_text_message("❌ يرجى إدخال رقم صحيح"),
+                "message": "▪️ يرجى إدخال رقم صحيح",
+                "response": self._create_text_message("▪️ يرجى إدخال رقم صحيح"),
                 "points": 0
             }
 
         if user_num == int(self.current_answer):
-            # حساب النقاط مع بونص الوقت
-            base_points = 10
-            elapsed = int(time.time() - self.round_start_time)
-            remaining = max(0, self.round_time - elapsed)
-            time_bonus = max(0, remaining // 2)
-            total_points = base_points + time_bonus
+            total_points = 1
 
-            # توزيع النقاط
             if self.team_mode:
                 team = self.get_user_team(user_id)
                 if not team:
@@ -191,6 +176,9 @@ class MathGame(BaseGame):
                 self.add_team_score(team, total_points)
             else:
                 self.add_score(user_id, display_name, total_points)
+
+            self.previous_question = self.current_question_data["question"] if self.current_question_data else None
+            self.previous_answer = self.current_answer
 
             self.current_question += 1
             self.answered_users.clear()
@@ -200,15 +188,14 @@ class MathGame(BaseGame):
                 result["points"] = total_points
                 return result
 
-            bonus_msg = f" +{time_bonus} بونص" if time_bonus > 0 else ""
             return {
-                "message": f"✅ إجابة صحيحة!\n+{total_points} نقطة{bonus_msg}",
+                "message": f"▪️ إجابة صحيحة!\n+{total_points} نقطة",
                 "response": self.get_question(),
                 "points": total_points
             }
 
         return {
-            "message": "❌ إجابة خاطئة",
-            "response": self._create_text_message("❌ إجابة خاطئة"),
+            "message": "▪️ إجابة خاطئة",
+            "response": self._create_text_message("▪️ إجابة خاطئة"),
             "points": 0
         }
