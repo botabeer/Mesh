@@ -7,11 +7,10 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-# ✅ استيراد الدالة الجديدة للتحويل
 from constants import (BOT_NAME, BOT_VERSION, BOT_RIGHTS, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
     validate_env, get_username, GAME_LIST, DEFAULT_THEME, PRIVACY_SETTINGS, is_allowed_command, 
     GAME_COMMANDS, get_game_class_name)
-from ui_builder import (build_games_menu, build_my_points, build_leaderboard, build_registration_required,
+from ui_builder import (build_games_menu, build_my_points, build_leaderboard, build_registration_status,
     build_winner_announcement, build_help_window, build_theme_selector, build_enhanced_home, build_multiplayer_help_window,
     attach_quick_reply, build_join_confirmation, build_error_message, build_game_stopped, build_team_game_end)
 from database import get_database
@@ -42,7 +41,6 @@ def is_rate_limited(user_id):
     user_rate[user_id].append(now)
     return False
 
-# ✅ تحميل الألعاب بأسماء الكلاسات الصحيحة
 AVAILABLE_GAMES = {}
 try:
     from games.iq_game import IqGame
@@ -58,7 +56,6 @@ try:
     from games.guess_game import GuessGame
     from games.compatibility_game import CompatibilitySystem
 
-    # ✅ المفاتيح هي أسماء الكلاسات (مثل "كتابة سريعة")
     AVAILABLE_GAMES = {
         "ذكاء": IqGame,
         "رياضيات": MathGame,
@@ -112,9 +109,6 @@ def close_join_phase_and_assign(game_id):
     logger.info(f"✅ تم تقسيم الفرق: {len(team1)} vs {len(team2)}")
 
 def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=None, team_mode=False, source_type="user"):
-    """
-    ✅ game_class_name هو اسم الكلاس (مثل "كتابة سريعة")
-    """
     if game_class_name not in AVAILABLE_GAMES:
         raise ValueError(f"اللعبة غير متوفرة: {game_class_name}")
     
@@ -162,22 +156,29 @@ def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=Non
     return game_instance
 
 def get_user_data(user_id, username="مستخدم"):
+    """✅ إنشاء حساب + تحديث الاسم (بدون تسجيل تلقائي)"""
     if user_id in user_cache:
         cache_time = user_cache.get(f"{user_id}_time", datetime.min)
         if datetime.utcnow() - cache_time < timedelta(minutes=PRIVACY_SETTINGS["cache_timeout_minutes"]):
             cached_user = user_cache[user_id]
+            # ✅ تحديث الاسم إذا تغير
             if cached_user.get('name') != username:
                 db.update_user_name(user_id, username)
                 cached_user['name'] = username
             return cached_user
+    
     user = db.get_user(user_id)
     if not user:
+        # ✅ إنشاء حساب فقط (بدون تسجيل)
         db.create_user(user_id, username)
         user = db.get_user(user_id)
+        logger.info(f"✅ حساب جديد: {username}")
     else:
+        # ✅ تحديث الاسم إذا تغير
         if user.get('name') != username:
             db.update_user_name(user_id, username)
             user['name'] = username
+    
     user_cache[user_id] = user
     user_cache[f"{user_id}_time"] = datetime.utcnow()
     return user
@@ -238,6 +239,8 @@ def handle_message(event):
                 username = get_username(profile)
             except Exception:
                 username = "مستخدم"
+            
+            # ✅ التسجيل التلقائي وتحديث الاسم
             user = get_user_data(user_id, username)
             db.update_activity(user_id)
             db.set_user_online(user_id, True)
@@ -252,36 +255,41 @@ def handle_message(event):
             elif lowered in ["ألعاب","games","العاب"]:
                 reply_message = build_games_menu(current_theme)
             elif lowered in ["نقاطي","points","نقاط"]:
-                if not user.get('is_registered'):
-                    reply_message = build_registration_required(current_theme)
-                else:
-                    stats = db.get_user_game_stats(user_id)
-                    reply_message = build_my_points(username, user['points'], stats, current_theme)
+                stats = db.get_user_game_stats(user_id)
+                reply_message = build_my_points(username, user['points'], stats, current_theme)
             elif lowered in ["صدارة","leaderboard","مستوى"]:
-                top = db.get_leaderboard(20)
+                # ✅ عرض جميع المستخدمين (مسجلين وغير مسجلين)
+                top = db.get_leaderboard_all(20)
                 reply_message = build_leaderboard(top, current_theme)
             elif lowered in ["انضم","join","تسجيل"]:
+                # ✅ التسجيل اليدوي
                 if not user.get('is_registered'):
                     db.update_user(user_id, is_registered=1)
                     user_cache.pop(user_id, None)
+                    user = get_user_data(user_id, username)
                     logger.info(f"✅ مستخدم مسجل: {username}")
+                
+                # عرض حالة التسجيل
+                reply_message = build_registration_status(username, user['points'], current_theme)
+                
+                # إضافة للفريق إذا كانت مرحلة انضمام نشطة
                 meta = ensure_session_meta(game_id)
                 if in_group and meta.get("join_phase"):
                     meta["joined_users"].add(user_id)
-                    reply_message = build_join_confirmation(username, current_theme)
-                else:
-                    return
+                    logger.info(f"✅ انضم للفريق: {username}")
             elif lowered in ["انسحب","leave","خروج"]:
+                # ✅ إلغاء التسجيل (مع الاحتفاظ بالنقاط والبيانات)
                 if user.get('is_registered'):
                     db.update_user(user_id, is_registered=0)
                     user_cache.pop(user_id, None)
-                    logger.info(f"▫️ مستخدم انسحب: {username}")
-                    reply_message = build_error_message("تم إلغاء تسجيلك بنجاح", current_theme)
-                return
+                    user = get_user_data(user_id, username)
+                    logger.info(f"▫️ مستخدم ألغى تسجيله (محتفظ بالنقاط): {username}")
+                    from ui_builder import build_unregister_confirmation
+                    reply_message = build_unregister_confirmation(username, user['points'], current_theme)
+                else:
+                    reply_message = build_error_message("أنت غير مسجل أصلاً", current_theme)
             elif lowered in ["فريقين","teams","فرق"]:
-                if not user.get('is_registered'):
-                    reply_message = build_registration_required(current_theme)
-                elif in_group:
+                if in_group:
                     start_join_phase(game_id, owner_id=user_id)
                     reply_message = build_multiplayer_help_window(current_theme)
                 else:
@@ -306,13 +314,11 @@ def handle_message(event):
                     reply_message = build_game_stopped(game_name, current_theme)
                 else:
                     reply_message = build_error_message("⚠️ لا توجد لعبة نشطة", current_theme)
-            
-            # ✅ معالجة بدء اللعبة: تحويل من اسم العرض لاسم الكلاس
             elif text in GAME_COMMANDS:
-                # text هو اسم العرض (مثل "أسرع")
-                game_class_name = get_game_class_name(text)  # تحويل لاسم الكلاس (مثل "كتابة سريعة")
+                game_class_name = get_game_class_name(text)
                 
                 if game_class_name == "توافق":
+                    # ✅ لعبة التوافق بدون تسجيل
                     try:
                         game_instance = launch_game_instance(game_id, user_id, game_class_name, line_api, current_theme, False, source_type)
                         start_msg = game_instance.start_game()
@@ -324,6 +330,8 @@ def handle_message(event):
                         logger.error(traceback.format_exc())
                         reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
                 elif not user.get('is_registered'):
+                    # ✅ بقية الألعاب تحتاج تسجيل
+                    from ui_builder import build_registration_required
                     reply_message = build_registration_required(current_theme)
                 else:
                     meta = ensure_session_meta(game_id)
@@ -344,12 +352,9 @@ def handle_message(event):
                         logger.error(f"❌ خطأ في بدء اللعبة: {e}")
                         logger.error(traceback.format_exc())
                         reply_message = build_error_message(f"❌ حدث خطأ في بدء اللعبة", current_theme)
-            
             elif game_id in active_games:
                 meta = ensure_session_meta(game_id)
                 is_compatibility = meta.get("current_game_name") == "توافق"
-                if not is_compatibility and not user.get('is_registered'):
-                    return
                 game_instance = active_games[game_id]
                 if meta.get("team_mode"):
                     all_joined = meta.get("joined_users", set()) | set(meta.get("teams", {}).keys())
@@ -444,15 +449,14 @@ periodic_cleanup()
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info("="*70)
-    logger.info(f"▪️ {BOT_NAME} v{BOT_VERSION} - FINAL OPTIMIZED")
+    logger.info(f"▪️ {BOT_NAME} v{BOT_VERSION} - AUTO REGISTER + 1 POINT")
     logger.info(f"▫️ {BOT_RIGHTS}")
     logger.info(f"▫️ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
-    logger.info(f"▫️ يرد فقط على الأوامر المسموحة")
-    logger.info(f"▫️ يحسب فقط إجابات المسجلين")
-    logger.info(f"▫️ تحديث تلقائي للأسماء من LINE")
+    logger.info(f"▫️ ✅ التسجيل اليدوي (انضم)")
+    logger.info(f"▫️ ✅ تحديث تلقائي للأسماء من LINE")
+    logger.info(f"▫️ ✅ 1 نقطة لكل إجابة صحيحة")
+    logger.info(f"▫️ ✅ عرض السؤال السابق في كل الألعاب")
     logger.info(f"▫️ حذف تلقائي بعد {PRIVACY_SETTINGS['auto_delete_inactive_days']} يوم من عدم النشاط")
-    logger.info(f"▫️ تتبع المتصلين حالياً في الصدارة")
-    logger.info(f"▫️ إيموجي مبسطة: ▫️▪️⏱️🏆🥇🥈🥉🎖️")
     logger.info(f"▪️ المنفذ: {port}")
     logger.info("="*70)
     app.run(host="0.0.0.0", port=port, debug=False)
