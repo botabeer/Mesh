@@ -1,8 +1,8 @@
 """
-لعبة التخمين - Bot Mesh v9.0 FINAL
+لعبة التخمين - Bot Mesh v9.1 FIXED
 Created by: Abeer Aldosari © 2025
 ✅ فردي: لمح (أول حرف + عدد) + جاوب + مؤقت
-✅ فريقين: مؤقت فقط
+✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
 """
 
 from games.base_game import BaseGame
@@ -92,11 +92,11 @@ class GuessGame(BaseGame):
         self.current_answer = q_data["answers"]
         self.round_start_time = time.time()
 
-        # ✅ النص الإضافي حسب الوضع
-        if self.team_mode:
-            additional_info = f"⏱️ {self.round_time} ثانية"
-        else:
+        # ✅ استخدام can_use_hint() و can_reveal_answer()
+        if self.can_use_hint() and self.can_reveal_answer():
             additional_info = f"⏱️ {self.round_time} ثانية\n💡 اكتب 'لمح' أو 'جاوب'"
+        else:
+            additional_info = f"⏱️ {self.round_time} ثانية"
 
         return self.build_question_flex(
             question_text=f"الفئة: {q_data['category']}\nيبدأ بحرف: {q_data['letter']}",
@@ -137,41 +137,43 @@ class GuessGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ لمح وجاوب للفردي فقط
-        if not self.team_mode:
-            # التلميح
-            if normalized == "لمح":
-                if not self.current_answer:
-                    return {
-                        "message": "لا توجد تلميحات",
-                        "response": self._create_text_message("لا توجد تلميحات"),
-                        "points": 0
-                    }
-                
-                answer = self.current_answer[0]
-                hint = f"💡 تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)}"
+        # ✅ التلميح (فردي فقط)
+        if self.can_use_hint() and normalized == "لمح":
+            if not self.current_answer:
                 return {
-                    "message": hint,
-                    "response": self._create_text_message(hint),
+                    "message": "لا توجد تلميحات",
+                    "response": self._create_text_message("لا توجد تلميحات"),
                     "points": 0
                 }
+            
+            answer = self.current_answer[0]
+            hint = f"💡 تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)}"
+            return {
+                "message": hint,
+                "response": self._create_text_message(hint),
+                "points": 0
+            }
 
-            # كشف الإجابة
-            if normalized == "جاوب":
-                answers_text = " أو ".join(self.current_answer)
-                self.current_question += 1
-                self.answered_users.clear()
+        # ✅ كشف الإجابة (فردي فقط)
+        if self.can_reveal_answer() and normalized == "جاوب":
+            answers_text = " أو ".join(self.current_answer)
+            self.current_question += 1
+            self.answered_users.clear()
 
-                if self.current_question >= self.questions_count:
-                    result = self.end_game()
-                    result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
-                    return result
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                return result
 
-                return {
-                    "message": f"الإجابة: {answers_text}",
-                    "response": self.get_question(),
-                    "points": 0
-                }
+            return {
+                "message": f"الإجابة: {answers_text}",
+                "response": self.get_question(),
+                "points": 0
+            }
+
+        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
+        if self.team_mode and normalized in ["لمح", "جاوب"]:
+            return None
 
         # التحقق من الإجابة
         for correct_answer in self.current_answer:
