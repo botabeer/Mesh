@@ -1,8 +1,8 @@
 """
-لعبة الكلمة المبعثرة - Bot Mesh v9.1 FIXED
+لعبة الكلمة المبعثرة (كلمات) - Bot Mesh v13.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ فردي: لمح (أول حرف + عدد الحروف) + جاوب + مؤقت
-✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
+✅ نقطة واحدة فقط
+✅ عرض السؤال السابق
 """
 
 from games.base_game import BaseGame
@@ -12,26 +12,24 @@ from typing import Dict, Any, Optional
 
 
 class ScrambleWordGame(BaseGame):
-    """لعبة الكلمة المبعثرة"""
+    """لعبة كلمات"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "كلمة مبعثرة"
-        self.game_icon = "🔤"
+        self.game_name = "كلمات"
+        self.game_icon = "▪️"
         self.supports_hint = True
         self.supports_reveal = True
 
-        self.round_time = 25  # ⏱️ 25 ثانية
+        self.round_time = 25
         self.round_start_time = None
 
         self.words = [
-            # كلمات أساسية
             "مدرسة","كتاب","قلم","باب","نافذة","طاولة","كرسي","سيارة","طائرة","قطار",
             "سفينة","دراجة","تفاحة","موز","برتقال","عنب","بطيخ","فراولة","شمس","قمر",
             "نجمة","سماء","بحر","جبل","نهر","أسد","نمر","فيل","زرافة","حصان",
             "غزال","ورد","شجرة","زهرة","عشب","ورقة","منزل","مسجد","حديقة","ملعب",
             "مطعم","مكتبة","صديق","عائلة","أخ","أخت","والد","والدة","مطر","ريح",
-            # كلمات إضافية منطقية
             "برق","رعد","غيم","ثلج","جليد","نار","ماء","هواء","تراب","صخرة",
             "رمل","وادي","صحراء","غابة","حقل","مزرعة","بستان","طريق","شارع","جسر",
             "نفق","ميدان","حديقة","متحف","سوق","محطة","مطار","ميناء","قرية","مدينة",
@@ -44,7 +42,6 @@ class ScrambleWordGame(BaseGame):
         self.current_scrambled = None
 
     def scramble_word(self, word: str) -> str:
-        """خلط حروف الكلمة"""
         letters = list(word)
         attempts = 0
         while attempts < 10:
@@ -76,9 +73,8 @@ class ScrambleWordGame(BaseGame):
         self.current_scrambled = self.scramble_word(word)
         self.round_start_time = time.time()
 
-        # ✅ استخدام can_use_hint() و can_reveal_answer()
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\nعدد الحروف: {len(word)}\n💡 اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"⏱️ {self.round_time} ثانية\nعدد الحروف: {len(word)}\n▪️ اكتب 'لمح' أو 'جاوب'"
         else:
             additional_info = f"⏱️ {self.round_time} ثانية\nعدد الحروف: {len(word)}"
 
@@ -96,18 +92,19 @@ class ScrambleWordGame(BaseGame):
         if not self.game_active:
             return None
 
-        # التحقق من الوقت
         if self._time_expired():
+            self.previous_question = self.current_scrambled
+            self.previous_answer = self.current_answer
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\nالإجابة: {self.current_answer}\n\n{result.get('message', '')}"
+                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\nالإجابة: {self.current_answer}",
+                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -120,18 +117,18 @@ class ScrambleWordGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ التلميح (فردي فقط)
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"💡 تبدأ بـ: {self.current_answer[0]}\nعدد الحروف: {len(self.current_answer)}"
+            hint = f"▪️ تبدأ بـ: {self.current_answer[0]}\nعدد الحروف: {len(self.current_answer)}"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
                 "points": 0
             }
 
-        # ✅ كشف الإجابة (فردي فقط)
         if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"الإجابة: {self.current_answer}"
+            reveal = f"▪️ الإجابة: {self.current_answer}"
+            self.previous_question = self.current_scrambled
+            self.previous_answer = self.current_answer
             self.current_question += 1
             self.answered_users.clear()
 
@@ -146,17 +143,11 @@ class ScrambleWordGame(BaseGame):
                 "points": 0
             }
 
-        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
 
-        # التحقق من الإجابة
         if normalized == self.normalize_text(self.current_answer):
-            base_points = 10
-            elapsed = int(time.time() - self.round_start_time)
-            remaining = max(0, self.round_time - elapsed)
-            time_bonus = max(0, remaining // 2)
-            total_points = base_points + time_bonus
+            total_points = 1
 
             if self.team_mode:
                 team = self.get_user_team(user_id)
@@ -165,6 +156,9 @@ class ScrambleWordGame(BaseGame):
                 self.add_team_score(team, total_points)
             else:
                 self.add_score(user_id, display_name, total_points)
+
+            self.previous_question = self.current_scrambled
+            self.previous_answer = self.current_answer
 
             self.current_question += 1
             self.answered_users.clear()
@@ -175,13 +169,13 @@ class ScrambleWordGame(BaseGame):
                 return result
 
             return {
-                "message": f"✅ صحيح!\n+{total_points} نقطة",
+                "message": f"▪️ صحيح!\n+{total_points} نقطة",
                 "response": self.get_question(),
                 "points": total_points
             }
 
         return {
-            "message": "❌ خطأ",
-            "response": self._create_text_message("❌ خطأ"),
+            "message": "▪️ خطأ",
+            "response": self._create_text_message("▪️ خطأ"),
             "points": 0
         }
