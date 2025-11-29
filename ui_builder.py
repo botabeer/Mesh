@@ -116,7 +116,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
             ]},
             {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
                 _btn("▪️ نقاطي", "نقاطي", "secondary", theme),
-                _btn("🏆 الصدارة", "صدارة", "secondary", theme)
+                _btn("▪️ الصدارة", "صدارة", "secondary", theme)
             ]},
             {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
                 _btn("▪️ فريقين", "فريقين", "secondary", theme),
