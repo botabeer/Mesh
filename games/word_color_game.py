@@ -1,9 +1,10 @@
 """
-لعبة ألوان (Stroop Effect) - Bot Mesh v13.0 FINAL
-Created by: Abeer Aldosari © 2025
-✅ 1 نقطة فقط (بدون بونص)
+لعبة ألوان (Stroop Effect) - Bot Mesh v14.0 THEMED
+تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025
+✅ 1 نقطة فقط
 ✅ عرض السؤال السابق
-✅ Flex بدلاً من TextMessage
+✅ الألوان تتكيف مع الثيم المختار
+✅ Flex متناسق مع باقي الألعاب
 """
 
 from games.base_game import BaseGame
@@ -13,19 +14,20 @@ from typing import Dict, Any, Optional
 
 
 class WordColorGame(BaseGame):
-    """لعبة ألوان - اختبار Stroop"""
+    """لعبة ألوان - اختبار Stroop مع دعم الثيمات"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "ألوان"
         self.game_icon = "▪️"
-        self.supports_hint = False  # ❌ لعبة بصرية
-        self.supports_reveal = False  # ❌ لعبة بصرية
+        self.supports_hint = True
+        self.supports_reveal = True
 
-        self.round_time = 15  # ⏱️ 15 ثانية
+        self.round_time = 15
         self.round_start_time = None
 
-        self.colors = {
+        # ✅ ألوان ثابتة للكلمات (مستقلة عن الثيم)
+        self.word_colors = {
             "أحمر": "#E53E3E",
             "أزرق": "#3182CE",
             "أخضر": "#38A169",
@@ -35,7 +37,7 @@ class WordColorGame(BaseGame):
             "وردي": "#D53F8C",
             "بني": "#8B4513"
         }
-        self.color_names = list(self.colors.keys())
+        self.color_names = list(self.word_colors.keys())
         self.current_word = None
         self.current_color_name = None
 
@@ -48,7 +50,7 @@ class WordColorGame(BaseGame):
         return self.get_question()
 
     def get_question(self):
-        # اختيار كلمة ولون مختلف (70% من الوقت)
+        # اختيار كلمة ولون مختلف (70% من الوقت للتحدي)
         word = random.choice(self.color_names)
         color_name = random.choice([c for c in self.color_names if c != word]) if random.random() < 0.7 else word
         
@@ -57,72 +59,44 @@ class WordColorGame(BaseGame):
         self.current_answer = [color_name]
         self.round_start_time = time.time()
 
-        colors = self.get_theme_colors()
-        display_color = self.colors[color_name]
+        # ✅ الحصول على ألوان الثيم للواجهة
+        theme_colors = self.get_theme_colors()
+        
+        # ✅ اللون الفعلي للكلمة (من قاموس الألوان الثابت)
+        display_color = self.word_colors[color_name]
 
-        # بناء Flex بدلاً من TextMessage
-        flex_contents = [
-            {"type": "text", "text": f"{self.game_icon} {self.game_name}", "size": "xl", "weight": "bold", "color": colors["primary"], "align": "center"},
-            {"type": "text", "text": f"سؤال {self.current_question + 1} من {self.questions_count}", "size": "sm", "color": colors["text2"], "align": "center", "margin": "xs"},
-            {"type": "separator", "margin": "lg", "color": colors["border"]}
-        ]
+        # ✅ بناء السؤال باستخدام build_question_flex
+        additional_info = f"⏱️ {self.round_time} ثانية"
         
-        # عرض السؤال السابق والإجابة
-        if self.previous_question and self.previous_answer:
-            prev_answer_text = self.previous_answer if isinstance(self.previous_answer, str) else (self.previous_answer[0] if isinstance(self.previous_answer, list) and self.previous_answer else "")
-            
-            flex_contents.append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "▪️ السؤال السابق", "size": "xs", "color": colors["text3"], "weight": "bold"},
-                    {"type": "text", "text": str(self.previous_question)[:30] + "..." if len(str(self.previous_question)) > 30 else str(self.previous_question), "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": f"▪️ الإجابة: {prev_answer_text}", "size": "xs", "color": colors["success"], "wrap": True, "margin": "xs"}
-                ],
-                "backgroundColor": colors["info_bg"],
-                "cornerRadius": "10px",
-                "paddingAll": "10px",
-                "margin": "md"
-            })
-            flex_contents.append({"type": "separator", "margin": "md", "color": colors["border"]})
+        # استخدام الدالة الأساسية ثم تعديل الكلمة الملونة
+        base_flex = self.build_question_flex(
+            question_text=f"ما لون هذه الكلمة؟\n\n{word}",
+            additional_info=additional_info
+        )
         
-        # السؤال الحالي - الكلمة الملونة
-        flex_contents.append({
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {"type": "text", "text": "ما لون هذه الكلمة؟", "size": "md", "color": colors["text2"], "align": "center", "wrap": True},
-                {"type": "text", "text": word, "size": "xxl", "weight": "bold", "color": display_color, "align": "center", "margin": "lg"}
-            ],
-            "cornerRadius": "15px",
-            "paddingAll": "20px",
-            "margin": "lg",
-            "borderWidth": "2px",
-            "borderColor": colors["border"]
-        })
+        # ✅ تعديل لون الكلمة في الـ Flex
+        flex_dict = base_flex.contents.to_dict()
         
-        # معلومات إضافية
-        flex_contents.append({
-            "type": "text",
-            "text": f"⏱️ {self.round_time} ثانية",
-            "size": "xs",
-            "color": colors["text2"],
-            "align": "center",
-            "margin": "md"
-        })
+        # البحث عن النص وتلوينه
+        for content in flex_dict['body']['contents']:
+            if content.get('type') == 'box' and 'contents' in content:
+                for item in content['contents']:
+                    if item.get('type') == 'text' and word in item.get('text', ''):
+                        # تلوين الكلمة المستهدفة فقط
+                        item['text'] = f"ما لون هذه الكلمة؟"
+                        # إضافة الكلمة الملونة بشكل منفصل
+                        content['contents'].append({
+                            "type": "text",
+                            "text": word,
+                            "size": "xxl",
+                            "weight": "bold",
+                            "color": display_color,
+                            "align": "center",
+                            "margin": "lg"
+                        })
+                        break
         
-        flex_content = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": flex_contents,
-                "paddingAll": "20px"
-            }
-        }
-        
-        return self._create_flex_with_buttons(self.game_name, flex_content)
+        return self._create_flex_with_buttons(self.game_name, flex_dict)
 
     def _time_expired(self) -> bool:
         if not self.round_start_time:
@@ -162,7 +136,6 @@ class WordColorGame(BaseGame):
         correct = self.normalize_text(self.current_answer[0])
 
         if normalized == correct:
-            # نقطة واحدة فقط (بدون بونص الوقت)
             total_points = 1
 
             if self.team_mode:
