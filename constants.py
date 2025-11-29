@@ -1,12 +1,3 @@
-"""
-Bot Mesh - Constants v18.0 DYNAMIC THEMES
-Created by: Abeer Aldosari © 2025
-✅ نظام ثيمات ديناميكي 100%
-✅ خلفيات ذكية لكل ثيم
-✅ تباين احترافي ومريح للعين
-✅ بدون شروط if theme == "أبيض"
-"""
-
 import os
 from typing import Dict, List, Tuple, Optional
 from dotenv import load_dotenv
@@ -16,7 +7,7 @@ load_dotenv()
 
 BOT_NAME = "Bot Mesh"
 BOT_VERSION = "18.0 DYNAMIC"
-BOT_RIGHTS = "© 2025 Abeer Aldosari"
+BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
@@ -33,27 +24,27 @@ def validate_env():
 THEMES = {
     "أبيض": {
         "name": "أبيض",
-        "bg": "#FAFBFC",                    # خلفية رمادية فاتحة جداً (ليست بيضاء نقية)
-        "card": "#FFFFFF",                  # بطاقات بيضاء نقية
-        "primary": "#2563EB",               # أزرق حيوي
-        "primary_hover": "#1D4ED8",         # أزرق أغمق
-        "secondary": "#64748B",             # رمادي متوسط
-        "accent": "#3B82F6",                # أزرق لامع
-        "text": "#1E293B",                  # نص داكن (contrast 13:1)
-        "text2": "#475569",                 # نص ثانوي (contrast 8:1)
-        "text3": "#64748B",                 # نص ثالثي (contrast 5:1)
-        "border": "#E2E8F0",                # حدود ناعمة
-        "success": "#10B981",               # أخضر زاهي
-        "success_bg": "#D1FAE5",            # خلفية خضراء
-        "error": "#EF4444",                 # أحمر واضح
-        "error_bg": "#FEE2E2",              # خلفية حمراء
-        "warning": "#F59E0B",               # برتقالي دافئ
-        "info": "#2563EB",                  # أزرق معلومات
-        "info_bg": "#EFF6FF",               # خلفية زرقاء فاتحة
-        "shadow": "rgba(15, 23, 42, 0.06)", # ظل ناعم
-        "button_text": "#FFFFFF",           # نص الأزرار
-        "disabled": "#94A3B8",              # معطل
-        "disabled_bg": "#F1F5F9"            # خلفية معطلة
+        "bg": "#FAFBFC",
+        "card": "#FFFFFF",
+        "primary": "#2563EB",
+        "primary_hover": "#1D4ED8",
+        "secondary": "#64748B",
+        "accent": "#3B82F6",
+        "text": "#1E293B",
+        "text2": "#475569",
+        "text3": "#64748B",
+        "border": "#E2E8F0",
+        "success": "#10B981",
+        "success_bg": "#D1FAE5",
+        "error": "#EF4444",
+        "error_bg": "#FEE2E2",
+        "warning": "#F59E0B",
+        "info": "#2563EB",
+        "info_bg": "#EFF6FF",
+        "shadow": "rgba(15, 23, 42, 0.06)",
+        "button_text": "#FFFFFF",
+        "disabled": "#94A3B8",
+        "disabled_bg": "#F1F5F9"
     },
     "أسود": {
         "name": "أسود",
