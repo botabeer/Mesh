@@ -1,14 +1,3 @@
-"""
-Bot Mesh - Database v12.1 OPTIMIZED + COMPLETE
-Created by: Abeer Aldosari © 2025
-✅ Connection pooling محترف
-✅ Prepared statements صحيحة
-✅ Retry logic ذكي
-✅ Auto-vacuum
-✅ مقاومة race conditions
-✅ جميع الدوال المطلوبة
-"""
-
 import sqlite3
 import os
 from datetime import datetime, timedelta
@@ -130,7 +119,7 @@ class ConnectionPool:
 
 
 class Database:
-    """Database management محترف"""
+    """Database management محترف مع نظام انسحاب ذكي"""
     
     def __init__(self, db_path='botmesh.db'):
         self.db_path = db_path
@@ -138,7 +127,7 @@ class Database:
         self.pool = ConnectionPool(db_path, pool_size=10)
         self.init_database()
         self._start_maintenance_thread()
-        logger.info(f"✅ Database initialized: {db_path}")
+        logger.info(f"☑️ Database initialized: {db_path}")
     
     def _ensure_clean_db(self):
         """التأكد من نظافة قاعدة البيانات"""
@@ -260,7 +249,7 @@ class Database:
                 cursor.execute(idx)
             
             cursor.execute("ANALYZE")
-            logger.info("✅ تم تهيئة الجداول والـ indexes")
+            logger.info("☑️ تم تهيئة الجداول والـ indexes")
     
     @retry_on_locked()
     def get_user(self, user_id: str) -> Optional[Dict]:
@@ -379,18 +368,18 @@ class Database:
             return True
     
     @retry_on_locked()
-    def get_leaderboard(self, limit: int = 20) -> List[Tuple[str, int, bool]]:
-        """لوحة الصدارة - محسّنة"""
+    def get_leaderboard_all(self, limit: int = 20) -> List[Tuple[str, int, bool]]:
+        """☑️ لوحة الصدارة - جميع المستخدمين الذين لديهم نقاط"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT name, points, is_online 
+                SELECT name, points, is_registered 
                 FROM users 
-                WHERE is_registered = 1 AND points > 0
+                WHERE points > 0
                 ORDER BY points DESC, last_activity DESC 
                 LIMIT ?
             ''', (limit,))
-            return [(row['name'], row['points'], bool(row['is_online'])) 
+            return [(row['name'], row['points'], bool(row['is_registered'])) 
                     for row in cursor.fetchall()]
     
     @retry_on_locked()
@@ -485,7 +474,7 @@ class Database:
     
     @retry_on_locked()
     def get_stats_summary(self) -> Dict:
-        """الحصول على ملخص الإحصائيات - الدالة الناقصة ✅"""
+        """الحصول على ملخص الإحصائيات"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             
@@ -514,19 +503,22 @@ class Database:
     
     @retry_on_locked()
     def cleanup_inactive_users(self, days: int = 30) -> int:
-        """تنظيف المستخدمين غير النشطين"""
+        """☑️ تنظيف المستخدمين غير النشطين (مع الاحتفاظ بأصحاب النقاط)"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cutoff = datetime.now() - timedelta(days=days)
             
+            # ❌ حذف فقط: بدون نقاط + غير مسجل + غير نشط 30 يوم
             cursor.execute('''
                 DELETE FROM users 
-                WHERE last_activity < ? AND (is_registered = 0 OR points = 0)
+                WHERE last_activity < ? 
+                AND points = 0 
+                AND is_registered = 0
             ''', (cutoff,))
             deleted = cursor.rowcount
             
             if deleted > 0:
-                logger.info(f"✅ تم حذف {deleted} مستخدم غير نشط")
+                logger.info(f"☑️ تم حذف {deleted} مستخدم غير نشط (بدون نقاط)")
             
             return deleted
     
