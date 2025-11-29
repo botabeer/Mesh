@@ -18,7 +18,7 @@ class CompatibilitySystem(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
         self.game_name = "توافق"
-        self.game_icon = "💕"
+        self.game_icon = "🖤"
         self.supports_hint = False
         self.supports_reveal = False
 
@@ -143,7 +143,7 @@ class CompatibilitySystem(BaseGame):
                     # العنوان
                     {
                         "type": "text",
-                        "text": "💕 نتيجة التوافق",
+                        "text": "🖤 نتيجة التوافق",
                         "size": "xl",
                         "weight": "bold",
                         "color": colors["primary"],
