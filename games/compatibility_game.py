@@ -1,3 +1,10 @@
+"""
+لعبة التوافق - Bot Mesh v14.0 FIXED
+Created by: Abeer Aldosari © 2025
+✅ قبول الأسماء حتى لو احتوت على "و"
+✅ معالجة ذكية للفواصل
+"""
+
 from games.base_game import BaseGame
 from typing import Dict, Any, Optional
 import re
@@ -9,7 +16,7 @@ class CompatibilitySystem(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
         self.game_name = "توافق"
-        self.game_icon = "▫️"
+        self.game_icon = "🖤"
         self.supports_hint = False
         self.supports_reveal = False
 
@@ -18,6 +25,39 @@ class CompatibilitySystem(BaseGame):
         if re.search(r"[@#0-9A-Za-z!$%^&*()_+=\[\]{};:'\"\\|,.<>/?~`]", text):
             return False
         return True
+
+    def parse_names(self, text: str) -> tuple:
+        """
+        ✅ معالجة ذكية: قبول الأسماء حتى لو احتوت على "و"
+        
+        أمثلة:
+        - "محمد و أحمد" → ("محمد", "أحمد")
+        - "عبدالله و سارة" → ("عبدالله", "سارة")
+        - "نورة و محمد" → ("نورة", "محمد")
+        - "أبو عبدالله و أم محمد" → ("أبو عبدالله", "أم محمد")
+        """
+        # إزالة المسافات الزائدة
+        text = ' '.join(text.split())
+        
+        # البحث عن " و " (مع مسافات) كفاصل
+        if ' و ' in text:
+            parts = text.split(' و ', 1)  # تقسيم مرة واحدة فقط
+            name1 = parts[0].strip()
+            name2 = parts[1].strip() if len(parts) > 1 else ""
+            return (name1, name2) if name1 and name2 else (None, None)
+        
+        # إذا لم يوجد " و " مع مسافات، تحقق من "و" بدون مسافات
+        # ولكن تأكد أنها ليست جزء من اسم مركب
+        words = text.split()
+        
+        # البحث عن "و" كلمة منفصلة
+        if 'و' in words:
+            idx = words.index('و')
+            name1 = ' '.join(words[:idx]).strip()
+            name2 = ' '.join(words[idx+1:]).strip()
+            return (name1, name2) if name1 and name2 else (None, None)
+        
+        return (None, None)
 
     def calculate_compatibility(self, name1: str, name2: str) -> int:
         """حساب نسبة التوافق"""
@@ -55,8 +95,8 @@ class CompatibilitySystem(BaseGame):
         colors = self.get_theme_colors()
 
         return self.build_question_flex(
-            question_text="أدخل اسمين بينهما (و)\n\nمثال:\nميش و عبير",
-            additional_info="تحذير: نصوص فقط، بدون رموز أو منشن"
+            question_text="أدخل اسمين بينهما (و)",
+            additional_info="مثال: ميش و عبير"
         )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
@@ -65,7 +105,10 @@ class CompatibilitySystem(BaseGame):
 
         text = user_answer.strip()
 
-        if "و" not in text:
+        # ✅ معالجة ذكية للأسماء
+        name1, name2 = self.parse_names(text)
+
+        if not name1 or not name2:
             return {
                 'response': self._create_text_message(
                     "الصيغة غير صحيحة\n\n"
@@ -75,54 +118,33 @@ class CompatibilitySystem(BaseGame):
                 'points': 0
             }
 
-        parts = [p.strip() for p in text.split("و")]
-
-        if len(parts) != 2:
-            return {
-                'response': self._create_text_message(
-                    "يرجى كتابة اسمين فقط\n\n"
-                    "الصيغة: اسم و اسم"
-                ),
-                'points': 0
-            }
-
-        name1, name2 = parts
-
+        # التحقق من صحة النصوص
         if not self.is_valid_text(name1) or not self.is_valid_text(name2):
             return {
                 'response': self._create_text_message(
-                    "غير مسموح بإدخال:\n"
-                    "- رموز\n"
-                    "- منشن\n"
-                    "- أرقام\n\n"
-                    "اكتب اسمين نص فقط"
+                    "غير مسموح بإدخال رموز أو أرقام\n\n"
+                    "اكتب اسمين نصيين فقط"
                 ),
                 'points': 0
             }
 
-        if not name1 or not name2:
-            return {
-                'response': self._create_text_message(
-                    "الأسماء لا يمكن أن تكون فارغة"
-                ),
-                'points': 0
-            }
-
+        # حساب التوافق
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
 
         colors = self.get_theme_colors()
 
+        # نافذة النتيجة المحسنة
         result_flex = {
             "type": "bubble",
-            "size": "kilo",
+            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
                     {
                         "type": "text",
-                        "text": " نتيجة التوافق",
+                        "text": "نتيجة التوافق",
                         "size": "xl",
                         "weight": "bold",
                         "color": colors["primary"],
@@ -131,12 +153,13 @@ class CompatibilitySystem(BaseGame):
                     
                     {
                         "type": "separator",
-                        "margin": "lg"
+                        "margin": "lg",
+                        "color": colors["border"]
                     },
                     
                     {
                         "type": "text",
-                        "text": f"{name1}  🖤  {name2}",
+                        "text": f"{name1}  و  {name2}",
                         "size": "lg",
                         "weight": "bold",
                         "color": colors["text"],
@@ -160,17 +183,26 @@ class CompatibilitySystem(BaseGame):
                         ],
                         "cornerRadius": "25px",
                         "paddingAll": "20px",
+                        "borderWidth": "2px",
+                        "borderColor": colors["primary"],
                         "margin": "xl"
                     },
                     
                     {
                         "type": "text",
                         "text": message_text,
-                        "size": "md",
+                        "size": "lg",
                         "color": colors["text"],
                         "align": "center",
                         "wrap": True,
-                        "margin": "md"
+                        "margin": "md",
+                        "weight": "bold"
+                    },
+                    
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": colors["border"]
                     },
                     
                     {
@@ -180,23 +212,42 @@ class CompatibilitySystem(BaseGame):
                         "color": colors["text2"],
                         "align": "center",
                         "wrap": True,
-                        "margin": "lg"
+                        "margin": "md"
                     },
                     
                     {
-                        "type": "button",
-                        "action": {
-                            "type": "message",
-                            "label": "إعادة الحساب",
-                            "text": "توافق"
-                        },
-                        "style": "primary",
-                        "height": "sm",
-                        "margin": "xl"
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "margin": "xl",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "message",
+                                    "label": "إعادة",
+                                    "text": "توافق"
+                                },
+                                "style": "primary",
+                                "height": "sm",
+                                "color": colors["primary"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "message",
+                                    "label": "البداية",
+                                    "text": "بداية"
+                                },
+                                "style": "secondary",
+                                "height": "sm"
+                            }
+                        ]
                     }
                 ],
                 "paddingAll": "24px",
-                "spacing": "sm"
+                "spacing": "sm",
+                "backgroundColor": colors["bg"]
             }
         }
 
