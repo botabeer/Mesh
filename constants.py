@@ -6,7 +6,7 @@ import re
 load_dotenv()
 
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "18.1 WITHDRAWAL"
+BOT_VERSION = "19.0 FINAL"
 BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -246,18 +246,18 @@ DEFAULT_THEME = "أبيض"
 # أسماء الألعاب - بدون تغيير
 # ============================================================================
 GAME_CONFIG = {
-    "كتابة سريعة": {"display": "أسرع", "icon": "▫️", "hint": False, "reveal": False, "timer": 20},
-    "ذكاء": {"display": "ذكاء", "icon": "▫️", "hint": True, "reveal": True, "timer": 30},
-    "إنسان حيوان نبات": {"display": "لعبة", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
-    "أغنية": {"display": "أغنيه", "icon": "▫️", "hint": True, "reveal": True, "timer": 30},
-    "تخمين": {"display": "خمن", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
-    "سلسلة كلمات": {"display": "سلسلة", "icon": "▫️", "hint": False, "reveal": False, "timer": 25},
-    "كلمة مبعثرة": {"display": "ترتيب", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
-    "تكوين": {"display": "تكوين", "icon": "▫️", "hint": True, "reveal": True, "timer": 40},
-    "أضداد": {"display": "ضد", "icon": "▫️", "hint": True, "reveal": True, "timer": 0},
-    "لون": {"display": "لون", "icon": "▫️", "hint": True, "reveal": True, "timer": 15},
-    "رياضيات": {"display": "رياضيات", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
-    "توافق": {"display": "توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
+    "كتابة سريعة": {"display": "أسرع", "icon": "⚡", "hint": False, "reveal": False, "timer": 20},
+    "ذكاء": {"display": "ذكاء", "icon": "🧠", "hint": True, "reveal": True, "timer": 30},
+    "إنسان حيوان نبات": {"display": "لعبة", "icon": "👾", "hint": True, "reveal": True, "timer": 25},
+    "أغنية": {"display": "أغنيه", "icon": "🎵", "hint": True, "reveal": True, "timer": 30},
+    "تخمين": {"display": "خمن", "icon": "🎯", "hint": True, "reveal": True, "timer": 25},
+    "سلسلة كلمات": {"display": "سلسلة", "icon": "🔗", "hint": False, "reveal": False, "timer": 25},
+    "كلمة مبعثرة": {"display": "ترتيب", "icon": "🔀", "hint": True, "reveal": True, "timer": 25},
+    "تكوين": {"display": "تكوين", "icon": "📝", "hint": True, "reveal": True, "timer": 40},
+    "أضداد": {"display": "ضد", "icon": "↔️", "hint": True, "reveal": True, "timer": 0},
+    "لون": {"display": "لون", "icon": "🎨", "hint": True, "reveal": True, "timer": 15},
+    "رياضيات": {"display": "رياضيات", "icon": "➕", "hint": True, "reveal": True, "timer": 25},
+    "توافق": {"display": "🖤 توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
 }
 
 GAME_LIST = [(k, v["display"], v["icon"]) for k, v in GAME_CONFIG.items()]
@@ -266,7 +266,7 @@ GAME_ICONS = {k: v["icon"] for k, v in GAME_CONFIG.items()}
 DISPLAY_TO_CLASS = {v["display"]: k for k, v in GAME_CONFIG.items()}
 
 FIXED_GAME_QR = [{"label": f"{v['icon']} {v['display']}", "text": v['display']} for k, v in GAME_CONFIG.items()]
-FIXED_GAME_QR.append({"label": "🔘 إيقاف", "text": "إيقاف"})
+FIXED_GAME_QR.append({"label": "⏹️ إيقاف", "text": "إيقاف"})
 
 PRIVACY_SETTINGS = {
     "auto_delete_inactive_days": 30,
@@ -348,7 +348,7 @@ def get_game_class_name(display_name: str) -> str:
     return DISPLAY_TO_CLASS.get(display_name, display_name)
 
 def get_game_icon(internal_name: str) -> str:
-    return GAME_ICONS.get(internal_name, "▫️")
+    return GAME_ICONS.get(internal_name, "🎮")
 
 def get_game_config(game_name: str) -> Dict:
     return GAME_CONFIG.get(game_name, {})
