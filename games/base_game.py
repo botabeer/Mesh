@@ -1,9 +1,10 @@
 """
-Bot Mesh - Base Game v13.0
+Bot Mesh - Base Game v13.0 FINAL ENHANCED
 Created by: Abeer Aldosari © 2025
-✅ استيراد الثيمات من constants
-✅ دعم كامل للفرق
-✅ can_use_hint() و can_reveal_answer()
+✅ نقطة واحدة فقط لكل إجابة صحيحة
+✅ عرض السؤال السابق والإجابة
+✅ نوافذ Mega Size موحدة
+✅ إيموجي محدود: ▫️▪️⏱️🥇🥈🥉🎖️🏅🏆🖤
 """
 
 from typing import Dict, Any, Optional
@@ -16,7 +17,7 @@ class BaseGame:
     """BaseGame - نظام اللعبة الأساسي"""
     
     game_name = "لعبة"
-    game_icon = "🎮"
+    game_icon = "▪️"
     supports_hint = True
     supports_reveal = True
 
@@ -63,20 +64,20 @@ class BaseGame:
         return re.sub(r'[\u064B-\u065F\u0670]', '', text)
 
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
-        """إضافة نقاط"""
+        """إضافة نقاط - دائماً 1 نقطة"""
         if user_id in self.answered_users:
             return 0
         if user_id not in self.scores:
             self.scores[user_id] = {"name": display_name, "score": 0}
-        self.scores[user_id]["score"] += points
+        self.scores[user_id]["score"] += 1  # دائماً نقطة واحدة
         self.answered_users.add(user_id)
-        return points
+        return 1
 
     def add_team_score(self, team_name: str, points: int):
-        """إضافة نقاط للفريق"""
+        """إضافة نقاط للفريق - دائماً 1 نقطة"""
         if team_name in self.team_scores:
-            self.team_scores[team_name] += points
-        return points
+            self.team_scores[team_name] += 1  # دائماً نقطة واحدة
+        return 1
 
     def assign_to_team(self, user_id: str) -> str:
         """تعيين المستخدم لفريق"""
@@ -148,7 +149,7 @@ class BaseGame:
             elif team2_score > team1_score:
                 winner = "الفريق الثاني 🥈"
             else:
-                winner = "تعادل ⚖️"
+                winner = "تعادل"
             
             message = (
                 f"🏆 انتهت اللعبة!\n\n"
@@ -165,14 +166,14 @@ class BaseGame:
             }
         
         if not self.scores:
-            return {"game_over": True, "points": 0, "message": "🏁 انتهت اللعبة"}
+            return {"game_over": True, "points": 0, "message": "▪️ انتهت اللعبة"}
         
         leaderboard = sorted(self.scores.items(), key=lambda x: x[1]["score"], reverse=True)
         winner = leaderboard[0]
         winner_text = f"🏆 الفائز: {winner[1]['name']}\n▫️ النقاط: {winner[1]['score']}\n\n"
         
         if len(leaderboard) > 1:
-            winner_text += "📊 الترتيب:\n"
+            winner_text += "▪️ الترتيب:\n"
             for i, (uid, data) in enumerate(leaderboard[:5], 1):
                 medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
                 winner_text += f"{medal} {data['name']}: {data['score']}\n"
@@ -188,26 +189,47 @@ class BaseGame:
         return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
 
     def build_question_flex(self, question_text: str, additional_info: str = None):
-        """بناء Flex للسؤال"""
+        """بناء Flex للسؤال مع السؤال السابق"""
         colors = self.get_theme_colors()
         
         contents = [
             {"type": "text", "text": f"{self.game_icon} {self.game_name}", "size": "xl", "weight": "bold", "color": colors["primary"], "align": "center"},
             {"type": "text", "text": f"سؤال {self.current_question + 1} من {self.questions_count}", "size": "sm", "color": colors["text2"], "align": "center", "margin": "xs"},
-            {"type": "separator", "margin": "lg", "color": colors["border"]},
-            {
+            {"type": "separator", "margin": "lg", "color": colors["border"]}
+        ]
+        
+        # عرض السؤال السابق والإجابة
+        if self.previous_question and self.previous_answer:
+            prev_answer_text = self.previous_answer if isinstance(self.previous_answer, str) else (self.previous_answer[0] if isinstance(self.previous_answer, list) and self.previous_answer else "")
+            
+            contents.append({
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": question_text, "size": "lg", "color": colors["text"], "align": "center", "wrap": True}
+                    {"type": "text", "text": "▪️ السؤال السابق", "size": "xs", "color": colors["text3"], "weight": "bold"},
+                    {"type": "text", "text": str(self.previous_question)[:50] + "..." if len(str(self.previous_question)) > 50 else str(self.previous_question), "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": f"▪️ الإجابة: {prev_answer_text}", "size": "xs", "color": colors["success"], "wrap": True, "margin": "xs"}
                 ],
-                "cornerRadius": "15px",
-                "paddingAll": "20px",
-                "margin": "lg",
-                "borderWidth": "1px",
-                "borderColor": colors["border"]
-            }
-        ]
+                "backgroundColor": colors["info_bg"],
+                "cornerRadius": "10px",
+                "paddingAll": "10px",
+                "margin": "md"
+            })
+            contents.append({"type": "separator", "margin": "md", "color": colors["border"]})
+        
+        # السؤال الحالي
+        contents.append({
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": question_text, "size": "lg", "color": colors["text"], "align": "center", "wrap": True}
+            ],
+            "cornerRadius": "15px",
+            "paddingAll": "20px",
+            "margin": "lg",
+            "borderWidth": "1px",
+            "borderColor": colors["border"]
+        })
         
         if additional_info:
             contents.append({
@@ -222,7 +244,7 @@ class BaseGame:
         
         flex_content = {
             "type": "bubble",
-            "size": "kilo",
+            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
