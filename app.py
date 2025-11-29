@@ -1,10 +1,10 @@
 # app_v13_final.py - Bot Mesh v13.0 FINAL
 """
 Bot Mesh - LINE Bot Application v13.0 FINAL
-✅ استخدام database_v12_optimized
-✅ استخدام constants_v13_optimized
-✅ استخدام ui_builder_v13_glass
-✅ استخدام base_game_v13
+✅ استخدام database
+✅ استخدام constants
+✅ استخدام ui_builder
+✅ استخدام base_game
 ✅ 100% محسّن ومتكامل
 """
 
@@ -17,13 +17,13 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-# استيراد المحسّنة
-from constants_v13_optimized import (BOT_NAME, BOT_VERSION, BOT_RIGHTS, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
+# استيراد المحسّنة - تم التعديل هنا ✅
+from constants import (BOT_NAME, BOT_VERSION, BOT_RIGHTS, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
     validate_env, get_username, GAME_LIST, DEFAULT_THEME, PRIVACY_SETTINGS, is_allowed_command, GAME_COMMANDS)
-from ui_builder_v13_glass import (build_games_menu, build_my_points, build_leaderboard, build_registration_required,
+from ui_builder import (build_games_menu, build_my_points, build_leaderboard, build_registration_required,
     build_winner_announcement, build_help_window, build_theme_selector, build_enhanced_home, build_multiplayer_help_window,
     attach_quick_reply, build_join_confirmation, build_error_message, build_game_stopped, build_team_game_end)
-from database_v12_optimized import get_database
+from database import get_database
 
 try:
     validate_env()
@@ -279,7 +279,7 @@ def handle_message(event):
                     reply_message = build_error_message("⚠️ هذا الأمر للمجموعات فقط", current_theme)
             elif lowered.startswith("ثيم "):
                 theme_name = text.replace("ثيم ", "").strip()
-                from constants_v13_optimized import THEMES
+                from constants import THEMES
                 if theme_name in THEMES:
                     db.set_user_theme(user_id, theme_name)
                     user_cache.pop(user_id, None)
@@ -377,7 +377,7 @@ def handle_message(event):
                             line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
                             return
                         else:
-                            from ui_builder_v13_glass import build_answer_feedback
+                            from ui_builder import build_answer_feedback
                             reply_message = build_answer_feedback(result.get('message', '✅'), current_theme)
                 except Exception as e:
                     logger.error(f"❌ خطأ في check_answer: {e}")
