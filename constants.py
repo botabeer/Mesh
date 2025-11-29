@@ -1,8 +1,9 @@
 """
-Bot Mesh - Constants v15.0 FINAL
+Bot Mesh - Constants v17.0 FINAL FIXED
 Created by: Abeer Aldosari © 2025
-✅ ألوان محسّنة + رمادي
-✅ إيموجي محدود: ▫️▪️🖤⏱️🥇🥈🥉🎖️🏅☑️🔘
+✅ أسماء الألعاب الصحيحة والمرتبة
+✅ 9 ثيمات متنوعة
+✅ توحيد كامل مع جميع الملفات
 """
 
 import os
@@ -13,7 +14,7 @@ import re
 load_dotenv()
 
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "15.0 FINAL"
+BOT_VERSION = "17.0 FINAL"
 BOT_RIGHTS = "© 2025 Abeer Aldosari"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -25,6 +26,9 @@ def validate_env():
     if not LINE_CHANNEL_ACCESS_TOKEN:
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
+# ============================================================================
+# 9 ثيمات متنوعة ومحسّنة
+# ============================================================================
 THEMES = {
     "أبيض": {
         "name": "أبيض",
@@ -66,6 +70,26 @@ THEMES = {
         "info": "#3B82F6",
         "info_bg": "#1E3A8A"
     },
+    "رمادي": {
+        "name": "رمادي",
+        "bg": "#F9FAFB",
+        "card": "#F3F4F6",
+        "primary": "#374151",
+        "primary_hover": "#1F2937",
+        "secondary": "#6B7280",
+        "accent": "#9CA3AF",
+        "text": "#111827",
+        "text2": "#374151",
+        "text3": "#6B7280",
+        "border": "#D1D5DB",
+        "success": "#059669",
+        "success_bg": "#D1FAE5",
+        "error": "#DC2626",
+        "error_bg": "#FEE2E2",
+        "warning": "#D97706",
+        "info": "#374151",
+        "info_bg": "#E5E7EB"
+    },
     "أزرق": {
         "name": "أزرق",
         "bg": "#EFF6FF",
@@ -85,46 +109,6 @@ THEMES = {
         "warning": "#D97706",
         "info": "#1E3A8A",
         "info_bg": "#DBEAFE"
-    },
-    "أخضر": {
-        "name": "أخضر",
-        "bg": "#F0FDF4",
-        "card": "#DCFCE7",
-        "primary": "#047857",
-        "primary_hover": "#065F46",
-        "secondary": "#059669",
-        "accent": "#10B981",
-        "text": "#064E3B",
-        "text2": "#065F46",
-        "text3": "#059669",
-        "border": "#86EFAC",
-        "success": "#10B981",
-        "success_bg": "#D1FAE5",
-        "error": "#DC2626",
-        "error_bg": "#FEE2E2",
-        "warning": "#D97706",
-        "info": "#047857",
-        "info_bg": "#DCFCE7"
-    },
-    "وردي": {
-        "name": "وردي",
-        "bg": "#FDF2F8",
-        "card": "#FCE7F3",
-        "primary": "#9F1239",
-        "primary_hover": "#831843",
-        "secondary": "#BE185D",
-        "accent": "#DB2777",
-        "text": "#831843",
-        "text2": "#9F1239",
-        "text3": "#BE185D",
-        "border": "#F9A8D4",
-        "success": "#059669",
-        "success_bg": "#D1FAE5",
-        "error": "#DC2626",
-        "error_bg": "#FEE2E2",
-        "warning": "#D97706",
-        "info": "#9F1239",
-        "info_bg": "#FCE7F3"
     },
     "بنفسجي": {
         "name": "بنفسجي",
@@ -146,25 +130,65 @@ THEMES = {
         "info": "#6B21A8",
         "info_bg": "#EDE9FE"
     },
-    "رمادي": {
-        "name": "رمادي",
-        "bg": "#F9FAFB",
-        "card": "#F3F4F6",
-        "primary": "#374151",
-        "primary_hover": "#1F2937",
-        "secondary": "#6B7280",
-        "accent": "#9CA3AF",
-        "text": "#111827",
-        "text2": "#374151",
-        "text3": "#6B7280",
-        "border": "#D1D5DB",
+    "وردي": {
+        "name": "وردي",
+        "bg": "#FDF2F8",
+        "card": "#FCE7F3",
+        "primary": "#9F1239",
+        "primary_hover": "#831843",
+        "secondary": "#BE185D",
+        "accent": "#DB2777",
+        "text": "#831843",
+        "text2": "#9F1239",
+        "text3": "#BE185D",
+        "border": "#F9A8D4",
         "success": "#059669",
         "success_bg": "#D1FAE5",
         "error": "#DC2626",
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
-        "info": "#374151",
-        "info_bg": "#E5E7EB"
+        "info": "#9F1239",
+        "info_bg": "#FCE7F3"
+    },
+    "أخضر": {
+        "name": "أخضر",
+        "bg": "#F0FDF4",
+        "card": "#DCFCE7",
+        "primary": "#047857",
+        "primary_hover": "#065F46",
+        "secondary": "#059669",
+        "accent": "#10B981",
+        "text": "#064E3B",
+        "text2": "#065F46",
+        "text3": "#059669",
+        "border": "#86EFAC",
+        "success": "#10B981",
+        "success_bg": "#D1FAE5",
+        "error": "#DC2626",
+        "error_bg": "#FEE2E2",
+        "warning": "#D97706",
+        "info": "#047857",
+        "info_bg": "#DCFCE7"
+    },
+    "برتقالي": {
+        "name": "برتقالي",
+        "bg": "#FFF7ED",
+        "card": "#FFEDD5",
+        "primary": "#C2410C",
+        "primary_hover": "#9A3412",
+        "secondary": "#EA580C",
+        "accent": "#F97316",
+        "text": "#7C2D12",
+        "text2": "#9A3412",
+        "text3": "#C2410C",
+        "border": "#FED7AA",
+        "success": "#059669",
+        "success_bg": "#D1FAE5",
+        "error": "#DC2626",
+        "error_bg": "#FEE2E2",
+        "warning": "#D97706",
+        "info": "#C2410C",
+        "info_bg": "#FFEDD5"
     },
     "ذهبي": {
         "name": "ذهبي",
@@ -190,25 +214,37 @@ THEMES = {
 
 DEFAULT_THEME = "أبيض"
 
+# ============================================================================
+# أسماء الألعاب الصحيحة - مطابقة للعرض والكلاسات
+# الترتيب: أسرع، ذكاء، لعبة، أغنيه، خمن، سلسلة، ترتيب، تكوين، ضد، لون، رياضيات، توافق
+# ============================================================================
 GAME_CONFIG = {
-    "ذكاء": {"display": "ذكاء", "icon": "▪️", "hint": True, "reveal": True, "timer": 30},
-    "رياضيات": {"display": "رياضيات", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
-    "تخمين": {"display": "تخمين", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
-    "أسرع": {"display": "أسرع", "icon": "▪️", "hint": False, "reveal": False, "timer": 20},
-    "كلمات": {"display": "كلمات", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
-    "سلسلة": {"display": "سلسلة", "icon": "▪️", "hint": False, "reveal": False, "timer": 25},
-    "أضداد": {"display": "أضداد", "icon": "▪️", "hint": True, "reveal": True, "timer": 0},
-    "أغنية": {"display": "أغنية", "icon": "▪️", "hint": True, "reveal": True, "timer": 30},
-    "تكوين": {"display": "تكوين", "icon": "▪️", "hint": True, "reveal": True, "timer": 40},
-    "ألوان": {"display": "ألوان", "icon": "▪️", "hint": False, "reveal": False, "timer": 15},
-    "لعبة": {"display": "لعبة", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
+    # اسم الكلاس في الكود : اسم العرض
+    "كتابة سريعة": {"display": "أسرع", "icon": "▫️", "hint": False, "reveal": False, "timer": 20},
+    "ذكاء": {"display": "ذكاء", "icon": "▫️", "hint": True, "reveal": True, "timer": 30},
+    "إنسان حيوان نبات": {"display": "لعبة", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
+    "أغنية": {"display": "أغنيه", "icon": "▫️", "hint": True, "reveal": True, "timer": 30},
+    "تخمين": {"display": "خمن", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
+    "سلسلة كلمات": {"display": "سلسلة", "icon": "▫️", "hint": False, "reveal": False, "timer": 25},
+    "كلمة مبعثرة": {"display": "ترتيب", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
+    "تكوين": {"display": "تكوين", "icon": "▫️", "hint": True, "reveal": True, "timer": 40},
+    "أضداد": {"display": "ضد", "icon": "▫️", "hint": True, "reveal": True, "timer": 0},
+    "لون": {"display": "لون", "icon": "▫️", "hint": False, "reveal": False, "timer": 15},
+    "رياضيات": {"display": "رياضيات", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
     "توافق": {"display": "توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
 }
 
+# القائمة بالترتيب المطلوب
 GAME_LIST = [(k, v["display"], v["icon"]) for k, v in GAME_CONFIG.items()]
+
+# الخرائط للتحويل
 GAME_NAMES = {k: v["display"] for k, v in GAME_CONFIG.items()}
 GAME_ICONS = {k: v["icon"] for k, v in GAME_CONFIG.items()}
 
+# خريطة عكسية: من اسم العرض إلى اسم الكلاس
+DISPLAY_TO_CLASS = {v["display"]: k for k, v in GAME_CONFIG.items()}
+
+# Quick Reply بالترتيب الصحيح
 FIXED_GAME_QR = [{"label": f"{v['icon']} {v['display']}", "text": v['display']} for k, v in GAME_CONFIG.items()]
 FIXED_GAME_QR.append({"label": "🔘 إيقاف", "text": "إيقاف"})
 
@@ -240,6 +276,7 @@ ALLOWED_COMMANDS = {
     "لمح", "hint", "جاوب", "reveal", "answer"
 }
 
+# أسماء الألعاب للعرض فقط
 GAME_COMMANDS = set(GAME_NAMES.values())
 
 def normalize_text(text: str) -> str:
@@ -286,16 +323,22 @@ def get_username(profile) -> str:
         return "مستخدم"
 
 def get_game_display_name(internal_name: str) -> str:
+    """من اسم الكلاس إلى اسم العرض"""
     return GAME_NAMES.get(internal_name, internal_name)
 
+def get_game_class_name(display_name: str) -> str:
+    """من اسم العرض إلى اسم الكلاس"""
+    return DISPLAY_TO_CLASS.get(display_name, display_name)
+
 def get_game_icon(internal_name: str) -> str:
-    return GAME_ICONS.get(internal_name, "▪️")
+    return GAME_ICONS.get(internal_name, "▫️")
 
 def get_game_config(game_name: str) -> Dict:
     return GAME_CONFIG.get(game_name, {})
 
 def is_valid_game(game_name: str) -> bool:
-    return game_name in GAME_NAMES.values()
+    """التحقق من اسم اللعبة (سواء اسم عرض أو اسم كلاس)"""
+    return game_name in GAME_NAMES.values() or game_name in GAME_CONFIG.keys()
 
 def is_allowed_command(text: str) -> bool:
     if not text or not isinstance(text, str):
@@ -313,11 +356,11 @@ __all__ = [
     'BOT_NAME', 'BOT_VERSION', 'BOT_RIGHTS',
     'LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN',
     'THEMES', 'DEFAULT_THEME', 'GAME_CONFIG', 'GAME_LIST',
-    'GAME_NAMES', 'GAME_ICONS', 'FIXED_GAME_QR',
+    'GAME_NAMES', 'GAME_ICONS', 'FIXED_GAME_QR', 'DISPLAY_TO_CLASS',
     'PRIVACY_SETTINGS', 'SECURITY_SETTINGS',
     'ALLOWED_COMMANDS', 'GAME_COMMANDS',
     'validate_env', 'normalize_text', 'sanitize_input',
     'get_theme_colors', 'validate_theme', 'get_username',
-    'get_game_display_name', 'get_game_icon', 'get_game_config',
-    'is_valid_game', 'is_allowed_command'
+    'get_game_display_name', 'get_game_class_name', 'get_game_icon', 
+    'get_game_config', 'is_valid_game', 'is_allowed_command'
 ]
