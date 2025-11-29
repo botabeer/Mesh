@@ -1,10 +1,11 @@
 """
-Bot Mesh - Base Game System v9.0 FINAL
+Bot Mesh - Base Game System v9.1 FIXED
 Created by: Abeer Aldosari © 2025
 ✅ نظام أساسي محسّن
 ✅ دعم كامل للفرق
 ✅ نظام session متكامل
 ✅ مؤقت مدمج
+✅ إضافة can_use_hint() و can_reveal_answer()
 """
 
 from typing import Dict, Any, Optional
@@ -72,6 +73,22 @@ class BaseGame:
         self.session_id = None
         self.session_type = "solo"  # solo, group, teams
         self.db = None  # سيتم تعيينه من app.py
+
+    def can_use_hint(self) -> bool:
+        """
+        ✅ دالة مساعدة: هل يمكن استخدام 'لمح'؟
+        - فقط في الوضع الفردي
+        - إذا كانت اللعبة تدعم التلميحات
+        """
+        return (not self.team_mode) and self.supports_hint
+
+    def can_reveal_answer(self) -> bool:
+        """
+        ✅ دالة مساعدة: هل يمكن استخدام 'جاوب'؟
+        - فقط في الوضع الفردي
+        - إذا كانت اللعبة تدعم كشف الإجابة
+        """
+        return (not self.team_mode) and self.supports_reveal
 
     def normalize_text(self, text: str) -> str:
         """تطبيع النص العربي"""
