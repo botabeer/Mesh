@@ -1,8 +1,8 @@
 """
-لعبة تخمين الأغنية - Bot Mesh v9.0 FINAL
+لعبة تخمين الأغنية - Bot Mesh v9.1 FIXED
 Created by: Abeer Aldosari © 2025
 ✅ فردي: لمح (أول حرف + عدد) + جاوب + مؤقت
-✅ فريقين: مؤقت فقط
+✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
 """
 
 from games.base_game import BaseGame
@@ -70,11 +70,11 @@ class SongGame(BaseGame):
         self.current_answer = [q_data["artist"]]
         self.round_start_time = time.time()
 
-        # ✅ النص الإضافي حسب الوضع
-        if self.team_mode:
-            additional_info = f"⏱️ {self.round_time} ثانية\nمن المغني؟"
-        else:
+        # ✅ استخدام can_use_hint() و can_reveal_answer()
+        if self.can_use_hint() and self.can_reveal_answer():
             additional_info = f"⏱️ {self.round_time} ثانية\nمن المغني؟\n💡 اكتب 'لمح' أو 'جاوب'"
+        else:
+            additional_info = f"⏱️ {self.round_time} ثانية\nمن المغني؟"
 
         return self.build_question_flex(
             question_text=f"🎵\n{q_data['lyrics']}",
@@ -115,32 +115,36 @@ class SongGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ لمح وجاوب للفردي فقط
-        if not self.team_mode:
-            if normalized == "لمح":
-                artist = self.current_answer[0]
-                hint = f"💡 يبدأ بـ: {artist[0]}\nعدد الحروف: {len(artist)}"
-                return {
-                    "message": hint,
-                    "response": self._create_text_message(hint),
-                    "points": 0
-                }
+        # ✅ التلميح (فردي فقط)
+        if self.can_use_hint() and normalized == "لمح":
+            artist = self.current_answer[0]
+            hint = f"💡 يبدأ بـ: {artist[0]}\nعدد الحروف: {len(artist)}"
+            return {
+                "message": hint,
+                "response": self._create_text_message(hint),
+                "points": 0
+            }
 
-            if normalized == "جاوب":
-                reveal = f"المغني: {self.current_answer[0]}"
-                self.current_question += 1
-                self.answered_users.clear()
+        # ✅ كشف الإجابة (فردي فقط)
+        if self.can_reveal_answer() and normalized == "جاوب":
+            reveal = f"المغني: {self.current_answer[0]}"
+            self.current_question += 1
+            self.answered_users.clear()
 
-                if self.current_question >= self.questions_count:
-                    result = self.end_game()
-                    result["message"] = f"{reveal}\n\n{result.get('message', '')}"
-                    return result
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"{reveal}\n\n{result.get('message', '')}"
+                return result
 
-                return {
-                    "message": reveal,
-                    "response": self.get_question(),
-                    "points": 0
-                }
+            return {
+                "message": reveal,
+                "response": self.get_question(),
+                "points": 0
+            }
+
+        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
+        if self.team_mode and normalized in ["لمح", "جاوب"]:
+            return None
 
         # التحقق من الإجابة
         correct_normalized = self.normalize_text(self.current_answer[0])
