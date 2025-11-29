@@ -1,18 +1,16 @@
 """
-Bot Mesh - Base Game System v9.1 FIXED
+Bot Mesh - Base Game v13.0
 Created by: Abeer Aldosari © 2025
-✅ نظام أساسي محسّن
+✅ استيراد الثيمات من constants_v13_optimized
 ✅ دعم كامل للفرق
-✅ نظام session متكامل
-✅ مؤقت مدمج
-✅ إضافة can_use_hint() و can_reveal_answer()
+✅ can_use_hint() و can_reveal_answer()
 """
 
 from typing import Dict, Any, Optional
 from datetime import datetime
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 import re
-
+from constants_v13_optimized import THEMES, DEFAULT_THEME
 
 class BaseGame:
     """BaseGame - نظام اللعبة الأساسي"""
@@ -21,118 +19,6 @@ class BaseGame:
     game_icon = "🎮"
     supports_hint = True
     supports_reveal = True
-
-    # ثيمات زجاجية - 9 ثيمات
-    THEMES = {
-        "أبيض": {
-            "bg": "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#3B82F6",
-            "text": "#1E293B",
-            "text2": "#64748B",
-            "shadow1": "rgba(59,130,246,0.1)",
-            "border": "rgba(59,130,246,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "أسود": {
-            "bg": "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
-            "card": "#1E293B",
-            "glass": "rgba(30,41,59,0.85)",
-            "primary": "#60A5FA",
-            "text": "#F1F5F9",
-            "text2": "#CBD5E1",
-            "shadow1": "rgba(96,165,250,0.1)",
-            "border": "rgba(96,165,250,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "رمادي": {
-            "bg": "linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#6B7280",
-            "text": "#111827",
-            "text2": "#6B7280",
-            "shadow1": "rgba(107,114,128,0.1)",
-            "border": "rgba(107,114,128,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "أزرق": {
-            "bg": "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#2563EB",
-            "text": "#1E3A8A",
-            "text2": "#3B82F6",
-            "shadow1": "rgba(37,99,235,0.1)",
-            "border": "rgba(37,99,235,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "بنفسجي": {
-            "bg": "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#8B5CF6",
-            "text": "#4C1D95",
-            "text2": "#7C3AED",
-            "shadow1": "rgba(139,92,246,0.1)",
-            "border": "rgba(139,92,246,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "وردي": {
-            "bg": "linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#EC4899",
-            "text": "#831843",
-            "text2": "#DB2777",
-            "shadow1": "rgba(236,72,153,0.1)",
-            "border": "rgba(236,72,153,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "أخضر": {
-            "bg": "linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#10B981",
-            "text": "#064E3B",
-            "text2": "#059669",
-            "shadow1": "rgba(16,185,129,0.1)",
-            "border": "rgba(16,185,129,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "برتقالي": {
-            "bg": "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#F97316",
-            "text": "#7C2D12",
-            "text2": "#EA580C",
-            "shadow1": "rgba(249,115,22,0.1)",
-            "border": "rgba(249,115,22,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        },
-        "بني": {
-            "bg": "linear-gradient(135deg, #FFFCF7 0%, #F5E6D8 100%)",
-            "card": "#FFFFFF",
-            "glass": "rgba(255,255,255,0.85)",
-            "primary": "#8A4B10",
-            "text": "#4A2F05",
-            "text2": "#C08437",
-            "shadow1": "rgba(138,75,16,0.1)",
-            "border": "rgba(138,75,16,0.1)",
-            "success": "#10B981",
-            "error": "#EF4444"
-        }
-    }
 
     def __init__(self, line_bot_api=None, questions_count: int = 5):
         self.line_bot_api = line_bot_api
@@ -145,33 +31,25 @@ class BaseGame:
         self.answered_users = set()
         self.game_active = False
         self.game_start_time: Optional[datetime] = None
-        self.current_theme = "أبيض"
+        self.current_theme = DEFAULT_THEME
         
-        # ✅ دعم الفرق
+        # دعم الفرق
         self.team_mode = False
         self.joined_users = set()
         self.user_teams: Dict[str, str] = {}
         self.team_scores: Dict[str, int] = {"team1": 0, "team2": 0}
         
-        # ✅ دعم الجلسات
+        # دعم الجلسات
         self.session_id = None
-        self.session_type = "solo"  # solo, group, teams
-        self.db = None  # سيتم تعيينه من app.py
+        self.session_type = "solo"
+        self.db = None
 
     def can_use_hint(self) -> bool:
-        """
-        ✅ دالة مساعدة: هل يمكن استخدام 'لمح'؟
-        - فقط في الوضع الفردي
-        - إذا كانت اللعبة تدعم التلميحات
-        """
+        """هل يمكن استخدام 'لمح'؟"""
         return (not self.team_mode) and self.supports_hint
 
     def can_reveal_answer(self) -> bool:
-        """
-        ✅ دالة مساعدة: هل يمكن استخدام 'جاوب'؟
-        - فقط في الوضع الفردي
-        - إذا كانت اللعبة تدعم كشف الإجابة
-        """
+        """هل يمكن استخدام 'جاوب'؟"""
         return (not self.team_mode) and self.supports_reveal
 
     def normalize_text(self, text: str) -> str:
@@ -179,11 +57,7 @@ class BaseGame:
         if not text:
             return ""
         text = text.strip().lower()
-        replacements = {
-            'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 
-            'ى': 'ي', 'ة': 'ه', 
-            'ؤ': 'و', 'ئ': 'ي'
-        }
+        replacements = {'أ':'ا','إ':'ا','آ':'ا','ى':'ي','ة':'ه','ؤ':'و','ئ':'ي'}
         for old, new in replacements.items():
             text = text.replace(old, new)
         return re.sub(r'[\u064B-\u065F\u0670]', '', text)
@@ -192,10 +66,8 @@ class BaseGame:
         """إضافة نقاط"""
         if user_id in self.answered_users:
             return 0
-        
         if user_id not in self.scores:
             self.scores[user_id] = {"name": display_name, "score": 0}
-        
         self.scores[user_id]["score"] += points
         self.answered_users.add(user_id)
         return points
@@ -210,11 +82,8 @@ class BaseGame:
         """تعيين المستخدم لفريق"""
         if user_id in self.user_teams:
             return self.user_teams[user_id]
-        
-        # توزيع متوازن
         team1_count = sum(1 for t in self.user_teams.values() if t == "team1")
         team2_count = sum(1 for t in self.user_teams.values() if t == "team2")
-        
         team = "team1" if team1_count <= team2_count else "team2"
         self.user_teams[user_id] = team
         self.joined_users.add(user_id)
@@ -236,12 +105,12 @@ class BaseGame:
         return None
 
     def get_theme_colors(self) -> Dict[str, str]:
-        """الحصول على ألوان الثيم"""
-        return self.THEMES.get(self.current_theme, self.THEMES["أبيض"])
+        """الحصول على ألوان الثيم من constants"""
+        return THEMES.get(self.current_theme, THEMES[DEFAULT_THEME])
 
     def set_theme(self, theme_name: str):
         """تعيين الثيم"""
-        if theme_name in self.THEMES:
+        if theme_name in THEMES:
             self.current_theme = theme_name
 
     def set_database(self, db):
@@ -272,10 +141,8 @@ class BaseGame:
         self.game_active = False
         
         if self.team_mode:
-            # نهاية لعبة الفرق
             team1_score = self.team_scores.get("team1", 0)
             team2_score = self.team_scores.get("team2", 0)
-            
             if team1_score > team2_score:
                 winner = "الفريق الأول 🥇"
             elif team2_score > team1_score:
@@ -297,25 +164,12 @@ class BaseGame:
                 "message": message
             }
         
-        # نهاية لعبة فردية
         if not self.scores:
-            return {
-                "game_over": True,
-                "points": 0,
-                "message": "🏁 انتهت اللعبة"
-            }
+            return {"game_over": True, "points": 0, "message": "🏁 انتهت اللعبة"}
         
-        leaderboard = sorted(
-            self.scores.items(),
-            key=lambda x: x[1]["score"],
-            reverse=True
-        )
-        
+        leaderboard = sorted(self.scores.items(), key=lambda x: x[1]["score"], reverse=True)
         winner = leaderboard[0]
-        winner_text = (
-            f"🏆 الفائز: {winner[1]['name']}\n"
-            f"▫️ النقاط: {winner[1]['score']}\n\n"
-        )
+        winner_text = f"🏆 الفائز: {winner[1]['name']}\n▫️ النقاط: {winner[1]['score']}\n\n"
         
         if len(leaderboard) > 1:
             winner_text += "📊 الترتيب:\n"
@@ -323,29 +177,7 @@ class BaseGame:
                 medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
                 winner_text += f"{medal} {data['name']}: {data['score']}\n"
         
-        return {
-            "game_over": True,
-            "points": winner[1]["score"],
-            "message": winner_text
-        }
-
-    def get_leaderboard(self) -> str:
-        """الحصول على الترتيب"""
-        if not self.scores:
-            return "لا يوجد لاعبون بعد"
-        
-        leaderboard = sorted(
-            self.scores.items(),
-            key=lambda x: x[1]["score"],
-            reverse=True
-        )
-        
-        text = "📊 الترتيب:\n"
-        for i, (uid, data) in enumerate(leaderboard, 1):
-            medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
-            text += f"{medal} {data['name']}: {data['score']}\n"
-        
-        return text
+        return {"game_over": True, "points": winner[1]["score"], "message": winner_text}
 
     def _create_text_message(self, text: str):
         """إنشاء رسالة نصية"""
@@ -353,52 +185,27 @@ class BaseGame:
 
     def _create_flex_with_buttons(self, alt_text: str, flex_content: dict):
         """إنشاء Flex Message"""
-        return FlexMessage(
-            alt_text=alt_text,
-            contents=FlexContainer.from_dict(flex_content)
-        )
+        return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
 
     def build_question_flex(self, question_text: str, additional_info: str = None):
         """بناء Flex للسؤال"""
         colors = self.get_theme_colors()
         
         contents = [
-            {
-                "type": "text",
-                "text": f"{self.game_icon} {self.game_name}",
-                "size": "xl",
-                "weight": "bold",
-                "color": colors["primary"],
-                "align": "center"
-            },
-            {
-                "type": "text",
-                "text": f"سؤال {self.current_question + 1} من {self.questions_count}",
-                "size": "sm",
-                "color": colors["text2"],
-                "align": "center",
-                "margin": "xs"
-            },
-            {
-                "type": "separator",
-                "margin": "lg"
-            },
+            {"type": "text", "text": f"{self.game_icon} {self.game_name}", "size": "xl", "weight": "bold", "color": colors["primary"], "align": "center"},
+            {"type": "text", "text": f"سؤال {self.current_question + 1} من {self.questions_count}", "size": "sm", "color": colors["text2"], "align": "center", "margin": "xs"},
+            {"type": "separator", "margin": "lg", "color": colors["border"]},
             {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {
-                        "type": "text",
-                        "text": question_text,
-                        "size": "lg",
-                        "color": colors["text"],
-                        "align": "center",
-                        "wrap": True
-                    }
+                    {"type": "text", "text": question_text, "size": "lg", "color": colors["text"], "align": "center", "wrap": True}
                 ],
                 "cornerRadius": "15px",
                 "paddingAll": "20px",
-                "margin": "lg"
+                "margin": "lg",
+                "borderWidth": "1px",
+                "borderColor": colors["border"]
             }
         ]
         
