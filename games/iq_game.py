@@ -1,9 +1,3 @@
-"""
-لعبة الذكاء - Bot Mesh v19.0 ENHANCED
-Created by: Abeer Aldosari © 2025
-نقطة واحدة | عرض السؤال السابق | لمح وجاوب
-"""
-
 from games.base_game import BaseGame
 import random
 import time
@@ -100,7 +94,7 @@ class IqGame(BaseGame):
         self.round_start_time = time.time()
 
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"الوقت {self.round_time} ثانية\naكتب لمح او جاوب"
+            additional_info = f"الوقت {self.round_time} ثانية\nاكتب لمح او جاوب"
         else:
             additional_info = f"الوقت {self.round_time} ثانية"
 
