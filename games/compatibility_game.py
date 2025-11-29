@@ -1,8 +1,7 @@
 """
-لعبة التوافق - Bot Mesh v14.0 FIXED
+لعبة التوافق - Bot Mesh v19.0 ENHANCED
 Created by: Abeer Aldosari © 2025
-✅ قبول الأسماء حتى لو احتوت على "و"
-✅ معالجة ذكية للفواصل
+نظام مستقل | بدون تسجيل | معالجة ذكية للأسماء
 """
 
 from games.base_game import BaseGame
@@ -16,7 +15,7 @@ class CompatibilitySystem(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
         self.game_name = "توافق"
-        self.game_icon = "🖤"
+        self.game_icon = ""
         self.supports_hint = False
         self.supports_reveal = False
 
@@ -28,29 +27,23 @@ class CompatibilitySystem(BaseGame):
 
     def parse_names(self, text: str) -> tuple:
         """
-        ✅ معالجة ذكية: قبول الأسماء حتى لو احتوت على "و"
+        معالجة ذكية: قبول الأسماء حتى لو احتوت على و
         
         أمثلة:
-        - "محمد و أحمد" → ("محمد", "أحمد")
-        - "عبدالله و سارة" → ("عبدالله", "سارة")
-        - "نورة و محمد" → ("نورة", "محمد")
-        - "أبو عبدالله و أم محمد" → ("أبو عبدالله", "أم محمد")
+        - "محمد و أحمد" -> ("محمد", "أحمد")
+        - "عبدالله و سارة" -> ("عبدالله", "سارة")
+        - "نورة و محمد" -> ("نورة", "محمد")
         """
-        # إزالة المسافات الزائدة
         text = ' '.join(text.split())
         
-        # البحث عن " و " (مع مسافات) كفاصل
         if ' و ' in text:
-            parts = text.split(' و ', 1)  # تقسيم مرة واحدة فقط
+            parts = text.split(' و ', 1)
             name1 = parts[0].strip()
             name2 = parts[1].strip() if len(parts) > 1 else ""
             return (name1, name2) if name1 and name2 else (None, None)
         
-        # إذا لم يوجد " و " مع مسافات، تحقق من "و" بدون مسافات
-        # ولكن تأكد أنها ليست جزء من اسم مركب
         words = text.split()
         
-        # البحث عن "و" كلمة منفصلة
         if 'و' in words:
             idx = words.index('و')
             name1 = ' '.join(words[:idx]).strip()
@@ -105,7 +98,6 @@ class CompatibilitySystem(BaseGame):
 
         text = user_answer.strip()
 
-        # ✅ معالجة ذكية للأسماء
         name1, name2 = self.parse_names(text)
 
         if not name1 or not name2:
@@ -118,23 +110,20 @@ class CompatibilitySystem(BaseGame):
                 'points': 0
             }
 
-        # التحقق من صحة النصوص
         if not self.is_valid_text(name1) or not self.is_valid_text(name2):
             return {
                 'response': self._create_text_message(
-                    "غير مسموح بإدخال رموز أو أرقام\n\n"
+                    "غير مسموح بإدخال رموز او أرقام\n\n"
                     "اكتب اسمين نصيين فقط"
                 ),
                 'points': 0
             }
 
-        # حساب التوافق
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
 
         colors = self.get_theme_colors()
 
-        # نافذة النتيجة المحسنة
         result_flex = {
             "type": "bubble",
             "size": "mega",
