@@ -143,7 +143,7 @@ class CompatibilitySystem(BaseGame):
                     # العنوان
                     {
                         "type": "text",
-                        "text": "🖤 نتيجة التوافق",
+                        "text": " نتيجة التوافق",
                         "size": "xl",
                         "weight": "bold",
                         "color": colors["primary"],
@@ -159,7 +159,7 @@ class CompatibilitySystem(BaseGame):
                     # الأسماء
                     {
                         "type": "text",
-                        "text": f"{name1}  ×  {name2}",
+                        "text": f"{name1}  🖤  {name2}",
                         "size": "lg",
                         "weight": "bold",
                         "color": colors["text"],
