@@ -1,10 +1,3 @@
-"""
-لعبة الكتابة السريعة (أسرع) - Bot Mesh v13.0 FINAL
-Created by: Abeer Aldosari © 2025
-✅ 1 نقطة فقط
-✅ عرض السؤال السابق
-"""
-
 from games.base_game import BaseGame
 import random
 import time
@@ -16,8 +9,8 @@ class FastTypingGame(BaseGame):
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "أسرع"  # ✅ تم التحديث
-        self.game_icon = "▪️"
+        self.game_name = "أسرع"
+        self.game_icon = "▫️"
         self.supports_hint = False
         self.supports_reveal = False
 
@@ -63,7 +56,7 @@ class FastTypingGame(BaseGame):
         self.current_answer = phrase
         self.round_start_time = time.time()
 
-        additional_info = f"⏱️ {self.round_time} ثانية\nاكتب النص بالضبط"
+        additional_info = f"الوقت {self.round_time} ثانية\nاكتب النص بالضبط"
 
         return self.build_question_flex(
             question_text=phrase,
@@ -87,11 +80,11 @@ class FastTypingGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\n\n{result.get('message', '')}"
+                result["message"] = f"انتهى الوقت\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": "⏱️ انتهى الوقت!",
+                "message": "انتهى الوقت",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -129,7 +122,7 @@ class FastTypingGame(BaseGame):
                 result["points"] = total_points
                 return result
 
-            msg = f"▪️ صحيح!\n⏱️ {time_taken:.1f}s\n+{total_points} نقطة"
+            msg = f"صحيح\nالوقت⏱️ {time_taken:.1f}s\n+{total_points} نقطة"
             return {
                 "message": msg,
                 "response": self.get_question(),
@@ -137,7 +130,7 @@ class FastTypingGame(BaseGame):
             }
 
         return {
-            "message": f"▪️ خطأ (⏱️ {time_taken:.1f}s)",
-            "response": self._create_text_message(f"▪️ خطأ (⏱️ {time_taken:.1f}s)"),
+            "message": f"خطأ (الوقت {time_taken:.1f}s)",
+            "response": self._create_text_message(f"خطأ (الوقت {time_taken:.1f}s)"),
             "points": 0
         }
