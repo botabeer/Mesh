@@ -2,12 +2,12 @@
 Bot Mesh - UI Builder v13.0 GLASS 3D FULL
 Created by: Abeer Aldosari © 2025
 ✅ تطبيق الثيم الزجاجي بشكل كامل على كل عنصر
-✅ استخدام الثيمات من constants_v13_optimized
+✅ استخدام الثيمات من constants
 ✅ Glass effect: border, shadow, gradient, overlay
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
-from constants_v13_optimized import GAME_LIST, DEFAULT_THEME, THEMES, BOT_NAME, BOT_RIGHTS
+from constants import GAME_LIST, DEFAULT_THEME, THEMES, BOT_NAME, BOT_RIGHTS
 
 def _c(theme=None):
     """الحصول على ألوان الثيم"""
@@ -511,9 +511,25 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
         }
     }))
 
+def build_answer_feedback(message, theme=DEFAULT_THEME):
+    """رسالة تأكيد الإجابة"""
+    c = _c(theme)
+    return attach_quick_reply(_flex("إجابة", {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "paddingAll": "20px",
+            "contents": [
+                {"type": "text", "text": message, "size": "md", "color": c["text"], "align": "center", "wrap": True}
+            ]
+        }
+    }))
+
 __all__ = [
     'build_enhanced_home', 'build_games_menu', 'build_my_points', 'build_leaderboard',
     'build_help_window', 'build_registration_required', 'build_winner_announcement',
     'build_theme_selector', 'build_multiplayer_help_window', 'attach_quick_reply',
-    'build_join_confirmation', 'build_error_message', 'build_game_stopped', 'build_team_game_end'
+    'build_join_confirmation', 'build_error_message', 'build_game_stopped', 'build_team_game_end',
+    'build_answer_feedback'
 ]
