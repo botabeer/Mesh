@@ -1,14 +1,15 @@
 """
-Bot Mesh - Constants & Configuration v11.2 FINAL
+Bot Mesh - Constants & Configuration v12.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ ألوان محسّنة للوضوح
-✅ إيموجي مبسطة
-✅ متوافق مع جميع الألعاب
+✅ أمان محسّن
+✅ ألوان زجاجية 3D احترافية
+✅ متوافق 100% مع LINE API v3
 """
 
 import os
 from typing import Dict, List, Tuple, Optional
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
@@ -16,8 +17,8 @@ load_dotenv()
 # Bot Information
 # ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "11.2"
-BOT_RIGHTS = "© 2025 Abeer Aldosari"
+BOT_VERSION = "12.0"
+BOT_RIGHTS = "© 2025 Abeer Aldosari - All Rights Reserved"
 
 # ============================================================================
 # LINE Configuration
@@ -33,152 +34,143 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# Glass 3D Themes (9 Themes) - ألوان محسّنة للوضوح
+# Glass 3D Themes - 9 ثيمات زجاجية احترافية
 # ============================================================================
 THEMES = {
     "أبيض": {
         "name": "أبيض",
-        "bg": "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)",
+        "bg": "#F8FAFC",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
+        "glass": "#FFFFFF",
         "primary": "#2563EB",
         "secondary": "#60A5FA",
         "text": "#0F172A",
-        "text2": "#475569",
-        "shadow": "0 8px 32px rgba(59,130,246,0.15)",
-        "shadow1": "rgba(59,130,246,0.1)",
-        "border": "rgba(59,130,246,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "text2": "#64748B",
+        "border": "#E2E8F0",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(59,130,246,0.15)"
     },
     "أسود": {
         "name": "أسود",
-        "bg": "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+        "bg": "#0F172A",
         "card": "#1E293B",
-        "glass": "rgba(30,41,59,0.85)",
+        "glass": "#1E293B",
         "primary": "#60A5FA",
         "secondary": "#93C5FD",
         "text": "#F8FAFC",
         "text2": "#CBD5E1",
-        "shadow": "0 8px 32px rgba(96,165,250,0.15)",
-        "shadow1": "rgba(96,165,250,0.1)",
-        "border": "rgba(96,165,250,0.1)",
+        "border": "#334155",
         "success": "#34D399",
         "error": "#F87171",
-        "warning": "#FBBF24"
+        "warning": "#FBBF24",
+        "shadow": "rgba(96,165,250,0.15)"
     },
     "رمادي": {
         "name": "رمادي",
-        "bg": "linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)",
+        "bg": "#F9FAFB",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
-        "primary": "#374151",
-        "secondary": "#6B7280",
+        "glass": "#FFFFFF",
+        "primary": "#6B7280",
+        "secondary": "#9CA3AF",
         "text": "#111827",
         "text2": "#6B7280",
-        "shadow": "0 8px 32px rgba(107,114,128,0.15)",
-        "shadow1": "rgba(107,114,128,0.1)",
-        "border": "rgba(107,114,128,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "border": "#E5E7EB",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(107,114,128,0.15)"
     },
     "أزرق": {
         "name": "أزرق",
-        "bg": "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)",
+        "bg": "#EFF6FF",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
-        "primary": "#1E40AF",
-        "secondary": "#2563EB",
+        "glass": "#FFFFFF",
+        "primary": "#2563EB",
+        "secondary": "#60A5FA",
         "text": "#1E3A8A",
         "text2": "#3B82F6",
-        "shadow": "0 8px 32px rgba(37,99,235,0.15)",
-        "shadow1": "rgba(37,99,235,0.1)",
-        "border": "rgba(37,99,235,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "border": "#DBEAFE",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(37,99,235,0.15)"
     },
     "بنفسجي": {
         "name": "بنفسجي",
-        "bg": "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
+        "bg": "#F5F3FF",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
-        "primary": "#6D28D9",
-        "secondary": "#8B5CF6",
+        "glass": "#FFFFFF",
+        "primary": "#7C3AED",
+        "secondary": "#A78BFA",
         "text": "#4C1D95",
         "text2": "#7C3AED",
-        "shadow": "0 8px 32px rgba(139,92,246,0.15)",
-        "shadow1": "rgba(139,92,246,0.1)",
-        "border": "rgba(139,92,246,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "border": "#EDE9FE",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(124,58,237,0.15)"
     },
     "وردي": {
         "name": "وردي",
-        "bg": "linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)",
+        "bg": "#FDF2F8",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
-        "primary": "#BE185D",
+        "glass": "#FFFFFF",
+        "primary": "#DB2777",
         "secondary": "#EC4899",
         "text": "#831843",
         "text2": "#DB2777",
-        "shadow": "0 8px 32px rgba(236,72,153,0.15)",
-        "shadow1": "rgba(236,72,153,0.1)",
-        "border": "rgba(236,72,153,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "border": "#FCE7F3",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(219,39,119,0.15)"
     },
     "أخضر": {
         "name": "أخضر",
-        "bg": "linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)",
+        "bg": "#F0FDF4",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
-        "primary": "#047857",
+        "glass": "#FFFFFF",
+        "primary": "#059669",
         "secondary": "#10B981",
         "text": "#064E3B",
         "text2": "#059669",
-        "shadow": "0 8px 32px rgba(16,185,129,0.15)",
-        "shadow1": "rgba(16,185,129,0.1)",
-        "border": "rgba(16,185,129,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "border": "#DCFCE7",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(5,150,105,0.15)"
     },
     "برتقالي": {
         "name": "برتقالي",
-        "bg": "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
+        "bg": "#FFF7ED",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
-        "primary": "#C2410C",
+        "glass": "#FFFFFF",
+        "primary": "#EA580C",
         "secondary": "#F97316",
         "text": "#7C2D12",
         "text2": "#EA580C",
-        "shadow": "0 8px 32px rgba(249,115,22,0.15)",
-        "shadow1": "rgba(249,115,22,0.1)",
-        "border": "rgba(249,115,22,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "border": "#FFEDD5",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(234,88,12,0.15)"
     },
     "بني": {
         "name": "بني",
-        "bg": "linear-gradient(135deg, #FFFCF7 0%, #F5E6D8 100%)",
+        "bg": "#FFFCF7",
         "card": "#FFFFFF",
-        "glass": "rgba(255,255,255,0.85)",
-        "primary": "#78350F",
-        "secondary": "#92400E",
+        "glass": "#FFFFFF",
+        "primary": "#92400E",
+        "secondary": "#B45309",
         "text": "#451A03",
         "text2": "#92400E",
-        "shadow": "0 8px 32px rgba(138,75,16,0.15)",
-        "shadow1": "rgba(138,75,16,0.1)",
-        "border": "rgba(138,75,16,0.1)",
-        "success": "#059669",
-        "error": "#DC2626",
-        "warning": "#D97706"
+        "border": "#F5E6D8",
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "shadow": "rgba(146,64,14,0.15)"
     }
 }
 
@@ -190,24 +182,23 @@ DEFAULT_THEME = "أبيض"
 GAME_LIST: List[Tuple[str, str, str]] = [
     ("fast_typing", "كتابة سريعة", "⚡"),
     ("iq", "ذكاء", "🧠"),
-    ("human_animal_plant", "إنسان حيوان نبات", "🌿"),
-    ("song", "أغنية", "🎵"),
     ("guess", "تخمين", "🔮"),
+    ("song", "أغنية", "🎵"),
+    ("human_animal_plant", "إنسان حيوان نبات", "🌿"),
     ("chain_words", "سلسلة كلمات", "🔗"),
-    ("scramble_word", "كلمة مبعثرة", "🔤"),
-    ("letters_words", "تكوين", "📝"),
     ("opposite", "أضداد", "↔️"),
-    ("word_color", "لون", "🎨"),
+    ("letters_words", "تكوين", "📝"),
+    ("scramble_word", "كلمة مبعثرة", "🔤"),
+    ("compatibility", "توافق", "💕"),
     ("math", "رياضيات", "🔢"),
-    ("compatibility", "توافق", "💕")
+    ("word_color", "لون", "🎨")
 ]
 
-# Game names mapping
 GAME_NAMES = {internal: display for internal, display, icon in GAME_LIST}
 GAME_ICONS = {internal: icon for internal, display, icon in GAME_LIST}
 
 # ============================================================================
-# Quick Reply Items (Games Only)
+# Quick Reply Items
 # ============================================================================
 FIXED_GAME_QR = [
     {"label": f"{icon} {display}", "text": display}
@@ -215,16 +206,27 @@ FIXED_GAME_QR = [
 ]
 
 # ============================================================================
-# Privacy Settings
+# Privacy & Security Settings
 # ============================================================================
 PRIVACY_SETTINGS = {
-    "auto_delete_inactive_days": 30,  # حذف تلقائي بعد شهر من عدم النشاط
-    "cache_timeout_minutes": 5,       # مدة الكاش
-    "cleanup_interval_hours": 24      # تنظيف يومي
+    "auto_delete_inactive_days": 30,
+    "cache_timeout_minutes": 5,
+    "cleanup_interval_hours": 24,
+    "max_sessions_per_user": 3,
+    "session_timeout_minutes": 30
+}
+
+SECURITY_SETTINGS = {
+    "rate_limit_requests": 15,
+    "rate_limit_window_seconds": 60,
+    "max_message_length": 500,
+    "max_game_duration_minutes": 15,
+    "enable_sql_injection_protection": True,
+    "enable_xss_protection": True
 }
 
 # ============================================================================
-# Bot Commands (الأوامر المسموحة فقط)
+# Bot Commands
 # ============================================================================
 ALLOWED_COMMANDS = {
     "مساعدة", "help", "؟",
@@ -241,7 +243,6 @@ ALLOWED_COMMANDS = {
     "جاوب", "reveal", "answer"
 }
 
-# أوامر الألعاب
 GAME_COMMANDS = set(GAME_NAMES.values())
 
 # ============================================================================
@@ -249,13 +250,16 @@ GAME_COMMANDS = set(GAME_NAMES.values())
 # ============================================================================
 
 def normalize_text(text: str) -> str:
-    """Normalize Arabic text for comparison"""
-    if not text:
+    """Normalize Arabic text with security"""
+    if not text or not isinstance(text, str):
         return ""
+    
+    # Security: limit length
+    text = text[:SECURITY_SETTINGS["max_message_length"]]
     
     text = text.strip().lower()
     
-    # Arabic character replacements
+    # Arabic normalization
     replacements = {
         'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
         'ى': 'ي', 'ة': 'ه',
@@ -266,10 +270,34 @@ def normalize_text(text: str) -> str:
         text = text.replace(old, new)
     
     # Remove diacritics
-    import re
     text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
     
+    # Security: remove dangerous characters
+    if SECURITY_SETTINGS["enable_xss_protection"]:
+        text = re.sub(r'[<>"\']', '', text)
+    
     return text
+
+
+def sanitize_input(text: str) -> str:
+    """Sanitize user input for security"""
+    if not text:
+        return ""
+    
+    # SQL injection protection
+    if SECURITY_SETTINGS["enable_sql_injection_protection"]:
+        dangerous_patterns = [
+            r'\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b',
+            r'[;\'"\\]',
+            r'--',
+            r'/\*',
+            r'\*/'
+        ]
+        for pattern in dangerous_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return ""
+    
+    return text[:SECURITY_SETTINGS["max_message_length"]]
 
 
 def get_theme_colors(theme_name: Optional[str] = None) -> Dict[str, str]:
@@ -280,14 +308,20 @@ def get_theme_colors(theme_name: Optional[str] = None) -> Dict[str, str]:
 
 
 def validate_theme(theme_name: str) -> str:
-    """Validate theme name and return valid theme"""
+    """Validate theme name"""
     return theme_name if theme_name in THEMES else DEFAULT_THEME
 
 
 def get_username(profile) -> str:
-    """Extract username from LINE profile"""
+    """Extract username from LINE profile with security"""
     try:
-        return profile.display_name if hasattr(profile, 'display_name') and profile.display_name else "مستخدم"
+        name = profile.display_name if hasattr(profile, 'display_name') else "مستخدم"
+        if not name or not isinstance(name, str):
+            return "مستخدم"
+        
+        # Sanitize username
+        name = sanitize_input(name)
+        return name[:50] if name else "مستخدم"
     except:
         return "مستخدم"
 
@@ -309,17 +343,17 @@ def is_valid_game(game_name: str) -> bool:
 
 def is_allowed_command(text: str) -> bool:
     """Check if text is an allowed command"""
+    if not text or not isinstance(text, str):
+        return False
+    
     lowered = text.lower().strip()
     
-    # تحقق من الأوامر الأساسية
     if lowered in ALLOWED_COMMANDS:
         return True
     
-    # تحقق من أوامر الألعاب
     if text.strip() in GAME_COMMANDS:
         return True
     
-    # تحقق من أوامر الثيمات
     if lowered.startswith("ثيم "):
         return True
     
@@ -334,9 +368,10 @@ __all__ = [
     'LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN',
     'THEMES', 'DEFAULT_THEME',
     'GAME_LIST', 'GAME_NAMES', 'GAME_ICONS',
-    'FIXED_GAME_QR', 'PRIVACY_SETTINGS',
+    'FIXED_GAME_QR', 'PRIVACY_SETTINGS', 'SECURITY_SETTINGS',
     'ALLOWED_COMMANDS', 'GAME_COMMANDS',
-    'validate_env', 'normalize_text', 'get_theme_colors',
-    'validate_theme', 'get_username', 'get_game_display_name',
-    'get_game_icon', 'is_valid_game', 'is_allowed_command'
+    'validate_env', 'normalize_text', 'sanitize_input',
+    'get_theme_colors', 'validate_theme', 'get_username',
+    'get_game_display_name', 'get_game_icon',
+    'is_valid_game', 'is_allowed_command'
 ]
