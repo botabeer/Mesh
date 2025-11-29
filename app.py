@@ -266,7 +266,7 @@ def handle_message(event):
                 else:
                     stats = db.get_user_game_stats(user_id)
                     reply_message = build_my_points(username, user['points'], stats, current_theme)
-            elif lowered in ["صدارة","leaderboard","ترتيب"]:
+            elif lowered in ["صدارة","leaderboard","مستوى"]:
                 top = db.get_leaderboard(20)
                 reply_message = build_leaderboard(top, current_theme)
             elif lowered in ["انضم","join","تسجيل"]:
