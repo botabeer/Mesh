@@ -1,5 +1,5 @@
 """
-لعبة الرياضيات - Bot Mesh v9.0 FINAL
+لعبة الرياضيات - Bot Mesh v9.1 FIXED
 Created by: Abeer Aldosari © 2025
 ✅ فردي: لمح + جاوب + مؤقت
 ✅ فريقين: مؤقت فقط
@@ -88,11 +88,11 @@ class MathGame(BaseGame):
         self.current_answer = q_data["answer"]
         self.round_start_time = time.time()
 
-        # ✅ النص الإضافي حسب الوضع
-        if self.team_mode:
-            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}"
-        else:
+        # ✅ استخدام can_use_hint() و can_reveal_answer()
+        if self.can_use_hint() and self.can_reveal_answer():
             additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}\n💡 اكتب 'لمح' أو 'جاوب'"
+        else:
+            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}"
 
         return self.build_question_flex(
             question_text=q_data["question"],
@@ -135,31 +135,35 @@ class MathGame(BaseGame):
         answer = user_answer.strip()
         normalized = self.normalize_text(answer)
 
-        # ✅ لمح وجاوب للفردي فقط
-        if not self.team_mode:
-            if normalized == "لمح":
-                hint = f"💡 الجواب من {len(self.current_answer)} خانات"
-                return {
-                    "message": hint,
-                    "response": self._create_text_message(hint),
-                    "points": 0
-                }
+        # ✅ التلميح (فردي فقط)
+        if self.can_use_hint() and normalized == "لمح":
+            hint = f"💡 الجواب من {len(self.current_answer)} خانات"
+            return {
+                "message": hint,
+                "response": self._create_text_message(hint),
+                "points": 0
+            }
 
-            if normalized == "جاوب":
-                reveal = f"الجواب: {self.current_answer}"
-                self.current_question += 1
-                self.answered_users.clear()
+        # ✅ كشف الإجابة (فردي فقط)
+        if self.can_reveal_answer() and normalized == "جاوب":
+            reveal = f"الجواب: {self.current_answer}"
+            self.current_question += 1
+            self.answered_users.clear()
 
-                if self.current_question >= self.questions_count:
-                    result = self.end_game()
-                    result["message"] = f"{reveal}\n\n{result.get('message', '')}"
-                    return result
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"{reveal}\n\n{result.get('message', '')}"
+                return result
 
-                return {
-                    "message": reveal,
-                    "response": self.get_question(),
-                    "points": 0
-                }
+            return {
+                "message": reveal,
+                "response": self.get_question(),
+                "points": 0
+            }
+
+        # ✅ تجاهل لمح/جاوب في وضع الفريقين
+        if self.team_mode and normalized in ["لمح", "جاوب"]:
+            return None
 
         # التحقق من الإجابة
         try:
@@ -176,7 +180,7 @@ class MathGame(BaseGame):
             base_points = 10
             elapsed = int(time.time() - self.round_start_time)
             remaining = max(0, self.round_time - elapsed)
-            time_bonus = max(0, remaining // 2)  # بونص 1 نقطة لكل ثانيتين
+            time_bonus = max(0, remaining // 2)
             total_points = base_points + time_bonus
 
             # توزيع النقاط
