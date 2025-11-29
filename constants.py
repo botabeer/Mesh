@@ -1,9 +1,10 @@
 """
-Bot Mesh - Constants v17.1 WHITE THEME FIXED
+Bot Mesh - Constants v18.0 DYNAMIC THEMES
 Created by: Abeer Aldosari © 2025
-✅ إصلاح الثيم الأبيض بتباين قوي
-✅ نظام Auto Contrast
-✅ ألوان واضحة للأزرار والحدود
+✅ نظام ثيمات ديناميكي 100%
+✅ خلفيات ذكية لكل ثيم
+✅ تباين احترافي ومريح للعين
+✅ بدون شروط if theme == "أبيض"
 """
 
 import os
@@ -14,7 +15,7 @@ import re
 load_dotenv()
 
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "17.1 WHITE FIXED"
+BOT_VERSION = "18.0 DYNAMIC"
 BOT_RIGHTS = "© 2025 Abeer Aldosari"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -27,32 +28,32 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# 9 ثيمات محسّنة - الثيم الأبيض مع تباين قوي
+# 9 ثيمات ديناميكية - كل ثيم له شخصيته
 # ============================================================================
 THEMES = {
     "أبيض": {
         "name": "أبيض",
-        "bg": "#FFFFFF",                    # خلفية بيضاء نقية
-        "card": "#F8FAFC",                  # بطاقات رمادية فاتحة جداً
-        "primary": "#1E40AF",               # أزرق غامق للأزرار الأساسية
-        "primary_hover": "#1E3A8A",         # أزرق أغمق عند التمرير
-        "secondary": "#475569",             # رمادي متوسط للأزرار الثانوية
-        "accent": "#2563EB",                # أزرق لامع للتأكيدات
-        "text": "#0F172A",                  # نص أسود تقريباً (تباين عالي)
-        "text2": "#334155",                 # نص ثانوي رمادي غامق
-        "text3": "#64748B",                 # نص ثالثي رمادي متوسط
-        "border": "#CBD5E1",                # حدود رمادية واضحة
-        "success": "#059669",               # أخضر للنجاح
-        "success_bg": "#D1FAE5",            # خلفية خضراء فاتحة
-        "error": "#DC2626",                 # أحمر للخطأ
-        "error_bg": "#FEE2E2",              # خلفية حمراء فاتحة
-        "warning": "#D97706",               # برتقالي للتحذير
-        "info": "#1E40AF",                  # أزرق للمعلومات
-        "info_bg": "#DBEAFE",               # خلفية زرقاء فاتحة
-        "shadow": "rgba(15, 23, 42, 0.08)", # ظل خفيف للعمق
-        "button_text": "#FFFFFF",           # نص الأزرار أبيض
-        "disabled": "#94A3B8",              # حالة معطلة
-        "disabled_bg": "#E2E8F0"            # خلفية معطلة
+        "bg": "#FAFBFC",                    # خلفية رمادية فاتحة جداً (ليست بيضاء نقية)
+        "card": "#FFFFFF",                  # بطاقات بيضاء نقية
+        "primary": "#2563EB",               # أزرق حيوي
+        "primary_hover": "#1D4ED8",         # أزرق أغمق
+        "secondary": "#64748B",             # رمادي متوسط
+        "accent": "#3B82F6",                # أزرق لامع
+        "text": "#1E293B",                  # نص داكن (contrast 13:1)
+        "text2": "#475569",                 # نص ثانوي (contrast 8:1)
+        "text3": "#64748B",                 # نص ثالثي (contrast 5:1)
+        "border": "#E2E8F0",                # حدود ناعمة
+        "success": "#10B981",               # أخضر زاهي
+        "success_bg": "#D1FAE5",            # خلفية خضراء
+        "error": "#EF4444",                 # أحمر واضح
+        "error_bg": "#FEE2E2",              # خلفية حمراء
+        "warning": "#F59E0B",               # برتقالي دافئ
+        "info": "#2563EB",                  # أزرق معلومات
+        "info_bg": "#EFF6FF",               # خلفية زرقاء فاتحة
+        "shadow": "rgba(15, 23, 42, 0.06)", # ظل ناعم
+        "button_text": "#FFFFFF",           # نص الأزرار
+        "disabled": "#94A3B8",              # معطل
+        "disabled_bg": "#F1F5F9"            # خلفية معطلة
     },
     "أسود": {
         "name": "أسود",
