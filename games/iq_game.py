@@ -1,12 +1,3 @@
-"""
-لعبة الذكاء - Bot Mesh v13.0 FINAL
-Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة فقط لكل إجابة
-✅ عرض السؤال السابق
-✅ فردي: لمح + جاوب + مؤقت
-✅ فريقين: مؤقت فقط
-"""
-
 from games.base_game import BaseGame
 import random
 import time
@@ -19,14 +10,13 @@ class IqGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "ذكاء"
-        self.game_icon = ""
+        self.game_icon = "▫️"
         self.supports_hint = True
         self.supports_reveal = True
 
-        self.round_time = 30  # ⏱️ 30 ثانية
+        self.round_time = 30
         self.round_start_time = None
         
-        # قاعدة الألغاز
         self.riddles = [
             {"q": "ما الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "الغيم", "سحاب", "غيم"]},
             {"q": "له رأس ولكن لا عين له؟", "a": ["الدبوس", "المسمار", "الإبرة", "دبوس", "مسمار", "ابرة"]},
@@ -104,9 +94,9 @@ class IqGame(BaseGame):
         self.round_start_time = time.time()
 
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\n اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"الوقت {self.round_time} ثانية\n اكتب 'لمح' أو 'جاوب'"
         else:
-            additional_info = f"⏱️ {self.round_time} ثانية"
+            additional_info = f"الوقت {self.round_time} ثانية"
 
         return self.build_question_flex(
             question_text=f" {riddle['q']}",
@@ -131,11 +121,11 @@ class IqGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"انتهى الوقت\n الإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}",
+                "message": f"انتهى الوقت\n الإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -158,9 +148,9 @@ class IqGame(BaseGame):
             
             answer = self.current_answer[0]
             if len(answer) <= 2:
-                hint = f"▪️ الكلمة قصيرة: {answer[0]}_"
+                hint = f"الكلمة قصيرة: {answer[0]}_"
             else:
-                hint = f"▪️ تلميح: {answer[0]}{answer[1]}{'_' * (len(answer) - 2)}"
+                hint = f"تلميح: {answer[0]}{answer[1]}{'_' * (len(answer) - 2)}"
             
             return {
                 "message": hint,
@@ -177,11 +167,11 @@ class IqGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"▪️ الإجابة: {answers_text}",
+                "message": f"الإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -191,7 +181,7 @@ class IqGame(BaseGame):
 
         for correct in self.current_answer:
             if self.normalize_text(correct) == normalized:
-                total_points = 1  # نقطة واحدة فقط
+                total_points = 1
 
                 if self.team_mode:
                     team = self.get_user_team(user_id)
@@ -213,13 +203,13 @@ class IqGame(BaseGame):
                     return result
 
                 return {
-                    "message": f"▪️ صحيح!\n+{total_points} نقطة",
+                    "message": f"صحيح\n+{total_points} نقطة",
                     "response": self.get_question(),
                     "points": total_points
                 }
 
         return {
-            "message": "▪️ إجابة غير صحيحة",
-            "response": self._create_text_message("▪️ إجابة غير صحيحة"),
+            "message": "إجابة غير صحيحة",
+            "response": self._create_text_message("إجابة غير صحيحة"),
             "points": 0
         }
