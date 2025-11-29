@@ -1,9 +1,8 @@
 """
-Bot Mesh - Constants v14.0 PRO
+Bot Mesh - Constants v15.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ ألوان احترافية صحيحة
-✅ تباين عالي للقراءة
-✅ تطبيق ذكي للثيمات
+✅ ألوان محسّنة + رمادي
+✅ إيموجي محدود: ▫️▪️🖤⏱️🥇🥈🥉🎖️🏅☑️🔘
 """
 
 import os
@@ -14,7 +13,7 @@ import re
 load_dotenv()
 
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "14.0 PRO"
+BOT_VERSION = "15.0 FINAL"
 BOT_RIGHTS = "© 2025 Abeer Aldosari"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -26,62 +25,19 @@ def validate_env():
     if not LINE_CHANNEL_ACCESS_TOKEN:
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
-# ============================================================================
-# THEMES - ألوان احترافية محسّنة
-# ============================================================================
 THEMES = {
     "أبيض": {
         "name": "أبيض",
         "bg": "#FFFFFF",
-        "card": "#FAFAFA",
-        "primary": "#2563EB",
-        "primary_hover": "#1D4ED8",
-        "secondary": "#64748B",
-        "accent": "#3B82F6",
+        "card": "#F8FAFC",
+        "primary": "#1E40AF",
+        "primary_hover": "#1E3A8A",
+        "secondary": "#475569",
+        "accent": "#2563EB",
         "text": "#0F172A",
         "text2": "#334155",
         "text3": "#64748B",
-        "border": "#E2E8F0",
-        "success": "#10B981",
-        "success_bg": "#D1FAE5",
-        "error": "#EF4444",
-        "error_bg": "#FEE2E2",
-        "warning": "#F59E0B",
-        "info": "#3B82F6",
-        "info_bg": "#DBEAFE"
-    },
-    "أسود": {
-        "name": "أسود",
-        "bg": "#0A0A0A",
-        "card": "#1A1A1A",
-        "primary": "#60A5FA",
-        "primary_hover": "#93C5FD",
-        "secondary": "#94A3B8",
-        "accent": "#3B82F6",
-        "text": "#F8FAFC",
-        "text2": "#E2E8F0",
-        "text3": "#CBD5E1",
-        "border": "#334155",
-        "success": "#34D399",
-        "success_bg": "#065F46",
-        "error": "#F87171",
-        "error_bg": "#7F1D1D",
-        "warning": "#FBBF24",
-        "info": "#60A5FA",
-        "info_bg": "#1E3A8A"
-    },
-    "أزرق": {
-        "name": "أزرق",
-        "bg": "#EFF6FF",
-        "card": "#DBEAFE",
-        "primary": "#1E40AF",
-        "primary_hover": "#1E3A8A",
-        "secondary": "#3B82F6",
-        "accent": "#2563EB",
-        "text": "#1E3A8A",
-        "text2": "#1E40AF",
-        "text3": "#3B82F6",
-        "border": "#93C5FD",
+        "border": "#CBD5E1",
         "success": "#059669",
         "success_bg": "#D1FAE5",
         "error": "#DC2626",
@@ -90,34 +46,74 @@ THEMES = {
         "info": "#1E40AF",
         "info_bg": "#DBEAFE"
     },
+    "أسود": {
+        "name": "أسود",
+        "bg": "#0A0A0A",
+        "card": "#1E1E1E",
+        "primary": "#3B82F6",
+        "primary_hover": "#60A5FA",
+        "secondary": "#64748B",
+        "accent": "#3B82F6",
+        "text": "#FFFFFF",
+        "text2": "#E2E8F0",
+        "text3": "#94A3B8",
+        "border": "#334155",
+        "success": "#10B981",
+        "success_bg": "#064E3B",
+        "error": "#EF4444",
+        "error_bg": "#7F1D1D",
+        "warning": "#F59E0B",
+        "info": "#3B82F6",
+        "info_bg": "#1E3A8A"
+    },
+    "أزرق": {
+        "name": "أزرق",
+        "bg": "#EFF6FF",
+        "card": "#DBEAFE",
+        "primary": "#1E3A8A",
+        "primary_hover": "#1E40AF",
+        "secondary": "#1E40AF",
+        "accent": "#2563EB",
+        "text": "#0F172A",
+        "text2": "#1E3A8A",
+        "text3": "#3B82F6",
+        "border": "#93C5FD",
+        "success": "#059669",
+        "success_bg": "#D1FAE5",
+        "error": "#DC2626",
+        "error_bg": "#FEE2E2",
+        "warning": "#D97706",
+        "info": "#1E3A8A",
+        "info_bg": "#DBEAFE"
+    },
     "أخضر": {
         "name": "أخضر",
         "bg": "#F0FDF4",
         "card": "#DCFCE7",
-        "primary": "#059669",
-        "primary_hover": "#047857",
-        "secondary": "#10B981",
-        "accent": "#34D399",
+        "primary": "#047857",
+        "primary_hover": "#065F46",
+        "secondary": "#059669",
+        "accent": "#10B981",
         "text": "#064E3B",
         "text2": "#065F46",
-        "text3": "#047857",
+        "text3": "#059669",
         "border": "#86EFAC",
         "success": "#10B981",
         "success_bg": "#D1FAE5",
         "error": "#DC2626",
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
-        "info": "#059669",
+        "info": "#047857",
         "info_bg": "#DCFCE7"
     },
     "وردي": {
         "name": "وردي",
         "bg": "#FDF2F8",
         "card": "#FCE7F3",
-        "primary": "#BE185D",
-        "primary_hover": "#9F1239",
-        "secondary": "#DB2777",
-        "accent": "#EC4899",
+        "primary": "#9F1239",
+        "primary_hover": "#831843",
+        "secondary": "#BE185D",
+        "accent": "#DB2777",
         "text": "#831843",
         "text2": "#9F1239",
         "text3": "#BE185D",
@@ -127,17 +123,17 @@ THEMES = {
         "error": "#DC2626",
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
-        "info": "#BE185D",
+        "info": "#9F1239",
         "info_bg": "#FCE7F3"
     },
     "بنفسجي": {
         "name": "بنفسجي",
         "bg": "#F5F3FF",
         "card": "#EDE9FE",
-        "primary": "#7C3AED",
-        "primary_hover": "#6B21A8",
-        "secondary": "#8B5CF6",
-        "accent": "#A78BFA",
+        "primary": "#6B21A8",
+        "primary_hover": "#5B21B6",
+        "secondary": "#7C3AED",
+        "accent": "#8B5CF6",
         "text": "#5B21B6",
         "text2": "#6B21A8",
         "text3": "#7C3AED",
@@ -147,37 +143,37 @@ THEMES = {
         "error": "#DC2626",
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
-        "info": "#7C3AED",
+        "info": "#6B21A8",
         "info_bg": "#EDE9FE"
     },
-    "برتقالي": {
-        "name": "برتقالي",
-        "bg": "#FFF7ED",
-        "card": "#FFEDD5",
-        "primary": "#EA580C",
-        "primary_hover": "#C2410C",
-        "secondary": "#F97316",
-        "accent": "#FB923C",
-        "text": "#7C2D12",
-        "text2": "#9A3412",
-        "text3": "#C2410C",
-        "border": "#FDBA74",
+    "رمادي": {
+        "name": "رمادي",
+        "bg": "#F9FAFB",
+        "card": "#F3F4F6",
+        "primary": "#374151",
+        "primary_hover": "#1F2937",
+        "secondary": "#6B7280",
+        "accent": "#9CA3AF",
+        "text": "#111827",
+        "text2": "#374151",
+        "text3": "#6B7280",
+        "border": "#D1D5DB",
         "success": "#059669",
         "success_bg": "#D1FAE5",
         "error": "#DC2626",
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
-        "info": "#EA580C",
-        "info_bg": "#FFEDD5"
+        "info": "#374151",
+        "info_bg": "#E5E7EB"
     },
     "ذهبي": {
         "name": "ذهبي",
         "bg": "#FFFBEB",
         "card": "#FEF3C7",
-        "primary": "#D97706",
-        "primary_hover": "#B45309",
-        "secondary": "#F59E0B",
-        "accent": "#FBBF24",
+        "primary": "#B45309",
+        "primary_hover": "#92400E",
+        "secondary": "#D97706",
+        "accent": "#F59E0B",
         "text": "#78350F",
         "text2": "#92400E",
         "text3": "#B45309",
@@ -187,29 +183,26 @@ THEMES = {
         "error": "#DC2626",
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
-        "info": "#D97706",
+        "info": "#B45309",
         "info_bg": "#FEF3C7"
     }
 }
 
 DEFAULT_THEME = "أبيض"
 
-# ============================================================================
-# GAMES - مع معلومات دعم لمح/جاوب
-# ============================================================================
 GAME_CONFIG = {
-    "ذكاء": {"display": "ذكاء", "icon": "🧠", "hint": True, "reveal": True, "timer": 30},
-    "رياضيات": {"display": "رياضيات", "icon": "🔢", "hint": True, "reveal": True, "timer": 25},
-    "تخمين": {"display": "تخمين", "icon": "🎯", "hint": True, "reveal": True, "timer": 25},
-    "أسرع": {"display": "أسرع", "icon": "⚡", "hint": False, "reveal": False, "timer": 20},
-    "كلمات": {"display": "كلمات", "icon": "🔤", "hint": True, "reveal": True, "timer": 25},
-    "سلسلة": {"display": "سلسلة", "icon": "🔗", "hint": False, "reveal": False, "timer": 25},
-    "أضداد": {"display": "أضداد", "icon": "↔️", "hint": True, "reveal": True, "timer": 0},
-    "أغنية": {"display": "أغنية", "icon": "🎵", "hint": True, "reveal": True, "timer": 30},
-    "تكوين": {"display": "تكوين", "icon": "📝", "hint": True, "reveal": True, "timer": 40},
-    "ألوان": {"display": "ألوان", "icon": "🎨", "hint": False, "reveal": False, "timer": 15},
-    "لعبة": {"display": "لعبة", "icon": "🌿", "hint": True, "reveal": True, "timer": 25},
-    "توافق": {"display": "توافق", "icon": "💕", "hint": False, "reveal": False, "timer": 0}
+    "ذكاء": {"display": "ذكاء", "icon": "▪️", "hint": True, "reveal": True, "timer": 30},
+    "رياضيات": {"display": "رياضيات", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
+    "تخمين": {"display": "تخمين", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
+    "أسرع": {"display": "أسرع", "icon": "▪️", "hint": False, "reveal": False, "timer": 20},
+    "كلمات": {"display": "كلمات", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
+    "سلسلة": {"display": "سلسلة", "icon": "▪️", "hint": False, "reveal": False, "timer": 25},
+    "أضداد": {"display": "أضداد", "icon": "▪️", "hint": True, "reveal": True, "timer": 0},
+    "أغنية": {"display": "أغنية", "icon": "▪️", "hint": True, "reveal": True, "timer": 30},
+    "تكوين": {"display": "تكوين", "icon": "▪️", "hint": True, "reveal": True, "timer": 40},
+    "ألوان": {"display": "ألوان", "icon": "▪️", "hint": False, "reveal": False, "timer": 15},
+    "لعبة": {"display": "لعبة", "icon": "▪️", "hint": True, "reveal": True, "timer": 25},
+    "توافق": {"display": "توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
 }
 
 GAME_LIST = [(k, v["display"], v["icon"]) for k, v in GAME_CONFIG.items()]
@@ -217,11 +210,8 @@ GAME_NAMES = {k: v["display"] for k, v in GAME_CONFIG.items()}
 GAME_ICONS = {k: v["icon"] for k, v in GAME_CONFIG.items()}
 
 FIXED_GAME_QR = [{"label": f"{v['icon']} {v['display']}", "text": v['display']} for k, v in GAME_CONFIG.items()]
-FIXED_GAME_QR.append({"label": "⛔ إيقاف", "text": "إيقاف"})
+FIXED_GAME_QR.append({"label": "🔘 إيقاف", "text": "إيقاف"})
 
-# ============================================================================
-# Settings
-# ============================================================================
 PRIVACY_SETTINGS = {
     "auto_delete_inactive_days": 30,
     "cache_timeout_minutes": 10,
@@ -252,9 +242,6 @@ ALLOWED_COMMANDS = {
 
 GAME_COMMANDS = set(GAME_NAMES.values())
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
 def normalize_text(text: str) -> str:
     if not text or not isinstance(text, str):
         return ""
