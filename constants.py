@@ -298,7 +298,7 @@ SECURITY_SETTINGS = {
 ALLOWED_COMMANDS = {
     "مساعدة", "help", "؟", "بداية", "home", "الرئيسية", "start",
     "ألعاب", "games", "العاب", "نقاطي", "points", "نقاط",
-    "صدارة", "leaderboard", "ترتيب", "انضم", "join", "تسجيل",
+    "صدارة", "leaderboard", "مستوى", "انضم", "join", "تسجيل",
     "انسحب", "leave", "خروج", "فريقين", "teams", "فرق",
     "ثيمات", "themes", "مظهر", "إيقاف", "stop", "انهاء",
     "لمح", "hint", "جاوب", "reveal", "answer"
