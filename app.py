@@ -1,12 +1,3 @@
-# app_v13_final.py - Bot Mesh v13.0 FINAL
-"""
-Bot Mesh - LINE Bot Application v17.0 FINAL
-Created by: Abeer Aldosari © 2025
-✅ أسماء الألعاب موحدة 100%
-✅ معالجة أخطاء محسّنة
-✅ تحويل صحيح من اسم العرض لاسم الكلاس
-"""
-
 import os, sys, logging, threading, time, traceback, random
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -454,6 +445,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info("="*70)
     logger.info(f"▪️ {BOT_NAME} v{BOT_VERSION} - FINAL OPTIMIZED")
+    logger.info(f"▫️ {BOT_RIGHTS}")
     logger.info(f"▫️ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
     logger.info(f"▫️ يرد فقط على الأوامر المسموحة")
     logger.info(f"▫️ يحسب فقط إجابات المسجلين")
