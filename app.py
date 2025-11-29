@@ -1,10 +1,11 @@
-# app.py - FINAL COMPLETE VERSION
+# app.py - FINAL FIXED v11.1
 """
-Bot Mesh - LINE Bot Application v11.0 FINAL
+Bot Mesh - LINE Bot Application v11.1 FIXED
 ✅ وضع الفريقين: بدون لمح/جاوب - أول إجابة صحيحة تفوز
 ✅ وضع فردي: مع لمح/جاوب حسب اللعبة
 ✅ لعبة التوافق: بدون نقاط، بدون إعلان فائز
 ✅ كل شيء نوافذ فلكس وأزرار
+✅ إصلاح: منع لمح/جاوب في وضع الفريقين نهائياً
 Created by: Abeer Aldosari © 2025
 """
 
@@ -181,10 +182,10 @@ def close_join_phase_and_assign(game_id):
     logger.info(f"✅ تم تقسيم الفرق: {len(team1)} vs {len(team2)}")
 
 # -------------------------
-# إطلاق لعبة
+# إطلاق لعبة - FIXED VERSION
 # -------------------------
 def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, team_mode=False, source_type="user"):
-    """إطلاق نسخة من اللعبة"""
+    """إطلاق نسخة من اللعبة - مع إصلاح لمح/جاوب"""
     if game_name not in AVAILABLE_GAMES:
         raise ValueError(f"اللعبة غير متوفرة: {game_name}")
     
@@ -213,10 +214,18 @@ def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, tea
     else:
         game_instance.session_type = "solo"
 
-    # ✅ في وضع الفريقين: تعطيل لمح وجاوب
+    # ✅ في وضع الفريقين: تعطيل لمح وجاوب بشكل نهائي
     if team_mode:
+        game_instance.team_mode = True  # ✅ تفعيل وضع الفريقين أولاً
         game_instance.supports_hint = False
         game_instance.supports_reveal = False
+        
+        # نقل بيانات الفرق من session_meta
+        meta = ensure_session_meta(game_id)
+        if meta.get("joined_users"):
+            game_instance.joined_users = meta["joined_users"].copy()
+        if meta.get("teams"):
+            game_instance.user_teams = meta["teams"].copy()
 
     active_games[game_id] = game_instance
     meta = ensure_session_meta(game_id)
@@ -233,7 +242,14 @@ def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, tea
     meta["session_id"] = session_id
     meta["team_mode"] = team_mode
     
-    logger.info(f"✅ تم إطلاق اللعبة: {game_name} (نوع={game_instance.session_type}, لمح={game_instance.supports_hint})")
+    # ✅ لوج تفصيلي للتأكد
+    logger.info(f"✅ تم إطلاق اللعبة: {game_name}")
+    logger.info(f"   - نوع={game_instance.session_type}")
+    logger.info(f"   - فريقين={team_mode}")
+    logger.info(f"   - team_mode={game_instance.team_mode}")
+    logger.info(f"   - supports_hint={game_instance.supports_hint}")
+    logger.info(f"   - supports_reveal={game_instance.supports_reveal}")
+    
     return game_instance
 
 # -------------------------
@@ -440,9 +456,11 @@ def handle_message(event):
                     meta = ensure_session_meta(game_id)
                     team_mode = False
                     
+                    # ✅ تحقق من وضع الفريقين
                     if in_group and meta.get("join_phase"):
                         close_join_phase_and_assign(game_id)
                         team_mode = True
+                        logger.info(f"🎯 بدء لعبة فريقين: {text}")
                     
                     try:
                         game_instance = launch_game_instance(
@@ -450,11 +468,12 @@ def handle_message(event):
                             current_theme, team_mode, source_type
                         )
                         
-                        # نقل بيانات الفرق للعبة
-                        if team_mode and hasattr(game_instance, 'team_mode'):
-                            game_instance.team_mode = True
-                            game_instance.joined_users = meta.get("joined_users", set())
-                            game_instance.user_teams = meta.get("teams", {})
+                        # ✅ تأكيد تعطيل لمح/جاوب
+                        if team_mode:
+                            logger.info(f"🔒 وضع الفريقين نشط للعبة {text}")
+                            logger.info(f"   - team_mode: {game_instance.team_mode}")
+                            logger.info(f"   - supports_hint: {game_instance.supports_hint}")
+                            logger.info(f"   - supports_reveal: {game_instance.supports_reveal}")
                         
                         start_msg = game_instance.start_game()
                         attach_quick_reply(start_msg)
@@ -597,9 +616,9 @@ periodic_cleanup()
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     logger.info("=" * 70)
-    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION} - FINAL COMPLETE")
+    logger.info(f"🚀 {BOT_NAME} v{BOT_VERSION} - FINAL FIXED")
     logger.info(f"✅ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
-    logger.info(f"✅ وضع الفريقين: بدون لمح/جاوب")
+    logger.info(f"✅ وضع الفريقين: بدون لمح/جاوب نهائياً")
     logger.info(f"✅ لعبة التوافق: بدون نقاط/إعلان")
     logger.info(f"🌐 المنفذ: {port}")
     logger.info("=" * 70)
