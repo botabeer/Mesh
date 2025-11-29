@@ -6,7 +6,7 @@ import re
 load_dotenv()
 
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "18.0 DYNAMIC"
+BOT_VERSION = "18.1 WITHDRAWAL"
 BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
