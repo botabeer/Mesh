@@ -1,9 +1,9 @@
 """
-Bot Mesh - Constants & Configuration v9.0 FINAL
+Bot Mesh - Constants & Configuration v11.2 FINAL
 Created by: Abeer Aldosari © 2025
+✅ ألوان محسّنة للوضوح
+✅ إيموجي مبسطة
 ✅ متوافق مع جميع الألعاب
-✅ ثيمات زجاجية
-✅ Quick Reply للألعاب
 """
 
 import os
@@ -16,8 +16,8 @@ load_dotenv()
 # Bot Information
 # ============================================================================
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "9.0"
-BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
+BOT_VERSION = "11.2"
+BOT_RIGHTS = "© 2025 Abeer Aldosari"
 
 # ============================================================================
 # LINE Configuration
@@ -33,7 +33,7 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# Glass 3D Themes (9 Themes)
+# Glass 3D Themes (9 Themes) - ألوان محسّنة للوضوح
 # ============================================================================
 THEMES = {
     "أبيض": {
@@ -41,16 +41,16 @@ THEMES = {
         "bg": "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#3B82F6",
+        "primary": "#2563EB",
         "secondary": "#60A5FA",
-        "text": "#1E293B",
-        "text2": "#64748B",
+        "text": "#0F172A",
+        "text2": "#475569",
         "shadow": "0 8px 32px rgba(59,130,246,0.15)",
         "shadow1": "rgba(59,130,246,0.1)",
         "border": "rgba(59,130,246,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     },
     "أسود": {
         "name": "أسود",
@@ -59,133 +59,133 @@ THEMES = {
         "glass": "rgba(30,41,59,0.85)",
         "primary": "#60A5FA",
         "secondary": "#93C5FD",
-        "text": "#F1F5F9",
+        "text": "#F8FAFC",
         "text2": "#CBD5E1",
         "shadow": "0 8px 32px rgba(96,165,250,0.15)",
         "shadow1": "rgba(96,165,250,0.1)",
         "border": "rgba(96,165,250,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#34D399",
+        "error": "#F87171",
+        "warning": "#FBBF24"
     },
     "رمادي": {
         "name": "رمادي",
         "bg": "linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#6B7280",
-        "secondary": "#9CA3AF",
+        "primary": "#374151",
+        "secondary": "#6B7280",
         "text": "#111827",
         "text2": "#6B7280",
         "shadow": "0 8px 32px rgba(107,114,128,0.15)",
         "shadow1": "rgba(107,114,128,0.1)",
         "border": "rgba(107,114,128,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     },
     "أزرق": {
         "name": "أزرق",
         "bg": "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#2563EB",
-        "secondary": "#3B82F6",
+        "primary": "#1E40AF",
+        "secondary": "#2563EB",
         "text": "#1E3A8A",
         "text2": "#3B82F6",
         "shadow": "0 8px 32px rgba(37,99,235,0.15)",
         "shadow1": "rgba(37,99,235,0.1)",
         "border": "rgba(37,99,235,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     },
     "بنفسجي": {
         "name": "بنفسجي",
         "bg": "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#8B5CF6",
-        "secondary": "#A78BFA",
+        "primary": "#6D28D9",
+        "secondary": "#8B5CF6",
         "text": "#4C1D95",
         "text2": "#7C3AED",
         "shadow": "0 8px 32px rgba(139,92,246,0.15)",
         "shadow1": "rgba(139,92,246,0.1)",
         "border": "rgba(139,92,246,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     },
     "وردي": {
         "name": "وردي",
         "bg": "linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#EC4899",
-        "secondary": "#F472B6",
+        "primary": "#BE185D",
+        "secondary": "#EC4899",
         "text": "#831843",
         "text2": "#DB2777",
         "shadow": "0 8px 32px rgba(236,72,153,0.15)",
         "shadow1": "rgba(236,72,153,0.1)",
         "border": "rgba(236,72,153,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     },
     "أخضر": {
         "name": "أخضر",
         "bg": "linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#10B981",
-        "secondary": "#34D399",
+        "primary": "#047857",
+        "secondary": "#10B981",
         "text": "#064E3B",
         "text2": "#059669",
         "shadow": "0 8px 32px rgba(16,185,129,0.15)",
         "shadow1": "rgba(16,185,129,0.1)",
         "border": "rgba(16,185,129,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     },
     "برتقالي": {
         "name": "برتقالي",
         "bg": "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#F97316",
-        "secondary": "#FB923C",
+        "primary": "#C2410C",
+        "secondary": "#F97316",
         "text": "#7C2D12",
         "text2": "#EA580C",
         "shadow": "0 8px 32px rgba(249,115,22,0.15)",
         "shadow1": "rgba(249,115,22,0.1)",
         "border": "rgba(249,115,22,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     },
     "بني": {
         "name": "بني",
         "bg": "linear-gradient(135deg, #FFFCF7 0%, #F5E6D8 100%)",
         "card": "#FFFFFF",
         "glass": "rgba(255,255,255,0.85)",
-        "primary": "#8A4B10",
-        "secondary": "#C08437",
-        "text": "#4A2F05",
-        "text2": "#C08437",
+        "primary": "#78350F",
+        "secondary": "#92400E",
+        "text": "#451A03",
+        "text2": "#92400E",
         "shadow": "0 8px 32px rgba(138,75,16,0.15)",
         "shadow1": "rgba(138,75,16,0.1)",
         "border": "rgba(138,75,16,0.1)",
-        "success": "#10B981",
-        "error": "#EF4444",
-        "warning": "#F59E0B"
+        "success": "#059669",
+        "error": "#DC2626",
+        "warning": "#D97706"
     }
 }
 
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# Games Configuration (ترتيب نهائي)
+# Games Configuration
 # ============================================================================
 GAME_LIST: List[Tuple[str, str, str]] = [
     ("fast_typing", "كتابة سريعة", "⚡"),
@@ -213,6 +213,36 @@ FIXED_GAME_QR = [
     {"label": f"{icon} {display}", "text": display}
     for internal, display, icon in GAME_LIST
 ]
+
+# ============================================================================
+# Privacy Settings
+# ============================================================================
+PRIVACY_SETTINGS = {
+    "auto_delete_inactive_days": 30,  # حذف تلقائي بعد شهر من عدم النشاط
+    "cache_timeout_minutes": 5,       # مدة الكاش
+    "cleanup_interval_hours": 24      # تنظيف يومي
+}
+
+# ============================================================================
+# Bot Commands (الأوامر المسموحة فقط)
+# ============================================================================
+ALLOWED_COMMANDS = {
+    "مساعدة", "help", "؟",
+    "بداية", "home", "الرئيسية", "start",
+    "ألعاب", "games", "العاب",
+    "نقاطي", "points", "نقاط",
+    "صدارة", "leaderboard", "ترتيب",
+    "انضم", "join", "تسجيل",
+    "انسحب", "leave", "خروج",
+    "فريقين", "teams", "فرق",
+    "ثيمات", "themes", "مظهر",
+    "إيقاف", "stop", "انهاء",
+    "لمح", "hint",
+    "جاوب", "reveal", "answer"
+}
+
+# أوامر الألعاب
+GAME_COMMANDS = set(GAME_NAMES.values())
 
 # ============================================================================
 # Helper Functions
@@ -269,12 +299,31 @@ def get_game_display_name(internal_name: str) -> str:
 
 def get_game_icon(internal_name: str) -> str:
     """Get icon for game"""
-    return GAME_ICONS.get(internal_name, "🎮")
+    return GAME_ICONS.get(internal_name, "▪️")
 
 
 def is_valid_game(game_name: str) -> bool:
     """Check if game name is valid"""
     return game_name in GAME_NAMES.values()
+
+
+def is_allowed_command(text: str) -> bool:
+    """Check if text is an allowed command"""
+    lowered = text.lower().strip()
+    
+    # تحقق من الأوامر الأساسية
+    if lowered in ALLOWED_COMMANDS:
+        return True
+    
+    # تحقق من أوامر الألعاب
+    if text.strip() in GAME_COMMANDS:
+        return True
+    
+    # تحقق من أوامر الثيمات
+    if lowered.startswith("ثيم "):
+        return True
+    
+    return False
 
 
 # ============================================================================
@@ -285,8 +334,9 @@ __all__ = [
     'LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN',
     'THEMES', 'DEFAULT_THEME',
     'GAME_LIST', 'GAME_NAMES', 'GAME_ICONS',
-    'FIXED_GAME_QR',
+    'FIXED_GAME_QR', 'PRIVACY_SETTINGS',
+    'ALLOWED_COMMANDS', 'GAME_COMMANDS',
     'validate_env', 'normalize_text', 'get_theme_colors',
     'validate_theme', 'get_username', 'get_game_display_name',
-    'get_game_icon', 'is_valid_game'
+    'get_game_icon', 'is_valid_game', 'is_allowed_command'
 ]
