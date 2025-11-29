@@ -345,6 +345,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
     return attach_quick_reply(_flex("فوز", bubble))
 
 def build_help_window(theme=DEFAULT_THEME):
+    """نافذة المساعدة المحسّنة ✅"""
     c = _c(theme)
     bubble = {
         "type": "bubble",
@@ -357,14 +358,73 @@ def build_help_window(theme=DEFAULT_THEME):
                 {"type": "text", "text": "▪️ المساعدة", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
                 {"type": "separator", "margin": "lg", "color": c["border"]},
                 
+                # أوامر التنقل
                 _glass_box([
-                    {"type": "text", "text": "▪️ الأوامر:", "weight": "bold", "color": c["text"]},
-                    {"type": "text", "text": "• بداية\n• ألعاب\n• نقاطي\n• صدارة\n• انضم", "size": "sm", "color": c["text2"], "wrap": True, "margin": "sm"}
+                    {"type": "text", "text": "▪️ أوامر التنقل", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "• بداية / home / start", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "• ألعاب / games", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• نقاطي / points", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• صدارة / leaderboard", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• مساعدة / help", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
                 ], theme, "15px", "15px"),
                 
+                # أوامر الحساب
                 _glass_box([
-                    {"type": "text", "text": "▪️ أثناء اللعب:", "weight": "bold", "color": c["text"]},
-                    {"type": "text", "text": "• لمح\n• جاوب\n• إيقاف", "size": "sm", "color": c["text2"], "wrap": True, "margin": "sm"}
+                    {"type": "text", "text": "▪️ أوامر الحساب", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "• انضم / join", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "• انسحب / leave", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                ], theme, "15px", "15px"),
+                
+                # أوامر اللعب
+                _glass_box([
+                    {"type": "text", "text": "▪️ أوامر اللعب", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "• [اسم اللعبة] - بدء اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "• لمح / hint - تلميح", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• جاوب / reveal - كشف الإجابة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• إيقاف / stop - إيقاف اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                ], theme, "15px", "15px"),
+                
+                # أوامر الفريقين
+                _glass_box([
+                    {"type": "text", "text": "▪️ أوامر الفريقين (مجموعات)", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "• فريقين / teams", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "• انضم - الانضمام", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• ثم اختر اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                ], theme, "15px", "15px"),
+                
+                # نظام النقاط
+                _glass_box([
+                    {"type": "text", "text": "▪️ نظام النقاط", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "• 1 نقطة لكل إجابة صحيحة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "• للمسجلين فقط", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• إجابة واحدة لكل سؤال", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                ], theme, "15px", "15px"),
+                
+                # المستويات
+                _glass_box([
+                    {"type": "text", "text": "▪️ المستويات", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "• 0-49: ▪️ مبتدئ", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "• 50-149: ▪️ متوسط", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• 150-299: ▪️ متقدم", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• 300+: 🏆 محترف", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                ], theme, "15px", "15px"),
+                
+                # وضع الفريقين
+                _glass_box([
+                    {"type": "text", "text": "▪️ وضع الفريقين", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "1. اكتب: فريقين", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "2. الجميع يكتب: انضم", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "3. اختر اللعبة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "4. تقسيم تلقائي لفريقين", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                ], theme, "15px", "15px"),
+                
+                # الميزات
+                _glass_box([
+                    {"type": "text", "text": "▪️ ميزات الفريقين", "weight": "bold", "color": c["text"], "size": "md"},
+                    {"type": "text", "text": "• تقسيم عادل تلقائي", "size": "xs", "color": c["text2"], "wrap": True, "margin": "sm"},
+                    {"type": "text", "text": "• نقاط منفصلة لكل فريق", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• بدون لمح أو جاوب", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": "• إعلان الفائز بعد الانتهاء", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
                 ], theme, "15px", "15px"),
                 
                 _btn("▪️ البداية", "بداية", "primary", theme)
