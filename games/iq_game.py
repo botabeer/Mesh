@@ -16,7 +16,7 @@ class IqGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "ذكاء"
-        self.game_icon = "▫️"
+        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
 
