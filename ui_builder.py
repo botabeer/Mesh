@@ -1,876 +1,315 @@
 """
-Bot Mesh - UI Builder v10.0 COMPLETE FIXED
+Bot Mesh - UI Builder v11.0 ULTRA OPTIMIZED
 Created by: Abeer Aldosari © 2025
-✅ إصلاح جميع الأخطاء
-✅ Quick Reply للألعاب فقط
-✅ نوافذ Flex كاملة
+✅ تصميم مُحسّن مستوحى من الواجهة الجديدة
+✅ كود مضغوط وفعّال
 """
 
-from linebot.v3.messaging import (
-    FlexMessage, FlexContainer, TextMessage,
-    QuickReply, QuickReplyItem, MessageAction
-)
+from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from constants import GAME_LIST, DEFAULT_THEME, THEMES, BOT_NAME, BOT_RIGHTS
 
-# ============================================================================
-# Quick Reply - للألعاب فقط
-# ============================================================================
+# ============ Quick Reply ============
+def build_qr():
+    return QuickReply(items=[QuickReplyItem(action=MessageAction(label=f"{ic} {nm}", text=nm)) for _, nm, ic in GAME_LIST])
 
-def build_games_quick_reply():
-    """بناء Quick Reply للألعاب فقط"""
-    items = []
-    for internal, display, icon in GAME_LIST:
-        items.append(
-            QuickReplyItem(
-                action=MessageAction(
-                    label=f"{icon} {display}",
-                    text=display
-                )
-            )
-        )
-    return QuickReply(items=items)
+def attach_qr(msg):
+    if msg and hasattr(msg, 'quick_reply'): msg.quick_reply = build_qr()
+    return msg
 
+# ============ Helpers ============
+def _c(theme=None): return THEMES.get(theme or DEFAULT_THEME, THEMES[DEFAULT_THEME])
+def _btn(lbl, txt, style="primary", color=None): return {"type":"button","action":{"type":"message","label":lbl,"text":txt},"style":style,"height":"sm",**({"color":color} if color else {})}
+def _flex(alt, bubble): return FlexMessage(alt_text=alt, contents=FlexContainer.from_dict(bubble))
 
-def attach_quick_reply(message):
-    """إضافة Quick Reply لأي رسالة"""
-    if message and hasattr(message, 'quick_reply'):
-        message.quick_reply = build_games_quick_reply()
-    return message
-
-
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
-def get_theme_colors(theme_name=None):
-    """الحصول على ألوان الثيم"""
-    if theme_name is None:
-        theme_name = DEFAULT_THEME
-    return THEMES.get(theme_name, THEMES[DEFAULT_THEME])
-
-
-def _btn(label, text, style="primary", color=None):
-    """زر سريع"""
-    btn = {
-        "type": "button",
-        "action": {
-            "type": "message",
-            "label": label,
-            "text": text
-        },
-        "style": style,
-        "height": "sm"
-    }
-    if color:
-        btn["color"] = color
-    return btn
-
-
-# ============================================================================
-# Main Windows
-# ============================================================================
-
+# ============ البداية ============
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
-    """نافذة البداية المحسّنة"""
-    colors = get_theme_colors(theme)
+    c = _c(theme)
+    status = "✅ مسجل" if is_registered else "⚪ غير مسجل"
+    status_color = c["success"] if is_registered else c["text2"]
     
-    # أزرار الثيمات
-    theme_names = list(THEMES.keys())
-    theme_rows = []
-    for i in range(0, len(theme_names), 3):
-        row_themes = theme_names[i:i+3]
-        theme_rows.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "margin": "sm",
-            "contents": [
-                _btn(t, f"ثيم {t}", "primary" if t == theme else "secondary")
-                for t in row_themes
-            ]
-        })
+    # صفوف الثيمات (3 لكل صف)
+    theme_rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(t,f"ثيم {t}","primary" if t==theme else "secondary") for t in list(THEMES.keys())[i:i+3]]} for i in range(0,len(THEMES),3)]
     
     bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": f"🎮 {BOT_NAME}",
-                    "size": "xxl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                },
-                {
-                    "type": "text",
-                    "text": f"مرحباً {username}",
-                    "size": "md",
-                    "align": "center",
-                    "color": "#FFFFFF",
-                    "margin": "md"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "backgroundColor": colors["glass"],
-                    "cornerRadius": "10px",
-                    "paddingAll": "15px",
-                    "margin": "md",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": f"⭐ {points} نقطة",
-                            "size": "xl",
-                            "weight": "bold",
-                            "align": "center",
-                            "color": colors["text"]
-                        },
-                        {
-                            "type": "text",
-                            "text": "✅ مسجل" if is_registered else "⭕ غير مسجل",
-                            "size": "sm",
-                            "align": "center",
-                            "color": colors["success"] if is_registered else colors["error"],
-                            "margin": "sm"
-                        }
-                    ]
-                },
-                {
-                    "type": "text",
-                    "text": "🎨 اختر الثيم:",
-                    "size": "lg",
-                    "weight": "bold",
-                    "margin": "xl",
-                    "color": colors["text"]
-                },
+        "type":"bubble","size":"mega",
+        "body":{
+            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "contents":[
+                # Header
+                {"type":"box","layout":"vertical","contents":[
+                    {"type":"text","text":f"🎮 {BOT_NAME}","weight":"bold","size":"xxl","color":c["primary"],"align":"center"},
+                    {"type":"text","text":"بوت الألعاب الترفيهية الذكي","size":"sm","color":c["text2"],"align":"center","margin":"xs"}
+                ],"spacing":"xs"},
+                {"type":"separator","color":c["shadow1"],"margin":"lg"},
+                
+                # User Card
+                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"20px","margin":"lg","contents":[
+                    {"type":"text","text":f"👤 {username}","size":"lg","color":c["text"],"weight":"bold"},
+                    {"type":"box","layout":"horizontal","margin":"sm","contents":[
+                        {"type":"text","text":status,"size":"sm","color":status_color,"flex":0},
+                        {"type":"text","text":f"⭐ {points} نقطة","size":"sm","color":c["primary"],"align":"end"}
+                    ]}
+                ]},
+                
+                # Theme Selector
+                {"type":"text","text":"🎨 اختر ثيمك المفضل:","size":"md","weight":"bold","color":c["text"],"margin":"xl"},
                 *theme_rows,
-                {
-                    "type": "separator",
-                    "margin": "xl"
-                },
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "margin": "lg",
-                    "contents": [
-                        _btn("🎮 الألعاب", "ألعاب", "primary"),
-                        _btn("⭐ نقاطي", "نقاطي", "secondary")
-                    ]
-                },
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "margin": "sm",
-                    "contents": [
-                        _btn("🏆 الصدارة", "صدارة", "secondary"),
-                        _btn("❓ مساعدة", "مساعدة", "secondary")
-                    ]
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": BOT_RIGHTS,
-                    "size": "xxs",
-                    "align": "center",
-                    "color": colors["text2"]
-                }
+                
+                # Buttons
+                {"type":"separator","color":c["shadow1"],"margin":"xl"},
+                {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[
+                    _btn("📝 انضم" if not is_registered else "❌ انسحب", "انضم" if not is_registered else "انسحب","primary"),
+                    _btn("🎮 الألعاب","ألعاب")
+                ]},
+                {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[
+                    _btn("⭐ نقاطي","نقاطي","secondary"),
+                    _btn("🏆 الصدارة","صدارة","secondary")
+                ]},
+                {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[
+                    _btn("❓ مساعدة","مساعدة","secondary"),
+                    _btn("👥 فريقين","فريقين","secondary") if is_registered else {}
+                ]},
+                {"type":"separator","color":c["shadow1"],"margin":"lg"},
+                {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text2"],"align":"center"}
             ]
         }
     }
-    
-    msg = FlexMessage(alt_text="البداية", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
+    return attach_qr(_flex("البداية", bubble))
 
-
+# ============ قائمة الألعاب ============
 def build_games_menu(theme=DEFAULT_THEME):
-    """قائمة الألعاب"""
-    colors = get_theme_colors(theme)
-    
-    # تقسيم الألعاب إلى صفوف
-    game_rows = []
-    for i in range(0, len(GAME_LIST), 3):
-        row_games = GAME_LIST[i:i+3]
-        game_rows.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "margin": "sm",
-            "contents": [
-                _btn(f"{icon} {display}", display, "primary")
-                for internal, display, icon in row_games
-            ]
-        })
+    c = _c(theme)
+    game_rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(f"{ic} {nm}",nm,"primary") for _,nm,ic in GAME_LIST[i:i+3]]} for i in range(0,len(GAME_LIST),3)]
     
     bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "🎮 الألعاب المتاحة",
-                    "size": "xl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                },
-                {
-                    "type": "text",
-                    "text": f"عدد الألعاب: {len(GAME_LIST)}",
-                    "size": "sm",
-                    "align": "center",
-                    "color": "#FFFFFF",
-                    "margin": "sm"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
+        "type":"bubble","size":"mega",
+        "body":{
+            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "contents":[
+                {"type":"text","text":"🎮 الألعاب المتاحة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
+                {"type":"text","text":f"اختر من {len(GAME_LIST)} لعبة مختلفة","size":"sm","color":c["text2"],"align":"center","margin":"xs"},
+                {"type":"separator","color":c["shadow1"],"margin":"lg"},
                 *game_rows,
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "backgroundColor": colors["glass"],
-                    "cornerRadius": "8px",
-                    "paddingAll": "12px",
-                    "margin": "lg",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "💡 اضغط على اسم اللعبة للبدء",
-                            "size": "sm",
-                            "color": colors["text"],
-                            "align": "center",
-                            "wrap": True
-                        }
-                    ]
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "contents": [
-                        _btn("🏠 البداية", "بداية", "secondary"),
-                        _btn("❓ مساعدة", "مساعدة", "secondary")
-                    ]
-                }
+                {"type":"separator","color":c["shadow1"],"margin":"lg"},
+                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"15px","paddingAll":"15px","margin":"md","contents":[
+                    {"type":"text","text":"💡 الأوامر أثناء اللعب:","size":"sm","color":c["text"],"weight":"bold"},
+                    {"type":"text","text":"• لمح - للحصول على تلميح\n• جاوب - لكشف الإجابة\n• إيقاف - لإنهاء اللعبة","size":"xs","color":c["text2"],"wrap":True,"margin":"xs"}
+                ]},
+                {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[
+                    _btn("🏠 البداية","بداية","secondary"),
+                    _btn("⛔ إيقاف","إيقاف","secondary")
+                ]},
+                {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text2"],"align":"center","margin":"sm"}
             ]
         }
     }
-    
-    msg = FlexMessage(alt_text="الألعاب", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
+    return attach_qr(_flex("الألعاب", bubble))
 
-
+# ============ نقاطي ============
 def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
-    """نافذة نقاطي"""
-    colors = get_theme_colors(theme)
+    c = _c(theme)
+    level = "🌱 مبتدئ" if points<50 else "⭐ متوسط" if points<150 else "🔥 متقدم" if points<300 else "👑 محترف"
+    level_color = "#48BB78" if points<50 else "#667EEA" if points<150 else "#DD6B20" if points<300 else "#D53F8C"
     
     bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "⭐ نقاطي",
-                    "size": "xl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "النقاط الكلية",
-                    "size": "md",
-                    "align": "center",
-                    "color": colors["text2"],
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": str(points),
-                    "size": "xxl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": colors["text"],
-                    "margin": "sm"
-                },
-                {
-                    "type": "separator",
-                    "margin": "xl"
-                },
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "backgroundColor": colors["glass"],
-                    "cornerRadius": "8px",
-                    "paddingAll": "15px",
-                    "margin": "lg",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "استمر باللعب لكسب المزيد!",
-                            "size": "sm",
-                            "color": colors["text"],
-                            "align": "center",
-                            "wrap": True
-                        }
-                    ]
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "contents": [
-                        _btn("🎮 الألعاب", "ألعاب", "primary"),
-                        _btn("🏠 البداية", "بداية", "secondary")
-                    ]
-                }
+        "type":"bubble","size":"mega",
+        "body":{
+            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "contents":[
+                {"type":"text","text":"⭐ نقاطي","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
+                {"type":"separator","color":c["shadow1"],"margin":"lg"},
+                {"type":"text","text":f"👤 {username}","size":"lg","color":c["text"],"weight":"bold","align":"center","margin":"lg"},
+                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"25px","margin":"lg","contents":[
+                    {"type":"text","text":"النقاط الكلية","size":"sm","color":c["text2"],"align":"center"},
+                    {"type":"text","text":str(points),"size":"xxl","weight":"bold","color":c["primary"],"align":"center","margin":"sm"}
+                ]},
+                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"15px","paddingAll":"15px","margin":"md","contents":[
+                    {"type":"text","text":"المستوى الحالي","size":"sm","color":c["text2"],"align":"center"},
+                    {"type":"text","text":level,"size":"lg","weight":"bold","color":level_color,"align":"center","margin":"sm"}
+                ]},
+                {"type":"separator","color":c["shadow1"],"margin":"lg"},
+                {"type":"text","text":"⚠️ سيتم حذف بياناتك بعد 7 أيام من عدم النشاط","size":"xs","color":"#FF5555","wrap":True,"align":"center"},
+                {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[
+                    _btn("🏠 البداية","بداية","secondary"),
+                    _btn("🎮 الألعاب","ألعاب","secondary")
+                ]},
+                {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text2"],"align":"center","margin":"sm"}
             ]
         }
     }
-    
-    msg = FlexMessage(alt_text="نقاطي", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
+    return attach_qr(_flex("نقاطي", bubble))
 
-
+# ============ لوحة الصدارة ============
 def build_leaderboard(top_users, theme=DEFAULT_THEME):
-    """لوحة الصدارة"""
-    colors = get_theme_colors(theme)
-    
-    leaderboard_items = []
-    for idx, (name, pts) in enumerate(top_users[:10], 1):
-        medal = "🥇" if idx == 1 else "🥈" if idx == 2 else "🥉" if idx == 3 else f"{idx}."
-        leaderboard_items.append({
-            "type": "box",
-            "layout": "horizontal",
-            "margin": "sm",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": medal,
-                    "size": "md",
-                    "flex": 0,
-                    "margin": "none"
-                },
-                {
-                    "type": "text",
-                    "text": name,
-                    "size": "sm",
-                    "color": colors["text"],
-                    "flex": 2,
-                    "margin": "md"
-                },
-                {
-                    "type": "text",
-                    "text": str(pts),
-                    "size": "sm",
-                    "color": colors["primary"],
-                    "align": "end",
-                    "flex": 1
-                }
-            ]
-        })
+    c = _c(theme)
+    medals = ["🥇","🥈","🥉"]
+    items = [{"type":"box","layout":"horizontal","spacing":"md","paddingAll":"sm","contents":[
+        {"type":"text","text":medals[i-1] if i<=3 else f"{i}.","size":"lg","flex":0,"color":c["primary"] if i<=3 else c["text"]},
+        {"type":"text","text":nm,"size":"sm","color":c["text"],"flex":3},
+        {"type":"text","text":str(pts),"size":"sm","color":c["primary"],"align":"end","flex":1}
+    ]} for i,(nm,pts) in enumerate(top_users[:10],1)] or [{"type":"text","text":"لا يوجد لاعبين مسجلين بعد","size":"sm","color":c["text2"],"align":"center"}]
     
     bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "🏆 لوحة الصدارة",
-                    "size": "xl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": leaderboard_items if leaderboard_items else [
-                {
-                    "type": "text",
-                    "text": "لا توجد بيانات بعد",
-                    "align": "center",
-                    "color": colors["text2"]
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "contents": [
-                        _btn("⭐ نقاطي", "نقاطي", "primary"),
-                        _btn("🏠 البداية", "بداية", "secondary")
-                    ]
-                }
+        "type":"bubble","size":"mega",
+        "body":{
+            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "contents":[
+                {"type":"text","text":"🏆 لوحة الصدارة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
+                {"type":"separator","color":c["shadow1"],"margin":"lg"},
+                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"20px","margin":"lg","spacing":"sm","contents":items},
+                {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[
+                    _btn("🏠 البداية","بداية","secondary"),
+                    _btn("⭐ نقاطي","نقاطي","secondary")
+                ]},
+                {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text2"],"align":"center","margin":"sm"}
             ]
         }
     }
-    
-    msg = FlexMessage(alt_text="الصدارة", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
+    return attach_qr(_flex("الصدارة", bubble))
 
-
-def build_help_window(theme=DEFAULT_THEME):
-    """نافذة المساعدة"""
-    colors = get_theme_colors(theme)
-    
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "❓ المساعدة",
-                    "size": "xl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "🎮 الأوامر الأساسية:",
-                    "weight": "bold",
-                    "color": colors["text"],
-                    "margin": "md"
-                },
-                {
-                    "type": "text",
-                    "text": "• بداية - العودة للصفحة الرئيسية\n• ألعاب - عرض جميع الألعاب\n• نقاطي - عرض نقاطك\n• صدارة - لوحة المتصدرين\n• انضم - التسجيل في البوت",
-                    "size": "sm",
-                    "color": colors["text2"],
-                    "margin": "sm",
-                    "wrap": True
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "🎯 أثناء اللعب:",
-                    "weight": "bold",
-                    "color": colors["text"],
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "• لمح - الحصول على تلميح\n• جاوب - كشف الإجابة\n• إيقاف - إنهاء اللعبة",
-                    "size": "sm",
-                    "color": colors["text2"],
-                    "margin": "sm",
-                    "wrap": True
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "👥 وضع الفريقين:",
-                    "weight": "bold",
-                    "color": colors["text"],
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "• فريقين - بدء وضع الفرق (للمجموعات)\n• انضم - الانضمام للفريق",
-                    "size": "sm",
-                    "color": colors["text2"],
-                    "margin": "sm",
-                    "wrap": True
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [
-                _btn("🏠 البداية", "بداية", "primary")
-            ]
-        }
-    }
-    
-    msg = FlexMessage(alt_text="المساعدة", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
-
-
-# ============================================================================
-# Game-Specific Windows
-# ============================================================================
-
+# ============ نوافذ إضافية ============
 def build_registration_required(theme=DEFAULT_THEME):
-    """نافذة طلب التسجيل"""
-    colors = get_theme_colors(theme)
-    
-    bubble = {
-        "type": "bubble",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["warning"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "⚠️ تسجيل مطلوب",
-                    "size": "xl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "يجب التسجيل أولاً للعب",
-                    "align": "center",
-                    "color": colors["text"],
-                    "wrap": True
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [
-                _btn("✅ انضم الآن", "انضم", "primary")
-            ]
-        }
-    }
-    
-    msg = FlexMessage(alt_text="تسجيل مطلوب", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
-
+    c = _c(theme)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":"⚠️ يجب التسجيل أولاً","weight":"bold","size":"lg","color":c["primary"],"align":"center"},
+        {"type":"separator","color":c["shadow1"],"margin":"lg"},
+        {"type":"text","text":"اضغط 'انضم' للتسجيل والبدء باللعب","size":"sm","color":c["text2"],"align":"center","wrap":True,"margin":"md"}
+    ]},"footer":{"type":"box","layout":"vertical","paddingAll":"15px","contents":[
+        {"type":"box","layout":"horizontal","spacing":"sm","contents":[_btn("📝 انضم","انضم","primary"),_btn("🏠 البداية","بداية","secondary")]}
+    ]}}
+    return attach_qr(_flex("تسجيل مطلوب", bubble))
 
 def build_winner_announcement(username, game_name, round_points, total_points, theme=DEFAULT_THEME):
-    """إعلان الفائز"""
-    colors = get_theme_colors(theme)
-    
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["success"],
-            "paddingAll": "25px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "🎉",
-                    "size": "xxl",
-                    "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": "مبروك!",
-                    "size": "xxl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF",
-                    "margin": "sm"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": f"أنهيت لعبة {game_name}",
-                    "size": "md",
-                    "align": "center",
-                    "color": colors["text"],
-                    "wrap": True
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "النقاط المكتسبة",
-                    "size": "sm",
-                    "align": "center",
-                    "color": colors["text2"],
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": f"+{round_points}",
-                    "size": "xxl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": colors["success"],
-                    "margin": "sm"
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": f"⭐ إجمالي النقاط: {total_points}",
-                    "size": "md",
-                    "align": "center",
-                    "color": colors["text"],
-                    "margin": "lg"
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "sm",
-            "paddingAll": "15px",
-            "contents": [
-                _btn(f"🔄 {game_name}", game_name, "primary"),
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "contents": [
-                        _btn("🎮 الألعاب", "ألعاب", "secondary"),
-                        _btn("🏠 البداية", "بداية", "secondary")
-                    ]
-                }
-            ]
-        }
-    }
-    
-    msg = FlexMessage(alt_text="فوز", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
+    c = _c(theme)
+    bubble = {"type":"bubble","size":"mega","header":{"type":"box","layout":"vertical","backgroundColor":c["success"],"paddingAll":"25px","contents":[
+        {"type":"text","text":"🎉","size":"xxl","align":"center"},
+        {"type":"text","text":"إنجاز!","size":"xxl","weight":"bold","align":"center","color":"#FFFFFF","margin":"sm"}
+    ]},"body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":f"أنهيت لعبة {game_name}","size":"lg","color":c["text"],"align":"center","wrap":True},
+        {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"20px","margin":"lg","contents":[
+            {"type":"text","text":"النقاط المكتسبة","size":"sm","color":c["text2"],"align":"center"},
+            {"type":"text","text":f"+{round_points}","size":"xxl","weight":"bold","color":c["success"],"align":"center","margin":"sm"}
+        ]},
+        {"type":"text","text":f"⭐ إجمالي النقاط: {total_points}","size":"md","color":c["text"],"align":"center","margin":"md"}
+    ]},"footer":{"type":"box","layout":"vertical","paddingAll":"15px","contents":[
+        _btn(f"🔄 إعادة {game_name}",game_name,"primary"),
+        {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("🎮 الألعاب","ألعاب","secondary"),_btn("🏠 البداية","بداية","secondary")]}
+    ]}}
+    return attach_qr(_flex("فوز", bubble))
 
+def build_help_window(theme=DEFAULT_THEME):
+    c = _c(theme)
+    bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
+        {"type":"text","text":"❓ المساعدة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
+        {"type":"separator","color":c["shadow1"],"margin":"lg"},
+        {"type":"text","text":"🎮 الأوامر الأساسية:","weight":"bold","color":c["text"],"margin":"lg"},
+        {"type":"text","text":"• بداية - الرئيسية\n• ألعاب - عرض الألعاب\n• نقاطي - نقاطك\n• صدارة - المتصدرين\n• انضم - التسجيل","size":"sm","color":c["text2"],"wrap":True,"margin":"sm"},
+        {"type":"separator","color":c["shadow1"],"margin":"lg"},
+        {"type":"text","text":"🎯 أثناء اللعب:","weight":"bold","color":c["text"],"margin":"md"},
+        {"type":"text","text":"• لمح - تلميح\n• جاوب - كشف الإجابة\n• إيقاف - إنهاء","size":"sm","color":c["text2"],"wrap":True,"margin":"sm"},
+        {"type":"separator","color":c["shadow1"],"margin":"lg"},
+        {"type":"text","text":"👥 وضع الفريقين:","weight":"bold","color":c["text"],"margin":"md"},
+        {"type":"text","text":"• فريقين - بدء (للمجموعات)\n• انضم - الانضمام","size":"sm","color":c["text2"],"wrap":True,"margin":"sm"},
+        _btn("🏠 البداية","بداية","primary")
+    ]}}
+    return attach_qr(_flex("المساعدة", bubble))
 
 def build_theme_selector(theme=DEFAULT_THEME):
-    """محدد الثيمات"""
-    colors = get_theme_colors(theme)
-    theme_names = list(THEMES.keys())
-    
-    theme_buttons = []
-    for i in range(0, len(theme_names), 3):
-        row = theme_names[i:i+3]
-        theme_buttons.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "margin": "sm",
-            "contents": [_btn(t, f"ثيم {t}") for t in row]
-        })
-    
-    bubble = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "🎨 اختر الثيم",
-                    "size": "xl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": theme_buttons
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [_btn("🏠 البداية", "بداية", "secondary")]
-        }
-    }
-    
-    msg = FlexMessage(alt_text="الثيمات", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
-
+    c = _c(theme)
+    rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(t,f"ثيم {t}") for t in list(THEMES.keys())[i:i+3]]} for i in range(0,len(THEMES),3)]
+    bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":"🎨 اختر الثيم","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
+        {"type":"separator","margin":"lg"},*rows,_btn("🏠 البداية","بداية","secondary")
+    ]}}
+    return attach_qr(_flex("الثيمات", bubble))
 
 def build_multiplayer_help_window(theme=DEFAULT_THEME):
-    """نافذة مساعدة الفريقين"""
-    colors = get_theme_colors(theme)
-    
-    bubble = {
-        "type": "bubble",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": colors["primary"],
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "👥 وضع الفريقين",
-                    "size": "xl",
-                    "weight": "bold",
-                    "align": "center",
-                    "color": "#FFFFFF"
-                }
-            ]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "20px",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "تم بدء مرحلة الانضمام!",
-                    "size": "md",
-                    "color": colors["text"],
-                    "wrap": True
-                },
-                {
-                    "type": "separator",
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "الخطوات:",
-                    "weight": "bold",
-                    "color": colors["text"],
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": "1. اكتب 'انضم' للانضمام\n2. اختر اللعبة من القائمة\n3. سيتم تقسيم الفرق تلقائياً",
-                    "size": "sm",
-                    "color": colors["text2"],
-                    "margin": "sm",
-                    "wrap": True
-                }
-            ]
-        },
-        "footer": {
-            "type": "box",
-            "layout": "vertical",
-            "paddingAll": "15px",
-            "contents": [_btn("✅ انضم", "انضم", "primary")]
-        }
-    }
-    
-    msg = FlexMessage(alt_text="وضع الفريقين", contents=FlexContainer.from_dict(bubble))
-    return attach_quick_reply(msg)
+    c = _c(theme)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":"👥 وضع الفريقين","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
+        {"type":"separator","margin":"lg"},
+        {"type":"text","text":"تم بدء مرحلة الانضمام!","size":"md","color":c["text"],"wrap":True,"margin":"md"},
+        {"type":"text","text":"1. اكتب 'انضم'\n2. اختر اللعبة\n3. تقسيم تلقائي للفرق","size":"sm","color":c["text2"],"wrap":True,"margin":"sm"},
+        _btn("✅ انضم","انضم","primary")
+    ]}}
+    return attach_qr(_flex("وضع الفريقين", bubble))
 
+# نوافذ إضافية مختصرة
+def build_join_confirmation(username, theme=DEFAULT_THEME):
+    c = _c(theme)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":"✅ انضممت للفريق","size":"lg","weight":"bold","color":c["success"],"align":"center"},
+        {"type":"text","text":"انتظر اختيار اللعبة","size":"sm","color":c["text2"],"align":"center","margin":"md"}
+    ]}}
+    return attach_qr(_flex("انضمام", bubble))
 
-# ============================================================================
-# Export
-# ============================================================================
+def build_registration_success(username, theme=DEFAULT_THEME):
+    c = _c(theme)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":"✅ تم التسجيل","size":"lg","weight":"bold","color":c["success"],"align":"center"},
+        {"type":"text","text":f"مرحباً {username}","size":"md","color":c["text"],"align":"center","margin":"md"},
+        _btn("🎮 ابدأ اللعب","ألعاب","primary")
+    ]}}
+    return attach_qr(_flex("تسجيل", bubble))
+
+def build_theme_change_success(theme_name, theme=DEFAULT_THEME):
+    c = _c(theme_name)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
+        {"type":"text","text":"✅ تم تغيير الثيم","size":"lg","weight":"bold","color":c["primary"],"align":"center"},
+        {"type":"text","text":f"الثيم الحالي: {theme_name}","size":"sm","color":c["text"],"align":"center","margin":"md"},
+        _btn("🏠 البداية","بداية","primary")
+    ]}}
+    return attach_qr(_flex("ثيم", bubble))
+
+def build_error_message(error_text, theme=DEFAULT_THEME):
+    c = _c(theme)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":error_text,"size":"md","color":c["error"],"align":"center","wrap":True},
+        _btn("🏠 البداية","بداية","secondary")
+    ]}}
+    return attach_qr(_flex("خطأ", bubble))
+
+def build_game_stopped(game_name, theme=DEFAULT_THEME):
+    c = _c(theme)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":"⛔ تم إيقاف اللعبة","size":"lg","weight":"bold","color":c["error"],"align":"center"},
+        {"type":"text","text":f"لعبة {game_name}","size":"sm","color":c["text2"],"align":"center","margin":"sm"},
+        {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[_btn("🎮 الألعاب","ألعاب","primary"),_btn("🏠 البداية","بداية","secondary")]}
+    ]}}
+    return attach_qr(_flex("إيقاف", bubble))
+
+def build_answer_feedback(message, theme=DEFAULT_THEME):
+    c = _c(theme)
+    bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"15px","contents":[
+        {"type":"text","text":message,"size":"md","color":c["text"],"align":"center","wrap":True}
+    ]}}
+    return attach_qr(_flex("إجابة", bubble))
+
+def build_team_game_end(team_points, theme=DEFAULT_THEME):
+    c = _c(theme)
+    t1 = team_points.get("team1",0)
+    t2 = team_points.get("team2",0)
+    winner = "الفريق الأول 🥇" if t1>t2 else "الفريق الثاني 🥈" if t2>t1 else "تعادل ⚖️"
+    bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
+        {"type":"text","text":"🏆 انتهت اللعبة!","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
+        {"type":"separator","margin":"lg"},
+        {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"15px","paddingAll":"20px","margin":"lg","contents":[
+            {"type":"text","text":"النتيجة النهائية","size":"md","color":c["text2"],"align":"center"},
+            {"type":"box","layout":"horizontal","margin":"md","contents":[
+                {"type":"text","text":f"الفريق الأول\n{t1}","size":"lg","color":c["primary"],"align":"center","flex":1},
+                {"type":"text","text":"VS","size":"sm","color":c["text2"],"align":"center","flex":0},
+                {"type":"text","text":f"الفريق الثاني\n{t2}","size":"lg","color":c["primary"],"align":"center","flex":1}
+            ]},
+            {"type":"text","text":f"الفائز: {winner}","size":"md","weight":"bold","color":c["success"],"align":"center","margin":"md"}
+        ]},
+        {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[_btn("🎮 الألعاب","ألعاب","primary"),_btn("🏠 البداية","بداية","secondary")]}
+    ]}}
+    return attach_qr(_flex("نتيجة", bubble))
 
 __all__ = [
-    'build_enhanced_home',
-    'build_games_menu',
-    'build_my_points',
-    'build_leaderboard',
-    'build_help_window',
-    'build_registration_required',
-    'build_winner_announcement',
-    'build_theme_selector',
-    'build_multiplayer_help_window',
-    'attach_quick_reply',
-    'build_games_quick_reply'
+    'build_enhanced_home','build_games_menu','build_my_points','build_leaderboard',
+    'build_help_window','build_registration_required','build_winner_announcement',
+    'build_theme_selector','build_multiplayer_help_window','attach_qr','build_qr',
+    'build_join_confirmation','build_registration_success','build_theme_change_success',
+    'build_error_message','build_game_stopped','build_answer_feedback','build_team_game_end'
 ]
