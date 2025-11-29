@@ -1,12 +1,10 @@
 """
-Bot Mesh - Database v8.5 ENHANCED
+Bot Mesh - Database v11.2 FINAL
 Created by: Abeer Aldosari © 2025
-✅ دعم الثيمات
-✅ تحديث تلقائي للأسماء
-✅ نظام الجلسات المحسّن
-✅ إحصائيات الألعاب
-✅ نظام الفرق الكامل
-✅ معالجة أخطاء محسّنة
+✅ تتبع الاتصال في الوقت الفعلي
+✅ حذف تلقائي بعد شهر من عدم النشاط
+✅ تحديث تلقائي للأسماء من LINE
+✅ نظام خصوصية محسّن
 """
 
 import sqlite3
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    """Database management with enhanced features"""
+    """Database management with enhanced privacy features"""
     
     def __init__(self, db_path='botmesh.db'):
         self.db_path = db_path
@@ -83,13 +81,15 @@ class Database:
                 with self.get_connection() as conn:
                     cursor = conn.cursor()
                     
-                    # Users table
+                    # Users table - مع تتبع الاتصال
                     cursor.execute('''
                         CREATE TABLE IF NOT EXISTS users (
                             user_id TEXT PRIMARY KEY,
                             name TEXT NOT NULL,
                             points INTEGER DEFAULT 0,
                             is_registered BOOLEAN DEFAULT 0,
+                            is_online BOOLEAN DEFAULT 0,
+                            last_online TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
@@ -181,6 +181,7 @@ class Database:
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_registered ON users(is_registered)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_activity ON users(last_activity)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_online ON users(is_online)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_prefs_theme ON user_preferences(theme)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_owner ON game_sessions(owner_id)')
                     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_game ON game_sessions(game_name)')
@@ -232,9 +233,9 @@ class Database:
                 
                 # Insert user
                 cursor.execute('''
-                    INSERT OR IGNORE INTO users (user_id, name, points, is_registered, last_activity)
-                    VALUES (?, ?, 0, 0, ?)
-                ''', (user_id, name, now))
+                    INSERT OR IGNORE INTO users (user_id, name, points, is_registered, is_online, last_online, last_activity)
+                    VALUES (?, ?, 0, 0, 1, ?, ?)
+                ''', (user_id, name, now, now))
                 
                 # Insert default preferences
                 cursor.execute('''
@@ -253,7 +254,7 @@ class Database:
         if not kwargs:
             return False
         
-        allowed_fields = {'name', 'points', 'is_registered'}
+        allowed_fields = {'name', 'points', 'is_registered', 'is_online'}
         fields = []
         values = []
         
@@ -287,9 +288,25 @@ class Database:
                     'UPDATE users SET name = ?, last_activity = ? WHERE user_id = ?',
                     (new_name, datetime.now(), user_id)
                 )
+                logger.info(f"✅ Updated name for {user_id}: {new_name}")
                 return True
         except Exception as e:
             logger.error(f"❌ Error updating name: {e}")
+            return False
+    
+    def set_user_online(self, user_id: str, is_online: bool = True) -> bool:
+        """Set user online/offline status"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now()
+                cursor.execute(
+                    'UPDATE users SET is_online = ?, last_online = ?, last_activity = ? WHERE user_id = ?',
+                    (1 if is_online else 0, now, now, user_id)
+                )
+                return True
+        except Exception as e:
+            logger.error(f"❌ Error setting online status: {e}")
             return False
     
     def add_points(self, user_id: str, points: int) -> bool:
@@ -308,31 +325,32 @@ class Database:
             return False
     
     def update_activity(self, user_id: str) -> bool:
-        """Update last activity timestamp"""
+        """Update last activity timestamp and set online"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
+                now = datetime.now()
                 cursor.execute(
-                    'UPDATE users SET last_activity = ? WHERE user_id = ?',
-                    (datetime.now(), user_id)
+                    'UPDATE users SET last_activity = ?, is_online = 1, last_online = ? WHERE user_id = ?',
+                    (now, now, user_id)
                 )
                 return True
         except Exception as e:
             logger.error(f"❌ Error updating activity: {e}")
             return False
     
-    def get_leaderboard(self, limit: int = 10) -> List[Tuple[str, int]]:
-        """Get leaderboard"""
+    def get_leaderboard(self, limit: int = 10) -> List[Tuple[str, int, bool]]:
+        """Get leaderboard with online status"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
-                    SELECT name, points FROM users 
+                    SELECT name, points, is_online FROM users 
                     WHERE is_registered = 1 AND points > 0
                     ORDER BY points DESC, last_activity DESC 
                     LIMIT ?
                 ''', (limit,))
-                return [(row['name'], row['points']) for row in cursor.fetchall()]
+                return [(row['name'], row['points'], bool(row['is_online'])) for row in cursor.fetchall()]
         except Exception as e:
             logger.error(f"❌ Error getting leaderboard: {e}")
             return []
@@ -543,43 +561,41 @@ class Database:
             logger.error(f"❌ Error logging activity: {e}")
             return False
     
-    def get_logs(self, limit: int = 100, user_id: Optional[str] = None) -> List[Dict]:
-        """Get activity logs"""
-        try:
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                if user_id:
-                    cursor.execute(
-                        'SELECT * FROM activity_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?',
-                        (user_id, limit)
-                    )
-                else:
-                    cursor.execute(
-                        'SELECT * FROM activity_logs ORDER BY timestamp DESC LIMIT ?',
-                        (limit,)
-                    )
-                return [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
-            logger.error(f"❌ Error getting logs: {e}")
-            return []
-    
-    # ==================== Maintenance ====================
+    # ==================== Privacy & Maintenance ====================
     
     def cleanup_inactive_users(self, days: int = 30) -> int:
-        """Cleanup inactive unregistered users"""
+        """Cleanup inactive users (privacy feature)"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cutoff = datetime.now() - timedelta(days=days)
-                cursor.execute(
-                    'DELETE FROM users WHERE last_activity < ? AND is_registered = 0',
-                    (cutoff,)
-                )
+                
+                # حذف المستخدمين غير النشطين (غير مسجلين أو لم يسجلوا دخول منذ شهر)
+                cursor.execute('''
+                    DELETE FROM users 
+                    WHERE last_activity < ? AND (is_registered = 0 OR points = 0)
+                ''', (cutoff,))
                 deleted = cursor.rowcount
-                logger.info(f"✅ Cleaned {deleted} inactive users")
+                
+                if deleted > 0:
+                    logger.info(f"✅ Cleaned {deleted} inactive users (privacy cleanup)")
+                
                 return deleted
         except Exception as e:
             logger.error(f"❌ Error cleaning users: {e}")
+            return 0
+    
+    def set_all_offline(self) -> int:
+        """Set all users offline (call on bot restart)"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('UPDATE users SET is_online = 0')
+                count = cursor.rowcount
+                logger.info(f"✅ Set {count} users offline")
+                return count
+        except Exception as e:
+            logger.error(f"❌ Error setting offline: {e}")
             return 0
     
     def get_stats_summary(self) -> Dict:
@@ -594,6 +610,9 @@ class Database:
                 cursor.execute('SELECT COUNT(*) as registered FROM users WHERE is_registered = 1')
                 registered_users = cursor.fetchone()['registered']
                 
+                cursor.execute('SELECT COUNT(*) as online FROM users WHERE is_online = 1')
+                online_users = cursor.fetchone()['online']
+                
                 cursor.execute('SELECT SUM(points) as total_points FROM users')
                 total_points = cursor.fetchone()['total_points'] or 0
                 
@@ -606,6 +625,7 @@ class Database:
                 return {
                     'total_users': total_users,
                     'registered_users': registered_users,
+                    'online_users': online_users,
                     'total_points': total_points,
                     'total_sessions': total_sessions,
                     'completed_sessions': completed_sessions
@@ -615,6 +635,7 @@ class Database:
             return {
                 'total_users': 0,
                 'registered_users': 0,
+                'online_users': 0,
                 'total_points': 0,
                 'total_sessions': 0,
                 'completed_sessions': 0
@@ -633,6 +654,8 @@ def get_database() -> Database:
         with _db_lock:
             if _db_instance is None:
                 _db_instance = Database()
+                # Set all users offline on startup
+                _db_instance.set_all_offline()
     return _db_instance
 
 
