@@ -1,6 +1,8 @@
 """
-لعبة الأضداد - Bot Mesh v8.5
+لعبة الأضداد - Bot Mesh v9.1 FIXED
 Created by: Abeer Aldosari © 2025
+✅ فردي: لمح + جاوب
+✅ فريقين: بدون لمح/جاوب
 """
 
 from games.base_game import BaseGame
@@ -89,8 +91,11 @@ class OppositeGame(BaseGame):
 
         question_text = f"ما هو عكس كلمة:\n\n{word}"
         
-        # إخفاء لمح/جاوب في وضع الفريقين
-        additional_info = None if self.team_mode else "اكتب 'لمح' للتلميح أو 'جاوب' للإجابة"
+        # ✅ استخدام can_use_hint() و can_reveal_answer()
+        if self.can_use_hint() and self.can_reveal_answer():
+            additional_info = "اكتب 'لمح' للتلميح أو 'جاوب' للإجابة"
+        else:
+            additional_info = None
 
         return self.build_question_flex(
             question_text=question_text,
@@ -119,38 +124,36 @@ class OppositeGame(BaseGame):
         # في وضع الفريقين: تجاهل غير المنضمين
         if self.team_mode and user_id not in self.joined_users:
             return None
-        
-        # في وضع الفريقين: لا يوجد لمح أو جاوب
+
+        # ✅ التلميح (فردي فقط)
+        if self.can_use_hint() and normalized == "لمح":
+            hint = self.get_hint()
+            return {
+                "message": hint,
+                "response": self._create_text_message(hint),
+                "points": 0
+            }
+
+        # ✅ كشف الإجابة (فردي فقط)
+        if self.can_reveal_answer() and normalized == "جاوب":
+            answers_text = " أو ".join(self.current_answer)
+            self.current_question += 1
+            self.answered_users.clear()
+
+            if self.current_question >= self.questions_count:
+                result = self.end_game()
+                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message','')}"
+                return result
+
+            return {
+                "message": f"الإجابة: {answers_text}",
+                "response": self.get_question(),
+                "points": 0
+            }
+
+        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
-
-        # الوضع الفردي فقط
-        if not self.team_mode:
-            # التلميح
-            if normalized == "لمح":
-                hint = self.get_hint()
-                return {
-                    "message": hint,
-                    "response": self._create_text_message(hint),
-                    "points": 0
-                }
-
-            # كشف الإجابة
-            if normalized == "جاوب":
-                answers_text = " أو ".join(self.current_answer)
-                self.current_question += 1
-                self.answered_users.clear()
-
-                if self.current_question >= self.questions_count:
-                    result = self.end_game()
-                    result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message','')}"
-                    return result
-
-                return {
-                    "message": f"الإجابة: {answers_text}",
-                    "response": self.get_question(),
-                    "points": 0
-                }
 
         # التحقق من الإجابة
         for correct_answer in self.current_answer:
