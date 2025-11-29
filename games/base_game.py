@@ -22,7 +22,7 @@ class BaseGame:
     supports_hint = True
     supports_reveal = True
 
-    # ثيمات زجاجية
+    # ثيمات زجاجية - 9 ثيمات
     THEMES = {
         "أبيض": {
             "bg": "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)",
@@ -37,7 +37,7 @@ class BaseGame:
             "error": "#EF4444"
         },
         "أسود": {
-            "bg": "linear-gradient(135deg,#0F172A 0%,#1E293B 100%)",
+            "bg": "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
             "card": "#1E293B",
             "glass": "rgba(30,41,59,0.85)",
             "primary": "#60A5FA",
@@ -45,6 +45,90 @@ class BaseGame:
             "text2": "#CBD5E1",
             "shadow1": "rgba(96,165,250,0.1)",
             "border": "rgba(96,165,250,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "رمادي": {
+            "bg": "linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#6B7280",
+            "text": "#111827",
+            "text2": "#6B7280",
+            "shadow1": "rgba(107,114,128,0.1)",
+            "border": "rgba(107,114,128,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "أزرق": {
+            "bg": "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#2563EB",
+            "text": "#1E3A8A",
+            "text2": "#3B82F6",
+            "shadow1": "rgba(37,99,235,0.1)",
+            "border": "rgba(37,99,235,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "بنفسجي": {
+            "bg": "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#8B5CF6",
+            "text": "#4C1D95",
+            "text2": "#7C3AED",
+            "shadow1": "rgba(139,92,246,0.1)",
+            "border": "rgba(139,92,246,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "وردي": {
+            "bg": "linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#EC4899",
+            "text": "#831843",
+            "text2": "#DB2777",
+            "shadow1": "rgba(236,72,153,0.1)",
+            "border": "rgba(236,72,153,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "أخضر": {
+            "bg": "linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#10B981",
+            "text": "#064E3B",
+            "text2": "#059669",
+            "shadow1": "rgba(16,185,129,0.1)",
+            "border": "rgba(16,185,129,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "برتقالي": {
+            "bg": "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#F97316",
+            "text": "#7C2D12",
+            "text2": "#EA580C",
+            "shadow1": "rgba(249,115,22,0.1)",
+            "border": "rgba(249,115,22,0.1)",
+            "success": "#10B981",
+            "error": "#EF4444"
+        },
+        "بني": {
+            "bg": "linear-gradient(135deg, #FFFCF7 0%, #F5E6D8 100%)",
+            "card": "#FFFFFF",
+            "glass": "rgba(255,255,255,0.85)",
+            "primary": "#8A4B10",
+            "text": "#4A2F05",
+            "text2": "#C08437",
+            "shadow1": "rgba(138,75,16,0.1)",
+            "border": "rgba(138,75,16,0.1)",
             "success": "#10B981",
             "error": "#EF4444"
         }
