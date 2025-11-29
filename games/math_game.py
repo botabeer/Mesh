@@ -1,8 +1,7 @@
 """
-لعبة الرياضيات - Bot Mesh v13.0 FINAL
+لعبة الرياضيات - Bot Mesh v19.0 ENHANCED
 Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة فقط
-✅ عرض السؤال السابق
+نقطة واحدة | عرض السؤال السابق | مستويات متدرجة
 """
 
 from games.base_game import BaseGame
@@ -12,12 +11,12 @@ from typing import Dict, Any, Optional
 
 
 class MathGame(BaseGame):
-    """لعبة الرياضيات"""
+    """لعبة الرياضيات - عمليات حسابية متدرجة الصعوبة"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "رياضيات"
-        self.game_icon = "▪️"
+        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
 
@@ -35,6 +34,7 @@ class MathGame(BaseGame):
         self.current_question_data = None
 
     def generate_math_question(self):
+        """توليد سؤال رياضي حسب المستوى الحالي"""
         level = min(self.current_question + 1, 5)
         config = self.difficulty_levels[level]
         operation = random.choice(config["ops"])
@@ -55,7 +55,7 @@ class MathGame(BaseGame):
             b = random.randint(2, max_factor)
             answer = a * b
             question = f"{a} × {b} = ؟"
-        else:
+        else:  # '÷'
             result = random.randint(2, 20)
             divisor = random.randint(2, 15)
             a = result * divisor
@@ -84,9 +84,9 @@ class MathGame(BaseGame):
         self.round_start_time = time.time()
 
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}\n▪️ اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"الوقت {self.round_time} ثانية | المستوى: {q_data['level_name']}\nاكتب لمح او جاوب"
         else:
-            additional_info = f"⏱️ {self.round_time} ثانية | المستوى: {q_data['level_name']}"
+            additional_info = f"الوقت {self.round_time} ثانية | المستوى: {q_data['level_name']}"
 
         return self.build_question_flex(
             question_text=q_data["question"],
@@ -110,11 +110,11 @@ class MathGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}\n\n{result.get('message', '')}"
+                result["message"] = f"انتهى الوقت\nالإجابة: {self.current_answer}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {self.current_answer}",
+                "message": f"انتهى الوقت\nالإجابة: {self.current_answer}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -129,7 +129,7 @@ class MathGame(BaseGame):
         normalized = self.normalize_text(answer)
 
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"▪️ الجواب من {len(self.current_answer)} خانات"
+            hint = f"الجواب من {len(self.current_answer)} خانات"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
@@ -137,7 +137,7 @@ class MathGame(BaseGame):
             }
 
         if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"▪️ الجواب: {self.current_answer}"
+            reveal = f"الجواب: {self.current_answer}"
             self.previous_question = self.current_question_data["question"] if self.current_question_data else None
             self.previous_answer = self.current_answer
             self.current_question += 1
@@ -161,8 +161,8 @@ class MathGame(BaseGame):
             user_num = int(answer)
         except:
             return {
-                "message": "▪️ يرجى إدخال رقم صحيح",
-                "response": self._create_text_message("▪️ يرجى إدخال رقم صحيح"),
+                "message": "يرجى إدخال رقم صحيح",
+                "response": self._create_text_message("يرجى إدخال رقم صحيح"),
                 "points": 0
             }
 
@@ -189,13 +189,13 @@ class MathGame(BaseGame):
                 return result
 
             return {
-                "message": f"▪️ إجابة صحيحة!\n+{total_points} نقطة",
+                "message": f"إجابة صحيحة\n+{total_points} نقطة",
                 "response": self.get_question(),
                 "points": total_points
             }
 
         return {
-            "message": "▪️ إجابة خاطئة",
-            "response": self._create_text_message("▪️ إجابة خاطئة"),
+            "message": "إجابة خاطئة",
+            "response": self._create_text_message("إجابة خاطئة"),
             "points": 0
         }
