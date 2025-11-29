@@ -1,7 +1,8 @@
 """
-Bot Mesh - UI Builder v11.0 FIXED
+Bot Mesh - UI Builder v11.1 FINAL FIX
 Created by: Abeer Aldosari © 2025
-✅ إصلاح جميع أخطاء LINE API
+✅ إزالة backgroundColor من جميع الـ Flex Messages
+✅ متوافق 100% مع LINE API
 """
 
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
@@ -21,78 +22,139 @@ def _btn(lbl, txt, style="primary", color=None):
     return {"type":"button","action":{"type":"message","label":lbl,"text":txt},"style":style,"height":"sm","color":color} if color else {"type":"button","action":{"type":"message","label":lbl,"text":txt},"style":style,"height":"sm"}
 def _flex(alt, bubble): return FlexMessage(alt_text=alt, contents=FlexContainer.from_dict(bubble))
 
-# البداية
+# البداية - متطابقة مع الصور
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
     c = _c(theme)
-    status = "✅ مسجل" if is_registered else "⚪ غير مسجل"
-    status_color = c["success"] if is_registered else c["text2"]
+    status_icon = "✅" if is_registered else "⚪"
+    status_text = "مسجل" if is_registered else "غير مسجل"
     
-    theme_rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(t,f"ثيم {t}","primary" if t==theme else "secondary",c["primary"] if t==theme else None) for t in list(THEMES.keys())[i:i+3]]} for i in range(0,len(THEMES),3)]
+    # أزرار الثيمات 3×3
+    theme_list = list(THEMES.keys())
+    theme_rows = []
+    for i in range(0, len(theme_list), 3):
+        row_themes = theme_list[i:i+3]
+        theme_rows.append({
+            "type":"box","layout":"horizontal","spacing":"sm","margin":"sm",
+            "contents":[_btn(t,f"ثيم {t}","primary" if t==theme else "secondary") for t in row_themes]
+        })
     
     # زر الانضمام/الانسحاب
-    join_btn = _btn("📝 انضم" if not is_registered else "❌ انسحب", "انضم" if not is_registered else "انسحب","primary",c["primary"])
-    games_btn = _btn("🎮 الألعاب","ألعاب","secondary")
+    join_icon = "✅" if is_registered else "❌"
+    join_text = "انسحب" if is_registered else "انضم"
+    join_label = f"{join_icon} {join_text}"
     
     bubble = {
         "type":"bubble","size":"mega",
         "body":{
-            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "type":"box","layout":"vertical","paddingAll":"20px",
             "contents":[
-                {"type":"box","layout":"vertical","contents":[
-                    {"type":"text","text":f"🎮 {BOT_NAME}","weight":"bold","size":"xxl","color":c["primary"],"align":"center"},
-                    {"type":"text","text":"بوت الألعاب الترفيهية الذكي","size":"sm","color":c["text2"],"align":"center","margin":"xs"}
-                ],"spacing":"xs"},
+                # العنوان
+                {"type":"text","text":f"🎮 {BOT_NAME}","weight":"bold","size":"xxl","color":c["text"],"align":"center"},
                 {"type":"separator","margin":"lg"},
-                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"20px","margin":"lg","contents":[
-                    {"type":"text","text":f"👤 {username}","size":"lg","color":c["text"],"weight":"bold"},
-                    {"type":"box","layout":"horizontal","margin":"sm","contents":[
-                        {"type":"text","text":status,"size":"sm","color":status_color,"flex":0},
-                        {"type":"text","text":f"⭐ {points} نقطة","size":"sm","color":c["primary"],"align":"end"}
-                    ]}
+                
+                # حالة المستخدم
+                {"type":"box","layout":"horizontal","margin":"lg","contents":[
+                    {"type":"text","text":f"{status_icon} | نقطة","size":"md","color":c["text"],"align":"start","flex":2},
+                    {"type":"text","text":status_text,"size":"md","color":c["text2"],"align":"end","flex":1}
                 ]},
-                {"type":"text","text":"🎨 اختر ثيمك المفضل:","size":"md","weight":"bold","color":c["text"],"margin":"xl"},
+                {"type":"text","text":str(points),"size":"xxl","color":c["text"],"align":"start","margin":"none"},
+                
+                # قسم الثيمات
+                {"type":"text","text":"🎨 :اختر الثيم","size":"md","weight":"bold","color":c["text"],"margin":"xl","align":"start"},
                 *theme_rows,
-                {"type":"separator","margin":"xl"},
-                {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[join_btn, games_btn]},
+                
+                # الأزرار الرئيسية
+                {"type":"box","layout":"horizontal","spacing":"sm","margin":"xl","contents":[
+                    _btn(join_label,join_text,"primary" if is_registered else "secondary"),
+                    _btn("🎮 الألعاب","ألعاب","secondary")
+                ]},
                 {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[
                     _btn("⭐ نقاطي","نقاطي","secondary"),
                     _btn("🏆 الصدارة","صدارة","secondary")
                 ]},
                 {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[
-                    _btn("❓ مساعدة","مساعدة","secondary"),
-                    _btn("👥 فريقين","فريقين","secondary") if is_registered else _btn("🎨 ثيمات","ثيمات","secondary")
+                    _btn("👥 فريقين","فريقين","secondary"),
+                    _btn("❓ مساعدة","مساعدة","secondary")
                 ]},
+                
+                # الحقوق
                 {"type":"separator","margin":"lg"},
-                {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text2"],"align":"center"}
+                {"type":"text","text":"© 2025 Abeer Aldosari - All Rights Reserved","size":"xxs","color":c["text2"],"align":"center","margin":"md"}
             ]
         }
     }
     return attach_quick_reply(_flex("البداية", bubble))
 
-# قائمة الألعاب
+# قائمة الألعاب - متطابقة مع الصورة 3
 def build_games_menu(theme=DEFAULT_THEME):
     c = _c(theme)
-    game_rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(f"{ic} {nm}",nm,"primary",c["primary"]) for _,nm,ic in GAME_LIST[i:i+3]]} for i in range(0,len(GAME_LIST),3)]
+    
+    # ترتيب الألعاب حسب الصورة: 12 لعبة في 4 صفوف × 3 أعمدة
+    games_order = [
+        ("fast_typing","كتابة سريعة","⚡"),
+        ("iq","ذكاء","🧠"),
+        ("guess","تخمين","🔮"),
+        ("song","أغنية","🎵"),
+        ("human_animal_plant","إنسان حيوان نبات","🌿"),
+        ("chain_words","سلسلة كلمات","🔗"),
+        ("opposite","أضداد","↔️"),
+        ("letters_words","تكوين","📝"),
+        ("scramble_word","كلمة مبعثرة","🔤"),
+        ("compatibility","توافق","💕"),
+        ("math","رياضيات","🔢"),
+        ("word_color","لون","🎨")
+    ]
+    
+    # نقرأ الأسماء من الترتيب الجديد
+    display_names = [
+        "أسرع", "ذكاء", "لعبة",
+        "أغنية", "خمن", "سلسلة",
+        "ترتيب", "تكوين", "ضد",
+        "لون", "رياضيا...", "توافق"
+    ]
+    
+    # إنشاء الأزرار 3×4
+    game_rows = []
+    for i in range(0, 12, 3):
+        row = {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[]}
+        for j in range(3):
+            idx = i + j
+            if idx < len(display_names):
+                # استخدام الاسم الفعلي من GAME_LIST للأمر
+                actual_name = [name for _, name, _ in GAME_LIST][idx]
+                row["contents"].append(_btn(display_names[idx], actual_name, "primary"))
+        game_rows.append(row)
     
     bubble = {
         "type":"bubble","size":"mega",
         "body":{
-            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "type":"box","layout":"vertical","paddingAll":"20px",
             "contents":[
-                {"type":"text","text":"🎮 الألعاب المتاحة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
-                {"type":"text","text":f"اختر من {len(GAME_LIST)} لعبة مختلفة","size":"sm","color":c["text2"],"align":"center","margin":"xs"},
+                # العنوان
+                {"type":"text","text":"🎮 الألعاب المتاحة","weight":"bold","size":"xl","color":"#3B9DD9","align":"center"},
+                {"type":"text","text":"عدد الألعاب: 12","size":"sm","color":c["text2"],"align":"center","margin":"xs"},
                 {"type":"separator","margin":"lg"},
+                
+                # الألعاب
                 *game_rows,
-                {"type":"separator","margin":"lg"},
-                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"15px","paddingAll":"15px","margin":"md","contents":[
-                    {"type":"text","text":"💡 الأوامر أثناء اللعب:","size":"sm","color":c["text"],"weight":"bold"},
-                    {"type":"text","text":"• لمح - للحصول على تلميح\n• جاوب - لكشف الإجابة\n• إيقاف - لإنهاء اللعبة","size":"xs","color":c["text2"],"wrap":True,"margin":"xs"}
+                
+                # قسم الأوامر
+                {"type":"box","layout":"vertical","paddingAll":"15px","margin":"lg","contents":[
+                    {"type":"text","text":"💡 :أوامر اللعب","size":"sm","color":c["text"],"weight":"bold","align":"start"},
+                    {"type":"text","text":"اضغط على اسم اللعبة لبدء اللعب •","size":"xs","color":c["text2"],"wrap":True,"margin":"sm","align":"start"},
+                    {"type":"text","text":"اكتب 'لمح' للتلميح •","size":"xs","color":c["text2"],"wrap":True,"margin":"xs","align":"start"},
+                    {"type":"text","text":"اكتب 'جاوب' لكشف الإجابة •","size":"xs","color":c["text2"],"wrap":True,"margin":"xs","align":"start"},
+                    {"type":"text","text":"اكتب 'إيقاف' لإنهاء اللعبة •","size":"xs","color":c["text2"],"wrap":True,"margin":"xs","align":"start"}
                 ]},
+                
+                # الأزرار السفلية
                 {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[
                     _btn("🏠 البداية","بداية","secondary"),
                     _btn("⛔ إيقاف","إيقاف","secondary")
                 ]},
-                {"type":"text","text":BOT_RIGHTS,"size":"xxs","color":c["text2"],"align":"center","margin":"sm"}
+                
+                # الحقوق
+                {"type":"text","text":"© 2025 Abeer Aldosari - All Rights Reserved","size":"xxs","color":c["text2"],"align":"center","margin":"sm"}
             ]
         }
     }
@@ -107,16 +169,16 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
     bubble = {
         "type":"bubble","size":"mega",
         "body":{
-            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "type":"box","layout":"vertical","paddingAll":"20px",
             "contents":[
                 {"type":"text","text":"⭐ نقاطي","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
                 {"type":"separator","margin":"lg"},
                 {"type":"text","text":f"👤 {username}","size":"lg","color":c["text"],"weight":"bold","align":"center","margin":"lg"},
-                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"25px","margin":"lg","contents":[
+                {"type":"box","layout":"vertical","cornerRadius":"20px","paddingAll":"25px","margin":"lg","contents":[
                     {"type":"text","text":"النقاط الكلية","size":"sm","color":c["text2"],"align":"center"},
                     {"type":"text","text":str(points),"size":"xxl","weight":"bold","color":c["primary"],"align":"center","margin":"sm"}
                 ]},
-                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"15px","paddingAll":"15px","margin":"md","contents":[
+                {"type":"box","layout":"vertical","cornerRadius":"15px","paddingAll":"15px","margin":"md","contents":[
                     {"type":"text","text":"المستوى الحالي","size":"sm","color":c["text2"],"align":"center"},
                     {"type":"text","text":level,"size":"lg","weight":"bold","color":level_color,"align":"center","margin":"sm"}
                 ]},
@@ -145,11 +207,11 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
     bubble = {
         "type":"bubble","size":"mega",
         "body":{
-            "type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],
+            "type":"box","layout":"vertical","paddingAll":"20px",
             "contents":[
                 {"type":"text","text":"🏆 لوحة الصدارة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
                 {"type":"separator","margin":"lg"},
-                {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"20px","margin":"lg","spacing":"sm","contents":items},
+                {"type":"box","layout":"vertical","cornerRadius":"20px","paddingAll":"20px","margin":"lg","spacing":"sm","contents":items},
                 {"type":"box","layout":"horizontal","spacing":"sm","margin":"md","contents":[
                     _btn("🏠 البداية","بداية","secondary"),
                     _btn("⭐ نقاطي","نقاطي","secondary")
@@ -174,12 +236,12 @@ def build_registration_required(theme=DEFAULT_THEME):
 
 def build_winner_announcement(username, game_name, round_points, total_points, theme=DEFAULT_THEME):
     c = _c(theme)
-    bubble = {"type":"bubble","size":"mega","header":{"type":"box","layout":"vertical","backgroundColor":c["success"],"paddingAll":"25px","contents":[
+    bubble = {"type":"bubble","size":"mega","header":{"type":"box","layout":"vertical","paddingAll":"25px","contents":[
         {"type":"text","text":"🎉","size":"xxl","align":"center"},
         {"type":"text","text":"مبروك!","size":"xxl","weight":"bold","align":"center","color":"#FFFFFF","margin":"sm"}
     ]},"body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
         {"type":"text","text":f"أنهيت لعبة {game_name}","size":"lg","color":c["text"],"align":"center","wrap":True},
-        {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"20px","paddingAll":"20px","margin":"lg","contents":[
+        {"type":"box","layout":"vertical","cornerRadius":"20px","paddingAll":"20px","margin":"lg","contents":[
             {"type":"text","text":"النقاط المكتسبة","size":"sm","color":c["text2"],"align":"center"},
             {"type":"text","text":f"+{round_points}","size":"xxl","weight":"bold","color":c["success"],"align":"center","margin":"sm"}
         ]},
@@ -192,7 +254,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
 
 def build_help_window(theme=DEFAULT_THEME):
     c = _c(theme)
-    bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
+    bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
         {"type":"text","text":"❓ المساعدة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
         {"type":"separator","margin":"lg"},
         {"type":"text","text":"🎮 الأوامر:","weight":"bold","color":c["text"],"margin":"md"},
@@ -241,7 +303,7 @@ def build_registration_success(username, theme=DEFAULT_THEME):
 
 def build_theme_change_success(theme_name, theme=DEFAULT_THEME):
     c = _c(theme_name)
-    return attach_quick_reply(_flex("ثيم", {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
+    return attach_quick_reply(_flex("ثيم", {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
         {"type":"text","text":"✅ تم تغيير الثيم","size":"lg","weight":"bold","color":c["primary"],"align":"center"},
         {"type":"text","text":f"الثيم: {theme_name}","size":"sm","color":c["text"],"align":"center","margin":"md"},
         _btn("🏠 البداية","بداية","primary")
@@ -276,7 +338,7 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("نتيجة", {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","paddingAll":"20px","contents":[
         {"type":"text","text":"🏆 انتهت اللعبة!","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
         {"type":"separator","margin":"lg"},
-        {"type":"box","layout":"vertical","backgroundColor":c["card"],"cornerRadius":"15px","paddingAll":"20px","margin":"lg","contents":[
+        {"type":"box","layout":"vertical","cornerRadius":"15px","paddingAll":"20px","margin":"lg","contents":[
             {"type":"box","layout":"horizontal","margin":"md","contents":[
                 {"type":"text","text":f"الفريق 1\n{t1}","size":"lg","color":c["primary"],"align":"center","flex":1},
                 {"type":"text","text":"VS","size":"sm","color":c["text2"],"align":"center","flex":0},
