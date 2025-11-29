@@ -25,7 +25,7 @@ def build_registration_required(theme=DEFAULT_THEME):
 
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
     c = _c(theme)
-    status = "☑️ مسجل" if is_registered else "🔘 غير مسجل"
+    status = "☑️ مسجل" if is_registered else "غير مسجل"
     themes = list(THEMES.keys())
     rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(t,f"ثيم {t}","primary" if t==theme else "secondary",theme) for t in themes[i:i+3]]} for i in range(0,len(themes),3)]
     join = "انسحب" if is_registered else "انضم"
@@ -35,7 +35,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
         _glass([{"type":"box","layout":"horizontal","contents":[{"type":"text","text":"النقاط","size":"md","color":c["text"],"flex":2,"weight":"bold"},{"type":"text","text":status,"size":"md","color":c["text2"],"align":"end","flex":1}]},{"type":"text","text":str(points),"size":"xxl","color":c["primary"],"margin":"sm","weight":"bold"}],theme,"15px","15px"),
         {"type":"text","text":"اختر الثيم","size":"md","weight":"bold","color":c["text"],"margin":"xl"},
         *rows,
-        {"type":"box","layout":"horizontal","spacing":"sm","margin":"xl","contents":[_btn(f"✨ {join}",join,"primary" if is_registered else "secondary",theme),_btn("🎮 الألعاب","ألعاب","secondary",theme)]},
+        {"type":"box","layout":"horizontal","spacing":"sm","margin":"xl","contents":[_btn(f"🚪 {join}",join,"primary" if is_registered else "secondary",theme),_btn("🎮 الألعاب","ألعاب","secondary",theme)]},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("📊 نقاطي","نقاطي","secondary",theme),_btn("🏆 الصدارة","صدارة","secondary",theme)]},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("👥 فريقين","فريقين","secondary",theme),_btn("📖 مساعدة","مساعدة","secondary",theme)]},
         {"type":"separator","margin":"lg","color":c["border"]},
@@ -45,7 +45,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
 
 def build_games_menu(theme=DEFAULT_THEME):
     c = _c(theme)
-    order = ["أسرع","ذكاء","لعبة","أغنيه","خمن","سلسلة","ترتيب","تكوين","ضد","لون","رياضيات","💖 توافق"]
+    order = ["أسرع","ذكاء","لعبة","أغنيه","خمن","سلسلة","ترتيب","تكوين","ضد","لون","رياضيات","توافق"]
     rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(order[i+j],order[i+j],"primary",theme) for j in range(3) if i+j<12]} for i in range(0,12,3)]
     body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
         {"type":"text","text":"🎮 الألعاب المتاحة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
@@ -107,7 +107,7 @@ def build_help_window(theme=DEFAULT_THEME):
             {"type":"text","text":"ملاحظات","weight":"bold","color":c["text"],"size":"sm"},
             {"type":"text","text":"• يمكنك استخدام البوت في الخاص والقروبات","size":"xs","color":c["text2"],"wrap":True,"margin":"sm"},
             {"type":"text","text":"• منشن البوت لعرض الألعاب @BOT","size":"xs","color":c["text2"],"wrap":True,"margin":"xs"},
-            {"type":"text","text":"• لعبة 🖤 توافق: لا تحتاج تسجيل","size":"xs","color":c["primary"],"wrap":True,"margin":"xs","weight":"bold"}
+            {"type":"text","text":"• لعبة توافق: لا تحتاج تسجيل","size":"xs","color":c["primary"],"wrap":True,"margin":"xs","weight":"bold"}
         ],theme,"12px","12px"),
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[
             _btn("🏠 البداية","بداية","secondary",theme),
