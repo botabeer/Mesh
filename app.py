@@ -1,11 +1,10 @@
 # app_v13_final.py - Bot Mesh v13.0 FINAL
 """
-Bot Mesh - LINE Bot Application v13.0 FINAL
-✅ استخدام database
-✅ استخدام constants
-✅ استخدام ui_builder
-✅ استخدام base_game
-✅ 100% محسّن ومتكامل
+Bot Mesh - LINE Bot Application v17.0 FINAL
+Created by: Abeer Aldosari © 2025
+✅ أسماء الألعاب موحدة 100%
+✅ معالجة أخطاء محسّنة
+✅ تحويل صحيح من اسم العرض لاسم الكلاس
 """
 
 import os, sys, logging, threading, time, traceback, random
@@ -17,9 +16,10 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
-# استيراد المحسّنة - تم التعديل هنا ✅
+# ✅ استيراد الدالة الجديدة للتحويل
 from constants import (BOT_NAME, BOT_VERSION, BOT_RIGHTS, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
-    validate_env, get_username, GAME_LIST, DEFAULT_THEME, PRIVACY_SETTINGS, is_allowed_command, GAME_COMMANDS)
+    validate_env, get_username, GAME_LIST, DEFAULT_THEME, PRIVACY_SETTINGS, is_allowed_command, 
+    GAME_COMMANDS, get_game_class_name)
 from ui_builder import (build_games_menu, build_my_points, build_leaderboard, build_registration_required,
     build_winner_announcement, build_help_window, build_theme_selector, build_enhanced_home, build_multiplayer_help_window,
     attach_quick_reply, build_join_confirmation, build_error_message, build_game_stopped, build_team_game_end)
@@ -51,6 +51,7 @@ def is_rate_limited(user_id):
     user_rate[user_id].append(now)
     return False
 
+# ✅ تحميل الألعاب بأسماء الكلاسات الصحيحة
 AVAILABLE_GAMES = {}
 try:
     from games.iq_game import IqGame
@@ -66,12 +67,20 @@ try:
     from games.guess_game import GuessGame
     from games.compatibility_game import CompatibilitySystem
 
+    # ✅ المفاتيح هي أسماء الكلاسات (مثل "كتابة سريعة")
     AVAILABLE_GAMES = {
-        "ذكاء": IqGame, "رياضيات": MathGame, "لون": WordColorGame,
-        "كلمة مبعثرة": ScrambleWordGame, "كتابة سريعة": FastTypingGame,
-        "أضداد": OppositeGame, "تكوين": LettersWordsGame, "أغنية": SongGame,
-        "إنسان حيوان نبات": HumanAnimalPlantGame, "سلسلة كلمات": ChainWordsGame,
-        "تخمين": GuessGame, "توافق": CompatibilitySystem
+        "ذكاء": IqGame,
+        "رياضيات": MathGame,
+        "لون": WordColorGame,
+        "كلمة مبعثرة": ScrambleWordGame,
+        "كتابة سريعة": FastTypingGame,
+        "أضداد": OppositeGame,
+        "تكوين": LettersWordsGame,
+        "أغنية": SongGame,
+        "إنسان حيوان نبات": HumanAnimalPlantGame,
+        "سلسلة كلمات": ChainWordsGame,
+        "تخمين": GuessGame,
+        "توافق": CompatibilitySystem
     }
     logger.info(f"✅ تم تحميل {len(AVAILABLE_GAMES)} لعبة")
 except Exception as e:
@@ -111,16 +120,22 @@ def close_join_phase_and_assign(game_id):
     meta["join_phase"] = False
     logger.info(f"✅ تم تقسيم الفرق: {len(team1)} vs {len(team2)}")
 
-def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, team_mode=False, source_type="user"):
-    if game_name not in AVAILABLE_GAMES:
-        raise ValueError(f"اللعبة غير متوفرة: {game_name}")
-    GameClass = AVAILABLE_GAMES[game_name]
+def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=None, team_mode=False, source_type="user"):
+    """
+    ✅ game_class_name هو اسم الكلاس (مثل "كتابة سريعة")
+    """
+    if game_class_name not in AVAILABLE_GAMES:
+        raise ValueError(f"اللعبة غير متوفرة: {game_class_name}")
+    
+    GameClass = AVAILABLE_GAMES[game_class_name]
     game_instance = GameClass(line_api)
+    
     try:
         if hasattr(game_instance, 'set_theme') and theme:
             game_instance.set_theme(theme)
     except Exception as e:
         logger.error(f"⚠️ فشل تعيين الثيم: {e}")
+    
     try:
         if hasattr(game_instance, 'set_database'):
             game_instance.set_database(db)
@@ -128,10 +143,12 @@ def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, tea
             game_instance.db = db
     except Exception as e:
         logger.warning(f"⚠️ لم يتم ربط قاعدة البيانات: {e}")
+    
     if source_type == "group":
         game_instance.session_type = "teams" if team_mode else "group"
     else:
         game_instance.session_type = "solo"
+    
     if team_mode:
         game_instance.team_mode = True
         game_instance.supports_hint = False
@@ -141,15 +158,16 @@ def launch_game_instance(game_id, owner_id, game_name, line_api, theme=None, tea
             game_instance.joined_users = meta["joined_users"].copy()
         if meta.get("teams"):
             game_instance.user_teams = meta["teams"].copy()
+    
     active_games[game_id] = game_instance
     meta = ensure_session_meta(game_id)
-    meta["current_game_name"] = game_name
+    meta["current_game_name"] = game_class_name
     meta["owner"] = owner_id
     meta["session_type"] = game_instance.session_type
-    session_id = db.create_game_session(owner_id, game_name, mode=game_instance.session_type, team_mode=1 if team_mode else 0)
+    session_id = db.create_game_session(owner_id, game_class_name, mode=game_instance.session_type, team_mode=1 if team_mode else 0)
     meta["session_id"] = session_id
     meta["team_mode"] = team_mode
-    logger.info(f"✅ تم إطلاق اللعبة: {game_name}")
+    logger.info(f"✅ تم إطلاق اللعبة: {game_class_name}")
     return game_instance
 
 def get_user_data(user_id, username="مستخدم"):
@@ -297,10 +315,15 @@ def handle_message(event):
                     reply_message = build_game_stopped(game_name, current_theme)
                 else:
                     reply_message = build_error_message("⚠️ لا توجد لعبة نشطة", current_theme)
-            elif text in AVAILABLE_GAMES:
-                if text == "توافق":
+            
+            # ✅ معالجة بدء اللعبة: تحويل من اسم العرض لاسم الكلاس
+            elif text in GAME_COMMANDS:
+                # text هو اسم العرض (مثل "أسرع")
+                game_class_name = get_game_class_name(text)  # تحويل لاسم الكلاس (مثل "كتابة سريعة")
+                
+                if game_class_name == "توافق":
                     try:
-                        game_instance = launch_game_instance(game_id, user_id, text, line_api, current_theme, False, source_type)
+                        game_instance = launch_game_instance(game_id, user_id, game_class_name, line_api, current_theme, False, source_type)
                         start_msg = game_instance.start_game()
                         attach_quick_reply(start_msg)
                         line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
@@ -317,11 +340,11 @@ def handle_message(event):
                     if in_group and meta.get("join_phase"):
                         close_join_phase_and_assign(game_id)
                         team_mode = True
-                        logger.info(f"▪️ بدء لعبة فريقين: {text}")
+                        logger.info(f"▪️ بدء لعبة فريقين: {game_class_name}")
                     try:
-                        game_instance = launch_game_instance(game_id, user_id, text, line_api, current_theme, team_mode, source_type)
+                        game_instance = launch_game_instance(game_id, user_id, game_class_name, line_api, current_theme, team_mode, source_type)
                         if team_mode:
-                            logger.info(f"▪️ وضع الفريقين نشط للعبة {text}")
+                            logger.info(f"▪️ وضع الفريقين نشط للعبة {game_class_name}")
                         start_msg = game_instance.start_game()
                         attach_quick_reply(start_msg)
                         line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
@@ -330,6 +353,7 @@ def handle_message(event):
                         logger.error(f"❌ خطأ في بدء اللعبة: {e}")
                         logger.error(traceback.format_exc())
                         reply_message = build_error_message(f"❌ حدث خطأ في بدء اللعبة", current_theme)
+            
             elif game_id in active_games:
                 meta = ensure_session_meta(game_id)
                 is_compatibility = meta.get("current_game_name") == "توافق"
