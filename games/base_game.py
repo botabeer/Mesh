@@ -1,10 +1,11 @@
 """
-Bot Mesh - Base Game v13.0 FINAL
+Bot Mesh - Base Game v17.1 ENHANCED
 Created by: Abeer Aldosari © 2025
 ✅ 1 نقطة فقط لكل إجابة صحيحة (بدون بونص)
-✅ عرض السؤال السابق والإجابة
+✅ عرض السؤال السابق والإجابة في جميع الألعاب
 ✅ نوافذ Mega Size موحدة
 ✅ إيموجي محدود: ▫️▪️⏱️🥇🥈🥉🎖️🏅🏆🖤
+✅ تحسين التباين للثيم الأبيض
 """
 
 from typing import Dict, Any, Optional
@@ -188,8 +189,27 @@ class BaseGame:
         """إنشاء Flex Message"""
         return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
 
+    def _glass_box_enhanced(self, contents, radius="15px", padding="15px"):
+        """صندوق زجاجي محسّن للألعاب"""
+        colors = self.get_theme_colors()
+        
+        box = {
+            "type": "box",
+            "layout": "vertical",
+            "contents": contents,
+            "cornerRadius": radius,
+            "paddingAll": padding,
+            "borderWidth": "2px" if self.current_theme == "أبيض" else "1px",
+            "borderColor": colors["border"]
+        }
+        
+        if self.current_theme == "أبيض":
+            box["backgroundColor"] = colors["card"]
+        
+        return box
+
     def build_question_flex(self, question_text: str, additional_info: str = None):
-        """بناء Flex للسؤال مع السؤال السابق والإجابة"""
+        """بناء Flex للسؤال مع السؤال السابق والإجابة - محسّن"""
         colors = self.get_theme_colors()
         
         contents = [
@@ -198,38 +218,30 @@ class BaseGame:
             {"type": "separator", "margin": "lg", "color": colors["border"]}
         ]
         
-        # عرض السؤال السابق والإجابة
+        # ✅ عرض السؤال السابق والإجابة
         if self.previous_question and self.previous_answer:
             prev_answer_text = self.previous_answer if isinstance(self.previous_answer, str) else (self.previous_answer[0] if isinstance(self.previous_answer, list) and self.previous_answer else "")
             
-            contents.append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
+            # اختصار السؤال السابق إذا كان طويلاً
+            prev_q_display = str(self.previous_question)
+            if len(prev_q_display) > 50:
+                prev_q_display = prev_q_display[:47] + "..."
+            
+            contents.append(
+                self._glass_box_enhanced([
                     {"type": "text", "text": "▪️ السؤال السابق", "size": "xs", "color": colors["text3"], "weight": "bold"},
-                    {"type": "text", "text": str(self.previous_question)[:50] + "..." if len(str(self.previous_question)) > 50 else str(self.previous_question), "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
-                    {"type": "text", "text": f"▪️ الإجابة: {prev_answer_text}", "size": "xs", "color": colors["success"], "wrap": True, "margin": "xs"}
-                ],
-                "backgroundColor": colors["info_bg"],
-                "cornerRadius": "10px",
-                "paddingAll": "10px",
-                "margin": "md"
-            })
+                    {"type": "text", "text": prev_q_display, "size": "xs", "color": colors["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": f"▪️ الإجابة: {prev_answer_text}", "size": "xs", "color": colors["success"], "wrap": True, "margin": "xs", "weight": "bold"}
+                ], "10px", "10px")
+            )
             contents.append({"type": "separator", "margin": "md", "color": colors["border"]})
         
-        # السؤال الحالي
-        contents.append({
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {"type": "text", "text": question_text, "size": "lg", "color": colors["text"], "align": "center", "wrap": True}
-            ],
-            "cornerRadius": "15px",
-            "paddingAll": "20px",
-            "margin": "lg",
-            "borderWidth": "1px",
-            "borderColor": colors["border"]
-        })
+        # ✅ السؤال الحالي
+        contents.append(
+            self._glass_box_enhanced([
+                {"type": "text", "text": question_text, "size": "lg", "color": colors["text"], "align": "center", "wrap": True, "weight": "bold"}
+            ], "15px", "20px")
+        )
         
         if additional_info:
             contents.append({
@@ -242,15 +254,21 @@ class BaseGame:
                 "margin": "md"
             })
         
+        body_style = {
+            "type": "box",
+            "layout": "vertical",
+            "contents": contents,
+            "paddingAll": "20px"
+        }
+        
+        # خلفية للثيم الأبيض
+        if self.current_theme == "أبيض":
+            body_style["backgroundColor"] = colors["bg"]
+        
         flex_content = {
             "type": "bubble",
             "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": contents,
-                "paddingAll": "20px"
-            }
+            "body": body_style
         }
         
         return self._create_flex_with_buttons(self.game_name, flex_content)
