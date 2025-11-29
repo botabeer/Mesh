@@ -1,8 +1,10 @@
 """
-🧠 لعبة الذكاء - Bot Mesh v9.1 FIXED
+لعبة الذكاء - Bot Mesh v13.0 FINAL
 Created by: Abeer Aldosari © 2025
+✅ نقطة واحدة فقط لكل إجابة
+✅ عرض السؤال السابق
 ✅ فردي: لمح + جاوب + مؤقت
-✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
+✅ فريقين: مؤقت فقط
 """
 
 from games.base_game import BaseGame
@@ -17,14 +19,14 @@ class IqGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "ذكاء"
-        self.game_icon = "🧠"
+        self.game_icon = "▪️"
         self.supports_hint = True
         self.supports_reveal = True
 
-        self.round_time = 30  # ⏱️ 30 ثانية لكل سؤال
+        self.round_time = 30  # ⏱️ 30 ثانية
         self.round_start_time = None
         
-        # قاعدة الألغاز - 60+ لغز
+        # قاعدة الألغاز
         self.riddles = [
             {"q": "ما الشيء الذي يمشي بلا أرجل ويبكي بلا عيون؟", "a": ["السحاب", "الغيم", "سحاب", "غيم"]},
             {"q": "له رأس ولكن لا عين له؟", "a": ["الدبوس", "المسمار", "الإبرة", "دبوس", "مسمار", "ابرة"]},
@@ -75,16 +77,7 @@ class IqGame(BaseGame):
             {"q": "يملأ الغرفة ولا يشغل حيزاً؟", "a": ["الضوء", "ضوء", "الهواء"]},
             {"q": "ما هو الشيء الذي له قلب ولكن لا أعضاء أخرى؟", "a": ["الشجرة", "شجرة"]},
             {"q": "له جذور لا يراها أحد؟", "a": ["الشجرة", "شجرة"]},
-            {"q": "يرتفع ولا يسقط أبداً؟", "a": ["الدخان", "دخان"]},
-            {"q": "ما الذي يمكنك الاحتفاظ به بعد إعطائه لشخص آخر؟", "a": ["الكلمة", "كلمة", "الوعد"]},
-            {"q": "يقف أمامك ولا تراه؟", "a": ["المستقبل", "مستقبل"]},
-            {"q": "له عين ولا يبكي؟", "a": ["الإبرة", "ابرة"]},
-            {"q": "ما هو الشيء الذي يمكن قطعه ولكن لا ينقسم؟", "a": ["الماء", "ماء"]},
-            {"q": "له وجه ولكن لا عيون أو فم أو أنف؟", "a": ["الساعة", "ساعة", "القمر"]},
-            {"q": "يركض ولا يتعب؟", "a": ["النهر", "نهر", "الماء"]},
-            {"q": "ما الذي يذهب صعوداً وهبوطاً دون أن يتحرك؟", "a": ["الدرج", "درج", "السلم"]},
-            {"q": "له أذنان ولا يسمع؟", "a": ["الإبريق", "ابريق", "الكوب"]},
-            {"q": "يبدأ وينتهي بحرف واحد وله حرف واحد فقط؟", "a": ["العين", "عين"]}
+            {"q": "يرتفع ولا يسقط أبداً؟", "a": ["الدخان", "دخان"]}
         ]
 
         random.shuffle(self.riddles)
@@ -100,7 +93,6 @@ class IqGame(BaseGame):
         return self.get_question()
 
     def get_question(self):
-        # اختيار لغز جديد
         available = [r for r in self.riddles if r not in self.used_riddles]
         if not available:
             self.used_riddles = []
@@ -109,23 +101,19 @@ class IqGame(BaseGame):
         riddle = random.choice(available)
         self.used_riddles.append(riddle)
         self.current_answer = riddle["a"]
-        
-        # بدء العداد
         self.round_start_time = time.time()
 
-        # ✅ استخدام can_use_hint() و can_reveal_answer()
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\n💡 اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"⏱️ {self.round_time} ثانية\n▪️ اكتب 'لمح' أو 'جاوب'"
         else:
             additional_info = f"⏱️ {self.round_time} ثانية"
 
         return self.build_question_flex(
-            question_text=f"🧩 {riddle['q']}",
+            question_text=f"▪️ {riddle['q']}",
             additional_info=additional_info
         )
 
     def _time_expired(self) -> bool:
-        """التحقق من انتهاء الوقت"""
         if not self.round_start_time:
             return False
         return (time.time() - self.round_start_time) > self.round_time
@@ -134,34 +122,32 @@ class IqGame(BaseGame):
         if not self.game_active:
             return None
 
-        # ✅ التحقق من الوقت أولاً
         if self._time_expired():
             answers_text = " أو ".join(self.current_answer)
+            self.previous_question = self.used_riddles[-1]["q"] if self.used_riddles else None
+            self.previous_answer = answers_text
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\nالإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\nالإجابة: {answers_text}",
+                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
 
-        # تجاهل من أجاب
         if user_id in self.answered_users:
             return None
         
-        # في وضع الفريقين: تجاهل غير المنضمين
         if self.team_mode and user_id not in self.joined_users:
             return None
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ التلميح (فردي فقط)
         if self.can_use_hint() and normalized == "لمح":
             if not self.current_answer:
                 return {
@@ -172,9 +158,9 @@ class IqGame(BaseGame):
             
             answer = self.current_answer[0]
             if len(answer) <= 2:
-                hint = f"💡 الكلمة قصيرة: {answer[0]}_"
+                hint = f"▪️ الكلمة قصيرة: {answer[0]}_"
             else:
-                hint = f"💡 تلميح: {answer[0]}{answer[1]}{'_' * (len(answer) - 2)}"
+                hint = f"▪️ تلميح: {answer[0]}{answer[1]}{'_' * (len(answer) - 2)}"
             
             return {
                 "message": hint,
@@ -182,38 +168,31 @@ class IqGame(BaseGame):
                 "points": 0
             }
 
-        # ✅ كشف الإجابة (فردي فقط)
         if self.can_reveal_answer() and normalized == "جاوب":
             answers_text = " أو ".join(self.current_answer)
+            self.previous_question = self.used_riddles[-1]["q"] if self.used_riddles else None
+            self.previous_answer = answers_text
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"الإجابة: {answers_text}",
+                "message": f"▪️ الإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
 
-        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
 
-        # التحقق من الإجابة
         for correct in self.current_answer:
             if self.normalize_text(correct) == normalized:
-                # حساب النقاط مع بونص الوقت
-                base_points = 10
-                elapsed = int(time.time() - self.round_start_time)
-                remaining = max(0, self.round_time - elapsed)
-                time_bonus = max(0, remaining // 3)
-                total_points = base_points + time_bonus
+                total_points = 1  # نقطة واحدة فقط
 
-                # توزيع النقاط
                 if self.team_mode:
                     team = self.get_user_team(user_id)
                     if not team:
@@ -222,7 +201,7 @@ class IqGame(BaseGame):
                 else:
                     self.add_score(user_id, display_name, total_points)
 
-                self.previous_question = self.used_riddles[-1]["q"]
+                self.previous_question = self.used_riddles[-1]["q"] if self.used_riddles else None
                 self.previous_answer = correct
 
                 self.current_question += 1
@@ -233,15 +212,14 @@ class IqGame(BaseGame):
                     result["points"] = total_points
                     return result
 
-                bonus_msg = f" +{time_bonus} بونص وقت" if time_bonus > 0 else ""
                 return {
-                    "message": f"✅ صحيح!\n+{total_points} نقطة{bonus_msg}",
+                    "message": f"▪️ صحيح!\n+{total_points} نقطة",
                     "response": self.get_question(),
                     "points": total_points
                 }
 
         return {
-            "message": "❌ إجابة غير صحيحة",
-            "response": self._create_text_message("❌ إجابة غير صحيحة"),
+            "message": "▪️ إجابة غير صحيحة",
+            "response": self._create_text_message("▪️ إجابة غير صحيحة"),
             "points": 0
         }
