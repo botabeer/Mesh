@@ -1,4 +1,3 @@
-"""Bot Mesh - UI Builder v19.0 FINAL | © 2025 Abeer Aldosari"""
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction, TextMessage
 from constants import GAME_LIST, DEFAULT_THEME, THEMES, BOT_NAME, BOT_RIGHTS, FIXED_GAME_QR
 
@@ -49,7 +48,7 @@ def build_games_menu(theme=DEFAULT_THEME):
     rows = [{"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn(order[i+j],order[i+j],"primary",theme) for j in range(3) if i+j<12]} for i in range(0,12,3)]
     body = {"type":"box","layout":"vertical","paddingAll":"20px","backgroundColor":c["bg"],"contents":[
         {"type":"text","text":"🎮 الألعاب المتاحة","weight":"bold","size":"xl","color":c["primary"],"align":"center"},
-        {"type":"text","text":"عدد الألعاب: 12","size":"sm","color":c["text2"],"align":"center","margin":"xs"},
+        {"type":"text","text":"بوت ميوشتي","size":"sm","color":c["text2"],"align":"center","margin":"xs"},
         {"type":"separator","margin":"lg","color":c["border"]},
         *rows,
         _glass([{"type":"text","text":"أوامر اللعب","size":"sm","color":c["text"],"weight":"bold"},{"type":"text","text":"• اضغط على اسم اللعبة","size":"xs","color":c["text2"],"wrap":True,"margin":"sm"},{"type":"text","text":"• لمح للتلميح | جاوب للكشف","size":"xs","color":c["text2"],"wrap":True,"margin":"xs"},{"type":"text","text":"• إيقاف لإنهاء اللعبة","size":"xs","color":c["text2"],"wrap":True,"margin":"xs"}],theme,"15px","15px"),
