@@ -1,7 +1,7 @@
 """
-Bot Mesh - Base Game v13.0 FINAL ENHANCED
+Bot Mesh - Base Game v13.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة فقط لكل إجابة صحيحة
+✅ 1 نقطة فقط لكل إجابة صحيحة (بدون بونص)
 ✅ عرض السؤال السابق والإجابة
 ✅ نوافذ Mega Size موحدة
 ✅ إيموجي محدود: ▫️▪️⏱️🥇🥈🥉🎖️🏅🏆🖤
@@ -64,7 +64,7 @@ class BaseGame:
         return re.sub(r'[\u064B-\u065F\u0670]', '', text)
 
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
-        """إضافة نقاط - دائماً 1 نقطة"""
+        """إضافة نقاط - دائماً 1 نقطة فقط"""
         if user_id in self.answered_users:
             return 0
         if user_id not in self.scores:
@@ -74,7 +74,7 @@ class BaseGame:
         return 1
 
     def add_team_score(self, team_name: str, points: int):
-        """إضافة نقاط للفريق - دائماً 1 نقطة"""
+        """إضافة نقاط للفريق - دائماً 1 نقطة فقط"""
         if team_name in self.team_scores:
             self.team_scores[team_name] += 1  # دائماً نقطة واحدة
         return 1
@@ -189,7 +189,7 @@ class BaseGame:
         return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
 
     def build_question_flex(self, question_text: str, additional_info: str = None):
-        """بناء Flex للسؤال مع السؤال السابق"""
+        """بناء Flex للسؤال مع السؤال السابق والإجابة"""
         colors = self.get_theme_colors()
         
         contents = [
