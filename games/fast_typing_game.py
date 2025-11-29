@@ -1,7 +1,7 @@
 """
-لعبة الكتابة السريعة (سرعة) - Bot Mesh v13.0 FINAL
+لعبة الكتابة السريعة (أسرع) - Bot Mesh v13.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة فقط
+✅ 1 نقطة فقط
 ✅ عرض السؤال السابق
 """
 
@@ -12,11 +12,11 @@ from typing import Dict, Any, Optional
 
 
 class FastTypingGame(BaseGame):
-    """لعبة سرعة"""
+    """لعبة أسرع"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "سرعة"
+        self.game_name = "أسرع"  # ✅ تم التحديث
         self.game_icon = "▪️"
         self.supports_hint = False
         self.supports_reveal = False
