@@ -1,11 +1,12 @@
 """
-Bot Mesh - Database v12.1 OPTIMIZED
+Bot Mesh - Database v12.1 OPTIMIZED + COMPLETE
 Created by: Abeer Aldosari © 2025
 ✅ Connection pooling محترف
 ✅ Prepared statements صحيحة
 ✅ Retry logic ذكي
 ✅ Auto-vacuum
 ✅ مقاومة race conditions
+✅ جميع الدوال المطلوبة
 """
 
 import sqlite3
@@ -329,6 +330,14 @@ class Database:
             return True
     
     @retry_on_locked()
+    def update_user_name(self, user_id: str, name: str) -> bool:
+        """تحديث اسم المستخدم"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE users SET name = ? WHERE user_id = ?', (name[:50], user_id))
+            return True
+    
+    @retry_on_locked()
     def add_points(self, user_id: str, points: int) -> bool:
         """إضافة نقاط - atomic operation"""
         with self.pool.get_connection() as conn:
@@ -338,6 +347,35 @@ class Database:
                 SET points = points + ?, last_activity = ?
                 WHERE user_id = ?
             ''', (points, datetime.now(), user_id))
+            return True
+    
+    @retry_on_locked()
+    def update_activity(self, user_id: str) -> bool:
+        """تحديث وقت النشاط"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE users SET last_activity = ? WHERE user_id = ?', (datetime.now(), user_id))
+            return True
+    
+    @retry_on_locked()
+    def set_user_online(self, user_id: str, is_online: bool) -> bool:
+        """تعيين حالة الاتصال"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE users SET is_online = ?, last_online = ? WHERE user_id = ?', 
+                         (1 if is_online else 0, datetime.now(), user_id))
+            return True
+    
+    @retry_on_locked()
+    def set_user_theme(self, user_id: str, theme: str) -> bool:
+        """تعيين ثيم المستخدم"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO user_preferences (user_id, theme) 
+                VALUES (?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET theme = ?, last_theme_change = ?
+            ''', (user_id, theme, theme, datetime.now()))
             return True
     
     @retry_on_locked()
@@ -354,6 +392,143 @@ class Database:
             ''', (limit,))
             return [(row['name'], row['points'], bool(row['is_online'])) 
                     for row in cursor.fetchall()]
+    
+    @retry_on_locked()
+    def create_game_session(self, owner_id: str, game_name: str, mode: str = "solo", team_mode: int = 0) -> int:
+        """إنشاء جلسة لعبة"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO game_sessions (owner_id, game_name, mode, team_mode, started_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (owner_id, game_name, mode, team_mode, datetime.now()))
+            return cursor.lastrowid
+    
+    @retry_on_locked()
+    def finish_session(self, session_id: int, score: int) -> bool:
+        """إنهاء جلسة"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE game_sessions 
+                SET completed = 1, score = ?, completed_at = ?
+                WHERE session_id = ?
+            ''', (score, datetime.now(), session_id))
+            return True
+    
+    @retry_on_locked()
+    def add_team_member(self, session_id: int, user_id: str, team_name: str) -> bool:
+        """إضافة عضو للفريق"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO team_members (session_id, user_id, team_name)
+                VALUES (?, ?, ?)
+            ''', (session_id, user_id, team_name))
+            
+            cursor.execute('''
+                INSERT OR IGNORE INTO team_scores (session_id, team_name, score)
+                VALUES (?, ?, 0)
+            ''', (session_id, team_name))
+            return True
+    
+    @retry_on_locked()
+    def add_team_points(self, session_id: int, team_name: str, points: int) -> bool:
+        """إضافة نقاط للفريق"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE team_scores 
+                SET score = score + ?, updated_at = ?
+                WHERE session_id = ? AND team_name = ?
+            ''', (points, datetime.now(), session_id, team_name))
+            return True
+    
+    @retry_on_locked()
+    def get_team_points(self, session_id: int) -> Dict[str, int]:
+        """الحصول على نقاط الفرق"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT team_name, score FROM team_scores WHERE session_id = ?', (session_id,))
+            return {row['team_name']: row['score'] for row in cursor.fetchall()}
+    
+    @retry_on_locked()
+    def record_game_stat(self, user_id: str, game_name: str, score: int, won: bool = False) -> bool:
+        """تسجيل إحصائية لعبة"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO game_stats (user_id, game_name, plays, wins, total_score, best_score, last_played)
+                VALUES (?, ?, 1, ?, ?, ?, ?)
+                ON CONFLICT(user_id, game_name) DO UPDATE SET
+                    plays = plays + 1,
+                    wins = wins + ?,
+                    total_score = total_score + ?,
+                    best_score = MAX(best_score, ?),
+                    avg_score = CAST(total_score + ? AS REAL) / (plays + 1),
+                    last_played = ?
+            ''', (user_id, game_name, 1 if won else 0, score, score, datetime.now(),
+                  1 if won else 0, score, score, score, datetime.now()))
+            return True
+    
+    @retry_on_locked()
+    def get_user_game_stats(self, user_id: str) -> Dict:
+        """الحصول على إحصائيات ألعاب المستخدم"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT game_name, plays, wins, total_score, best_score, avg_score
+                FROM game_stats WHERE user_id = ?
+                ORDER BY plays DESC
+            ''', (user_id,))
+            return {row['game_name']: dict(row) for row in cursor.fetchall()}
+    
+    @retry_on_locked()
+    def get_stats_summary(self) -> Dict:
+        """الحصول على ملخص الإحصائيات - الدالة الناقصة ✅"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # إجمالي المستخدمين
+            cursor.execute('SELECT COUNT(*) as count FROM users')
+            total_users = cursor.fetchone()['count']
+            
+            # المستخدمين المسجلين
+            cursor.execute('SELECT COUNT(*) as count FROM users WHERE is_registered = 1')
+            registered_users = cursor.fetchone()['count']
+            
+            # إجمالي الجلسات
+            cursor.execute('SELECT COUNT(*) as count FROM game_sessions')
+            total_sessions = cursor.fetchone()['count']
+            
+            # الجلسات المكتملة
+            cursor.execute('SELECT COUNT(*) as count FROM game_sessions WHERE completed = 1')
+            completed_sessions = cursor.fetchone()['count']
+            
+            return {
+                'total_users': total_users,
+                'registered_users': registered_users,
+                'total_sessions': total_sessions,
+                'completed_sessions': completed_sessions
+            }
+    
+    @retry_on_locked()
+    def cleanup_inactive_users(self, days: int = 30) -> int:
+        """تنظيف المستخدمين غير النشطين"""
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cutoff = datetime.now() - timedelta(days=days)
+            
+            cursor.execute('''
+                DELETE FROM users 
+                WHERE last_activity < ? AND (is_registered = 0 OR points = 0)
+            ''', (cutoff,))
+            deleted = cursor.rowcount
+            
+            if deleted > 0:
+                logger.info(f"✅ تم حذف {deleted} مستخدم غير نشط")
+            
+            return deleted
     
     def _start_maintenance_thread(self):
         """بدء thread للصيانة الدورية"""
@@ -388,24 +563,6 @@ class Database:
             ''', (old_date,))
             
             logger.info("✅ صيانة دورية مكتملة")
-    
-    @retry_on_locked()
-    def cleanup_inactive_users(self, days: int = 30) -> int:
-        """تنظيف المستخدمين غير النشطين"""
-        with self.pool.get_connection() as conn:
-            cursor = conn.cursor()
-            cutoff = datetime.now() - timedelta(days=days)
-            
-            cursor.execute('''
-                DELETE FROM users 
-                WHERE last_activity < ? AND (is_registered = 0 OR points = 0)
-            ''', (cutoff,))
-            deleted = cursor.rowcount
-            
-            if deleted > 0:
-                logger.info(f"✅ تم حذف {deleted} مستخدم غير نشط")
-            
-            return deleted
     
     def close(self):
         """إغلاق قاعدة البيانات"""
