@@ -1,10 +1,3 @@
-"""
-لعبة الأضداد - Bot Mesh v9.1 FIXED
-Created by: Abeer Aldosari © 2025
-✅ فردي: لمح + جاوب
-✅ فريقين: بدون لمح/جاوب
-"""
-
 from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
@@ -16,11 +9,10 @@ class OppositeGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "أضداد"
-        self.game_icon = "↔️"
+        self.game_icon = "▫️"
         self.supports_hint = True
         self.supports_reveal = True
 
-        # قاعدة الأضداد (50 زوج منطقي مع جميع الإجابات الممكنة)
         self.opposites = {
             "كبير": ["صغير", "قصير", "ضئيل", "محدود"],
             "طويل": ["قصير", "قزم"],
@@ -91,7 +83,6 @@ class OppositeGame(BaseGame):
 
         question_text = f"ما هو عكس كلمة:\n\n{word}"
         
-        # ✅ استخدام can_use_hint() و can_reveal_answer()
         if self.can_use_hint() and self.can_reveal_answer():
             additional_info = "اكتب 'لمح' للتلميح أو 'جاوب' للإجابة"
         else:
@@ -111,9 +102,8 @@ class OppositeGame(BaseGame):
         if len(answer) <= 2:
             return f"الكلمة قصيرة: {answer[0]}_"
         
-        # إظهار أول حرفين
         hint = f"{answer[0]}{answer[1]}" + "_" * (len(answer) - 2)
-        return f"💡 تلميح: {hint}"
+        return f"تلميح: {hint}"
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active or user_id in self.answered_users:
@@ -121,11 +111,9 @@ class OppositeGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
         
-        # في وضع الفريقين: تجاهل غير المنضمين
         if self.team_mode and user_id not in self.joined_users:
             return None
 
-        # ✅ التلميح (فردي فقط)
         if self.can_use_hint() and normalized == "لمح":
             hint = self.get_hint()
             return {
@@ -134,7 +122,6 @@ class OppositeGame(BaseGame):
                 "points": 0
             }
 
-        # ✅ كشف الإجابة (فردي فقط)
         if self.can_reveal_answer() and normalized == "جاوب":
             answers_text = " أو ".join(self.current_answer)
             self.current_question += 1
@@ -151,15 +138,12 @@ class OppositeGame(BaseGame):
                 "points": 0
             }
 
-        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
 
-        # التحقق من الإجابة
         for correct_answer in self.current_answer:
             if self.normalize_text(correct_answer) == normalized:
                 
-                # نقاط الفريقين أو الفردي
                 if self.team_mode:
                     team = self.get_user_team(user_id)
                     if not team:
