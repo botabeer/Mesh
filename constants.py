@@ -255,7 +255,7 @@ GAME_CONFIG = {
     "كلمة مبعثرة": {"display": "ترتيب", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
     "تكوين": {"display": "تكوين", "icon": "▫️", "hint": True, "reveal": True, "timer": 40},
     "أضداد": {"display": "ضد", "icon": "▫️", "hint": True, "reveal": True, "timer": 0},
-    "لون": {"display": "لون", "icon": "▫️", "hint": False, "reveal": False, "timer": 15},
+    "لون": {"display": "لون", "icon": "▫️", "hint": True, "reveal": True, "timer": 15},
     "رياضيات": {"display": "رياضيات", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
     "توافق": {"display": "توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
 }
