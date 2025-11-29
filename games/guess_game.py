@@ -1,8 +1,8 @@
 """
-لعبة التخمين - Bot Mesh v9.1 FIXED
+لعبة التخمين - Bot Mesh v13.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ فردي: لمح (أول حرف + عدد) + جاوب + مؤقت
-✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
+✅ نقطة واحدة فقط
+✅ عرض السؤال السابق
 """
 
 from games.base_game import BaseGame
@@ -17,14 +17,13 @@ class GuessGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "تخمين"
-        self.game_icon = "🔮"
+        self.game_icon = "▪️"
         self.supports_hint = True
         self.supports_reveal = True
 
-        self.round_time = 25  # ⏱️ 25 ثانية
+        self.round_time = 25
         self.round_start_time = None
 
-        # قاعدة البيانات - 50+ سؤال منطقي مع جميع الإجابات الممكنة
         self.items = {
             "المطبخ": {
                 "ق": ["قدر", "قلاية", "قارورة"],
@@ -125,7 +124,6 @@ class GuessGame(BaseGame):
             }
         }
 
-        # إنشاء الأسئلة
         self.questions_list: List[Dict[str, Any]] = []
         for category, letters in self.items.items():
             for letter, words in letters.items():
@@ -151,9 +149,8 @@ class GuessGame(BaseGame):
         self.current_answer = q_data["answers"]
         self.round_start_time = time.time()
 
-        # ✅ استخدام can_use_hint() و can_reveal_answer()
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\n💡 اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"⏱️ {self.round_time} ثانية\n▪️ اكتب 'لمح' أو 'جاوب'"
         else:
             additional_info = f"⏱️ {self.round_time} ثانية"
 
@@ -171,19 +168,21 @@ class GuessGame(BaseGame):
         if not self.game_active:
             return None
 
-        # التحقق من الوقت
         if self._time_expired():
             answers_text = " أو ".join(self.current_answer)
+            q_data = self.questions_list[self.current_question % len(self.questions_list)]
+            self.previous_question = f"{q_data['category']} - حرف {q_data['letter']}"
+            self.previous_answer = answers_text
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\nالإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\nالإجابة: {answers_text}",
+                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -196,7 +195,6 @@ class GuessGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ التلميح (فردي فقط)
         if self.can_use_hint() and normalized == "لمح":
             if not self.current_answer:
                 return {
@@ -206,45 +204,39 @@ class GuessGame(BaseGame):
                 }
             
             answer = self.current_answer[0]
-            hint = f"💡 تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)}"
+            hint = f"▪️ تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)}"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
                 "points": 0
             }
 
-        # ✅ كشف الإجابة (فردي فقط)
         if self.can_reveal_answer() and normalized == "جاوب":
             answers_text = " أو ".join(self.current_answer)
+            q_data = self.questions_list[self.current_question % len(self.questions_list)]
+            self.previous_question = f"{q_data['category']} - حرف {q_data['letter']}"
+            self.previous_answer = answers_text
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"الإجابة: {answers_text}",
+                "message": f"▪️ الإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
 
-        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
 
-        # التحقق من الإجابة
         for correct_answer in self.current_answer:
             if self.normalize_text(correct_answer) == normalized:
-                
-                base_points = 10
-                elapsed = int(time.time() - self.round_start_time)
-                remaining = max(0, self.round_time - elapsed)
-                time_bonus = max(0, remaining // 2)
-                total_points = base_points + time_bonus
+                total_points = 1
 
-                # توزيع النقاط
                 if self.team_mode:
                     team = self.get_user_team(user_id)
                     if not team:
@@ -252,6 +244,10 @@ class GuessGame(BaseGame):
                     self.add_team_score(team, total_points)
                 else:
                     self.add_score(user_id, display_name, total_points)
+
+                q_data = self.questions_list[self.current_question % len(self.questions_list)]
+                self.previous_question = f"{q_data['category']} - حرف {q_data['letter']}"
+                self.previous_answer = correct_answer
 
                 self.current_question += 1
                 self.answered_users.clear()
@@ -262,13 +258,13 @@ class GuessGame(BaseGame):
                     return result
 
                 return {
-                    "message": f"✅ صحيح!\n+{total_points} نقطة",
+                    "message": f"▪️ صحيح!\n+{total_points} نقطة",
                     "response": self.get_question(),
                     "points": total_points
                 }
 
         return {
-            "message": "❌ خطأ",
-            "response": self._create_text_message("❌ خطأ"),
+            "message": "▪️ خطأ",
+            "response": self._create_text_message("▪️ خطأ"),
             "points": 0
         }
