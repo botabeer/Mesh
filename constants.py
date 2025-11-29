@@ -1,9 +1,9 @@
 """
-Bot Mesh - Constants v17.0 FINAL FIXED
+Bot Mesh - Constants v17.1 WHITE THEME FIXED
 Created by: Abeer Aldosari © 2025
-✅ أسماء الألعاب الصحيحة والمرتبة
-✅ 9 ثيمات متنوعة
-✅ توحيد كامل مع جميع الملفات
+✅ إصلاح الثيم الأبيض بتباين قوي
+✅ نظام Auto Contrast
+✅ ألوان واضحة للأزرار والحدود
 """
 
 import os
@@ -14,7 +14,7 @@ import re
 load_dotenv()
 
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "17.0 FINAL"
+BOT_VERSION = "17.1 WHITE FIXED"
 BOT_RIGHTS = "© 2025 Abeer Aldosari"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -27,28 +27,32 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# 9 ثيمات متنوعة ومحسّنة
+# 9 ثيمات محسّنة - الثيم الأبيض مع تباين قوي
 # ============================================================================
 THEMES = {
     "أبيض": {
         "name": "أبيض",
-        "bg": "#FFFFFF",
-        "card": "#F8FAFC",
-        "primary": "#1E40AF",
-        "primary_hover": "#1E3A8A",
-        "secondary": "#475569",
-        "accent": "#2563EB",
-        "text": "#0F172A",
-        "text2": "#334155",
-        "text3": "#64748B",
-        "border": "#CBD5E1",
-        "success": "#059669",
-        "success_bg": "#D1FAE5",
-        "error": "#DC2626",
-        "error_bg": "#FEE2E2",
-        "warning": "#D97706",
-        "info": "#1E40AF",
-        "info_bg": "#DBEAFE"
+        "bg": "#FFFFFF",                    # خلفية بيضاء نقية
+        "card": "#F8FAFC",                  # بطاقات رمادية فاتحة جداً
+        "primary": "#1E40AF",               # أزرق غامق للأزرار الأساسية
+        "primary_hover": "#1E3A8A",         # أزرق أغمق عند التمرير
+        "secondary": "#475569",             # رمادي متوسط للأزرار الثانوية
+        "accent": "#2563EB",                # أزرق لامع للتأكيدات
+        "text": "#0F172A",                  # نص أسود تقريباً (تباين عالي)
+        "text2": "#334155",                 # نص ثانوي رمادي غامق
+        "text3": "#64748B",                 # نص ثالثي رمادي متوسط
+        "border": "#CBD5E1",                # حدود رمادية واضحة
+        "success": "#059669",               # أخضر للنجاح
+        "success_bg": "#D1FAE5",            # خلفية خضراء فاتحة
+        "error": "#DC2626",                 # أحمر للخطأ
+        "error_bg": "#FEE2E2",              # خلفية حمراء فاتحة
+        "warning": "#D97706",               # برتقالي للتحذير
+        "info": "#1E40AF",                  # أزرق للمعلومات
+        "info_bg": "#DBEAFE",               # خلفية زرقاء فاتحة
+        "shadow": "rgba(15, 23, 42, 0.08)", # ظل خفيف للعمق
+        "button_text": "#FFFFFF",           # نص الأزرار أبيض
+        "disabled": "#94A3B8",              # حالة معطلة
+        "disabled_bg": "#E2E8F0"            # خلفية معطلة
     },
     "أسود": {
         "name": "أسود",
@@ -68,7 +72,11 @@ THEMES = {
         "error_bg": "#7F1D1D",
         "warning": "#F59E0B",
         "info": "#3B82F6",
-        "info_bg": "#1E3A8A"
+        "info_bg": "#1E3A8A",
+        "shadow": "rgba(0, 0, 0, 0.3)",
+        "button_text": "#FFFFFF",
+        "disabled": "#475569",
+        "disabled_bg": "#1E293B"
     },
     "رمادي": {
         "name": "رمادي",
@@ -88,7 +96,11 @@ THEMES = {
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
         "info": "#374151",
-        "info_bg": "#E5E7EB"
+        "info_bg": "#E5E7EB",
+        "shadow": "rgba(17, 24, 39, 0.08)",
+        "button_text": "#FFFFFF",
+        "disabled": "#9CA3AF",
+        "disabled_bg": "#E5E7EB"
     },
     "أزرق": {
         "name": "أزرق",
@@ -108,7 +120,11 @@ THEMES = {
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
         "info": "#1E3A8A",
-        "info_bg": "#DBEAFE"
+        "info_bg": "#DBEAFE",
+        "shadow": "rgba(30, 58, 138, 0.1)",
+        "button_text": "#FFFFFF",
+        "disabled": "#93C5FD",
+        "disabled_bg": "#BFDBFE"
     },
     "بنفسجي": {
         "name": "بنفسجي",
@@ -128,7 +144,11 @@ THEMES = {
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
         "info": "#6B21A8",
-        "info_bg": "#EDE9FE"
+        "info_bg": "#EDE9FE",
+        "shadow": "rgba(107, 33, 168, 0.1)",
+        "button_text": "#FFFFFF",
+        "disabled": "#C4B5FD",
+        "disabled_bg": "#DDD6FE"
     },
     "وردي": {
         "name": "وردي",
@@ -148,7 +168,11 @@ THEMES = {
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
         "info": "#9F1239",
-        "info_bg": "#FCE7F3"
+        "info_bg": "#FCE7F3",
+        "shadow": "rgba(159, 18, 57, 0.1)",
+        "button_text": "#FFFFFF",
+        "disabled": "#F9A8D4",
+        "disabled_bg": "#FBCFE8"
     },
     "أخضر": {
         "name": "أخضر",
@@ -168,7 +192,11 @@ THEMES = {
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
         "info": "#047857",
-        "info_bg": "#DCFCE7"
+        "info_bg": "#DCFCE7",
+        "shadow": "rgba(4, 120, 87, 0.1)",
+        "button_text": "#FFFFFF",
+        "disabled": "#86EFAC",
+        "disabled_bg": "#BBF7D0"
     },
     "برتقالي": {
         "name": "برتقالي",
@@ -188,7 +216,11 @@ THEMES = {
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
         "info": "#C2410C",
-        "info_bg": "#FFEDD5"
+        "info_bg": "#FFEDD5",
+        "shadow": "rgba(194, 65, 12, 0.1)",
+        "button_text": "#FFFFFF",
+        "disabled": "#FED7AA",
+        "disabled_bg": "#FED7AA"
     },
     "ذهبي": {
         "name": "ذهبي",
@@ -208,18 +240,20 @@ THEMES = {
         "error_bg": "#FEE2E2",
         "warning": "#D97706",
         "info": "#B45309",
-        "info_bg": "#FEF3C7"
+        "info_bg": "#FEF3C7",
+        "shadow": "rgba(180, 83, 9, 0.1)",
+        "button_text": "#FFFFFF",
+        "disabled": "#FDE68A",
+        "disabled_bg": "#FDE68A"
     }
 }
 
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# أسماء الألعاب الصحيحة - مطابقة للعرض والكلاسات
-# الترتيب: أسرع، ذكاء، لعبة، أغنيه، خمن، سلسلة، ترتيب، تكوين، ضد، لون، رياضيات، توافق
+# أسماء الألعاب - بدون تغيير
 # ============================================================================
 GAME_CONFIG = {
-    # اسم الكلاس في الكود : اسم العرض
     "كتابة سريعة": {"display": "أسرع", "icon": "▫️", "hint": False, "reveal": False, "timer": 20},
     "ذكاء": {"display": "ذكاء", "icon": "▫️", "hint": True, "reveal": True, "timer": 30},
     "إنسان حيوان نبات": {"display": "لعبة", "icon": "▫️", "hint": True, "reveal": True, "timer": 25},
@@ -234,17 +268,11 @@ GAME_CONFIG = {
     "توافق": {"display": "توافق", "icon": "🖤", "hint": False, "reveal": False, "timer": 0}
 }
 
-# القائمة بالترتيب المطلوب
 GAME_LIST = [(k, v["display"], v["icon"]) for k, v in GAME_CONFIG.items()]
-
-# الخرائط للتحويل
 GAME_NAMES = {k: v["display"] for k, v in GAME_CONFIG.items()}
 GAME_ICONS = {k: v["icon"] for k, v in GAME_CONFIG.items()}
-
-# خريطة عكسية: من اسم العرض إلى اسم الكلاس
 DISPLAY_TO_CLASS = {v["display"]: k for k, v in GAME_CONFIG.items()}
 
-# Quick Reply بالترتيب الصحيح
 FIXED_GAME_QR = [{"label": f"{v['icon']} {v['display']}", "text": v['display']} for k, v in GAME_CONFIG.items()]
 FIXED_GAME_QR.append({"label": "🔘 إيقاف", "text": "إيقاف"})
 
@@ -276,7 +304,6 @@ ALLOWED_COMMANDS = {
     "لمح", "hint", "جاوب", "reveal", "answer"
 }
 
-# أسماء الألعاب للعرض فقط
 GAME_COMMANDS = set(GAME_NAMES.values())
 
 def normalize_text(text: str) -> str:
@@ -323,11 +350,9 @@ def get_username(profile) -> str:
         return "مستخدم"
 
 def get_game_display_name(internal_name: str) -> str:
-    """من اسم الكلاس إلى اسم العرض"""
     return GAME_NAMES.get(internal_name, internal_name)
 
 def get_game_class_name(display_name: str) -> str:
-    """من اسم العرض إلى اسم الكلاس"""
     return DISPLAY_TO_CLASS.get(display_name, display_name)
 
 def get_game_icon(internal_name: str) -> str:
@@ -337,7 +362,6 @@ def get_game_config(game_name: str) -> Dict:
     return GAME_CONFIG.get(game_name, {})
 
 def is_valid_game(game_name: str) -> bool:
-    """التحقق من اسم اللعبة (سواء اسم عرض أو اسم كلاس)"""
     return game_name in GAME_NAMES.values() or game_name in GAME_CONFIG.keys()
 
 def is_allowed_command(text: str) -> bool:
