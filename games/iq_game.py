@@ -109,7 +109,7 @@ class IqGame(BaseGame):
             additional_info = f"⏱️ {self.round_time} ثانية"
 
         return self.build_question_flex(
-            question_text=f"▪️ {riddle['q']}",
+            question_text=f" {riddle['q']}",
             additional_info=additional_info
         )
 
