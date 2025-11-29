@@ -9,11 +9,11 @@ from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickRe
 from constants import GAME_LIST, DEFAULT_THEME, THEMES, BOT_NAME, BOT_RIGHTS
 
 # ============ Quick Reply ============
-def build_qr():
+def build_games_quick_reply():
     return QuickReply(items=[QuickReplyItem(action=MessageAction(label=f"{ic} {nm}", text=nm)) for _, nm, ic in GAME_LIST])
 
-def attach_qr(msg):
-    if msg and hasattr(msg, 'quick_reply'): msg.quick_reply = build_qr()
+def attach_quick_reply(msg):
+    if msg and hasattr(msg, 'quick_reply'): msg.quick_reply = build_games_quick_reply()
     return msg
 
 # ============ Helpers ============
@@ -74,7 +74,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
             ]
         }
     }
-    return attach_qr(_flex("البداية", bubble))
+    return attach_quick_reply(_flex("البداية", bubble))
 
 # ============ قائمة الألعاب ============
 def build_games_menu(theme=DEFAULT_THEME):
@@ -103,7 +103,7 @@ def build_games_menu(theme=DEFAULT_THEME):
             ]
         }
     }
-    return attach_qr(_flex("الألعاب", bubble))
+    return attach_quick_reply(_flex("الألعاب", bubble))
 
 # ============ نقاطي ============
 def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
@@ -137,7 +137,7 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
             ]
         }
     }
-    return attach_qr(_flex("نقاطي", bubble))
+    return attach_quick_reply(_flex("نقاطي", bubble))
 
 # ============ لوحة الصدارة ============
 def build_leaderboard(top_users, theme=DEFAULT_THEME):
@@ -165,7 +165,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
             ]
         }
     }
-    return attach_qr(_flex("الصدارة", bubble))
+    return attach_quick_reply(_flex("الصدارة", bubble))
 
 # ============ نوافذ إضافية ============
 def build_registration_required(theme=DEFAULT_THEME):
@@ -177,7 +177,7 @@ def build_registration_required(theme=DEFAULT_THEME):
     ]},"footer":{"type":"box","layout":"vertical","paddingAll":"15px","contents":[
         {"type":"box","layout":"horizontal","spacing":"sm","contents":[_btn("📝 انضم","انضم","primary"),_btn("🏠 البداية","بداية","secondary")]}
     ]}}
-    return attach_qr(_flex("تسجيل مطلوب", bubble))
+    return attach_quick_reply(_flex("تسجيل مطلوب", bubble))
 
 def build_winner_announcement(username, game_name, round_points, total_points, theme=DEFAULT_THEME):
     c = _c(theme)
@@ -195,7 +195,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
         _btn(f"🔄 إعادة {game_name}",game_name,"primary"),
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[_btn("🎮 الألعاب","ألعاب","secondary"),_btn("🏠 البداية","بداية","secondary")]}
     ]}}
-    return attach_qr(_flex("فوز", bubble))
+    return attach_quick_reply(_flex("فوز", bubble))
 
 def build_help_window(theme=DEFAULT_THEME):
     c = _c(theme)
@@ -212,7 +212,7 @@ def build_help_window(theme=DEFAULT_THEME):
         {"type":"text","text":"• فريقين - بدء (للمجموعات)\n• انضم - الانضمام","size":"sm","color":c["text2"],"wrap":True,"margin":"sm"},
         _btn("🏠 البداية","بداية","primary")
     ]}}
-    return attach_qr(_flex("المساعدة", bubble))
+    return attach_quick_reply(_flex("المساعدة", bubble))
 
 def build_theme_selector(theme=DEFAULT_THEME):
     c = _c(theme)
@@ -221,7 +221,7 @@ def build_theme_selector(theme=DEFAULT_THEME):
         {"type":"text","text":"🎨 اختر الثيم","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
         {"type":"separator","margin":"lg"},*rows,_btn("🏠 البداية","بداية","secondary")
     ]}}
-    return attach_qr(_flex("الثيمات", bubble))
+    return attach_quick_reply(_flex("الثيمات", bubble))
 
 def build_multiplayer_help_window(theme=DEFAULT_THEME):
     c = _c(theme)
@@ -232,7 +232,7 @@ def build_multiplayer_help_window(theme=DEFAULT_THEME):
         {"type":"text","text":"1. اكتب 'انضم'\n2. اختر اللعبة\n3. تقسيم تلقائي للفرق","size":"sm","color":c["text2"],"wrap":True,"margin":"sm"},
         _btn("✅ انضم","انضم","primary")
     ]}}
-    return attach_qr(_flex("وضع الفريقين", bubble))
+    return attach_quick_reply(_flex("وضع الفريقين", bubble))
 
 # نوافذ إضافية مختصرة
 def build_join_confirmation(username, theme=DEFAULT_THEME):
@@ -241,7 +241,7 @@ def build_join_confirmation(username, theme=DEFAULT_THEME):
         {"type":"text","text":"✅ انضممت للفريق","size":"lg","weight":"bold","color":c["success"],"align":"center"},
         {"type":"text","text":"انتظر اختيار اللعبة","size":"sm","color":c["text2"],"align":"center","margin":"md"}
     ]}}
-    return attach_qr(_flex("انضمام", bubble))
+    return attach_quick_reply(_flex("انضمام", bubble))
 
 def build_registration_success(username, theme=DEFAULT_THEME):
     c = _c(theme)
@@ -250,7 +250,7 @@ def build_registration_success(username, theme=DEFAULT_THEME):
         {"type":"text","text":f"مرحباً {username}","size":"md","color":c["text"],"align":"center","margin":"md"},
         _btn("🎮 ابدأ اللعب","ألعاب","primary")
     ]}}
-    return attach_qr(_flex("تسجيل", bubble))
+    return attach_quick_reply(_flex("تسجيل", bubble))
 
 def build_theme_change_success(theme_name, theme=DEFAULT_THEME):
     c = _c(theme_name)
@@ -259,7 +259,7 @@ def build_theme_change_success(theme_name, theme=DEFAULT_THEME):
         {"type":"text","text":f"الثيم الحالي: {theme_name}","size":"sm","color":c["text"],"align":"center","margin":"md"},
         _btn("🏠 البداية","بداية","primary")
     ]}}
-    return attach_qr(_flex("ثيم", bubble))
+    return attach_quick_reply(_flex("ثيم", bubble))
 
 def build_error_message(error_text, theme=DEFAULT_THEME):
     c = _c(theme)
@@ -267,7 +267,7 @@ def build_error_message(error_text, theme=DEFAULT_THEME):
         {"type":"text","text":error_text,"size":"md","color":c["error"],"align":"center","wrap":True},
         _btn("🏠 البداية","بداية","secondary")
     ]}}
-    return attach_qr(_flex("خطأ", bubble))
+    return attach_quick_reply(_flex("خطأ", bubble))
 
 def build_game_stopped(game_name, theme=DEFAULT_THEME):
     c = _c(theme)
@@ -276,14 +276,14 @@ def build_game_stopped(game_name, theme=DEFAULT_THEME):
         {"type":"text","text":f"لعبة {game_name}","size":"sm","color":c["text2"],"align":"center","margin":"sm"},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[_btn("🎮 الألعاب","ألعاب","primary"),_btn("🏠 البداية","بداية","secondary")]}
     ]}}
-    return attach_qr(_flex("إيقاف", bubble))
+    return attach_quick_reply(_flex("إيقاف", bubble))
 
 def build_answer_feedback(message, theme=DEFAULT_THEME):
     c = _c(theme)
     bubble = {"type":"bubble","body":{"type":"box","layout":"vertical","paddingAll":"15px","contents":[
         {"type":"text","text":message,"size":"md","color":c["text"],"align":"center","wrap":True}
     ]}}
-    return attach_qr(_flex("إجابة", bubble))
+    return attach_quick_reply(_flex("إجابة", bubble))
 
 def build_team_game_end(team_points, theme=DEFAULT_THEME):
     c = _c(theme)
@@ -304,12 +304,12 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
         ]},
         {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[_btn("🎮 الألعاب","ألعاب","primary"),_btn("🏠 البداية","بداية","secondary")]}
     ]}}
-    return attach_qr(_flex("نتيجة", bubble))
+    return attach_quick_reply(_flex("نتيجة", bubble))
 
 __all__ = [
     'build_enhanced_home','build_games_menu','build_my_points','build_leaderboard',
     'build_help_window','build_registration_required','build_winner_announcement',
-    'build_theme_selector','build_multiplayer_help_window','attach_qr','build_qr',
+    'build_theme_selector','build_multiplayer_help_window','attach_quick_reply','build_games_quick_reply',
     'build_join_confirmation','build_registration_success','build_theme_change_success',
     'build_error_message','build_game_stopped','build_answer_feedback','build_team_game_end'
 ]
