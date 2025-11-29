@@ -1,7 +1,7 @@
 """
 Bot Mesh - Base Game v13.0
 Created by: Abeer Aldosari © 2025
-✅ استيراد الثيمات من constants_v13_optimized
+✅ استيراد الثيمات من constants
 ✅ دعم كامل للفرق
 ✅ can_use_hint() و can_reveal_answer()
 """
@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 import re
-from constants_v13_optimized import THEMES, DEFAULT_THEME
+from constants import THEMES, DEFAULT_THEME
 
 class BaseGame:
     """BaseGame - نظام اللعبة الأساسي"""
