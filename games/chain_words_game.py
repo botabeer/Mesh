@@ -1,8 +1,8 @@
 """
-لعبة سلسلة الكلمات - Bot Mesh v9.0 FINAL
+لعبة سلسلة الكلمات (سلسلة) - Bot Mesh v13.0 FINAL
 Created by: Abeer Aldosari © 2025
-✅ بدون لمح/جاوب (لعبة إبداعية)
-✅ مع مؤقت 25 ثانية
+✅ نقطة واحدة فقط
+✅ عرض السؤال السابق
 """
 
 from games.base_game import BaseGame
@@ -12,16 +12,16 @@ from typing import Dict, Any, Optional
 
 
 class ChainWordsGame(BaseGame):
-    """لعبة سلسلة الكلمات"""
+    """لعبة سلسلة"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "سلسلة كلمات"
-        self.game_icon = "🔗"
-        self.supports_hint = False  # ❌ لعبة إبداعية
-        self.supports_reveal = False  # ❌ لعبة إبداعية
+        self.game_name = "سلسلة"
+        self.game_icon = "▪️"
+        self.supports_hint = False
+        self.supports_reveal = False
 
-        self.round_time = 25  # ⏱️ 25 ثانية
+        self.round_time = 25
         self.round_start_time = None
 
         self.starting_words = [
@@ -38,6 +38,8 @@ class ChainWordsGame(BaseGame):
     def start_game(self):
         self.current_question = 0
         self.game_active = True
+        self.previous_question = None
+        self.previous_answer = None
         self.last_word = random.choice(self.starting_words)
         self.used_words = {self.normalize_text(self.last_word)}
         self.answered_users.clear()
@@ -63,8 +65,9 @@ class ChainWordsGame(BaseGame):
         if not self.game_active:
             return None
 
-        # التحقق من الوقت
         if self._time_expired():
+            self.previous_question = f"كلمة تبدأ بـ {self.last_word[-1]}"
+            self.previous_answer = "انتهى الوقت"
             self.current_question += 1
             self.answered_users.clear()
 
@@ -87,26 +90,24 @@ class ChainWordsGame(BaseGame):
 
         normalized_answer = self.normalize_text(user_answer)
 
-        # تحقق: الكلمة مستخدمة؟
         if normalized_answer in self.used_words:
             return {
-                "message": "❌ الكلمة مستخدمة",
-                "response": self._create_text_message("❌ الكلمة مستخدمة"),
+                "message": "▪️ الكلمة مستخدمة",
+                "response": self._create_text_message("▪️ الكلمة مستخدمة"),
                 "points": 0
             }
 
-        # تحقق: تبدأ بالحرف الصحيح؟
         required_letter = self.normalize_text(self.last_word[-1])
 
         if normalized_answer and normalized_answer[0] == required_letter and len(normalized_answer) >= 2:
             self.used_words.add(normalized_answer)
+            
+            self.previous_question = f"كلمة تبدأ بـ {self.last_word[-1]}"
+            self.previous_answer = user_answer.strip()
+            
             self.last_word = user_answer.strip()
             
-            base_points = 10
-            elapsed = int(time.time() - self.round_start_time)
-            remaining = max(0, self.round_time - elapsed)
-            time_bonus = max(0, remaining // 2)
-            total_points = base_points + time_bonus
+            total_points = 1
 
             if self.team_mode:
                 team = self.get_user_team(user_id)
@@ -125,13 +126,13 @@ class ChainWordsGame(BaseGame):
                 return result
 
             return {
-                "message": f"✅ صحيح!\n+{total_points} نقطة",
+                "message": f"▪️ صحيح!\n+{total_points} نقطة",
                 "response": self.get_question(),
                 "points": total_points
             }
 
         return {
-            "message": f"❌ يجب أن تبدأ بحرف {required_letter}",
-            "response": self._create_text_message(f"❌ يجب أن تبدأ بحرف {required_letter}"),
+            "message": f"▪️ يجب أن تبدأ بحرف {required_letter}",
+            "response": self._create_text_message(f"▪️ يجب أن تبدأ بحرف {required_letter}"),
             "points": 0
         }
