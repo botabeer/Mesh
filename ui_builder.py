@@ -20,21 +20,13 @@ def _3d_card(contents, theme=None, padding="20px"):
         "margin": "md"
     }
 
-def _gradient_header(text, icon, theme=None):
+def _gradient_header(text, theme=None):
     """هيدر بتدرج لوني"""
     c = _c(theme)
     return {
         "type": "box",
         "layout": "horizontal",
         "contents": [
-            {
-                "type": "text",
-                "text": icon,
-                "size": "xxl",
-                "weight": "bold",
-                "color": c["primary"],
-                "flex": 0
-            },
             {
                 "type": "text",
                 "text": text,
@@ -112,12 +104,12 @@ def attach_quick_reply(m):
     return m
 
 # ============================================================================
-# 🏠 الصفحة الرئيسية - فاخرة جداً
+# الصفحة الرئيسية - فاخرة بدون إيموجي
 # ============================================================================
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
     """صفحة رئيسية ثري دي فاخرة"""
     c = _c(theme)
-    status = "☑️ مسجل" if is_registered else "🔘 غير مسجل"
+    status = "مسجل" if is_registered else "غير مسجل"
     join_text = "انسحب" if is_registered else "انضم"
     
     themes_list = list(THEMES.keys())
@@ -143,7 +135,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
             "layout": "vertical",
             "contents": [
                 # Header
-                _gradient_header(BOT_NAME, "", theme),
+                _gradient_header(BOT_NAME, theme),
                 
                 _separator_3d(theme),
                 
@@ -214,7 +206,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
                 # Themes Section
                 {
                     "type": "text",
-                    "text": "🎨 اختر الثيم",
+                    "text": "اختر الثيم",
                     "size": "lg",
                     "weight": "bold",
                     "color": c["text"],
@@ -232,8 +224,8 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
                     "spacing": "sm",
                     "margin": "lg",
                     "contents": [
-                        _premium_button(f"🚪 {join_text}", join_text, "primary" if is_registered else "secondary", theme),
-                        _premium_button("🎮 الألعاب", "ألعاب", "secondary", theme)
+                        _premium_button(join_text, join_text, "primary" if is_registered else "secondary", theme),
+                        _premium_button("الألعاب", "ألعاب", "secondary", theme)
                     ]
                 },
                 {
@@ -242,8 +234,8 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
                     "spacing": "sm",
                     "margin": "sm",
                     "contents": [
-                        _premium_button("📊 نقاطي", "نقاطي", "secondary", theme),
-                        _premium_button("🏆 الصدارة", "صدارة", "secondary", theme)
+                        _premium_button("نقاطي", "نقاطي", "secondary", theme),
+                        _premium_button("الصدارة", "صدارة", "secondary", theme)
                     ]
                 },
                 {
@@ -252,8 +244,8 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
                     "spacing": "sm",
                     "margin": "sm",
                     "contents": [
-                        _premium_button("👥 فريقين", "فريقين", "secondary", theme),
-                        _premium_button("📖 مساعدة", "مساعدة", "secondary", theme)
+                        _premium_button("فريقين", "فريقين", "secondary", theme),
+                        _premium_button("مساعدة", "مساعدة", "secondary", theme)
                     ]
                 },
                 
@@ -278,7 +270,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
     return attach_quick_reply(_flex("البداية", body))
 
 # ============================================================================
-# 🎮 قائمة الألعاب - تصميم Grid فاخر
+# قائمة الألعاب - تصميم Grid فاخر
 # ============================================================================
 def build_games_menu(theme=DEFAULT_THEME):
     """قائمة ألعاب Grid ثري دي"""
@@ -308,7 +300,7 @@ def build_games_menu(theme=DEFAULT_THEME):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                _gradient_header("الألعاب المتاحة", "🎮", theme),
+                _gradient_header("الألعاب المتاحة", theme),
                 
                 {
                     "type": "text",
@@ -326,7 +318,7 @@ def build_games_menu(theme=DEFAULT_THEME):
                 _3d_card([
                     {
                         "type": "text",
-                        "text": "📋 أوامر اللعب",
+                        "text": "أوامر اللعب",
                         "size": "md",
                         "weight": "bold",
                         "color": c["text"]
@@ -348,8 +340,8 @@ def build_games_menu(theme=DEFAULT_THEME):
                     "spacing": "sm",
                     "margin": "lg",
                     "contents": [
-                        _premium_button("🏠 البداية", "بداية", "secondary", theme),
-                        _premium_button("⏹️ إيقاف", "إيقاف", "secondary", theme)
+                        _premium_button("البداية", "بداية", "secondary", theme),
+                        _premium_button("إيقاف", "إيقاف", "secondary", theme)
                     ]
                 },
                 
@@ -372,7 +364,7 @@ def build_games_menu(theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("الألعاب", body))
 
 # ============================================================================
-# 📊 نقاطي - بطاقة إحصائيات أنيقة
+# نقاطي - بطاقة إحصائيات أنيقة
 # ============================================================================
 def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
     """بطاقة نقاط فاخرة"""
@@ -380,16 +372,16 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
     
     # تحديد المستوى
     if points < 50:
-        level = "🥉 مبتدئ"
+        level = "مبتدئ"
         level_color = c["text2"]
     elif points < 150:
-        level = "🥈 متوسط"
+        level = "متوسط"
         level_color = c["info"]
     elif points < 300:
-        level = "🥇 متقدم"
+        level = "متقدم"
         level_color = c["warning"]
     else:
-        level = "🏆 محترف"
+        level = "محترف"
         level_color = c["success"]
     
     body = {
@@ -399,7 +391,7 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                _gradient_header("إحصائياتي", "📊", theme),
+                _gradient_header("إحصائياتي", theme),
                 
                 _separator_3d(theme),
                 
@@ -459,8 +451,8 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
                     "spacing": "sm",
                     "margin": "xl",
                     "contents": [
-                        _premium_button("🏠 البداية", "بداية", "secondary", theme),
-                        _premium_button("🏆 الصدارة", "صدارة", "primary", theme)
+                        _premium_button("البداية", "بداية", "secondary", theme),
+                        _premium_button("الصدارة", "صدارة", "primary", theme)
                     ]
                 },
                 
@@ -482,12 +474,12 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("نقاطي", body))
 
 # ============================================================================
-# 🏆 لوحة الصدارة - تصميم فاخر
+# لوحة الصدارة - تصميم فاخر
 # ============================================================================
 def build_leaderboard(top_users, theme=DEFAULT_THEME):
     """لوحة صدارة ثري دي فاخرة"""
     c = _c(theme)
-    medals = ["🥇", "🥈", "🥉"]
+    medals = ["[1]", "[2]", "[3]"]
     
     leaderboard_items = []
     for i, (name, pts, is_registered) in enumerate(top_users[:10], 1):
@@ -523,7 +515,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
                                 },
                                 {
                                     "type": "text",
-                                    "text": "☑️ نشط" if is_registered else "🔘 غير نشط",
+                                    "text": "نشط" if is_registered else "غير نشط",
                                     "size": "xs",
                                     "color": c["success"] if is_registered else c["text3"]
                                 }
@@ -568,7 +560,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                _gradient_header("لوحة الصدارة", "🏆", theme),
+                _gradient_header("لوحة الصدارة", theme),
                 
                 _separator_3d(theme),
                 
@@ -583,7 +575,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
                 
                 {
                     "type": "text",
-                    "text": "☑️ نشط = مسجل | 🔘 غير مسجل = ألغى التسجيل",
+                    "text": "نشط = مسجل | غير نشط = ألغى التسجيل",
                     "size": "xxs",
                     "color": c["text3"],
                     "align": "center",
@@ -596,8 +588,8 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
                     "spacing": "sm",
                     "margin": "lg",
                     "contents": [
-                        _premium_button("🏠 البداية", "بداية", "secondary", theme),
-                        _premium_button("📊 نقاطي", "نقاطي", "primary", theme)
+                        _premium_button("البداية", "بداية", "secondary", theme),
+                        _premium_button("نقاطي", "نقاطي", "primary", theme)
                     ]
                 },
                 
@@ -619,7 +611,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("الصدارة", body))
 
 # ============================================================================
-# 🏆 إعلان الفوز - تصميم احتفالي
+# إعلان الفوز - تصميم احتفالي
 # ============================================================================
 def build_winner_announcement(username, game_name, round_points, total_points, theme=DEFAULT_THEME):
     """نافذة فوز ثري دي احتفالية"""
@@ -634,7 +626,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
             "contents": [
                 {
                     "type": "text",
-                    "text": "🎉 مبروك! 🎉",
+                    "text": "مبروك!",
                     "size": "xxl",
                     "weight": "bold",
                     "align": "center",
@@ -708,8 +700,8 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
                     "spacing": "sm",
                     "margin": "xl",
                     "contents": [
-                        _premium_button("🎮 الألعاب", "ألعاب", "primary", theme),
-                        _premium_button("🏠 البداية", "بداية", "secondary", theme)
+                        _premium_button("الألعاب", "ألعاب", "primary", theme),
+                        _premium_button("البداية", "بداية", "secondary", theme)
                     ]
                 }
             ],
@@ -725,37 +717,37 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
 # ============================================================================
 def build_help_window(theme=DEFAULT_THEME):
     """نافذة مساعدة"""
-    return build_games_menu(theme)  # Simplified
+    return build_games_menu(theme)
 
 def build_theme_selector(theme=DEFAULT_THEME):
     """اختيار الثيمات"""
-    return build_enhanced_home("مستخدم", 0, True, theme)  # Simplified
+    return build_enhanced_home("مستخدم", 0, True, theme)
 
 def build_registration_status(username, points, theme=DEFAULT_THEME):
-    return TextMessage(text=f"☑️ تم التسجيل\nالاسم: {username}\nالنقاط: {points}")
+    return TextMessage(text=f"تم التسجيل\nالاسم: {username}\nالنقاط: {points}")
 
 def build_registration_required(theme=DEFAULT_THEME):
-    return TextMessage(text="⚠️ التسجيل مطلوب\nاكتب: انضم")
+    return TextMessage(text="التسجيل مطلوب\nاكتب: انضم")
 
 def build_unregister_confirmation(username, points, theme=DEFAULT_THEME):
-    return TextMessage(text=f"☑️ تم الانسحاب\nنقاطك: {points}")
+    return TextMessage(text=f"تم الانسحاب\nنقاطك: {points}")
 
 def build_multiplayer_help_window(theme=DEFAULT_THEME):
-    return TextMessage(text="👥 وضع الفريقين\n1. اكتب: انضم\n2. اختر اللعبة\n3. تقسيم تلقائي")
+    return TextMessage(text="وضع الفريقين\n1. اكتب: انضم\n2. اختر اللعبة\n3. تقسيم تلقائي")
 
 def build_join_confirmation(username, theme=DEFAULT_THEME):
-    return TextMessage(text="☑️ انضممت للفريق")
+    return TextMessage(text="انضممت للفريق")
 
 def build_error_message(error_text, theme=DEFAULT_THEME):
-    return TextMessage(text=f"❌ {error_text}")
+    return TextMessage(text=f"خطأ: {error_text}")
 
 def build_game_stopped(game_name, theme=DEFAULT_THEME):
-    return TextMessage(text=f"⏹️ تم إيقاف {game_name}")
+    return TextMessage(text=f"تم إيقاف {game_name}")
 
 def build_team_game_end(team_points, theme=DEFAULT_THEME):
     c = _c(theme)
     t1, t2 = team_points.get("team1", 0), team_points.get("team2", 0)
-    winner = "الفريق الأول 🥇" if t1 > t2 else "الفريق الثاني 🥈" if t2 > t1 else "⚖️ تعادل"
+    winner = "الفريق الأول" if t1 > t2 else "الفريق الثاني" if t2 > t1 else "تعادل"
     
     body = {
         "type": "bubble",
@@ -764,7 +756,7 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                _gradient_header("انتهت اللعبة!", "🏆", theme),
+                _gradient_header("انتهت اللعبة!", theme),
                 _separator_3d(theme),
                 _3d_card([
                     {
@@ -816,8 +808,8 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
                     "spacing": "sm",
                     "margin": "xl",
                     "contents": [
-                        _premium_button("🎮 الألعاب", "ألعاب", "primary", theme),
-                        _premium_button("🏠 البداية", "بداية", "secondary", theme)
+                        _premium_button("الألعاب", "ألعاب", "primary", theme),
+                        _premium_button("البداية", "بداية", "secondary", theme)
                     ]
                 }
             ],
