@@ -89,7 +89,7 @@ def build_enhanced_home(username,points,is_registered=True,theme=DEFAULT_THEME,m
             "type":"box","layout":"vertical",
             "contents":[
                 _gradient_header(BOT_NAME,theme),
-                {"type":"text","text":"البوت الترفيهي الأول","size":"xs","color":c["text2"],"align":"center","margin":"xs"},
+                {"type":"text","text":"البوت يعمل في الخاص وفي المجموعات.","size":"xs","color":c["text2"],"align":"center","margin":"xs"},
                 _separator_3d(theme),
                 _3d_card([
                     {"type":"box","layout":"horizontal","contents":[
@@ -231,7 +231,7 @@ def build_help_window(theme=DEFAULT_THEME):
                 ],"backgroundColor":c["card"],"cornerRadius":"16px","paddingAll":"16px","borderWidth":"1px","borderColor":c["border"],"margin":"md","offsetBottom":"4px"},
                 _3d_card([
                     {"type":"text","text":"✓ ملاحظة","size":"xs","weight":"bold","color":c["info"],"align":"center"},
-                    {"type":"text","text":"البوت يعمل في الخاص وفي المجموعات.","size":"xs","color":c["text2"],"align":"center","margin":"xs"}
+                    {"type":"text","text":"لعبة توافق متاحة للجميع بدون تسجيل","size":"xs","color":c["text2"],"align":"center","margin":"xs"}
                 ],theme,"12px"),
                 {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[
                     _premium_button("البداية","بداية","primary",theme),
