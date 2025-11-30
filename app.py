@@ -223,8 +223,20 @@ def handle_message(event):
         if not text:
             return
         
-        # ☑️ معالجة المنشن @BOT
-        if text.startswith('@') or 'mention' in text.lower():
+        in_group = hasattr(event.source, 'group_id')
+        game_id = event.source.group_id if in_group else user_id
+        
+        # ☑️ التحقق: هل هو منشن أو أمر مسموح؟
+        is_mention = text.startswith('@') or 'mention' in text.lower()
+        is_command = is_allowed_command(text)
+        is_game_active = game_id in active_games
+        
+        # ❌ تجاهل أي رسالة ليست: منشن أو أمر أو إجابة للعبة نشطة
+        if not is_mention and not is_command and not is_game_active:
+            return
+        
+        # ☑️ معالجة المنشن @BOT - عرض قائمة الألعاب
+        if is_mention:
             with ApiClient(configuration) as api_client:
                 line_api = MessagingApi(api_client)
                 try:
@@ -240,14 +252,13 @@ def handle_message(event):
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply_message]))
             return
         
-        in_group = hasattr(event.source, 'group_id')
-        game_id = event.source.group_id if in_group else user_id
-        if game_id not in active_games and not is_allowed_command(text):
-            return
+        # ☑️ التحقق من Rate Limiting
         if is_rate_limited(user_id):
             logger.info(f"⚠️ تجاوز الحد: {user_id}")
             return
+        
         source_type = "group" if in_group else "user"
+        
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
             try:
@@ -263,6 +274,7 @@ def handle_message(event):
             lowered = text.lower()
             reply_message = None
 
+            # ☑️ معالجة الأوامر
             if lowered in ["مساعدة","help","؟"]:
                 reply_message = build_help_window(current_theme)
             elif lowered in ["بداية","home","الرئيسية","start"]:
@@ -326,6 +338,7 @@ def handle_message(event):
             elif text in GAME_COMMANDS:
                 game_class_name = get_game_class_name(text)
                 
+                # ☑️ لعبة التوافق: لا تحتاج تسجيل
                 if game_class_name == "توافق":
                     try:
                         game_instance = launch_game_instance(game_id, user_id, game_class_name, line_api, current_theme, False, source_type)
@@ -337,6 +350,7 @@ def handle_message(event):
                         logger.error(f"❌ خطأ في بدء التوافق: {e}")
                         logger.error(traceback.format_exc())
                         reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
+                # ☑️ باقي الألعاب: تحتاج تسجيل
                 elif not user.get('is_registered'):
                     reply_message = build_registration_required(current_theme)
                 else:
@@ -358,60 +372,97 @@ def handle_message(event):
                         logger.error(f"❌ خطأ في بدء اللعبة: {e}")
                         logger.error(traceback.format_exc())
                         reply_message = build_error_message(f"❌ حدث خطأ في بدء اللعبة", current_theme)
+            # ☑️ معالجة إجابات الألعاب
             elif game_id in active_games:
                 meta = ensure_session_meta(game_id)
                 is_compatibility = meta.get("current_game_name") == "توافق"
-                game_instance = active_games[game_id]
-                if meta.get("team_mode"):
-                    all_joined = meta.get("joined_users", set()) | set(meta.get("teams", {}).keys())
-                    if user_id not in all_joined:
-                        return
-                try:
-                    result = game_instance.check_answer(text, user_id, username)
-                    if not result:
-                        return
-                    pts = result.get('points', 0)
-                    if pts and not is_compatibility:
-                        if meta.get("team_mode"):
-                            team_name = meta["teams"].get(user_id, "team1")
-                            db.add_team_points(meta["session_id"], team_name, pts)
+                
+                # ☑️ لعبة التوافق: مفتوحة للجميع
+                if is_compatibility:
+                    game_instance = active_games[game_id]
+                    try:
+                        result = game_instance.check_answer(text, user_id, username)
+                        if not result:
+                            return
+                        
+                        if result.get('game_over'):
+                            if result.get('response'):
+                                response_msg = result['response']
+                                attach_quick_reply(response_msg)
+                                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
+                            del active_games[game_id]
+                            session_meta.pop(game_id, None)
+                            return
                         else:
-                            db.add_points(user_id, pts)
-                            game_name = meta.get("current_game_name", "unknown")
-                            db.record_game_stat(user_id, game_name, pts, result.get('game_over', False))
-                    if result.get('game_over'):
-                        if meta.get("session_id"):
-                            db.finish_session(meta["session_id"], pts)
-                        if is_compatibility:
                             if result.get('response'):
                                 response_msg = result['response']
                                 attach_quick_reply(response_msg)
                                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
                                 return
-                        else:
+                    except Exception as e:
+                        logger.error(f"❌ خطأ في check_answer: {e}")
+                        logger.error(traceback.format_exc())
+                        if game_id in active_games:
+                            del active_games[game_id]
+                        reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
+                # ☑️ باقي الألعاب: المسجلين فقط
+                else:
+                    # ❌ تجاهل غير المسجلين بدون رد
+                    if not user.get('is_registered'):
+                        return
+                    
+                    game_instance = active_games[game_id]
+                    
+                    # ☑️ في وضع الفريقين: التحقق من العضوية
+                    if meta.get("team_mode"):
+                        all_joined = meta.get("joined_users", set()) | set(meta.get("teams", {}).keys())
+                        if user_id not in all_joined:
+                            return
+                    
+                    try:
+                        result = game_instance.check_answer(text, user_id, username)
+                        if not result:
+                            return
+                        
+                        pts = result.get('points', 0)
+                        if pts:
+                            if meta.get("team_mode"):
+                                team_name = meta["teams"].get(user_id, "team1")
+                                db.add_team_points(meta["session_id"], team_name, pts)
+                            else:
+                                db.add_points(user_id, pts)
+                                game_name = meta.get("current_game_name", "unknown")
+                                db.record_game_stat(user_id, game_name, pts, result.get('game_over', False))
+                        
+                        if result.get('game_over'):
+                            if meta.get("session_id"):
+                                db.finish_session(meta["session_id"], pts)
+                            
                             if meta.get("team_mode"):
                                 team_pts = db.get_team_points(meta["session_id"])
                                 reply_message = build_team_game_end(team_pts, current_theme)
                             else:
                                 reply_message = build_winner_announcement(username, meta.get("current_game_name", "اللعبة"), pts, user['points'] + pts, current_theme)
-                        del active_games[game_id]
-                        session_meta.pop(game_id, None)
-                    else:
-                        if result.get('response'):
-                            response_msg = result['response']
-                            attach_quick_reply(response_msg)
-                            line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
-                            return
+                            
+                            del active_games[game_id]
+                            session_meta.pop(game_id, None)
                         else:
-                            from ui_builder import build_answer_feedback
-                            reply_message = build_answer_feedback(result.get('message', '☑️'), current_theme)
-                except Exception as e:
-                    logger.error(f"❌ خطأ في check_answer: {e}")
-                    logger.error(traceback.format_exc())
-                    if game_id in active_games:
-                        del active_games[game_id]
-                    reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
+                            if result.get('response'):
+                                response_msg = result['response']
+                                attach_quick_reply(response_msg)
+                                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
+                                return
+                            else:
+                                from ui_builder import build_answer_feedback
+                                reply_message = build_answer_feedback(result.get('message', '☑️'), current_theme)
+                    except Exception as e:
+                        logger.error(f"❌ خطأ في check_answer: {e}")
+                        logger.error(traceback.format_exc())
+                        if game_id in active_games:
+                            del active_games[game_id]
+                        reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
             else:
+                # ❌ تجاهل أي رسالة أخرى
                 return
 
             if reply_message:
@@ -458,13 +509,15 @@ if __name__ == "__main__":
     logger.info(f"✨ {BOT_NAME} v{BOT_VERSION} - FINAL SYSTEM v19.0")
     logger.info(f"▫️ {BOT_RIGHTS}")
     logger.info(f"▫️ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
+    logger.info(f"▫️ ✅ الرد على المنشن @BOT فقط")
+    logger.info(f"▫️ ✅ الرد على الأوامر المحددة فقط")
+    logger.info(f"▫️ ✅ قبول إجابات المسجلين فقط")
+    logger.info(f"▫️ ✅ تجاهل الرسائل الأخرى بدون رد")
     logger.info(f"▫️ ✅ التسجيل اليدوي (انضم)")
     logger.info(f"▫️ ✅ الانسحاب مع الاحتفاظ بالنقاط")
     logger.info(f"▫️ ✅ البقاء في الصدارة (غير نشط)")
     logger.info(f"▫️ ✅ حذف تلقائي: بدون نقاط + 30 يوم")
     logger.info(f"▫️ ✅ نقطة واحدة لكل إجابة صحيحة")
-    logger.info(f"▫️ ✅ منشن البوت لعرض الألعاب @BOT")
-    logger.info(f"▫️ ✅ يعمل في الخاص والقروبات")
     logger.info(f"✨ المنفذ: {port}")
     logger.info("="*70)
     app.run(host="0.0.0.0", port=port, debug=False)
