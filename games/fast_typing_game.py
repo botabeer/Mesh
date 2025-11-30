@@ -1,3 +1,9 @@
+"""
+لعبة أسرع - Bot Mesh v20.1 FINAL
+Created by: Abeer Aldosari © 2025
+✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | مع وقت 20 ثانية
+"""
+
 from games.base_game import BaseGame
 import random
 import time
@@ -5,12 +11,11 @@ from typing import Dict, Any, Optional
 
 
 class FastTypingGame(BaseGame):
-    """لعبة أسرع"""
+    """لعبة أسرع - الوحيدة مع وقت"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "أسرع"
-        self.game_icon = "▫️"
         self.supports_hint = False
         self.supports_reveal = False
 
@@ -56,11 +61,9 @@ class FastTypingGame(BaseGame):
         self.current_answer = phrase
         self.round_start_time = time.time()
 
-        additional_info = f"الوقت {self.round_time} ثانية\nاكتب النص بالضبط"
-
         return self.build_question_flex(
             question_text=phrase,
-            additional_info=additional_info
+            additional_info=f"الوقت {self.round_time} ثانية\nاكتب النص بالضبط"
         )
 
     def _time_expired(self) -> bool:
@@ -83,11 +86,7 @@ class FastTypingGame(BaseGame):
                 result["message"] = f"انتهى الوقت\n\n{result.get('message', '')}"
                 return result
 
-            return {
-                "message": "انتهى الوقت",
-                "response": self.get_question(),
-                "points": 0
-            }
+            return {"message": "انتهى الوقت", "response": self.get_question(), "points": 0}
 
         if user_id in self.answered_users:
             return None
@@ -100,20 +99,16 @@ class FastTypingGame(BaseGame):
 
         if text == self.current_answer:
             self.answered_users.add(user_id)
-
             total_points = 1
 
             if self.team_mode:
-                team = self.get_user_team(user_id)
-                if not team:
-                    team = self.assign_to_team(user_id)
+                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
                 self.add_team_score(team, total_points)
             else:
                 self.add_score(user_id, display_name, total_points)
 
             self.previous_question = self.current_answer
             self.previous_answer = self.current_answer
-
             self.current_question += 1
             self.answered_users.clear()
 
@@ -122,15 +117,7 @@ class FastTypingGame(BaseGame):
                 result["points"] = total_points
                 return result
 
-            msg = f"صحيح\nالوقت⏱️ {time_taken:.1f}s\n+{total_points} نقطة"
-            return {
-                "message": msg,
-                "response": self.get_question(),
-                "points": total_points
-            }
+            msg = f"صحيح\nالوقت {time_taken:.1f}s\n+{total_points}"
+            return {"message": msg, "response": self.get_question(), "points": total_points}
 
-        return {
-            "message": f"خطأ (الوقت {time_taken:.1f}s)",
-            "response": self._create_text_message(f"خطأ (الوقت {time_taken:.1f}s)"),
-            "points": 0
-        }
+        return None
