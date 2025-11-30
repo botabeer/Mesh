@@ -126,7 +126,7 @@ class ConnectionPool:
 
 
 class Database:
-    """مدير قاعدة البيانات - لا يعرض user_id أبداً"""
+    """مدير قاعدة البيانات - محسّن مع جلب الأسماء من LINE"""
     
     def __init__(self, db_path='botmesh.db'):
         self.db_path = db_path
@@ -156,7 +156,7 @@ class Database:
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             
-            # جدول المستخدمين - user_id موجود للربط فقط ولا يُعرض
+            # جدول المستخدمين
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users(
                     user_id TEXT PRIMARY KEY,
@@ -261,10 +261,7 @@ class Database:
     
     @retry_on_locked()
     def get_user(self, user_id: str) -> Optional[Dict]:
-        """
-        الحصول على بيانات المستخدم
-        ⚠️ هام: لا يُرجع user_id أبداً - فقط البيانات العامة
-        """
+        """الحصول على بيانات المستخدم"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -281,7 +278,6 @@ class Database:
                 user_dict = dict(row)
                 if not user_dict.get('theme'):
                     user_dict['theme'] = 'أبيض'
-                # لا نُرجع user_id هنا
                 return user_dict
             return None
     
@@ -380,10 +376,7 @@ class Database:
     
     @retry_on_locked()
     def get_leaderboard_all(self, limit: int = 20) -> List:
-        """
-        الحصول على لوحة الصدارة
-        ⚠️ يُرجع فقط: name, points, is_registered (بدون user_id)
-        """
+        """الحصول على لوحة الصدارة"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
