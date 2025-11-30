@@ -292,7 +292,7 @@ def build_games_menu(theme=DEFAULT_THEME):
                 
                 {
                     "type": "text",
-                    "text": "بوت ميش",
+                    "text": "Bot Mesh",
                     "size": "sm",
                     "color": c["text2"],
                     "align": "center"
