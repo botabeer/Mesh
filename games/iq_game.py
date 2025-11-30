@@ -1,28 +1,22 @@
 """
-لعبة الذكاء - Bot Mesh v20.0 ENHANCED
+لعبة ذكاء - Bot Mesh v20.1 FINAL
 Created by: Abeer Aldosari © 2025
-✅ تلميح: أول حرف + عدد الحروف
-✅ نقطة واحدة | عرض السؤال السابق
+✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار
 """
 
 from games.base_game import BaseGame
 import random
-import time
 from typing import Dict, Any, Optional
 
 
 class IqGame(BaseGame):
-    """لعبة الذكاء - ألغاز ذكية"""
+    """لعبة ذكاء"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "ذكاء"
-        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
-
-        self.round_time = 30
-        self.round_start_time = None
         
         self.riddles = [
             {"q": "ما الشيء الذي يمشي بلا أرجل ويبكي بلا عيون", "a": ["السحاب", "الغيم", "سحاب", "غيم"]},
@@ -64,17 +58,7 @@ class IqGame(BaseGame):
             {"q": "ما هو الشيء الذي كلما كبر صغر", "a": ["العمر", "عمر"]},
             {"q": "له يد واحدة ولا يستطيع التصفيق", "a": ["الساعة", "ساعة"]},
             {"q": "ما هو الشيء الذي له أربع أرجل ولا يمشي", "a": ["الكرسي", "كرسي", "الطاولة", "طاولة"]},
-            {"q": "يصعد ولا ينزل", "a": ["العمر", "عمر", "السلم"]},
-            {"q": "ما هو الشيء الذي ينبض بلا قلب", "a": ["الساعة", "ساعة"]},
-            {"q": "له فم ولا يتكلم", "a": ["النهر", "نهر", "الوادي"]},
-            {"q": "يجري ولا يمشي", "a": ["الماء", "ماء", "النهر"]},
-            {"q": "يمكنك رميه ولكن لا يمكنك التقاطه", "a": ["الريش", "ريش"]},
-            {"q": "ما هو الشيء الذي كلما أعطيته كلما أخذ منك", "a": ["السر", "سر"]},
-            {"q": "له ذيل ولكن لا جسد له", "a": ["العملة", "عملة"]},
-            {"q": "يملأ الغرفة ولا يشغل حيزاً", "a": ["الضوء", "ضوء", "الهواء"]},
-            {"q": "ما هو الشيء الذي له قلب ولكن لا أعضاء أخرى", "a": ["الشجرة", "شجرة"]},
-            {"q": "له جذور لا يراها أحد", "a": ["الشجرة", "شجرة"]},
-            {"q": "يرتفع ولا يسقط أبداً", "a": ["الدخان", "دخان"]}
+            {"q": "يصعد ولا ينزل", "a": ["العمر", "عمر"]},
         ]
 
         random.shuffle(self.riddles)
@@ -98,46 +82,14 @@ class IqGame(BaseGame):
         riddle = random.choice(available)
         self.used_riddles.append(riddle)
         self.current_answer = riddle["a"]
-        self.round_start_time = time.time()
-
-        if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"الوقت {self.round_time} ثانية\nاكتب لمح او جاوب"
-        else:
-            additional_info = f"الوقت {self.round_time} ثانية"
 
         return self.build_question_flex(
             question_text=riddle['q'],
-            additional_info=additional_info
+            additional_info=None
         )
 
-    def _time_expired(self) -> bool:
-        if not self.round_start_time:
-            return False
-        return (time.time() - self.round_start_time) > self.round_time
-
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        if not self.game_active:
-            return None
-
-        if self._time_expired():
-            answers_text = " او ".join(self.current_answer)
-            self.previous_question = self.used_riddles[-1]["q"] if self.used_riddles else None
-            self.previous_answer = answers_text
-            self.current_question += 1
-            self.answered_users.clear()
-
-            if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result["message"] = f"انتهى الوقت\nالإجابة: {answers_text}\n\n{result.get('message', '')}"
-                return result
-
-            return {
-                "message": f"انتهى الوقت\nالإجابة: {answers_text}",
-                "response": self.get_question(),
-                "points": 0
-            }
-
-        if user_id in self.answered_users:
+        if not self.game_active or user_id in self.answered_users:
             return None
         
         if self.team_mode and user_id not in self.joined_users:
@@ -145,23 +97,12 @@ class IqGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
-        # التلميح: أول حرف + عدد الحروف
         if self.can_use_hint() and normalized == "لمح":
             if not self.current_answer:
-                return {
-                    "message": "لا توجد تلميحات",
-                    "response": self._create_text_message("لا توجد تلميحات"),
-                    "points": 0
-                }
-            
+                return None
             answer = self.current_answer[0]
-            hint = f"تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)} حرف"
-            
-            return {
-                "message": hint,
-                "response": self._create_text_message(hint),
-                "points": 0
-            }
+            hint = f"تبدأ بـ {answer[0]}\nعدد الحروف {len(answer)}"
+            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
 
         if self.can_reveal_answer() and normalized == "جاوب":
             answers_text = " او ".join(self.current_answer)
@@ -172,14 +113,10 @@ class IqGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"الإجابة {answers_text}\n\n{result.get('message', '')}"
                 return result
 
-            return {
-                "message": f"الإجابة: {answers_text}",
-                "response": self.get_question(),
-                "points": 0
-            }
+            return {"message": f"الإجابة {answers_text}", "response": self.get_question(), "points": 0}
 
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
@@ -189,16 +126,13 @@ class IqGame(BaseGame):
                 total_points = 1
 
                 if self.team_mode:
-                    team = self.get_user_team(user_id)
-                    if not team:
-                        team = self.assign_to_team(user_id)
+                    team = self.get_user_team(user_id) or self.assign_to_team(user_id)
                     self.add_team_score(team, total_points)
                 else:
                     self.add_score(user_id, display_name, total_points)
 
                 self.previous_question = self.used_riddles[-1]["q"] if self.used_riddles else None
                 self.previous_answer = correct
-
                 self.current_question += 1
                 self.answered_users.clear()
 
@@ -207,14 +141,6 @@ class IqGame(BaseGame):
                     result["points"] = total_points
                     return result
 
-                return {
-                    "message": f"صحيح\n+{total_points} نقطة",
-                    "response": self.get_question(),
-                    "points": total_points
-                }
+                return {"message": f"صحيح +{total_points}", "response": self.get_question(), "points": total_points}
 
-        return {
-            "message": "إجابة غير صحيحة",
-            "response": self._create_text_message("إجابة غير صحيحة"),
-            "points": 0
-        }
+        return None
