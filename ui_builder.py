@@ -89,7 +89,7 @@ def build_enhanced_home(username,points,is_registered=True,theme=DEFAULT_THEME,m
             "type":"box","layout":"vertical",
             "contents":[
                 _gradient_header(BOT_NAME,theme),
-                {"type":"text","text":"البوت يعمل في الخاص وفي المجموعات.","size":"xs","color":c["text2"],"align":"center","margin":"xs"},
+                {"type":"text","text":"البوت يعمل في الخاص وفي المجموعات","size":"xs","color":c["text2"],"align":"center","margin":"xs"},
                 _separator_3d(theme),
                 _3d_card([
                     {"type":"box","layout":"horizontal","contents":[
