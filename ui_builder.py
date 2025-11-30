@@ -104,10 +104,10 @@ def attach_quick_reply(m):
     return m
 
 # ============================================================================
-# الصفحة الرئيسية - فاخرة بدون إيموجي
+# الصفحة الرئيسية - مُصلحة (إزالة الإيموجي الفارغ)
 # ============================================================================
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
-    """صفحة رئيسية ثري دي فاخرة"""
+    """صفحة رئيسية ثري دي فاخرة - مُصلحة"""
     c = _c(theme)
     status = "مسجل" if is_registered else "غير مسجل"
     join_text = "انسحب" if is_registered else "انضم"
@@ -144,12 +144,6 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
                         "layout": "horizontal",
                         "contents": [
                             {
-                                "type": "text",
-                                "text": "",
-                                "size": "xl",
-                                "flex": 0
-                            },
-                            {
                                 "type": "box",
                                 "layout": "vertical",
                                 "contents": [
@@ -167,8 +161,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
                                         "color": c["success"] if is_registered else c["text3"]
                                     }
                                 ],
-                                "flex": 1,
-                                "margin": "md"
+                                "flex": 1
                             }
                         ]
                     },
@@ -800,104 +793,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
     return attach_quick_reply(_flex("فوز", body))
 
 # ============================================================================
-# نافذة اللعبة - مع أزرار لمح وجاوب
-# ============================================================================
-def build_game_question_with_controls(question_text, additional_info, game_name, supports_hint, supports_reveal, theme=DEFAULT_THEME):
-    """نافذة لعبة احترافية مع أزرار التحكم"""
-    c = _c(theme)
-    
-    contents = [
-        {
-            "type": "text",
-            "text": game_name,
-            "size": "xl",
-            "weight": "bold",
-            "color": c["primary"],
-            "align": "center"
-        },
-        
-        _separator_3d(theme),
-        
-        _3d_card([
-            {
-                "type": "text",
-                "text": question_text,
-                "size": "lg",
-                "color": c["text"],
-                "align": "center",
-                "wrap": True,
-                "weight": "bold"
-            }
-        ], theme, "20px")
-    ]
-    
-    if additional_info:
-        contents.append({
-            "type": "text",
-            "text": additional_info,
-            "size": "xs",
-            "color": c["text2"],
-            "align": "center",
-            "wrap": True,
-            "margin": "md"
-        })
-    
-    # أزرار التحكم
-    control_buttons = []
-    
-    if supports_hint and supports_reveal:
-        control_buttons = [
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "lg",
-                "contents": [
-                    _premium_button("لمح", "لمح", "secondary", theme),
-                    _premium_button("جاوب", "جاوب", "secondary", theme)
-                ]
-            },
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "sm",
-                "contents": [
-                    _premium_button("إيقاف", "إيقاف", "secondary", theme)
-                ]
-            }
-        ]
-    else:
-        control_buttons = [
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "lg",
-                "contents": [
-                    _premium_button("إيقاف", "إيقاف", "secondary", theme)
-                ]
-            }
-        ]
-    
-    contents.extend(control_buttons)
-    
-    body = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": contents,
-            "paddingAll": "24px",
-            "backgroundColor": c["bg"]
-        }
-    }
-    
-    return _flex(game_name, body)
-
-# ============================================================================
-# بقية الدوال (مختصرة)
+# بقية الدوال المساعدة
 # ============================================================================
 def build_help_window(theme=DEFAULT_THEME):
     """نافذة مساعدة"""
@@ -1006,6 +902,100 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
 
 def build_answer_feedback(message, theme=DEFAULT_THEME):
     return TextMessage(text=message)
+
+def build_game_question_with_controls(question_text, additional_info, game_name, supports_hint, supports_reveal, theme=DEFAULT_THEME):
+    """نافذة لعبة احترافية مع أزرار التحكم"""
+    c = _c(theme)
+    
+    contents = [
+        {
+            "type": "text",
+            "text": game_name,
+            "size": "xl",
+            "weight": "bold",
+            "color": c["primary"],
+            "align": "center"
+        },
+        
+        _separator_3d(theme),
+        
+        _3d_card([
+            {
+                "type": "text",
+                "text": question_text,
+                "size": "lg",
+                "color": c["text"],
+                "align": "center",
+                "wrap": True,
+                "weight": "bold"
+            }
+        ], theme, "20px")
+    ]
+    
+    if additional_info:
+        contents.append({
+            "type": "text",
+            "text": additional_info,
+            "size": "xs",
+            "color": c["text2"],
+            "align": "center",
+            "wrap": True,
+            "margin": "md"
+        })
+    
+    # أزرار التحكم
+    control_buttons = []
+    
+    if supports_hint and supports_reveal:
+        control_buttons = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "lg",
+                "contents": [
+                    _premium_button("لمح", "لمح", "secondary", theme),
+                    _premium_button("جاوب", "جاوب", "secondary", theme)
+                ]
+            },
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "sm",
+                "contents": [
+                    _premium_button("إيقاف", "إيقاف", "secondary", theme)
+                ]
+            }
+        ]
+    else:
+        control_buttons = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "lg",
+                "contents": [
+                    _premium_button("إيقاف", "إيقاف", "secondary", theme)
+                ]
+            }
+        ]
+    
+    contents.extend(control_buttons)
+    
+    body = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": contents,
+            "paddingAll": "24px",
+            "backgroundColor": c["bg"]
+        }
+    }
+    
+    return _flex(game_name, body)
 
 __all__ = [
     'build_enhanced_home', 'build_games_menu', 'build_my_points', 'build_leaderboard',
