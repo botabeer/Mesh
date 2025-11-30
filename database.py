@@ -156,7 +156,7 @@ class Database:
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             
-            # جدول المستخدمين
+            # جدول المستخدمين - بدون عرض user_id
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users(
                     user_id TEXT PRIMARY KEY,
@@ -261,11 +261,13 @@ class Database:
     
     @retry_on_locked()
     def get_user(self, user_id: str) -> Optional[Dict]:
-        """الحصول على بيانات المستخدم"""
+        """الحصول على بيانات المستخدم - بدون إرجاع user_id"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT u.*, p.theme, p.language, p.notifications 
+                SELECT u.name, u.points, u.is_registered, u.is_online, 
+                       u.last_online, u.created_at, u.last_activity,
+                       p.theme, p.language, p.notifications 
                 FROM users u 
                 LEFT JOIN user_preferences p ON u.user_id = p.user_id 
                 WHERE u.user_id = ?
@@ -291,6 +293,7 @@ class Database:
                 VALUES(?, ?, 0, 0, 1, ?, ?)
             ''', (user_id, name, now, now))
             cursor.execute("INSERT OR IGNORE INTO user_preferences(user_id, theme) VALUES(?, 'أبيض')", (user_id,))
+            logger.info(f"New user created: {name}")
             return True
     
     @retry_on_locked()
@@ -324,7 +327,10 @@ class Database:
         """تحديث اسم المستخدم"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('UPDATE users SET name = ? WHERE user_id = ?', (name[:50], user_id))
+            name = name[:50] if name else "مستخدم"
+            cursor.execute('UPDATE users SET name = ?, last_activity = ? WHERE user_id = ?', 
+                         (name, datetime.now(), user_id))
+            logger.info(f"Updated username to: {name}")
             return True
     
     @retry_on_locked()
@@ -529,7 +535,7 @@ class Database:
         def maintenance_worker():
             while True:
                 try:
-                    time.sleep(3600)  # كل ساعة
+                    time.sleep(3600)
                     self._perform_maintenance()
                 except Exception as e:
                     logger.error(f"Maintenance error: {e}")
