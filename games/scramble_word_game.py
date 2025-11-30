@@ -1,3 +1,11 @@
+"""
+لعبة كلمة مبعثرة (ترتيب) - Bot Mesh v20.0 ENHANCED
+Created by: Abeer Aldosari © 2025
+✅ حروف مفصلة مع مسافات
+✅ تلميح: أول حرف + عدد الحروف
+✅ نقطة واحدة | عرض السؤال السابق
+"""
+
 from games.base_game import BaseGame
 import random
 import time
@@ -5,12 +13,12 @@ from typing import Dict, Any, Optional
 
 
 class ScrambleWordGame(BaseGame):
-    """لعبة كلمات"""
+    """لعبة ترتيب الحروف"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "كلمات"
-        self.game_icon = "▫️"
+        self.game_name = "ترتيب"
+        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
 
@@ -35,15 +43,16 @@ class ScrambleWordGame(BaseGame):
         self.current_scrambled = None
 
     def scramble_word(self, word: str) -> str:
+        """خلط الحروف بطريقة مفصلة مع مسافات"""
         letters = list(word)
         attempts = 0
         while attempts < 10:
             random.shuffle(letters)
-            scrambled = ''.join(letters)
-            if scrambled != word:
+            scrambled = ' '.join(letters)  # حروف مفصلة
+            if scrambled.replace(' ', '') != word:
                 return scrambled
             attempts += 1
-        return word[::-1]
+        return ' '.join(word[::-1])
 
     def start_game(self):
         self.current_question = 0
@@ -67,12 +76,12 @@ class ScrambleWordGame(BaseGame):
         self.round_start_time = time.time()
 
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"الوقت {self.round_time} ثانية\nعدد الحروف: {len(word)}\n اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"الوقت {self.round_time} ثانية\nعدد الحروف: {len(word)}\nاكتب لمح او جاوب"
         else:
             additional_info = f"الوقت {self.round_time} ثانية\nعدد الحروف: {len(word)}"
 
         return self.build_question_flex(
-            question_text=f"رتب الحروف:\n{self.current_scrambled}",
+            question_text=f"رتب الحروف:\n\n{self.current_scrambled}",
             additional_info=additional_info
         )
 
@@ -93,11 +102,11 @@ class ScrambleWordGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"انتهى الوقت\n الإجابة: {self.current_answer}\n\n{result.get('message', '')}"
+                result["message"] = f"انتهى الوقت\nالإجابة: {self.current_answer}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"انتهى الوقت\n الإجابة: {self.current_answer}",
+                "message": f"انتهى الوقت\nالإجابة: {self.current_answer}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -110,8 +119,9 @@ class ScrambleWordGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
+        # التلميح: أول حرف + عدد الحروف
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"تبدأ بـ: {self.current_answer[0]}\nعدد الحروف: {len(self.current_answer)}"
+            hint = f"تبدأ بـ: {self.current_answer[0]}\nعدد الحروف: {len(self.current_answer)} حرف"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
