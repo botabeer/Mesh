@@ -1,28 +1,22 @@
 """
-لعبة التخمين - Bot Mesh v20.0 ENHANCED
+لعبة خمن - Bot Mesh v20.1 FINAL
 Created by: Abeer Aldosari © 2025
-✅ تلميح: أول حرف + عدد الحروف
-✅ نقطة واحدة لكل جواب صح
+✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | بدون وقت
 """
 
 from games.base_game import BaseGame
 import random
-import time
 from typing import Dict, Any, Optional, List
 
 
 class GuessGame(BaseGame):
-    """لعبة التخمين"""
+    """لعبة خمن"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "تخمين"
-        self.game_icon = ""
+        self.game_name = "خمن"
         self.supports_hint = True
         self.supports_reveal = True
-
-        self.round_time = 25
-        self.round_start_time = None
 
         self.items = {
             "المطبخ": {
@@ -84,7 +78,6 @@ class GuessGame(BaseGame):
                 "ج": ["جزر"],
                 "ف": ["فلفل", "فجل"],
                 "ك": ["كوسا"],
-                "ب": ["باذنجان"],
                 "ث": ["ثوم"]
             },
             "المهن": {
@@ -104,12 +97,10 @@ class GuessGame(BaseGame):
                 "ق": ["قفز"],
                 "ر": ["رماية"],
                 "م": ["مصارعة"],
-                "ت": ["تنس"],
-                "ج": ["جمباز"]
+                "ت": ["تنس"]
             },
             "الألوان": {
-                "أ": ["أحمر", "أزرق", "أخضر"],
-                "أ": ["أصفر"],
+                "أ": ["أحمر", "أزرق", "أخضر", "أصفر"],
                 "ب": ["بني", "برتقالي", "بنفسجي"],
                 "و": ["وردي"],
                 "ر": ["رمادي"]
@@ -147,47 +138,14 @@ class GuessGame(BaseGame):
     def get_question(self):
         q_data = self.questions_list[self.current_question % len(self.questions_list)]
         self.current_answer = q_data["answers"]
-        self.round_start_time = time.time()
-
-        if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"الوقت {self.round_time} ثانية\naكتب لمح او جاوب"
-        else:
-            additional_info = f"الوقت {self.round_time} ثانية"
 
         return self.build_question_flex(
-            question_text=f"الفئة: {q_data['category']}\nيبدأ بحرف: {q_data['letter']}",
-            additional_info=additional_info
+            question_text=f"الفئة {q_data['category']}\nيبدأ بحرف {q_data['letter']}",
+            additional_info=None
         )
 
-    def _time_expired(self) -> bool:
-        if not self.round_start_time:
-            return False
-        return (time.time() - self.round_start_time) > self.round_time
-
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        if not self.game_active:
-            return None
-
-        if self._time_expired():
-            answers_text = " أو ".join(self.current_answer)
-            q_data = self.questions_list[self.current_question % len(self.questions_list)]
-            self.previous_question = f"{q_data['category']} - حرف {q_data['letter']}"
-            self.previous_answer = answers_text
-            self.current_question += 1
-            self.answered_users.clear()
-
-            if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result["message"] = f"انتهى الوقت\nالإجابة: {answers_text}\n\n{result.get('message', '')}"
-                return result
-
-            return {
-                "message": f"انتهى الوقت\nالإجابة: {answers_text}",
-                "response": self.get_question(),
-                "points": 0
-            }
-
-        if user_id in self.answered_users:
+        if not self.game_active or user_id in self.answered_users:
             return None
         
         if self.team_mode and user_id not in self.joined_users:
@@ -195,41 +153,27 @@ class GuessGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
-        # التلميح: أول حرف + عدد الحروف
         if self.can_use_hint() and normalized == "لمح":
             if not self.current_answer:
-                return {
-                    "message": "لا توجد تلميحات",
-                    "response": self._create_text_message("لا توجد تلميحات"),
-                    "points": 0
-                }
-            
+                return None
             answer = self.current_answer[0]
-            hint = f"تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)} حرف"
-            return {
-                "message": hint,
-                "response": self._create_text_message(hint),
-                "points": 0
-            }
+            hint = f"تبدأ بـ {answer[0]}\nعدد الحروف {len(answer)}"
+            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
 
         if self.can_reveal_answer() and normalized == "جاوب":
-            answers_text = " أو ".join(self.current_answer)
+            answers_text = " او ".join(self.current_answer)
             q_data = self.questions_list[self.current_question % len(self.questions_list)]
-            self.previous_question = f"{q_data['category']} - حرف {q_data['letter']}"
+            self.previous_question = f"{q_data['category']} حرف {q_data['letter']}"
             self.previous_answer = answers_text
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"الإجابة {answers_text}\n\n{result.get('message', '')}"
                 return result
 
-            return {
-                "message": f"الإجابة: {answers_text}",
-                "response": self.get_question(),
-                "points": 0
-            }
+            return {"message": f"الإجابة {answers_text}", "response": self.get_question(), "points": 0}
 
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
@@ -239,17 +183,14 @@ class GuessGame(BaseGame):
                 total_points = 1
 
                 if self.team_mode:
-                    team = self.get_user_team(user_id)
-                    if not team:
-                        team = self.assign_to_team(user_id)
+                    team = self.get_user_team(user_id) or self.assign_to_team(user_id)
                     self.add_team_score(team, total_points)
                 else:
                     self.add_score(user_id, display_name, total_points)
 
                 q_data = self.questions_list[self.current_question % len(self.questions_list)]
-                self.previous_question = f"{q_data['category']} - حرف {q_data['letter']}"
+                self.previous_question = f"{q_data['category']} حرف {q_data['letter']}"
                 self.previous_answer = correct_answer
-
                 self.current_question += 1
                 self.answered_users.clear()
 
@@ -258,14 +199,6 @@ class GuessGame(BaseGame):
                     result["points"] = total_points
                     return result
 
-                return {
-                    "message": f"صحيح\n+{total_points} نقطة",
-                    "response": self.get_question(),
-                    "points": total_points
-                }
+                return {"message": f"صحيح +{total_points}", "response": self.get_question(), "points": total_points}
 
-        return {
-            "message": "خطأ",
-            "response": self._create_text_message("خطأ"),
-            "points": 0
-        }
+        return None
