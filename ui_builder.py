@@ -147,7 +147,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "•",
+                                "text": "",
                                 "size": "xl",
                                 "flex": 0
                             },
@@ -409,7 +409,7 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
-                            _stat_box("• النقاط", points, "primary", theme),
+                            _stat_box(" النقاط", points, "primary", theme),
                             {
                                 "type": "box",
                                 "layout": "vertical",
@@ -649,7 +649,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
                 _3d_card([
                     {
                         "type": "text",
-                        "text": "• اللعبة",
+                        "text": "اللعبة",
                         "size": "sm",
                         "color": c["text2"],
                         "align": "center"
@@ -668,7 +668,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
                 _3d_card([
                     {
                         "type": "text",
-                        "text": "• النقاط المكتسبة",
+                        "text": "النقاط المكتسبة",
                         "size": "sm",
                         "color": c["text2"],
                         "align": "center"
@@ -686,7 +686,7 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
                 
                 {
                     "type": "text",
-                    "text": f"• الإجمالي: {total_points}",
+                    "text": f"الإجمالي: {total_points}",
                     "size": "lg",
                     "weight": "bold",
                     "color": c["primary"],
