@@ -1,7 +1,7 @@
 """
-لعبة التوافق - Bot Mesh v19.0 ENHANCED
+لعبة توافق - Bot Mesh v20.1 FINAL
 Created by: Abeer Aldosari © 2025
-نظام مستقل | بدون تسجيل | معالجة ذكية للأسماء
+✅ نظام مستقل | بدون تسجيل | معالجة ذكية للأسماء | ثيمات
 """
 
 from games.base_game import BaseGame
@@ -10,30 +10,22 @@ import re
 
 
 class CompatibilitySystem(BaseGame):
-    """نظام مستقل لحساب التوافق بين اسمين"""
+    """نظام توافق مستقل"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
         self.game_name = "توافق"
-        self.game_icon = ""
         self.supports_hint = False
         self.supports_reveal = False
 
     def is_valid_text(self, text: str) -> bool:
-        """التحقق من أن النص أسماء فقط (بدون رموز أو منشن)"""
+        """التحقق من أن النص أسماء فقط"""
         if re.search(r"[@#0-9A-Za-z!$%^&*()_+=\[\]{};:'\"\\|,.<>/?~`]", text):
             return False
         return True
 
     def parse_names(self, text: str) -> tuple:
-        """
-        معالجة ذكية: قبول الأسماء حتى لو احتوت على و
-        
-        أمثلة:
-        - "محمد و أحمد" -> ("محمد", "أحمد")
-        - "عبدالله و سارة" -> ("عبدالله", "سارة")
-        - "نورة و محمد" -> ("نورة", "محمد")
-        """
+        """معالجة ذكية للأسماء"""
         text = ' '.join(text.split())
         
         if ' و ' in text:
@@ -66,7 +58,7 @@ class CompatibilitySystem(BaseGame):
         return percentage
 
     def get_compatibility_message(self, percentage: int) -> str:
-        """رسالة التوافق حسب النسبة"""
+        """رسالة التوافق"""
         if percentage >= 90:
             return "توافق عالي جداً"
         elif percentage >= 75:
@@ -85,11 +77,9 @@ class CompatibilitySystem(BaseGame):
 
     def get_question(self):
         """واجهة الإدخال"""
-        colors = self.get_theme_colors()
-
         return self.build_question_flex(
             question_text="أدخل اسمين بينهما (و)",
-            additional_info="مثال: ميش و عبير"
+            additional_info="مثال ميش و عبير"
         )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
@@ -97,15 +87,14 @@ class CompatibilitySystem(BaseGame):
             return None
 
         text = user_answer.strip()
-
         name1, name2 = self.parse_names(text)
 
         if not name1 or not name2:
             return {
                 'response': self._create_text_message(
                     "الصيغة غير صحيحة\n\n"
-                    "اكتب: اسم و اسم\n"
-                    "مثال: ميش و عبير"
+                    "اكتب اسم و اسم\n"
+                    "مثال ميش و عبير"
                 ),
                 'points': 0
             }
@@ -196,7 +185,7 @@ class CompatibilitySystem(BaseGame):
                     
                     {
                         "type": "text",
-                        "text": f"نفس النتيجة لو كتبت:\n{name2} و {name1}",
+                        "text": f"نفس النتيجة لو كتبت\n{name2} و {name1}",
                         "size": "xs",
                         "color": colors["text2"],
                         "align": "center",
@@ -248,17 +237,4 @@ class CompatibilitySystem(BaseGame):
             'response': result_message,
             'points': 0,
             'game_over': True
-        }
-
-    def get_game_info(self) -> Dict[str, Any]:
-        """معلومات النظام"""
-        return {
-            "name": self.game_name,
-            "description": "نظام مستقل لحساب التوافق",
-            "is_game": False,
-            "supports_hint": False,
-            "supports_reveal": False,
-            "has_timer": False,
-            "has_points": False,
-            "team_mode": False
         }
