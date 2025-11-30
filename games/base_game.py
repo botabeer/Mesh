@@ -1,4 +1,4 @@
-"""Bot Mesh - Base Game v19.0 COMPACT | © 2025 Abeer Aldosari"""
+"""Bot Mesh - Base Game v20.0 ENHANCED | © 2025 Abeer Aldosari"""
 from typing import Dict, Any, Optional
 from datetime import datetime
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
@@ -7,7 +7,7 @@ from constants import THEMES, DEFAULT_THEME
 
 class BaseGame:
     game_name = "لعبة"
-    game_icon = "🎮"
+    game_icon = ""
     supports_hint = True
     supports_reveal = True
 
@@ -33,10 +33,12 @@ class BaseGame:
 
     def can_use_hint(self) -> bool: return (not self.team_mode) and self.supports_hint
     def can_reveal_answer(self) -> bool: return (not self.team_mode) and self.supports_reveal
+    
     def normalize_text(self, text: str) -> str:
         if not text: return ""
         text = text.strip().lower()
-        for old, new in {'أ':'ا','إ':'ا','آ':'ا','ى':'ي','ة':'ه','ؤ':'و','ئ':'ي'}.items(): text = text.replace(old, new)
+        for old, new in {'أ':'ا','إ':'ا','آ':'ا','ى':'ي','ة':'ه','ؤ':'و','ئ':'ي'}.items(): 
+            text = text.replace(old, new)
         return re.sub(r'[\u064B-\u065F\u0670]', '', text)
 
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
@@ -82,51 +84,233 @@ class BaseGame:
         return self.get_question()
 
     def get_question(self): raise NotImplementedError("يجب تطبيق get_question")
-    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]: raise NotImplementedError("يجب تطبيق check_answer")
+    def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]: 
+        raise NotImplementedError("يجب تطبيق check_answer")
 
     def end_game(self) -> Dict[str, Any]:
         self.game_active = False
         if self.team_mode:
             t1, t2 = self.team_scores.get("team1",0), self.team_scores.get("team2",0)
-            winner = "الفريق الأول 🥇" if t1>t2 else "الفريق الثاني 🥈" if t2>t1 else "تعادل"
-            return {"game_over":True,"points":max(t1,t2),"message":f"🏆 انتهت اللعبة!\n\nالنتيجة:\nالفريق الأول: {t1}\nالفريق الثاني: {t2}\n\nالفائز: {winner}"}
+            winner = "الفريق الأول" if t1>t2 else "الفريق الثاني" if t2>t1 else "تعادل"
+            return {
+                "game_over":True,
+                "points":max(t1,t2),
+                "message":f"انتهت اللعبة\n\nالنتيجة:\nالفريق الأول: {t1}\nالفريق الثاني: {t2}\n\nالفائز: {winner}"
+            }
         if not self.scores: return {"game_over":True,"points":0,"message":"انتهت اللعبة"}
         lb = sorted(self.scores.items(), key=lambda x: x[1]["score"], reverse=True)
         winner = lb[0]
-        msg = f"🏆 الفائز: {winner[1]['name']}\nالنقاط: {winner[1]['score']}\n\n"
+        msg = f"الفائز: {winner[1]['name']}\nالنقاط: {winner[1]['score']}\n\n"
         if len(lb) > 1:
             msg += "الترتيب:\n"
             for i, (uid, data) in enumerate(lb[:5], 1):
-                medal = ["🥇","🥈","🥉"][i-1] if i<=3 else f"{i}."
-                msg += f"{medal} {data['name']}: {data['score']}\n"
+                medal = ["1","2","3"][i-1] if i<=3 else f"{i}"
+                msg += f"{medal}. {data['name']}: {data['score']}\n"
         return {"game_over":True,"points":winner[1]["score"],"message":msg}
 
     def _create_text_message(self, text: str): return TextMessage(text=text)
-    def _create_flex_with_buttons(self, alt_text: str, flex_content: dict): return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
+    def _create_flex_with_buttons(self, alt_text: str, flex_content: dict): 
+        return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
+    
     def _glass_box_enhanced(self, contents, radius="15px", padding="15px"):
         c = self.get_theme_colors()
-        return {"type":"box","layout":"vertical","contents":contents,"cornerRadius":radius,"paddingAll":padding,"borderWidth":"1px","borderColor":c["border"]}
+        return {
+            "type":"box",
+            "layout":"vertical",
+            "contents":contents,
+            "cornerRadius":radius,
+            "paddingAll":padding,
+            "borderWidth":"1px",
+            "borderColor":c["border"]
+        }
 
     def build_question_flex(self, question_text: str, additional_info: str = None):
+        """بناء نافذة سؤال احترافية مع أزرار التحكم"""
         c = self.get_theme_colors()
+        
+        # عداد السؤال البصري
+        progress = f"{self.current_question + 1}/{self.questions_count}"
+        
         contents = [
-            {"type":"text","text":f"{self.game_icon} {self.game_name}","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
-            {"type":"text","text":f"سؤال {self.current_question + 1} من {self.questions_count}","size":"sm","color":c["text2"],"align":"center","margin":"xs"},
+            {
+                "type":"text",
+                "text":self.game_name,
+                "size":"xl",
+                "weight":"bold",
+                "color":c["primary"],
+                "align":"center"
+            },
+            {
+                "type":"box",
+                "layout":"horizontal",
+                "contents":[
+                    {
+                        "type":"text",
+                        "text":"السؤال",
+                        "size":"sm",
+                        "color":c["text2"],
+                        "flex":1
+                    },
+                    {
+                        "type":"text",
+                        "text":progress,
+                        "size":"sm",
+                        "color":c["primary"],
+                        "weight":"bold",
+                        "align":"end",
+                        "flex":0
+                    }
+                ],
+                "margin":"sm"
+            },
             {"type":"separator","margin":"lg","color":c["border"]}
         ]
+        
+        # السؤال السابق
         if self.previous_question and self.previous_answer:
-            prev_ans = self.previous_answer if isinstance(self.previous_answer, str) else (self.previous_answer[0] if isinstance(self.previous_answer, list) and self.previous_answer else "")
+            prev_ans = self.previous_answer if isinstance(self.previous_answer, str) else (
+                self.previous_answer[0] if isinstance(self.previous_answer, list) and self.previous_answer else ""
+            )
             prev_q = str(self.previous_question)
             if len(prev_q) > 50: prev_q = prev_q[:47] + "..."
+            
             contents.append(self._glass_box_enhanced([
-                {"type":"text","text":"السؤال السابق","size":"xs","color":c["text3"],"weight":"bold"},
-                {"type":"text","text":prev_q,"size":"xs","color":c["text2"],"wrap":True,"margin":"xs"},
-                {"type":"text","text":f"الإجابة: {prev_ans}","size":"xs","color":c["success"],"wrap":True,"margin":"xs","weight":"bold"}
+                {
+                    "type":"text",
+                    "text":"السؤال السابق",
+                    "size":"xs",
+                    "color":c["text3"],
+                    "weight":"bold"
+                },
+                {
+                    "type":"text",
+                    "text":prev_q,
+                    "size":"xs",
+                    "color":c["text2"],
+                    "wrap":True,
+                    "margin":"xs"
+                },
+                {
+                    "type":"text",
+                    "text":f"الإجابة: {prev_ans}",
+                    "size":"xs",
+                    "color":c["success"],
+                    "wrap":True,
+                    "margin":"xs",
+                    "weight":"bold"
+                }
             ],"10px","10px"))
             contents.append({"type":"separator","margin":"md","color":c["border"]})
-        contents.append(self._glass_box_enhanced([{"type":"text","text":question_text,"size":"lg","color":c["text"],"align":"center","wrap":True,"weight":"bold"}],"15px","20px"))
-        if additional_info: contents.append({"type":"text","text":additional_info,"size":"xs","color":c["text2"],"align":"center","wrap":True,"margin":"md"})
-        return self._create_flex_with_buttons(self.game_name,{"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":contents,"paddingAll":"20px","backgroundColor":c["bg"]}})
+        
+        # السؤال الحالي
+        contents.append(self._glass_box_enhanced([
+            {
+                "type":"text",
+                "text":question_text,
+                "size":"lg",
+                "color":c["text"],
+                "align":"center",
+                "wrap":True,
+                "weight":"bold"
+            }
+        ],"15px","20px"))
+        
+        # معلومات إضافية
+        if additional_info:
+            contents.append({
+                "type":"text",
+                "text":additional_info,
+                "size":"xs",
+                "color":c["text2"],
+                "align":"center",
+                "wrap":True,
+                "margin":"md"
+            })
+        
+        # أزرار التحكم
+        if self.can_use_hint() and self.can_reveal_answer():
+            contents.extend([
+                {"type":"separator","margin":"lg","color":c["border"]},
+                {
+                    "type":"box",
+                    "layout":"horizontal",
+                    "spacing":"sm",
+                    "margin":"md",
+                    "contents":[
+                        {
+                            "type":"button",
+                            "action":{"type":"message","label":"لمح","text":"لمح"},
+                            "style":"secondary",
+                            "height":"sm",
+                            "color":c["secondary"]
+                        },
+                        {
+                            "type":"button",
+                            "action":{"type":"message","label":"جاوب","text":"جاوب"},
+                            "style":"secondary",
+                            "height":"sm",
+                            "color":c["secondary"]
+                        }
+                    ]
+                },
+                {
+                    "type":"box",
+                    "layout":"horizontal",
+                    "spacing":"sm",
+                    "margin":"sm",
+                    "contents":[
+                        {
+                            "type":"button",
+                            "action":{"type":"message","label":"إيقاف","text":"إيقاف"},
+                            "style":"secondary",
+                            "height":"sm"
+                        }
+                    ]
+                }
+            ])
+        elif not self.team_mode:
+            contents.extend([
+                {"type":"separator","margin":"lg","color":c["border"]},
+                {
+                    "type":"box",
+                    "layout":"horizontal",
+                    "spacing":"sm",
+                    "margin":"md",
+                    "contents":[
+                        {
+                            "type":"button",
+                            "action":{"type":"message","label":"إيقاف","text":"إيقاف"},
+                            "style":"secondary",
+                            "height":"sm"
+                        }
+                    ]
+                }
+            ])
+        
+        return self._create_flex_with_buttons(
+            self.game_name,
+            {
+                "type":"bubble",
+                "size":"mega",
+                "body":{
+                    "type":"box",
+                    "layout":"vertical",
+                    "contents":contents,
+                    "paddingAll":"20px",
+                    "backgroundColor":c["bg"]
+                }
+            }
+        )
 
     def get_game_info(self) -> Dict[str, Any]:
-        return {"name":self.game_name,"questions_count":self.questions_count,"supports_hint":self.supports_hint,"supports_reveal":self.supports_reveal,"active":self.game_active,"current_question":self.current_question,"players_count":len(self.scores),"team_mode":self.team_mode,"session_type":self.session_type}
+        return {
+            "name":self.game_name,
+            "questions_count":self.questions_count,
+            "supports_hint":self.supports_hint,
+            "supports_reveal":self.supports_reveal,
+            "active":self.game_active,
+            "current_question":self.current_question,
+            "players_count":len(self.scores),
+            "team_mode":self.team_mode,
+            "session_type":self.session_type
+        }
