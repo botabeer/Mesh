@@ -170,12 +170,14 @@ def handle_message(event):
                 elif text in GAME_COMMANDS:
                     game_class_name=get_game_class_name(text)
                     if game_class_name=="توافق":
-                        try:game_instance=launch_game_instance(game_id,user_id,game_class_name,line_api,current_theme,False,source_type);start_msg=game_instance.start_game();attach_quick_reply(start_msg);line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token,messages=[start_msg]));return
+                        try:
+                            game_instance=launch_game_instance(game_id,user_id,game_class_name,line_api,current_theme,False,source_type);start_msg=game_instance.start_game();attach_quick_reply(start_msg);line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token,messages=[start_msg]));return
                         except Exception as e:logger.error(f"Error starting compatibility: {e}");logger.error(traceback.format_exc());return
                     elif not user.get('is_registered'):reply_message=build_registration_required(current_theme)
                     else:
                         meta=ensure_session_meta(game_id);team_mode=team_mode_state.get(game_id,False)
-                        try:game_instance=launch_game_instance(game_id,user_id,game_class_name,line_api,current_theme,team_mode,source_type);
+                        try:
+                            game_instance=launch_game_instance(game_id,user_id,game_class_name,line_api,current_theme,team_mode,source_type)
                             if team_mode:logger.info(f"Team mode active for game {game_class_name}")
                             start_msg=game_instance.start_game();attach_quick_reply(start_msg);line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token,messages=[start_msg]));return
                         except Exception as e:logger.error(f"Error starting game: {e}");logger.error(traceback.format_exc());return
@@ -191,7 +193,7 @@ def handle_message(event):
                                 del active_games[game_id];session_meta.pop(game_id,None);return
                             else:
                                 if result.get('response'):response_msg=result['response'];attach_quick_reply(response_msg);line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token,messages=[response_msg]));return
-                        except Exception as e:logger.error(f"Error in check_answer: {e}");logger.error(traceback.format_exc());
+                        except Exception as e:logger.error(f"Error in check_answer: {e}");logger.error(traceback.format_exc())
                             if game_id in active_games:del active_games[game_id]
                             return
                     else:
@@ -209,7 +211,7 @@ def handle_message(event):
                             else:
                                 if result.get('response'):response_msg=result['response'];attach_quick_reply(response_msg);line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token,messages=[response_msg]));return
                                 else:return
-                        except Exception as e:logger.error(f"Error in check_answer: {e}");logger.error(traceback.format_exc());
+                        except Exception as e:logger.error(f"Error in check_answer: {e}");logger.error(traceback.format_exc())
                             if game_id in active_games:del active_games[game_id]
                             return
                 else:return
