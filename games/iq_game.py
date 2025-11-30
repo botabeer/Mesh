@@ -1,3 +1,10 @@
+"""
+لعبة الذكاء - Bot Mesh v20.0 ENHANCED
+Created by: Abeer Aldosari © 2025
+✅ تلميح: أول حرف + عدد الحروف
+✅ نقطة واحدة | عرض السؤال السابق
+"""
+
 from games.base_game import BaseGame
 import random
 import time
@@ -138,6 +145,7 @@ class IqGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
+        # التلميح: أول حرف + عدد الحروف
         if self.can_use_hint() and normalized == "لمح":
             if not self.current_answer:
                 return {
@@ -147,10 +155,7 @@ class IqGame(BaseGame):
                 }
             
             answer = self.current_answer[0]
-            if len(answer) <= 2:
-                hint = f"الكلمة قصيرة: {answer[0]}_"
-            else:
-                hint = f"تلميح: {answer[0]}{answer[1]}{'_' * (len(answer) - 2)}"
+            hint = f"تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)} حرف"
             
             return {
                 "message": hint,
