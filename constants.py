@@ -19,7 +19,7 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# 9 ثيمات احترافية متناسقة - بدون إيموجي
+# 9 ثيمات احترافية متناسقة
 # ============================================================================
 THEMES = {
     "أبيض": {
@@ -261,26 +261,25 @@ THEMES = {
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# إعدادات الألعاب (بدون إيموجي)
+# إعدادات الألعاب - بدون إيموجي
 # ============================================================================
 GAME_CONFIG = {
-    "كتابة سريعة": {"display": "أسرع", "icon": "", "hint": False, "reveal": False, "timer": 20},
-    "ذكاء": {"display": "ذكاء", "icon": "", "hint": True, "reveal": True, "timer": 30},
-    "إنسان حيوان نبات": {"display": "لعبة", "icon": "", "hint": True, "reveal": True, "timer": 25},
-    "أغنية": {"display": "أغنيه", "icon": "", "hint": True, "reveal": True, "timer": 30},
-    "تخمين": {"display": "خمن", "icon": "", "hint": True, "reveal": True, "timer": 25},
-    "سلسلة كلمات": {"display": "سلسلة", "icon": "", "hint": False, "reveal": False, "timer": 25},
-    "كلمة مبعثرة": {"display": "ترتيب", "icon": "", "hint": True, "reveal": True, "timer": 25},
-    "تكوين": {"display": "تكوين", "icon": "", "hint": True, "reveal": True, "timer": 40},
-    "أضداد": {"display": "ضد", "icon": "", "hint": True, "reveal": True, "timer": 0},
-    "لون": {"display": "لون", "icon": "", "hint": True, "reveal": True, "timer": 15},
-    "رياضيات": {"display": "رياضيات", "icon": "", "hint": True, "reveal": True, "timer": 25},
-    "توافق": {"display": "توافق", "icon": "", "hint": False, "reveal": False, "timer": 0}
+    "كتابة سريعة": {"display": "أسرع", "hint": False, "reveal": False, "timer": 20},
+    "ذكاء": {"display": "ذكاء", "hint": True, "reveal": True, "timer": 30},
+    "إنسان حيوان نبات": {"display": "لعبة", "hint": True, "reveal": True, "timer": 25},
+    "أغنية": {"display": "أغنيه", "hint": True, "reveal": True, "timer": 30},
+    "تخمين": {"display": "خمن", "hint": True, "reveal": True, "timer": 25},
+    "سلسلة كلمات": {"display": "سلسلة", "hint": False, "reveal": False, "timer": 25},
+    "كلمة مبعثرة": {"display": "ترتيب", "hint": True, "reveal": True, "timer": 25},
+    "تكوين": {"display": "تكوين", "hint": True, "reveal": True, "timer": 40},
+    "أضداد": {"display": "ضد", "hint": True, "reveal": True, "timer": 0},
+    "لون": {"display": "لون", "hint": True, "reveal": True, "timer": 15},
+    "رياضيات": {"display": "رياضيات", "hint": True, "reveal": True, "timer": 25},
+    "توافق": {"display": "توافق", "hint": False, "reveal": False, "timer": 0}
 }
 
-GAME_LIST = [(k, v["display"], v["icon"]) for k, v in GAME_CONFIG.items()]
+GAME_LIST = [(k, v["display"]) for k, v in GAME_CONFIG.items()]
 GAME_NAMES = {k: v["display"] for k, v in GAME_CONFIG.items()}
-GAME_ICONS = {k: v["icon"] for k, v in GAME_CONFIG.items()}
 DISPLAY_TO_CLASS = {v["display"]: k for k, v in GAME_CONFIG.items()}
 
 FIXED_GAME_QR = [{"label": f"{v['display']}", "text": v['display']} for k, v in GAME_CONFIG.items()]
@@ -365,9 +364,6 @@ def get_game_display_name(internal_name: str) -> str:
 def get_game_class_name(display_name: str) -> str:
     return DISPLAY_TO_CLASS.get(display_name, display_name)
 
-def get_game_icon(internal_name: str) -> str:
-    return GAME_ICONS.get(internal_name, "")
-
 def get_game_config(game_name: str) -> Dict:
     return GAME_CONFIG.get(game_name, {})
 
@@ -390,11 +386,11 @@ __all__ = [
     'BOT_NAME', 'BOT_VERSION', 'BOT_RIGHTS',
     'LINE_CHANNEL_SECRET', 'LINE_CHANNEL_ACCESS_TOKEN',
     'THEMES', 'DEFAULT_THEME', 'GAME_CONFIG', 'GAME_LIST',
-    'GAME_NAMES', 'GAME_ICONS', 'FIXED_GAME_QR', 'DISPLAY_TO_CLASS',
+    'GAME_NAMES', 'FIXED_GAME_QR', 'DISPLAY_TO_CLASS',
     'PRIVACY_SETTINGS', 'SECURITY_SETTINGS',
     'ALLOWED_COMMANDS', 'GAME_COMMANDS',
     'validate_env', 'normalize_text', 'sanitize_input',
     'get_theme_colors', 'validate_theme', 'get_username',
-    'get_game_display_name', 'get_game_class_name', 'get_game_icon', 
+    'get_game_display_name', 'get_game_class_name',
     'get_game_config', 'is_valid_game', 'is_allowed_command'
 ]
