@@ -187,25 +187,48 @@ def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=Non
     return game_instance
 
 
+def get_user_display_name(line_api, user_id):
+    """الحصول على اسم المستخدم الحقيقي من LINE"""
+    try:
+        profile = line_api.get_profile(user_id)
+        username = get_username(profile)
+        
+        # تحقق من أن الاسم ليس "مستخدم" الافتراضي
+        if username and username != "مستخدم":
+            logger.info(f"✓ Got real username from LINE: {username}")
+            return username
+        else:
+            logger.warning(f"✗ LINE returned default username for {user_id}")
+            return "مستخدم"
+    except Exception as e:
+        logger.error(f"✗ Failed to get LINE profile for {user_id}: {e}")
+        return "مستخدم"
+
+
 def get_user_data(user_id, username="مستخدم"):
+    """الحصول على بيانات المستخدم مع التحديث التلقائي للاسم"""
     cached = user_cache.get(user_id)
     if cached:
         cache_time = cached.get('_cache_time', datetime.min)
         if datetime.utcnow() - cache_time < timedelta(minutes=PRIVACY_SETTINGS["cache_timeout_minutes"]):
-            if cached.get('name') != username:
+            # تحديث الاسم في الكاش إذا تغير
+            if cached.get('name') != username and username != "مستخدم":
                 db.update_user_name(user_id, username)
                 cached['name'] = username
+                logger.info(f"✓ Updated cached username to: {username}")
             return cached
     
     user = db.get_user(user_id)
     if not user:
         db.create_user(user_id, username)
         user = db.get_user(user_id)
-        logger.info(f"New user created: {username}")
+        logger.info(f"✓ New user created: {username}")
     else:
-        if user.get('name') != username:
+        # تحديث الاسم في قاعدة البيانات إذا تغير
+        if user.get('name') != username and username != "مستخدم":
             db.update_user_name(user_id, username)
             user['name'] = username
+            logger.info(f"✓ Updated DB username to: {username}")
     
     user['_cache_time'] = datetime.utcnow()
     user_cache.put(user_id, user)
@@ -285,12 +308,10 @@ def handle_message(event):
             with ApiClient(configuration) as api_client:
                 line_api = MessagingApi(api_client)
                 
-                try:
-                    profile = line_api.get_profile(user_id)
-                    username = get_username(profile)
-                except:
-                    username = "مستخدم"
+                # الحصول على الاسم الحقيقي من LINE
+                username = get_user_display_name(line_api, user_id)
                 
+                # الحصول على بيانات المستخدم مع تحديث الاسم
                 user = get_user_data(user_id, username)
                 db.update_activity(user_id)
                 db.set_user_online(user_id, True)
@@ -331,7 +352,7 @@ def handle_message(event):
                         db.update_user(user_id, is_registered=1)
                         user_cache.remove(user_id)
                         user = get_user_data(user_id, username)
-                        logger.info(f"User registered: {username}")
+                        logger.info(f"✓ User registered: {username}")
                     reply_message = build_registration_status(username, user['points'], current_theme)
                 
                 elif lowered in ["انسحب", "leave", "خروج"]:
@@ -339,7 +360,7 @@ def handle_message(event):
                         db.update_user(user_id, is_registered=0)
                         user_cache.remove(user_id)
                         user = get_user_data(user_id, username)
-                        logger.info(f"User unregistered: {username}")
+                        logger.info(f"✓ User unregistered: {username}")
                         reply_message = build_unregister_confirmation(username, user['points'], current_theme)
                     else:
                         return
@@ -350,7 +371,7 @@ def handle_message(event):
                         team_mode_state[game_id] = not current
                         new_mode = team_mode_state[game_id]
                         mode_label = "فريقين" if new_mode else "فردي"
-                        reply_message = TextMessage(text=f"تم التبديل إلى وضع {mode_label}")
+                        reply_message = TextMessage(text=f"✓ تم التبديل إلى وضع {mode_label}")
                     else:
                         return
                 
@@ -363,6 +384,7 @@ def handle_message(event):
                         user = get_user_data(user_id, username)
                         current_mode = team_mode_state.get(game_id, False)
                         mode_label = "فريقين" if current_mode else "فردي"
+                        logger.info(f"✓ Theme changed to: {theme_name}")
                         reply_message = build_enhanced_home(
                             username, 
                             user['points'], 
@@ -571,10 +593,8 @@ if __name__ == "__main__":
     logger.info(f"{BOT_NAME} v{BOT_VERSION}")
     logger.info(f"{BOT_RIGHTS}")
     logger.info(f"Available games: {len(AVAILABLE_GAMES)}")
-    logger.info(f"One point per correct answer")
-    logger.info(f"Automatic team mode | Easy toggle")
-    logger.info(f"Compatibility: Entertainment system without points")
-    logger.info(f"Permanent leaderboard in database")
+    logger.info(f"✓ Enhanced username handling from LINE")
+    logger.info(f"✓ Updated themes: White, Black, Blue, Purple, Pink, Green, Gray, Red, Brown")
     logger.info(f"Port: {port}")
     logger.info("=" * 70)
     app.run(host="0.0.0.0", port=port, debug=False)
