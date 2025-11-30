@@ -1,8 +1,7 @@
 """
-لعبة الأضداد - Bot Mesh v20.1 FIXED
+لعبة ضد - Bot Mesh v20.1 FINAL
 Created by: Abeer Aldosari © 2025
-✅ إصلاح: نظام النقاط الصحيح (1 نقطة)
-✅ تلميح: أول حرفين + باقي الكلمة
+✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | بدون وقت
 """
 
 from games.base_game import BaseGame
@@ -11,12 +10,11 @@ from typing import Dict, Any, Optional
 
 
 class OppositeGame(BaseGame):
-    """لعبة الأضداد - فردي + فريقين"""
+    """لعبة ضد"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "أضداد"
-        self.game_icon = "▫️"
+        self.game_name = "ضد"
         self.supports_hint = True
         self.supports_reveal = True
 
@@ -88,123 +86,70 @@ class OppositeGame(BaseGame):
         word, opposites = self.questions_list[self.current_question % len(self.questions_list)]
         self.current_answer = opposites
 
-        question_text = f"ما هو عكس كلمة:\n\n{word}"
-        
-        if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = "اكتب 'لمح' للتلميح أو 'جاوب' للإجابة"
-        else:
-            additional_info = None
-
         return self.build_question_flex(
-            question_text=question_text,
-            additional_info=additional_info
+            question_text=f"ما هو عكس كلمة\n\n{word}",
+            additional_info=None
         )
-
-    def get_hint(self) -> str:
-        """الحصول على تلميح محسّن"""
-        if not self.current_answer:
-            return "لا توجد تلميحات متاحة"
-        
-        answer = self.current_answer[0]
-        if len(answer) <= 2:
-            return f"الكلمة قصيرة: {answer[0]}_"
-        
-        # أول حرفين + باقي الكلمة بشرطات
-        hint = f"{answer[0]}{answer[1]}" + "_" * (len(answer) - 2)
-        return f"تلميح: {hint}"
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active or user_id in self.answered_users:
             return None
 
-        normalized = self.normalize_text(user_answer)
-        
         if self.team_mode and user_id not in self.joined_users:
             return None
 
+        normalized = self.normalize_text(user_answer)
+        
         if self.can_use_hint() and normalized == "لمح":
-            hint = self.get_hint()
-            return {
-                "message": hint,
-                "response": self._create_text_message(hint),
-                "points": 0
-            }
+            if not self.current_answer:
+                return None
+            answer = self.current_answer[0]
+            if len(answer) <= 2:
+                hint = f"الكلمة قصيرة {answer[0]}"
+            else:
+                hint = f"{answer[0]}{answer[1]}" + "_" * (len(answer) - 2)
+                hint = f"تلميح {hint}"
+            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
 
         if self.can_reveal_answer() and normalized == "جاوب":
-            answers_text = " أو ".join(self.current_answer)
+            answers_text = " او ".join(self.current_answer)
+            word, _ = self.questions_list[self.current_question % len(self.questions_list)]
+            self.previous_question = f"عكس {word}"
+            self.previous_answer = answers_text
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message','')}"
+                result["message"] = f"الإجابة {answers_text}\n\n{result.get('message','')}"
                 return result
 
-            return {
-                "message": f"الإجابة: {answers_text}",
-                "response": self.get_question(),
-                "points": 0
-            }
+            return {"message": f"الإجابة {answers_text}", "response": self.get_question(), "points": 0}
 
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
 
         for correct_answer in self.current_answer:
             if self.normalize_text(correct_answer) == normalized:
-                
-                # ✅ إصلاح: نقطة واحدة فقط
                 total_points = 1
                 
                 if self.team_mode:
-                    team = self.get_user_team(user_id)
-                    if not team:
-                        team = self.assign_to_team(user_id)
+                    team = self.get_user_team(user_id) or self.assign_to_team(user_id)
                     self.add_team_score(team, total_points)
                 else:
-                    # ✅ لا نستخدم القيمة المُرجعة من add_score
                     self.add_score(user_id, display_name, total_points)
 
+                word, _ = self.questions_list[self.current_question % len(self.questions_list)]
+                self.previous_question = f"عكس {word}"
+                self.previous_answer = correct_answer
                 self.current_question += 1
                 self.answered_users.clear()
 
                 if self.current_question >= self.questions_count:
                     result = self.end_game()
                     result["points"] = total_points
-                    
-                    if self.team_mode:
-                        result["message"] = f"إجابة صحيحة\n+{total_points} نقطة\n\n{result.get('message', '')}"
-                    else:
-                        result["message"] = (
-                            f"إجابة صحيحة يا {display_name}\n"
-                            f"الكلمة: {correct_answer}\n"
-                            f"+{total_points} نقطة\n\n"
-                            f"{result.get('message', '')}"
-                        )
                     return result
 
-                msg = f"إجابة صحيحة\n+{total_points} نقطة" if self.team_mode else f"إجابة صحيحة يا {display_name}\nالكلمة: {correct_answer}\n+{total_points} نقطة"
-                
-                return {
-                    "message": msg,
-                    "response": self.get_question(),
-                    "points": total_points
-                }
+                return {"message": f"صحيح +{total_points}", "response": self.get_question(), "points": total_points}
 
-        return {
-            "message": "إجابة غير صحيحة، حاول مرة أخرى",
-            "response": self._create_text_message("إجابة غير صحيحة، حاول مرة أخرى"),
-            "points": 0
-        }
-
-    def get_game_info(self) -> Dict[str, Any]:
-        return {
-            "name": self.game_name,
-            "description": "اكتشف الكلمة المضادة",
-            "questions_count": self.questions_count,
-            "supports_hint": True,
-            "supports_reveal": True,
-            "active": self.game_active,
-            "current_question": self.current_question,
-            "players_count": len(self.scores),
-            "team_mode": self.team_mode
-        }
+        return None
