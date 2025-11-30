@@ -81,8 +81,9 @@ def launch_game_instance(game_id,owner_id,game_class_name,line_api,theme=None,te
     meta["current_game_name"] = game_class_name
     meta["team_mode"] = team_mode
     meta["session_type"] = game_instance.session_type
-    session_id = db.create_game_session(owner_id,game_class_name,mode=game_instance.session_type,team_mode=1 if team_mode else 0)
-    meta["session_id"] = session_id
+    if game_class_name != "توافق":
+        session_id = db.create_game_session(owner_id,game_class_name,mode=game_instance.session_type,team_mode=1 if team_mode else 0)
+        meta["session_id"] = session_id
     logger.info(f"تم إطلاق اللعبة: {game_class_name} | وضع: {'فريقين' if team_mode else 'فردي'}")
     return game_instance
 
@@ -111,15 +112,14 @@ def get_user_data(user_id,username="مستخدم"):
 def handle_game_answer(game_id,result,user_id,meta):
     pts = result.get('points',0)
     if pts > 0:
-        points_to_add = 1
         if meta.get("team_mode"):
             team_name = result.get('team','team1')
-            db.add_team_points(meta["session_id"],team_name,points_to_add)
+            db.add_team_points(meta["session_id"],team_name,1)
         else:
-            db.add_points(user_id,points_to_add)
+            db.add_points(user_id,1)
             game_name = meta.get("current_game_name","unknown")
-            db.record_game_stat(user_id,game_name,points_to_add,result.get('game_over',False))
-    return 1 if pts > 0 else 0
+            db.record_game_stat(user_id,game_name,1,result.get('game_over',False))
+    return pts
 
 @app.route("/callback",methods=['POST'])
 def callback():
@@ -167,7 +167,9 @@ def handle_message(event):
                 current_mode = team_mode_state.get(game_id,False)
                 mode_label = "فريقين" if current_mode else "فردي"
                 reply_message = build_enhanced_home(username,user['points'],user.get('is_registered'),current_theme,mode_label)
-            elif lowered in ["ألعاب","games","العاب"]:reply_message = build_games_menu(current_theme)
+            elif lowered in ["ألعاب","games","العاب"]:
+                top_games = db.get_top_games(12)
+                reply_message = build_games_menu(current_theme,top_games)
             elif lowered in ["نقاطي","points","نقاط"]:
                 stats = db.get_user_game_stats(user_id)
                 reply_message = build_my_points(username,user['points'],stats,current_theme)
@@ -219,15 +221,13 @@ def handle_message(event):
             elif text in GAME_COMMANDS:
                 game_class_name = get_game_class_name(text)
                 if game_class_name == "توافق":
-                    if not user.get('is_registered'):reply_message = build_registration_required(current_theme)
-                    else:
-                        try:
-                            game_instance = launch_game_instance(game_id,user_id,game_class_name,line_api,current_theme,False,source_type)
-                            start_msg = game_instance.start_game()
-                            attach_quick_reply(start_msg)
-                            line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token,messages=[start_msg]))
-                            return
-                        except Exception as e:logger.error(f"خطأ في بدء التوافق: {e}");logger.error(traceback.format_exc());return
+                    try:
+                        game_instance = launch_game_instance(game_id,user_id,game_class_name,line_api,current_theme,False,source_type)
+                        start_msg = game_instance.start_game()
+                        attach_quick_reply(start_msg)
+                        line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token,messages=[start_msg]))
+                        return
+                    except Exception as e:logger.error(f"خطأ في بدء التوافق: {e}");logger.error(traceback.format_exc());return
                 elif not user.get('is_registered'):reply_message = build_registration_required(current_theme)
                 else:
                     meta = ensure_session_meta(game_id)
@@ -330,6 +330,7 @@ if __name__ == "__main__":
     logger.info(f"الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
     logger.info(f"نقطة واحدة لكل إجابة صحيحة")
     logger.info(f"وضع فريقين تلقائي | تبديل بسيط")
+    logger.info(f"توافق: نظام ترفيهي بدون نقاط")
     logger.info(f"الصدارة دائمة في قاعدة البيانات")
     logger.info(f"المنفذ: {port}")
     logger.info("="*70)
