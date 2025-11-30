@@ -34,6 +34,7 @@ RATE_LIMIT = {"max_requests": 20, "window_seconds": 60}
 user_rate = defaultdict(list)
 
 def is_rate_limited(user_id):
+    """التحقق من Rate Limiting"""
     now = datetime.utcnow()
     window = timedelta(seconds=RATE_LIMIT["window_seconds"])
     user_rate[user_id] = [t for t in user_rate[user_id] if now - t < window]
@@ -71,17 +72,29 @@ try:
         "تخمين": GuessGame,
         "توافق": CompatibilitySystem
     }
-    logger.info(f"☑️ تم تحميل {len(AVAILABLE_GAMES)} لعبة")
+    logger.info(f"تم تحميل {len(AVAILABLE_GAMES)} لعبة")
 except Exception as e:
-    logger.error(f"❌ خطأ في تحميل الألعاب: {e}")
+    logger.error(f"خطأ في تحميل الألعاب: {e}")
     logger.error(traceback.format_exc())
 
 def ensure_session_meta(game_id):
+    """إنشاء/تحديث metadata الجلسة مع timestamp"""
     if game_id not in session_meta:
-        session_meta[game_id] = {"session_id":None,"team_mode":False,"join_phase":False,"joined_users":set(),"teams":{},"owner":None,"current_game_name":None,"session_type":"solo"}
+        session_meta[game_id] = {
+            "session_id": None,
+            "team_mode": False,
+            "join_phase": False,
+            "joined_users": set(),
+            "teams": {},
+            "owner": None,
+            "current_game_name": None,
+            "session_type": "solo",
+            "start_time": time.time()
+        }
     return session_meta[game_id]
 
 def start_join_phase(game_id, owner_id=None):
+    """بدء مرحلة الانضمام للفرق"""
     meta = ensure_session_meta(game_id)
     meta["join_phase"] = True
     meta["team_mode"] = True
@@ -91,9 +104,10 @@ def start_join_phase(game_id, owner_id=None):
     meta["session_type"] = "teams"
     session_id = db.create_game_session(owner_id or "unknown", "multi_game", mode="teams", team_mode=1)
     meta["session_id"] = session_id
-    logger.info(f"☑️ بدأت مرحلة الانضمام: {game_id}")
+    logger.info(f"بدأت مرحلة الانضمام: {game_id}")
 
 def close_join_phase_and_assign(game_id):
+    """إغلاق مرحلة الانضمام وتقسيم الفرق"""
     meta = ensure_session_meta(game_id)
     if not meta.get("join_phase"):
         return
@@ -107,9 +121,10 @@ def close_join_phase_and_assign(game_id):
         db.add_team_member(meta["session_id"], u, "team2")
         meta["teams"][u] = "team2"
     meta["join_phase"] = False
-    logger.info(f"☑️ تم تقسيم الفرق: {len(team1)} vs {len(team2)}")
+    logger.info(f"تم تقسيم الفرق: {len(team1)} vs {len(team2)}")
 
 def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=None, team_mode=False, source_type="user"):
+    """إطلاق instance اللعبة"""
     if game_class_name not in AVAILABLE_GAMES:
         raise ValueError(f"اللعبة غير متوفرة: {game_class_name}")
     
@@ -120,7 +135,7 @@ def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=Non
         if hasattr(game_instance, 'set_theme') and theme:
             game_instance.set_theme(theme)
     except Exception as e:
-        logger.error(f"⚠️ فشل تعيين الثيم: {e}")
+        logger.error(f"فشل تعيين الثيم: {e}")
     
     try:
         if hasattr(game_instance, 'set_database'):
@@ -128,7 +143,7 @@ def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=Non
         else:
             game_instance.db = db
     except Exception as e:
-        logger.warning(f"⚠️ لم يتم ربط قاعدة البيانات: {e}")
+        logger.warning(f"لم يتم ربط قاعدة البيانات: {e}")
     
     if source_type == "group":
         game_instance.session_type = "teams" if team_mode else "group"
@@ -153,11 +168,11 @@ def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=Non
     session_id = db.create_game_session(owner_id, game_class_name, mode=game_instance.session_type, team_mode=1 if team_mode else 0)
     meta["session_id"] = session_id
     meta["team_mode"] = team_mode
-    logger.info(f"☑️ تم إطلاق اللعبة: {game_class_name}")
+    logger.info(f"تم إطلاق اللعبة: {game_class_name}")
     return game_instance
 
 def get_user_data(user_id, username="مستخدم"):
-    """☑️ إنشاء حساب + تحديث الاسم (بدون تسجيل تلقائي)"""
+    """إنشاء حساب + تحديث الاسم (بدون تسجيل تلقائي)"""
     if user_id in user_cache:
         cache_time = user_cache.get(f"{user_id}_time", datetime.min)
         if datetime.utcnow() - cache_time < timedelta(minutes=PRIVACY_SETTINGS["cache_timeout_minutes"]):
@@ -171,7 +186,7 @@ def get_user_data(user_id, username="مستخدم"):
     if not user:
         db.create_user(user_id, username)
         user = db.get_user(user_id)
-        logger.info(f"☑️ حساب جديد: {username}")
+        logger.info(f"حساب جديد: {username}")
     else:
         if user.get('name') != username:
             db.update_user_name(user_id, username)
@@ -181,6 +196,21 @@ def get_user_data(user_id, username="مستخدم"):
     user_cache[f"{user_id}_time"] = datetime.utcnow()
     return user
 
+def handle_game_answer(game_id, result, user_id, meta):
+    """معالجة مركزية للنقاط - يمنع race condition"""
+    pts = result.get('points', 0)
+    
+    if pts > 0:
+        if meta.get("team_mode"):
+            team_name = meta["teams"].get(user_id, "team1")
+            db.add_team_points(meta["session_id"], team_name, pts)
+        else:
+            db.add_points(user_id, pts)
+            game_name = meta.get("current_game_name", "unknown")
+            db.record_game_stat(user_id, game_name, pts, result.get('game_over', False))
+    
+    return pts
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
@@ -188,10 +218,10 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.warning("❌ توقيع غير صالح")
+        logger.warning("توقيع غير صالح")
         abort(400)
     except Exception as e:
-        logger.error(f"❌ خطأ في المعالج: {e}")
+        logger.error(f"خطأ في المعالج: {e}")
         logger.error(traceback.format_exc())
         abort(500)
     return "OK"
@@ -199,21 +229,55 @@ def callback():
 @app.route("/", methods=['GET'])
 def status_page():
     stats = db.get_stats_summary()
-    return f"""<html><head><title>{BOT_NAME}</title></head>
-    <body style="font-family:Arial;padding:20px;background:#f5f5f5;">
-    <h1>✨ {BOT_NAME} v{BOT_VERSION}</h1>
-    <div style="background:white;padding:20px;border-radius:10px;margin:20px 0;">
-    <h2>📊 الإحصائيات</h2>
-    <p>🎮 الألعاب النشطة: {len(active_games)}</p>
-    <p>🎯 الألعاب المتاحة: {len(AVAILABLE_GAMES)}</p>
-    <p>👥 المستخدمين: {stats.get('total_users',0)}</p>
-    <p>✅ المسجلين: {stats.get('registered_users',0)}</p>
-    <p>🎲 الجلسات: {stats.get('total_sessions',0)}</p>
-    </div><p><small>{BOT_RIGHTS}</small></p></body></html>"""
+    return f"""<html><head><title>{BOT_NAME}</title>
+    <style>
+        body {{font-family:'Segoe UI',sans-serif;padding:40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;}}
+        .container {{max-width:800px;margin:0 auto;background:rgba(255,255,255,0.95);padding:40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);color:#333;}}
+        h1 {{color:#667eea;margin:0 0 10px;font-size:2.5em;}}
+        .version {{color:#999;margin-bottom:30px;}}
+        .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:30px 0;}}
+        .stat-card {{background:#f8f9fa;padding:20px;border-radius:15px;text-align:center;border:2px solid #e9ecef;}}
+        .stat-value {{font-size:2em;font-weight:bold;color:#667eea;margin:10px 0;}}
+        .stat-label {{color:#666;font-size:0.9em;text-transform:uppercase;}}
+        .footer {{margin-top:30px;padding-top:20px;border-top:2px solid #e9ecef;text-align:center;color:#999;font-size:0.85em;}}
+    </style></head>
+    <body>
+    <div class="container">
+        <h1>{BOT_NAME}</h1>
+        <div class="version">الإصدار {BOT_VERSION}</div>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">الألعاب النشطة</div>
+                <div class="stat-value">{len(active_games)}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">الألعاب المتاحة</div>
+                <div class="stat-value">{len(AVAILABLE_GAMES)}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">المستخدمين</div>
+                <div class="stat-value">{stats.get('total_users',0)}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">المسجلين</div>
+                <div class="stat-value">{stats.get('registered_users',0)}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">الجلسات</div>
+                <div class="stat-value">{stats.get('total_sessions',0)}</div>
+            </div>
+        </div>
+        <div class="footer">{BOT_RIGHTS}</div>
+    </div></body></html>"""
 
 @app.route("/health", methods=['GET'])
 def health_check():
-    return jsonify({"status":"ok","version":BOT_VERSION,"active_games":len(active_games),"available_games":len(AVAILABLE_GAMES)})
+    return jsonify({
+        "status": "ok",
+        "version": BOT_VERSION,
+        "active_games": len(active_games),
+        "available_games": len(AVAILABLE_GAMES)
+    })
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -226,16 +290,13 @@ def handle_message(event):
         in_group = hasattr(event.source, 'group_id')
         game_id = event.source.group_id if in_group else user_id
         
-        # ☑️ التحقق: هل هو منشن أو أمر مسموح؟
         is_mention = text.startswith('@') or 'mention' in text.lower()
         is_command = is_allowed_command(text)
         is_game_active = game_id in active_games
         
-        # ❌ تجاهل أي رسالة ليست: منشن أو أمر أو إجابة للعبة نشطة
         if not is_mention and not is_command and not is_game_active:
             return
         
-        # ☑️ معالجة المنشن @BOT - عرض قائمة الألعاب
         if is_mention:
             with ApiClient(configuration) as api_client:
                 line_api = MessagingApi(api_client)
@@ -252,9 +313,8 @@ def handle_message(event):
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply_message]))
             return
         
-        # ☑️ التحقق من Rate Limiting
         if is_rate_limited(user_id):
-            logger.info(f"⚠️ تجاوز الحد: {user_id}")
+            logger.info(f"تجاوز الحد: {user_id}")
             return
         
         source_type = "group" if in_group else "user"
@@ -274,47 +334,46 @@ def handle_message(event):
             lowered = text.lower()
             reply_message = None
 
-            # ☑️ معالجة الأوامر
-            if lowered in ["مساعدة","help","؟"]:
+            if lowered in ["مساعدة", "help", "؟"]:
                 reply_message = build_help_window(current_theme)
-            elif lowered in ["بداية","home","الرئيسية","start"]:
+            elif lowered in ["بداية", "home", "الرئيسية", "start"]:
                 reply_message = build_enhanced_home(username, user['points'], user.get('is_registered'), current_theme)
-            elif lowered in ["ألعاب","games","العاب"]:
+            elif lowered in ["ألعاب", "games", "العاب"]:
                 reply_message = build_games_menu(current_theme)
-            elif lowered in ["نقاطي","points","نقاط"]:
+            elif lowered in ["نقاطي", "points", "نقاط"]:
                 stats = db.get_user_game_stats(user_id)
                 reply_message = build_my_points(username, user['points'], stats, current_theme)
-            elif lowered in ["صدارة","leaderboard","مستوى"]:
+            elif lowered in ["صدارة", "leaderboard", "مستوى"]:
                 top = db.get_leaderboard_all(20)
                 reply_message = build_leaderboard(top, current_theme)
-            elif lowered in ["انضم","join","تسجيل"]:
+            elif lowered in ["انضم", "join", "تسجيل"]:
                 if not user.get('is_registered'):
                     db.update_user(user_id, is_registered=1)
                     user_cache.pop(user_id, None)
                     user = get_user_data(user_id, username)
-                    logger.info(f"☑️ مستخدم مسجل: {username}")
+                    logger.info(f"مستخدم مسجل: {username}")
                 
                 reply_message = build_registration_status(username, user['points'], current_theme)
                 
                 meta = ensure_session_meta(game_id)
                 if in_group and meta.get("join_phase"):
                     meta["joined_users"].add(user_id)
-                    logger.info(f"☑️ انضم للفريق: {username}")
-            elif lowered in ["انسحب","leave","خروج"]:
+                    logger.info(f"انضم للفريق: {username}")
+            elif lowered in ["انسحب", "leave", "خروج"]:
                 if user.get('is_registered'):
                     db.update_user(user_id, is_registered=0)
                     user_cache.pop(user_id, None)
                     user = get_user_data(user_id, username)
-                    logger.info(f"▫️ مستخدم ألغى تسجيله (محتفظ بالنقاط): {username}")
+                    logger.info(f"مستخدم ألغى تسجيله: {username}")
                     reply_message = build_unregister_confirmation(username, user['points'], current_theme)
                 else:
                     reply_message = build_error_message("أنت غير مسجل أصلاً", current_theme)
-            elif lowered in ["فريقين","teams","فرق"]:
+            elif lowered in ["فريقين", "teams", "فرق"]:
                 if in_group:
                     start_join_phase(game_id, owner_id=user_id)
                     reply_message = build_multiplayer_help_window(current_theme)
                 else:
-                    reply_message = build_error_message("⚠️ هذا الأمر للمجموعات فقط", current_theme)
+                    reply_message = build_error_message("هذا الأمر للمجموعات فقط", current_theme)
             elif lowered.startswith("ثيم "):
                 theme_name = text.replace("ثيم ", "").strip()
                 from constants import THEMES
@@ -325,20 +384,19 @@ def handle_message(event):
                     reply_message = build_enhanced_home(username, user['points'], user.get('is_registered'), theme_name)
                 else:
                     reply_message = build_theme_selector(current_theme)
-            elif lowered in ["ثيمات","themes","مظهر"]:
+            elif lowered in ["ثيمات", "themes", "مظهر"]:
                 reply_message = build_theme_selector(current_theme)
-            elif lowered in ["إيقاف","stop","انهاء"]:
+            elif lowered in ["إيقاف", "stop", "انهاء"]:
                 if game_id in active_games:
                     game_name = session_meta.get(game_id, {}).get("current_game_name", "اللعبة")
                     del active_games[game_id]
                     session_meta.pop(game_id, None)
                     reply_message = build_game_stopped(game_name, current_theme)
                 else:
-                    reply_message = build_error_message("⚠️ لا توجد لعبة نشطة", current_theme)
+                    reply_message = build_error_message("لا توجد لعبة نشطة", current_theme)
             elif text in GAME_COMMANDS:
                 game_class_name = get_game_class_name(text)
                 
-                # ☑️ لعبة التوافق: لا تحتاج تسجيل
                 if game_class_name == "توافق":
                     try:
                         game_instance = launch_game_instance(game_id, user_id, game_class_name, line_api, current_theme, False, source_type)
@@ -347,10 +405,9 @@ def handle_message(event):
                         line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
                         return
                     except Exception as e:
-                        logger.error(f"❌ خطأ في بدء التوافق: {e}")
+                        logger.error(f"خطأ في بدء التوافق: {e}")
                         logger.error(traceback.format_exc())
-                        reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
-                # ☑️ باقي الألعاب: تحتاج تسجيل
+                        reply_message = build_error_message(f"حدث خطأ", current_theme)
                 elif not user.get('is_registered'):
                     reply_message = build_registration_required(current_theme)
                 else:
@@ -359,25 +416,23 @@ def handle_message(event):
                     if in_group and meta.get("join_phase"):
                         close_join_phase_and_assign(game_id)
                         team_mode = True
-                        logger.info(f"✨ بدء لعبة فريقين: {game_class_name}")
+                        logger.info(f"بدء لعبة فريقين: {game_class_name}")
                     try:
                         game_instance = launch_game_instance(game_id, user_id, game_class_name, line_api, current_theme, team_mode, source_type)
                         if team_mode:
-                            logger.info(f"✨ وضع الفريقين نشط للعبة {game_class_name}")
+                            logger.info(f"وضع الفريقين نشط للعبة {game_class_name}")
                         start_msg = game_instance.start_game()
                         attach_quick_reply(start_msg)
                         line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg]))
                         return
                     except Exception as e:
-                        logger.error(f"❌ خطأ في بدء اللعبة: {e}")
+                        logger.error(f"خطأ في بدء اللعبة: {e}")
                         logger.error(traceback.format_exc())
-                        reply_message = build_error_message(f"❌ حدث خطأ في بدء اللعبة", current_theme)
-            # ☑️ معالجة إجابات الألعاب
+                        reply_message = build_error_message(f"حدث خطأ في بدء اللعبة", current_theme)
             elif game_id in active_games:
                 meta = ensure_session_meta(game_id)
                 is_compatibility = meta.get("current_game_name") == "توافق"
                 
-                # ☑️ لعبة التوافق: مفتوحة للجميع
                 if is_compatibility:
                     game_instance = active_games[game_id]
                     try:
@@ -400,20 +455,17 @@ def handle_message(event):
                                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg]))
                                 return
                     except Exception as e:
-                        logger.error(f"❌ خطأ في check_answer: {e}")
+                        logger.error(f"خطأ في check_answer: {e}")
                         logger.error(traceback.format_exc())
                         if game_id in active_games:
                             del active_games[game_id]
-                        reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
-                # ☑️ باقي الألعاب: المسجلين فقط
+                        reply_message = build_error_message(f"حدث خطأ", current_theme)
                 else:
-                    # ❌ تجاهل غير المسجلين بدون رد
                     if not user.get('is_registered'):
                         return
                     
                     game_instance = active_games[game_id]
                     
-                    # ☑️ في وضع الفريقين: التحقق من العضوية
                     if meta.get("team_mode"):
                         all_joined = meta.get("joined_users", set()) | set(meta.get("teams", {}).keys())
                         if user_id not in all_joined:
@@ -424,15 +476,7 @@ def handle_message(event):
                         if not result:
                             return
                         
-                        pts = result.get('points', 0)
-                        if pts:
-                            if meta.get("team_mode"):
-                                team_name = meta["teams"].get(user_id, "team1")
-                                db.add_team_points(meta["session_id"], team_name, pts)
-                            else:
-                                db.add_points(user_id, pts)
-                                game_name = meta.get("current_game_name", "unknown")
-                                db.record_game_stat(user_id, game_name, pts, result.get('game_over', False))
+                        pts = handle_game_answer(game_id, result, user_id, meta)
                         
                         if result.get('game_over'):
                             if meta.get("session_id"):
@@ -454,32 +498,34 @@ def handle_message(event):
                                 return
                             else:
                                 from ui_builder import build_answer_feedback
-                                reply_message = build_answer_feedback(result.get('message', '☑️'), current_theme)
+                                reply_message = build_answer_feedback(result.get('message', 'تم'), current_theme)
                     except Exception as e:
-                        logger.error(f"❌ خطأ في check_answer: {e}")
+                        logger.error(f"خطأ في check_answer: {e}")
                         logger.error(traceback.format_exc())
                         if game_id in active_games:
                             del active_games[game_id]
-                        reply_message = build_error_message(f"❌ حدث خطأ", current_theme)
+                        reply_message = build_error_message(f"حدث خطأ", current_theme)
             else:
-                # ❌ تجاهل أي رسالة أخرى
                 return
 
             if reply_message:
                 attach_quick_reply(reply_message)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply_message]))
     except Exception as e:
-        logger.error(f"❌ خطأ عام في handle_message: {e}")
+        logger.error(f"خطأ عام في handle_message: {e}")
         logger.error(traceback.format_exc())
 
 def periodic_cleanup():
+    """تنظيف دوري محسّن"""
     def _cleanup():
         while True:
             try:
                 cleanup_hours = PRIVACY_SETTINGS["cleanup_interval_hours"]
                 time.sleep(cleanup_hours * 3600)
+                
                 now = datetime.utcnow()
                 timeout_minutes = PRIVACY_SETTINGS["cache_timeout_minutes"]
+                
                 for uid in list(user_cache.keys()):
                     if uid.endswith("_time"):
                         continue
@@ -487,17 +533,34 @@ def periodic_cleanup():
                     if now - t > timedelta(minutes=timeout_minutes):
                         user_cache.pop(uid, None)
                         user_cache.pop(f"{uid}_time", None)
-                for game_id in list(session_meta.keys()):
-                    meta = session_meta[game_id]
-                    if game_id not in active_games and meta.get("session_id"):
-                        session_meta.pop(game_id, None)
+                
+                current_time = time.time()
+                old_sessions = []
+                
+                for gid, meta in list(session_meta.items()):
+                    start_time = meta.get('start_time', 0)
+                    if (gid not in active_games and 
+                        start_time > 0 and 
+                        current_time - start_time > 3600):
+                        old_sessions.append(gid)
+                
+                for gid in old_sessions:
+                    session_meta.pop(gid, None)
+                
+                if old_sessions:
+                    logger.info(f"تم تنظيف {len(old_sessions)} جلسة قديمة")
+                
                 delete_days = PRIVACY_SETTINGS["auto_delete_inactive_days"]
                 deleted = db.cleanup_inactive_users(delete_days)
+                
                 if deleted > 0:
-                    logger.info(f"🔒 تم حذف {deleted} مستخدم غير نشط (بدون نقاط)")
-                logger.info("✅ تنظيف دوري مكتمل")
+                    logger.info(f"تم حذف {deleted} مستخدم غير نشط")
+                
+                logger.info("تنظيف دوري مكتمل")
+                
             except Exception as e:
-                logger.error(f"❌ خطأ في التنظيف: {e}")
+                logger.error(f"خطأ في التنظيف: {e}")
+    
     t = threading.Thread(target=_cleanup, daemon=True)
     t.start()
 
@@ -505,19 +568,16 @@ periodic_cleanup()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
-    logger.info("="*70)
-    logger.info(f"✨ {BOT_NAME} v{BOT_VERSION} - FINAL SYSTEM v19.0")
-    logger.info(f"▫️ {BOT_RIGHTS}")
-    logger.info(f"▫️ الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
-    logger.info(f"▫️ ✅ الرد على المنشن @BOT فقط")
-    logger.info(f"▫️ ✅ الرد على الأوامر المحددة فقط")
-    logger.info(f"▫️ ✅ قبول إجابات المسجلين فقط")
-    logger.info(f"▫️ ✅ تجاهل الرسائل الأخرى بدون رد")
-    logger.info(f"▫️ ✅ التسجيل اليدوي (انضم)")
-    logger.info(f"▫️ ✅ الانسحاب مع الاحتفاظ بالنقاط")
-    logger.info(f"▫️ ✅ البقاء في الصدارة (غير نشط)")
-    logger.info(f"▫️ ✅ حذف تلقائي: بدون نقاط + 30 يوم")
-    logger.info(f"▫️ ✅ نقطة واحدة لكل إجابة صحيحة")
-    logger.info(f"✨ المنفذ: {port}")
-    logger.info("="*70)
+    logger.info("=" * 70)
+    logger.info(f"{BOT_NAME} v{BOT_VERSION}")
+    logger.info(f"{BOT_RIGHTS}")
+    logger.info(f"الألعاب المتاحة: {len(AVAILABLE_GAMES)}")
+    logger.info(f"الرد على المنشن @BOT فقط")
+    logger.info(f"الرد على الأوامر المحددة فقط")
+    logger.info(f"قبول إجابات المسجلين فقط")
+    logger.info(f"تجاهل الرسائل الأخرى بدون رد")
+    logger.info(f"التسجيل اليدوي (انضم)")
+    logger.info(f"الانسحاب مع الاحتفاظ بالنقاط")
+    logger.info(f"المنفذ: {port}")
+    logger.info("=" * 70)
     app.run(host="0.0.0.0", port=port, debug=False)
