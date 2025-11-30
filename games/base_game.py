@@ -1,4 +1,4 @@
-"""Bot Mesh - Base Game v20.0 ENHANCED | © 2025 Abeer Aldosari"""
+"""Bot Mesh - Base Game v20.1 ENHANCED | © 2025 Abeer Aldosari"""
 from typing import Dict, Any, Optional
 from datetime import datetime
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
@@ -112,7 +112,7 @@ class BaseGame:
         return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))
     
     def build_question_flex(self, question_text: str, additional_info: str = None):
-        """نافذة سؤال أنيقة مع عرض السؤال السابق + شريط تقدم"""
+        """نافذة سؤال محسّنة مع أزرار فقط"""
         c = self.get_theme_colors()
         
         # نسبة التقدم
