@@ -1,8 +1,8 @@
 """
-لعبة التخمين - Bot Mesh v13.0 FINAL
+لعبة التخمين - Bot Mesh v20.0 ENHANCED
 Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة فقط
-✅ عرض السؤال السابق
+✅ تلميح: أول حرف + عدد الحروف
+✅ نقطة واحدة لكل جواب صح
 """
 
 from games.base_game import BaseGame
@@ -17,7 +17,7 @@ class GuessGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "تخمين"
-        self.game_icon = "▪️"
+        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
 
@@ -150,9 +150,9 @@ class GuessGame(BaseGame):
         self.round_start_time = time.time()
 
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\n▪️ اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"الوقت {self.round_time} ثانية\naكتب لمح او جاوب"
         else:
-            additional_info = f"⏱️ {self.round_time} ثانية"
+            additional_info = f"الوقت {self.round_time} ثانية"
 
         return self.build_question_flex(
             question_text=f"الفئة: {q_data['category']}\nيبدأ بحرف: {q_data['letter']}",
@@ -178,11 +178,11 @@ class GuessGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"انتهى الوقت\nالإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\n▪️ الإجابة: {answers_text}",
+                "message": f"انتهى الوقت\nالإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -195,6 +195,7 @@ class GuessGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
+        # التلميح: أول حرف + عدد الحروف
         if self.can_use_hint() and normalized == "لمح":
             if not self.current_answer:
                 return {
@@ -204,7 +205,7 @@ class GuessGame(BaseGame):
                 }
             
             answer = self.current_answer[0]
-            hint = f"▪️ تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)}"
+            hint = f"تبدأ بـ: {answer[0]}\nعدد الحروف: {len(answer)} حرف"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
@@ -221,11 +222,11 @@ class GuessGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"▪️ الإجابة: {answers_text}\n\n{result.get('message', '')}"
+                result["message"] = f"الإجابة: {answers_text}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"▪️ الإجابة: {answers_text}",
+                "message": f"الإجابة: {answers_text}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -258,13 +259,13 @@ class GuessGame(BaseGame):
                     return result
 
                 return {
-                    "message": f"▪️ صحيح!\n+{total_points} نقطة",
+                    "message": f"صحيح\n+{total_points} نقطة",
                     "response": self.get_question(),
                     "points": total_points
                 }
 
         return {
-            "message": "▪️ خطأ",
-            "response": self._create_text_message("▪️ خطأ"),
+            "message": "خطأ",
+            "response": self._create_text_message("خطأ"),
             "points": 0
         }
