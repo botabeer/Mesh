@@ -193,7 +193,6 @@ def get_user_display_name(line_api, user_id):
         profile = line_api.get_profile(user_id)
         username = get_username(profile)
         
-        # تحقق من أن الاسم ليس "مستخدم" الافتراضي
         if username and username != "مستخدم":
             logger.info(f"✓ Got real username from LINE: {username}")
             return username
@@ -205,8 +204,15 @@ def get_user_display_name(line_api, user_id):
         return "مستخدم"
 
 
-def get_user_data(user_id, username="مستخدم"):
-    """الحصول على بيانات المستخدم مع التحديث التلقائي للاسم"""
+def get_user_data(line_api, user_id):
+    """
+    الحصول على بيانات المستخدم مع التحديث التلقائي للاسم
+    يجلب الاسم دائماً من LINE API
+    """
+    # جلب الاسم الحالي من LINE
+    username = get_user_display_name(line_api, user_id)
+    
+    # التحقق من الكاش
     cached = user_cache.get(user_id)
     if cached:
         cache_time = cached.get('_cache_time', datetime.min)
@@ -215,11 +221,14 @@ def get_user_data(user_id, username="مستخدم"):
             if cached.get('name') != username and username != "مستخدم":
                 db.update_user_name(user_id, username)
                 cached['name'] = username
+                user_cache.put(user_id, cached)
                 logger.info(f"✓ Updated cached username to: {username}")
             return cached
     
+    # جلب من قاعدة البيانات
     user = db.get_user(user_id)
     if not user:
+        # إنشاء مستخدم جديد
         db.create_user(user_id, username)
         user = db.get_user(user_id)
         logger.info(f"✓ New user created: {username}")
@@ -230,6 +239,7 @@ def get_user_data(user_id, username="مستخدم"):
             user['name'] = username
             logger.info(f"✓ Updated DB username to: {username}")
     
+    # تحديث الكاش
     user['_cache_time'] = datetime.utcnow()
     user_cache.put(user_id, user)
     return user
@@ -308,11 +318,10 @@ def handle_message(event):
             with ApiClient(configuration) as api_client:
                 line_api = MessagingApi(api_client)
                 
-                # الحصول على الاسم الحقيقي من LINE
-                username = get_user_display_name(line_api, user_id)
+                # الحصول على بيانات المستخدم (يجلب الاسم تلقائياً من LINE)
+                user = get_user_data(line_api, user_id)
+                username = user.get('name', 'مستخدم')
                 
-                # الحصول على بيانات المستخدم مع تحديث الاسم
-                user = get_user_data(user_id, username)
                 db.update_activity(user_id)
                 db.set_user_online(user_id, True)
                 
@@ -349,17 +358,20 @@ def handle_message(event):
                 
                 elif lowered in ["انضم", "join", "تسجيل"]:
                     if not user.get('is_registered'):
+                        # جلب الاسم الحديث من LINE قبل التسجيل
+                        fresh_username = get_user_display_name(line_api, user_id)
+                        db.update_user_name(user_id, fresh_username)
                         db.update_user(user_id, is_registered=1)
                         user_cache.remove(user_id)
-                        user = get_user_data(user_id, username)
-                        logger.info(f"✓ User registered: {username}")
+                        user = get_user_data(line_api, user_id)
+                        logger.info(f"✓ User registered: {fresh_username}")
                     reply_message = build_registration_status(username, user['points'], current_theme)
                 
                 elif lowered in ["انسحب", "leave", "خروج"]:
                     if user.get('is_registered'):
                         db.update_user(user_id, is_registered=0)
                         user_cache.remove(user_id)
-                        user = get_user_data(user_id, username)
+                        user = get_user_data(line_api, user_id)
                         logger.info(f"✓ User unregistered: {username}")
                         reply_message = build_unregister_confirmation(username, user['points'], current_theme)
                     else:
@@ -381,7 +393,7 @@ def handle_message(event):
                     if theme_name in THEMES:
                         db.set_user_theme(user_id, theme_name)
                         user_cache.remove(user_id)
-                        user = get_user_data(user_id, username)
+                        user = get_user_data(line_api, user_id)
                         current_mode = team_mode_state.get(game_id, False)
                         mode_label = "فريقين" if current_mode else "فردي"
                         logger.info(f"✓ Theme changed to: {theme_name}")
@@ -593,8 +605,9 @@ if __name__ == "__main__":
     logger.info(f"{BOT_NAME} v{BOT_VERSION}")
     logger.info(f"{BOT_RIGHTS}")
     logger.info(f"Available games: {len(AVAILABLE_GAMES)}")
-    logger.info(f"✓ Enhanced username handling from LINE")
-    logger.info(f"✓ Updated themes: White, Black, Blue, Purple, Pink, Green, Gray, Red, Brown")
+    logger.info(f"✓ Enhanced registration with LINE username sync")
+    logger.info(f"✓ Auto-update usernames from LINE API")
+    logger.info(f"✓ Improved help window design")
     logger.info(f"Port: {port}")
     logger.info("=" * 70)
     app.run(host="0.0.0.0", port=port, debug=False)
