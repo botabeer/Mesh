@@ -7,7 +7,7 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from constants import (BOT_NAME, BOT_VERSION, BOT_RIGHTS, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, 
-                       validate_env, get_username, GAME_LIST, DEFAULT_THEME, PRIVACY_SETTINGS, 
+                       validate_env, GAME_LIST, DEFAULT_THEME, PRIVACY_SETTINGS, 
                        is_allowed_command, GAME_COMMANDS, get_game_class_name)
 from ui_builder import (build_games_menu, build_my_points, build_leaderboard, build_registration_status, 
                         build_winner_announcement, build_help_window, build_theme_selector, build_enhanced_home, 
@@ -188,56 +188,67 @@ def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=Non
 
 
 def get_user_display_name(line_api, user_id):
-    """الحصول على اسم المستخدم الحقيقي من LINE"""
+    """
+    الحصول على اسم المستخدم الحقيقي من LINE
+    مع معالجة محسّنة للأخطاء
+    """
     try:
         profile = line_api.get_profile(user_id)
-        username = get_username(profile)
         
-        if username and username != "مستخدم":
-            logger.info(f"✓ Got real username from LINE: {username}")
-            return username
-        else:
-            logger.warning(f"✗ LINE returned default username for {user_id}")
-            return "مستخدم"
+        # جلب الاسم من الـ profile
+        username = None
+        if hasattr(profile, 'display_name') and profile.display_name:
+            username = str(profile.display_name).strip()
+        
+        # التحقق من صحة الاسم
+        if username and len(username) > 0 and username != "مستخدم":
+            logger.info(f"✓ Got username from LINE: {username[:20]}")
+            return username[:50]  # حد أقصى 50 حرف
+        
+        logger.warning(f"⚠ LINE profile has no valid display_name for user")
+        return "مستخدم"
+        
     except Exception as e:
-        logger.error(f"✗ Failed to get LINE profile for {user_id}: {e}")
+        logger.error(f"✗ Failed to get LINE profile: {str(e)[:100]}")
         return "مستخدم"
 
 
 def get_user_data(line_api, user_id):
     """
     الحصول على بيانات المستخدم مع التحديث التلقائي للاسم
-    يجلب الاسم دائماً من LINE API
     """
-    # جلب الاسم الحالي من LINE
-    username = get_user_display_name(line_api, user_id)
-    
-    # التحقق من الكاش
+    # التحقق من الكاش أولاً
     cached = user_cache.get(user_id)
     if cached:
         cache_time = cached.get('_cache_time', datetime.min)
         if datetime.utcnow() - cache_time < timedelta(minutes=PRIVACY_SETTINGS["cache_timeout_minutes"]):
-            # تحديث الاسم في الكاش إذا تغير
-            if cached.get('name') != username and username != "مستخدم":
-                db.update_user_name(user_id, username)
-                cached['name'] = username
-                user_cache.put(user_id, cached)
-                logger.info(f"✓ Updated cached username to: {username}")
             return cached
     
     # جلب من قاعدة البيانات
     user = db.get_user(user_id)
+    
     if not user:
-        # إنشاء مستخدم جديد
+        # جلب الاسم من LINE للمستخدم الجديد
+        username = get_user_display_name(line_api, user_id)
         db.create_user(user_id, username)
         user = db.get_user(user_id)
-        logger.info(f"✓ New user created: {username}")
+        logger.info(f"✓ New user created: {username[:20]}")
     else:
-        # تحديث الاسم في قاعدة البيانات إذا تغير
-        if user.get('name') != username and username != "مستخدم":
-            db.update_user_name(user_id, username)
-            user['name'] = username
-            logger.info(f"✓ Updated DB username to: {username}")
+        # تحديث الاسم بشكل دوري (كل ساعة)
+        last_update = user.get('last_activity', datetime.min)
+        if isinstance(last_update, str):
+            try:
+                last_update = datetime.fromisoformat(last_update)
+            except:
+                last_update = datetime.min
+        
+        # تحديث الاسم إذا مر أكثر من ساعة
+        if datetime.now() - last_update > timedelta(hours=1):
+            fresh_username = get_user_display_name(line_api, user_id)
+            if fresh_username != "مستخدم" and fresh_username != user.get('name'):
+                db.update_user_name(user_id, fresh_username)
+                user['name'] = fresh_username
+                logger.info(f"✓ Updated username to: {fresh_username[:20]}")
     
     # تحديث الكاش
     user['_cache_time'] = datetime.utcnow()
@@ -318,7 +329,7 @@ def handle_message(event):
             with ApiClient(configuration) as api_client:
                 line_api = MessagingApi(api_client)
                 
-                # الحصول على بيانات المستخدم (يجلب الاسم تلقائياً من LINE)
+                # الحصول على بيانات المستخدم
                 user = get_user_data(line_api, user_id)
                 username = user.get('name', 'مستخدم')
                 
@@ -358,21 +369,24 @@ def handle_message(event):
                 
                 elif lowered in ["انضم", "join", "تسجيل"]:
                     if not user.get('is_registered'):
-                        # جلب الاسم الحديث من LINE قبل التسجيل
+                        # جلب الاسم الطازج من LINE عند التسجيل
                         fresh_username = get_user_display_name(line_api, user_id)
-                        db.update_user_name(user_id, fresh_username)
+                        if fresh_username != "مستخدم":
+                            db.update_user_name(user_id, fresh_username)
+                            username = fresh_username
+                            user['name'] = fresh_username
+                        
                         db.update_user(user_id, is_registered=1)
                         user_cache.remove(user_id)
-                        user = get_user_data(line_api, user_id)
-                        logger.info(f"✓ User registered: {fresh_username}")
+                        logger.info(f"✓ User registered: {username[:20]}")
+                    
                     reply_message = build_registration_status(username, user['points'], current_theme)
                 
                 elif lowered in ["انسحب", "leave", "خروج"]:
                     if user.get('is_registered'):
                         db.update_user(user_id, is_registered=0)
                         user_cache.remove(user_id)
-                        user = get_user_data(line_api, user_id)
-                        logger.info(f"✓ User unregistered: {username}")
+                        logger.info(f"✓ User unregistered: {username[:20]}")
                         reply_message = build_unregister_confirmation(username, user['points'], current_theme)
                     else:
                         return
@@ -605,9 +619,9 @@ if __name__ == "__main__":
     logger.info(f"{BOT_NAME} v{BOT_VERSION}")
     logger.info(f"{BOT_RIGHTS}")
     logger.info(f"Available games: {len(AVAILABLE_GAMES)}")
-    logger.info(f"✓ Enhanced registration with LINE username sync")
-    logger.info(f"✓ Auto-update usernames from LINE API")
-    logger.info(f"✓ Improved help window design")
+    logger.info(f"✓ Enhanced username handling from LINE API")
+    logger.info(f"✓ Auto-update every hour + on registration")
+    logger.info(f"✓ Improved error handling")
     logger.info(f"Port: {port}")
     logger.info("=" * 70)
     app.run(host="0.0.0.0", port=port, debug=False)
