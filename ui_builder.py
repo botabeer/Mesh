@@ -104,10 +104,10 @@ def attach_quick_reply(m):
     return m
 
 # ============================================================================
-# الصفحة الرئيسية - مُصلحة (إزالة الإيموجي الفارغ)
+# الصفحة الرئيسية
 # ============================================================================
 def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEME):
-    """صفحة رئيسية ثري دي فاخرة - مُصلحة"""
+    """صفحة رئيسية ثري دي فاخرة"""
     c = _c(theme)
     status = "مسجل" if is_registered else "غير مسجل"
     join_text = "انسحب" if is_registered else "انضم"
@@ -258,7 +258,7 @@ def build_enhanced_home(username, points, is_registered=True, theme=DEFAULT_THEM
     return attach_quick_reply(_flex("البداية", body))
 
 # ============================================================================
-# قائمة الألعاب - تصميم Grid فاخر
+# قائمة الألعاب
 # ============================================================================
 def build_games_menu(theme=DEFAULT_THEME):
     """قائمة ألعاب Grid ثري دي"""
@@ -292,7 +292,7 @@ def build_games_menu(theme=DEFAULT_THEME):
                 
                 {
                     "type": "text",
-                    "text": "بوت ميوشتي",
+                    "text": "بوت ميش",
                     "size": "sm",
                     "color": c["text2"],
                     "align": "center"
@@ -350,7 +350,130 @@ def build_games_menu(theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("الألعاب", body))
 
 # ============================================================================
-# نقاطي - بطاقة إحصائيات أنيقة
+# نافذة مساعدة مستقلة
+# ============================================================================
+def build_help_window(theme=DEFAULT_THEME):
+    """نافذة مساعدة مستقلة"""
+    c = _c(theme)
+    
+    body = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                _gradient_header("المساعدة", theme),
+                
+                _separator_3d(theme),
+                
+                # أوامر التنقل
+                _3d_card([
+                    {
+                        "type": "text",
+                        "text": "أوامر التنقل",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": c["primary"]
+                    },
+                    {
+                        "type": "text",
+                        "text": "بداية | ألعاب | نقاطي | صدارة",
+                        "size": "sm",
+                        "color": c["text"],
+                        "wrap": True,
+                        "margin": "sm"
+                    }
+                ], theme, "15px"),
+                
+                # أوامر اللعب
+                _3d_card([
+                    {
+                        "type": "text",
+                        "text": "أوامر اللعب",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": c["primary"]
+                    },
+                    {
+                        "type": "text",
+                        "text": "لمح | جاوب | إيقاف",
+                        "size": "sm",
+                        "color": c["text"],
+                        "wrap": True,
+                        "margin": "sm"
+                    }
+                ], theme, "15px"),
+                
+                # نظام النقاط
+                _3d_card([
+                    {
+                        "type": "text",
+                        "text": "نظام النقاط",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": c["primary"]
+                    },
+                    {
+                        "type": "text",
+                        "text": "نقطة واحدة لكل إجابة صحيحة",
+                        "size": "sm",
+                        "color": c["text"],
+                        "wrap": True,
+                        "margin": "sm"
+                    }
+                ], theme, "15px"),
+                
+                # وضع الفريقين
+                _3d_card([
+                    {
+                        "type": "text",
+                        "text": "وضع الفريقين",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": c["primary"]
+                    },
+                    {
+                        "type": "text",
+                        "text": "1. اكتب انضم\n2. اكتب فريقين\n3. اختر اللعبة",
+                        "size": "sm",
+                        "color": c["text"],
+                        "wrap": True,
+                        "margin": "sm"
+                    }
+                ], theme, "15px"),
+                
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "margin": "xl",
+                    "contents": [
+                        _premium_button("البداية", "بداية", "primary", theme),
+                        _premium_button("الألعاب", "ألعاب", "secondary", theme)
+                    ]
+                },
+                
+                _separator_3d(theme),
+                
+                {
+                    "type": "text",
+                    "text": BOT_RIGHTS,
+                    "size": "xxs",
+                    "color": c["text3"],
+                    "align": "center",
+                    "wrap": True
+                }
+            ],
+            "paddingAll": "24px",
+            "backgroundColor": c["bg"]
+        }
+    }
+    
+    return attach_quick_reply(_flex("المساعدة", body))
+
+# ============================================================================
+# نقاطي
 # ============================================================================
 def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
     """بطاقة نقاط فاخرة"""
@@ -458,18 +581,17 @@ def build_my_points(username, points, stats=None, theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("نقاطي", body))
 
 # ============================================================================
-# لوحة الصدارة - احترافية محسّنة
+# لوحة الصدارة
 # ============================================================================
 def build_leaderboard(top_users, theme=DEFAULT_THEME):
-    """لوحة صدارة احترافية محسّنة"""
+    """لوحة صدارة احترافية"""
     c = _c(theme)
     
-    # Top 3 Podium
+    # Top 3
     podium = []
     for i, (name, pts, is_registered) in enumerate(top_users[:3] if len(top_users) >= 3 else top_users, 1):
-        rank_display = ["1ST", "2ND", "3RD"][i-1]
+        rank_display = ["الأول", "الثاني", "الثالث"][i-1]
         rank_color = [c["primary"], c["accent"], c["secondary"]][i-1]
-        bg_gradient = c["card"] if i != 1 else f"{c['card']}F0"
         
         podium.append({
             "type": "box",
@@ -486,10 +608,10 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
                                 {
                                     "type": "text",
                                     "text": rank_display,
-                                    "size": "xl" if i == 1 else "lg",
-                                    "weight": "bold",
+                                    "size": "sm",
                                     "color": rank_color,
-                                    "align": "center"
+                                    "align": "center",
+                                    "weight": "bold"
                                 },
                                 {
                                     "type": "text",
@@ -501,7 +623,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
                                 }
                             ],
                             "flex": 0,
-                            "width": "60px"
+                            "width": "70px"
                         },
                         {
                             "type": "box",
@@ -551,7 +673,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
                     ]
                 }
             ],
-            "backgroundColor": bg_gradient,
+            "backgroundColor": c["card"],
             "cornerRadius": "15px",
             "paddingAll": "15px",
             "borderWidth": "3px" if i == 1 else "2px",
@@ -559,7 +681,7 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
             "margin": "sm"
         })
     
-    # Rest of leaderboard (4-10)
+    # الترتيب 4-10
     rest_items = []
     for i, (name, pts, is_registered) in enumerate(top_users[3:10], 4):
         rest_items.append({
@@ -696,10 +818,10 @@ def build_leaderboard(top_users, theme=DEFAULT_THEME):
     return attach_quick_reply(_flex("الصدارة", body))
 
 # ============================================================================
-# إعلان الفوز - مختصر مع أزرار إعادة وإيقاف
+# إعلان الفوز
 # ============================================================================
 def build_winner_announcement(username, game_name, round_points, total_points, theme=DEFAULT_THEME):
-    """نافذة فوز مختصرة مع إعادة وإيقاف"""
+    """نافذة فوز مختصرة"""
     c = _c(theme)
     
     body = {
@@ -795,10 +917,6 @@ def build_winner_announcement(username, game_name, round_points, total_points, t
 # ============================================================================
 # بقية الدوال المساعدة
 # ============================================================================
-def build_help_window(theme=DEFAULT_THEME):
-    """نافذة مساعدة"""
-    return build_games_menu(theme)
-
 def build_theme_selector(theme=DEFAULT_THEME):
     """اختيار الثيمات"""
     return build_enhanced_home("مستخدم", 0, True, theme)
@@ -836,7 +954,7 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
             "type": "box",
             "layout": "vertical",
             "contents": [
-                _gradient_header("انتهت اللعبة!", theme),
+                _gradient_header("انتهت اللعبة", theme),
                 _separator_3d(theme),
                 _3d_card([
                     {
@@ -903,105 +1021,10 @@ def build_team_game_end(team_points, theme=DEFAULT_THEME):
 def build_answer_feedback(message, theme=DEFAULT_THEME):
     return TextMessage(text=message)
 
-def build_game_question_with_controls(question_text, additional_info, game_name, supports_hint, supports_reveal, theme=DEFAULT_THEME):
-    """نافذة لعبة احترافية مع أزرار التحكم"""
-    c = _c(theme)
-    
-    contents = [
-        {
-            "type": "text",
-            "text": game_name,
-            "size": "xl",
-            "weight": "bold",
-            "color": c["primary"],
-            "align": "center"
-        },
-        
-        _separator_3d(theme),
-        
-        _3d_card([
-            {
-                "type": "text",
-                "text": question_text,
-                "size": "lg",
-                "color": c["text"],
-                "align": "center",
-                "wrap": True,
-                "weight": "bold"
-            }
-        ], theme, "20px")
-    ]
-    
-    if additional_info:
-        contents.append({
-            "type": "text",
-            "text": additional_info,
-            "size": "xs",
-            "color": c["text2"],
-            "align": "center",
-            "wrap": True,
-            "margin": "md"
-        })
-    
-    # أزرار التحكم
-    control_buttons = []
-    
-    if supports_hint and supports_reveal:
-        control_buttons = [
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "lg",
-                "contents": [
-                    _premium_button("لمح", "لمح", "secondary", theme),
-                    _premium_button("جاوب", "جاوب", "secondary", theme)
-                ]
-            },
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "sm",
-                "contents": [
-                    _premium_button("إيقاف", "إيقاف", "secondary", theme)
-                ]
-            }
-        ]
-    else:
-        control_buttons = [
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "lg",
-                "contents": [
-                    _premium_button("إيقاف", "إيقاف", "secondary", theme)
-                ]
-            }
-        ]
-    
-    contents.extend(control_buttons)
-    
-    body = {
-        "type": "bubble",
-        "size": "mega",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": contents,
-            "paddingAll": "24px",
-            "backgroundColor": c["bg"]
-        }
-    }
-    
-    return _flex(game_name, body)
-
 __all__ = [
     'build_enhanced_home', 'build_games_menu', 'build_my_points', 'build_leaderboard',
     'build_help_window', 'build_registration_status', 'build_registration_required',
     'build_unregister_confirmation', 'build_winner_announcement', 'build_theme_selector',
     'build_multiplayer_help_window', 'attach_quick_reply', 'build_join_confirmation',
-    'build_error_message', 'build_game_stopped', 'build_team_game_end', 'build_answer_feedback',
-    'build_game_question_with_controls'
+    'build_error_message', 'build_game_stopped', 'build_team_game_end', 'build_answer_feedback'
 ]
