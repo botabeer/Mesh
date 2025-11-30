@@ -1,8 +1,8 @@
 """
-لعبة إنسان حيوان نبات - Bot Mesh v9.1 FIXED
+لعبة إنسان حيوان نبات - Bot Mesh v20.0 ENHANCED
 Created by: Abeer Aldosari © 2025
-✅ فردي: لمح (أول حرف + عدد) + جاوب + مؤقت
-✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
+✅ تلميح: أول حرف + عدد الحروف
+✅ نقطة واحدة لكل جواب صح
 """
 
 from games.base_game import BaseGame
@@ -16,12 +16,12 @@ class HumanAnimalPlantGame(BaseGame):
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
-        self.game_name = "إنسان حيوان نبات"
-        self.game_icon = "🌿"
+        self.game_name = "لعبة"
+        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
 
-        self.round_time = 25  # ⏱️ 25 ثانية
+        self.round_time = 25
         self.round_start_time = None
 
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
@@ -144,11 +144,10 @@ class HumanAnimalPlantGame(BaseGame):
         self.current_category = random.choice(self.categories)
         self.round_start_time = time.time()
 
-        # ✅ استخدام can_use_hint() و can_reveal_answer()
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\n💡 اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"الوقت {self.round_time} ثانية\nاكتب لمح او جاوب"
         else:
-            additional_info = f"⏱️ {self.round_time} ثانية"
+            additional_info = f"الوقت {self.round_time} ثانية"
 
         return self.build_question_flex(
             question_text=f"الفئة: {self.current_category}\nالحرف: {self.current_letter}",
@@ -184,10 +183,9 @@ class HumanAnimalPlantGame(BaseGame):
         if not self.game_active:
             return None
 
-        # التحقق من الوقت
         if self._time_expired():
             suggested = self.get_suggested_answer()
-            msg = f"⏱️ انتهى الوقت!\nمثال: {suggested}" if suggested else "⏱️ انتهى الوقت!"
+            msg = f"انتهى الوقت\nمثال: {suggested}" if suggested else "انتهى الوقت"
             
             self.current_question += 1
             self.answered_users.clear()
@@ -211,20 +209,19 @@ class HumanAnimalPlantGame(BaseGame):
 
         normalized_answer = self.normalize_text(user_answer)
 
-        # ✅ التلميح (فردي فقط)
+        # التلميح: أول حرف + عدد الحروف من إجابة مقترحة
         if self.can_use_hint() and normalized_answer == "لمح":
             suggested = self.get_suggested_answer()
             if suggested:
-                hint = f"💡 تبدأ بـ: {suggested[0]}\nعدد الحروف: {len(suggested)}"
+                hint = f"تبدأ بـ: {suggested[0]}\nعدد الحروف: {len(suggested)} حرف"
             else:
-                hint = "💡 فكر جيداً"
+                hint = "فكر جيداً"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
                 "points": 0
             }
 
-        # ✅ كشف الإجابة (فردي فقط)
         if self.can_reveal_answer() and normalized_answer == "جاوب":
             suggested = self.get_suggested_answer()
             reveal = f"مثال: {suggested}" if suggested else "لا توجد إجابة ثابتة"
@@ -242,27 +239,21 @@ class HumanAnimalPlantGame(BaseGame):
                 "points": 0
             }
 
-        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
         if self.team_mode and normalized_answer in ["لمح", "جاوب"]:
             return None
 
-        # التحقق من صحة الإجابة
         is_valid = self.validate_answer(normalized_answer)
 
         if not is_valid:
             return {
-                "message": f"❌ يجب أن تبدأ بحرف {self.current_letter}",
-                "response": self._create_text_message(f"❌ يجب أن تبدأ بحرف {self.current_letter}"),
+                "message": f"يجب أن تبدأ بحرف {self.current_letter}",
+                "response": self._create_text_message(f"يجب أن تبدأ بحرف {self.current_letter}"),
                 "points": 0
             }
 
         self.answered_users.add(user_id)
 
-        base_points = 10
-        elapsed = int(time.time() - self.round_start_time)
-        remaining = max(0, self.round_time - elapsed)
-        time_bonus = max(0, remaining // 2)
-        total_points = base_points + time_bonus
+        total_points = 1
 
         if self.team_mode:
             team = self.get_user_team(user_id)
@@ -281,7 +272,7 @@ class HumanAnimalPlantGame(BaseGame):
             return result
 
         return {
-            "message": f"✅ صحيح!\n+{total_points} نقطة",
+            "message": f"صحيح\n+{total_points} نقطة",
             "response": self.get_question(),
             "points": total_points
         }
