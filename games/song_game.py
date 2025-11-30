@@ -1,8 +1,8 @@
 """
-لعبة تخمين الأغنية - Bot Mesh v9.1 FIXED
+لعبة تخمين الأغنية - Bot Mesh v20.0 ENHANCED
 Created by: Abeer Aldosari © 2025
-✅ فردي: لمح (أول حرف + عدد) + جاوب + مؤقت
-✅ فريقين: مؤقت فقط (بدون لمح/جاوب)
+✅ تلميح: أول حرف + عدد الحروف
+✅ نقطة واحدة لكل جواب صح
 """
 
 from games.base_game import BaseGame
@@ -17,11 +17,11 @@ class SongGame(BaseGame):
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "أغنية"
-        self.game_icon = "🎵"
+        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
 
-        self.round_time = 30  # ⏱️ 30 ثانية
+        self.round_time = 30
         self.round_start_time = None
 
         self.songs = [
@@ -74,42 +74,7 @@ class SongGame(BaseGame):
             {"lyrics":"ضعت منك وانهدم جسر التلاقي","artist":"أميمة طالب"},
             {"lyrics":"بيان صادر من معاناة المحبة","artist":"أميمة طالب"},
             {"lyrics":"أنا ودي إذا ودك نعيد الماضي","artist":"رابح صقر"},
-            {"lyrics":"مثل ما تحب ياروحي ألبي رغبتك","artist":"رابح صقر"},
-            {"lyrics":"كل ما بلل مطر وصلك ثيابي","artist":"رابح صقر"},
-            {"lyrics":"يراودني شعور إني أحبك أكثر من أول","artist":"راشد الماجد"},
-            {"lyrics":"أنا أكثر شخص بالدنيا يحبك","artist":"راشد الماجد"},
-            {"lyrics":"ليت العمر لو كان مليون مرة","artist":"راشد الماجد"},
-            {"lyrics":"تلمست لك عذر","artist":"راشد الماجد"},
-            {"lyrics":"عظيم إحساسي والشوق فيني","artist":"راشد الماجد"},
-            {"lyrics":"خذ راحتك ماعاد تفرق معي","artist":"راشد الماجد"},
-            {"lyrics":"قال الوداع ومقصده يجرح القلب","artist":"راشد الماجد"},
-            {"lyrics":"اللي لقى احبابه نسى اصحابه","artist":"راشد الماجد"},
-            {"lyrics":"واسع خيالك اكتبه أنا بكذبك معجبه","artist":"شمة حمدان"},
-            {"lyrics":"ما دريت إني أحبك ما دريت","artist":"شمة حمدان"},
-            {"lyrics":"حبيته بيني وبين نفسي","artist":"شيرين"},
-            {"lyrics":"كلها غيرانة بتحقد","artist":"شيرين"},
-            {"lyrics":"مشاعر تشاور تودع تسافر","artist":"شيرين"},
-            {"lyrics":"أنا مش بتاعت الكلام ده","artist":"شيرين"},
-            {"lyrics":"مقادير يا قلبي العنا مقادير","artist":"طلال مداح"},
-            {"lyrics":"ظلمتني والله قوي يجازيك","artist":"طلال مداح"},
-            {"lyrics":"فزيت من نومي أناديلك","artist":"ذكرى"},
-            {"lyrics":"ابد على حطة يدك","artist":"ذكرى"},
-            {"lyrics":"أنا لولا الغلا والمحبة","artist":"فؤاد عبدالواحد"},
-            {"lyrics":"كلمة ولو جبر خاطر","artist":"عبادي الجوهر"},
-            {"lyrics":"أحبك لو تكون حاضر","artist":"عبادي الجوهر"},
-            {"lyrics":"إلحق عيني إلحق","artist":"وليد الشامي"},
-            {"lyrics":"يردون قلت لازم يردون","artist":"وليد الشامي"},
-            {"lyrics":"ولهان أنا ولهان","artist":"وليد الشامي"},
-            {"lyrics":"اقولها كبر عن الدنيا حبيبي","artist":"وليد الشامي"},
-            {"lyrics":"أنا استاهل وداع أفضل وداع","artist":"نوال الكويتية"},
-            {"lyrics":"لقيت روحي بعد ما لقيتك","artist":"نوال الكويتية"},
-            {"lyrics":"غريبة الناس غريبة الدنيا","artist":"وائل جسار"},
-            {"lyrics":"اعذريني يوم زفافك","artist":"وائل جسار"},
-            {"lyrics":"ماعاد يمديني ولا عاد يمديك","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"يا بعدهم كلهم يا سراجي بينهم","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"حتى الكره احساس","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"استكثرك وقتي علي","artist":"عبدالمجيد عبدالله"},
-            {"lyrics":"ياما حاولت الفراق وما قويت","artist":"عبدالمجيد عبدالله"}
+            {"lyrics":"مثل ما تحب ياروحي ألبي رغبتك","artist":"رابح صقر"}
         ]
 
         random.shuffle(self.songs)
@@ -135,14 +100,13 @@ class SongGame(BaseGame):
         self.current_answer = [q_data["artist"]]
         self.round_start_time = time.time()
 
-        # ✅ استخدام can_use_hint() و can_reveal_answer()
         if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"⏱️ {self.round_time} ثانية\nمن المغني؟\n💡 اكتب 'لمح' أو 'جاوب'"
+            additional_info = f"الوقت {self.round_time} ثانية\nمن المغني؟\nاكتب لمح او جاوب"
         else:
-            additional_info = f"⏱️ {self.round_time} ثانية\nمن المغني؟"
+            additional_info = f"الوقت {self.round_time} ثانية\nمن المغني؟"
 
         return self.build_question_flex(
-            question_text=f"🎵\n{q_data['lyrics']}",
+            question_text=f"{q_data['lyrics']}",
             additional_info=additional_info
         )
 
@@ -155,7 +119,6 @@ class SongGame(BaseGame):
         if not self.game_active:
             return None
 
-        # التحقق من الوقت
         if self._time_expired():
             correct = self.current_answer[0]
             self.current_question += 1
@@ -163,11 +126,11 @@ class SongGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"⏱️ انتهى الوقت!\nالمغني: {correct}\n\n{result.get('message', '')}"
+                result["message"] = f"انتهى الوقت\nالمغني: {correct}\n\n{result.get('message', '')}"
                 return result
 
             return {
-                "message": f"⏱️ انتهى الوقت!\nالمغني: {correct}",
+                "message": f"انتهى الوقت\nالمغني: {correct}",
                 "response": self.get_question(),
                 "points": 0
             }
@@ -180,17 +143,16 @@ class SongGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
-        # ✅ التلميح (فردي فقط)
+        # التلميح: أول حرف + عدد الحروف
         if self.can_use_hint() and normalized == "لمح":
             artist = self.current_answer[0]
-            hint = f"💡 يبدأ بـ: {artist[0]}\nعدد الحروف: {len(artist)}"
+            hint = f"يبدأ بـ: {artist[0]}\nعدد الحروف: {len(artist)} حرف"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
                 "points": 0
             }
 
-        # ✅ كشف الإجابة (فردي فقط)
         if self.can_reveal_answer() and normalized == "جاوب":
             reveal = f"المغني: {self.current_answer[0]}"
             self.current_question += 1
@@ -207,19 +169,13 @@ class SongGame(BaseGame):
                 "points": 0
             }
 
-        # ✅ تجاهل لمح/جاوب في وضع الفريقين بشكل صامت
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
 
-        # التحقق من الإجابة
         correct_normalized = self.normalize_text(self.current_answer[0])
         
         if normalized == correct_normalized:
-            base_points = 10
-            elapsed = int(time.time() - self.round_start_time)
-            remaining = max(0, self.round_time - elapsed)
-            time_bonus = max(0, remaining // 3)
-            total_points = base_points + time_bonus
+            total_points = 1
 
             if self.team_mode:
                 team = self.get_user_team(user_id)
@@ -239,13 +195,13 @@ class SongGame(BaseGame):
                 return result
 
             return {
-                "message": f"✅ صحيح!\n+{total_points} نقطة",
+                "message": f"صحيح\n+{total_points} نقطة",
                 "response": self.get_question(),
                 "points": total_points
             }
 
         return {
-            "message": "❌ خطأ",
-            "response": self._create_text_message("❌ خطأ"),
+            "message": "خطأ",
+            "response": self._create_text_message("خطأ"),
             "points": 0
         }
