@@ -19,7 +19,7 @@ def validate_env():
         raise ValueError("LINE_CHANNEL_ACCESS_TOKEN is not set")
 
 # ============================================================================
-# 🎨 9 ثيمات احترافية متناسقة - بدون إيموجي
+# 9 ثيمات احترافية متناسقة - بدون إيموجي
 # ============================================================================
 THEMES = {
     "أبيض": {
@@ -261,21 +261,21 @@ THEMES = {
 DEFAULT_THEME = "أبيض"
 
 # ============================================================================
-# إعدادات الألعاب (بدون إيموجي في الأيقونات)
+# إعدادات الألعاب (بدون إيموجي)
 # ============================================================================
 GAME_CONFIG = {
-    "كتابة سريعة": {"display": "أسرع", "icon": "▪", "hint": False, "reveal": False, "timer": 20},
-    "ذكاء": {"display": "ذكاء", "icon": "▪", "hint": True, "reveal": True, "timer": 30},
-    "إنسان حيوان نبات": {"display": "لعبة", "icon": "▪", "hint": True, "reveal": True, "timer": 25},
-    "أغنية": {"display": "أغنيه", "icon": "▪", "hint": True, "reveal": True, "timer": 30},
-    "تخمين": {"display": "خمن", "icon": "▪", "hint": True, "reveal": True, "timer": 25},
-    "سلسلة كلمات": {"display": "سلسلة", "icon": "▪", "hint": False, "reveal": False, "timer": 25},
-    "كلمة مبعثرة": {"display": "ترتيب", "icon": "▪", "hint": True, "reveal": True, "timer": 25},
-    "تكوين": {"display": "تكوين", "icon": "▪", "hint": True, "reveal": True, "timer": 40},
-    "أضداد": {"display": "ضد", "icon": "▪", "hint": True, "reveal": True, "timer": 0},
-    "لون": {"display": "لون", "icon": "▪", "hint": True, "reveal": True, "timer": 15},
-    "رياضيات": {"display": "رياضيات", "icon": "▪", "hint": True, "reveal": True, "timer": 25},
-    "توافق": {"display": "توافق", "icon": "▪", "hint": False, "reveal": False, "timer": 0}
+    "كتابة سريعة": {"display": "أسرع", "icon": "", "hint": False, "reveal": False, "timer": 20},
+    "ذكاء": {"display": "ذكاء", "icon": "", "hint": True, "reveal": True, "timer": 30},
+    "إنسان حيوان نبات": {"display": "لعبة", "icon": "", "hint": True, "reveal": True, "timer": 25},
+    "أغنية": {"display": "أغنيه", "icon": "", "hint": True, "reveal": True, "timer": 30},
+    "تخمين": {"display": "خمن", "icon": "", "hint": True, "reveal": True, "timer": 25},
+    "سلسلة كلمات": {"display": "سلسلة", "icon": "", "hint": False, "reveal": False, "timer": 25},
+    "كلمة مبعثرة": {"display": "ترتيب", "icon": "", "hint": True, "reveal": True, "timer": 25},
+    "تكوين": {"display": "تكوين", "icon": "", "hint": True, "reveal": True, "timer": 40},
+    "أضداد": {"display": "ضد", "icon": "", "hint": True, "reveal": True, "timer": 0},
+    "لون": {"display": "لون", "icon": "", "hint": True, "reveal": True, "timer": 15},
+    "رياضيات": {"display": "رياضيات", "icon": "", "hint": True, "reveal": True, "timer": 25},
+    "توافق": {"display": "توافق", "icon": "", "hint": False, "reveal": False, "timer": 0}
 }
 
 GAME_LIST = [(k, v["display"], v["icon"]) for k, v in GAME_CONFIG.items()]
@@ -283,7 +283,7 @@ GAME_NAMES = {k: v["display"] for k, v in GAME_CONFIG.items()}
 GAME_ICONS = {k: v["icon"] for k, v in GAME_CONFIG.items()}
 DISPLAY_TO_CLASS = {v["display"]: k for k, v in GAME_CONFIG.items()}
 
-FIXED_GAME_QR = [{"label": f"{v['icon']} {v['display']}", "text": v['display']} for k, v in GAME_CONFIG.items()]
+FIXED_GAME_QR = [{"label": f"{v['display']}", "text": v['display']} for k, v in GAME_CONFIG.items()]
 FIXED_GAME_QR.append({"label": "إيقاف", "text": "إيقاف"})
 
 PRIVACY_SETTINGS = {
@@ -366,7 +366,7 @@ def get_game_class_name(display_name: str) -> str:
     return DISPLAY_TO_CLASS.get(display_name, display_name)
 
 def get_game_icon(internal_name: str) -> str:
-    return GAME_ICONS.get(internal_name, "▪")
+    return GAME_ICONS.get(internal_name, "")
 
 def get_game_config(game_name: str) -> Dict:
     return GAME_CONFIG.get(game_name, {})
