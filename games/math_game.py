@@ -1,7 +1,8 @@
 """
-لعبة الرياضيات - Bot Mesh v19.0 ENHANCED
+لعبة الرياضيات - Bot Mesh v20.0 ENHANCED
 Created by: Abeer Aldosari © 2025
-نقطة واحدة | عرض السؤال السابق | مستويات متدرجة
+✅ تلميح: عدد الخانات
+✅ نقطة واحدة | عرض السؤال السابق
 """
 
 from games.base_game import BaseGame
@@ -128,8 +129,11 @@ class MathGame(BaseGame):
         answer = user_answer.strip()
         normalized = self.normalize_text(answer)
 
+        # التلميح: عدد الخانات
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"الجواب من {len(self.current_answer)} خانات"
+            hint = f"الجواب من {len(self.current_answer)} خانة"
+            if len(self.current_answer) > 1:
+                hint = f"الجواب من {len(self.current_answer)} خانات"
             return {
                 "message": hint,
                 "response": self._create_text_message(hint),
