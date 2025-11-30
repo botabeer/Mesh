@@ -1,3 +1,10 @@
+"""
+لعبة الأضداد - Bot Mesh v20.1 FIXED
+Created by: Abeer Aldosari © 2025
+✅ إصلاح: نظام النقاط الصحيح (1 نقطة)
+✅ تلميح: أول حرفين + باقي الكلمة
+"""
+
 from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
@@ -94,7 +101,7 @@ class OppositeGame(BaseGame):
         )
 
     def get_hint(self) -> str:
-        """الحصول على تلميح"""
+        """الحصول على تلميح محسّن"""
         if not self.current_answer:
             return "لا توجد تلميحات متاحة"
         
@@ -102,6 +109,7 @@ class OppositeGame(BaseGame):
         if len(answer) <= 2:
             return f"الكلمة قصيرة: {answer[0]}_"
         
+        # أول حرفين + باقي الكلمة بشرطات
         hint = f"{answer[0]}{answer[1]}" + "_" * (len(answer) - 2)
         return f"تلميح: {hint}"
 
@@ -144,39 +152,42 @@ class OppositeGame(BaseGame):
         for correct_answer in self.current_answer:
             if self.normalize_text(correct_answer) == normalized:
                 
+                # ✅ إصلاح: نقطة واحدة فقط
+                total_points = 1
+                
                 if self.team_mode:
                     team = self.get_user_team(user_id)
                     if not team:
                         team = self.assign_to_team(user_id)
-                    self.add_team_score(team, 10)
-                    points = 10
+                    self.add_team_score(team, total_points)
                 else:
-                    points = self.add_score(user_id, display_name, 10)
+                    # ✅ لا نستخدم القيمة المُرجعة من add_score
+                    self.add_score(user_id, display_name, total_points)
 
                 self.current_question += 1
                 self.answered_users.clear()
 
                 if self.current_question >= self.questions_count:
                     result = self.end_game()
-                    result["points"] = points
+                    result["points"] = total_points
                     
                     if self.team_mode:
-                        result["message"] = f"إجابة صحيحة\n+{points} نقطة\n\n{result.get('message', '')}"
+                        result["message"] = f"إجابة صحيحة\n+{total_points} نقطة\n\n{result.get('message', '')}"
                     else:
                         result["message"] = (
                             f"إجابة صحيحة يا {display_name}\n"
                             f"الكلمة: {correct_answer}\n"
-                            f"+{points} نقطة\n\n"
+                            f"+{total_points} نقطة\n\n"
                             f"{result.get('message', '')}"
                         )
                     return result
 
-                msg = f"إجابة صحيحة\n+{points} نقطة" if self.team_mode else f"إجابة صحيحة يا {display_name}\nالكلمة: {correct_answer}\n+{points} نقطة"
+                msg = f"إجابة صحيحة\n+{total_points} نقطة" if self.team_mode else f"إجابة صحيحة يا {display_name}\nالكلمة: {correct_answer}\n+{total_points} نقطة"
                 
                 return {
                     "message": msg,
                     "response": self.get_question(),
-                    "points": points
+                    "points": total_points
                 }
 
         return {
