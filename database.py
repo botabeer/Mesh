@@ -126,7 +126,7 @@ class ConnectionPool:
 
 
 class Database:
-    """مدير قاعدة البيانات"""
+    """مدير قاعدة البيانات - لا يعرض user_id أبداً"""
     
     def __init__(self, db_path='botmesh.db'):
         self.db_path = db_path
@@ -134,7 +134,7 @@ class Database:
         self.pool = ConnectionPool(db_path, pool_size=15)
         self.init_database()
         self._start_maintenance_thread()
-        logger.info(f"Database initialized: {db_path}")
+        logger.info(f"✓ Database initialized: {db_path}")
     
     def _ensure_clean_db(self):
         """التأكد من نظافة قاعدة البيانات"""
@@ -156,7 +156,7 @@ class Database:
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             
-            # جدول المستخدمين - بدون عرض user_id
+            # جدول المستخدمين - user_id موجود للربط فقط ولا يُعرض
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users(
                     user_id TEXT PRIMARY KEY,
@@ -257,11 +257,14 @@ class Database:
                 cursor.execute(idx)
             
             cursor.execute("ANALYZE")
-            logger.info("Database tables and indexes initialized")
+            logger.info("✓ Database tables and indexes initialized")
     
     @retry_on_locked()
     def get_user(self, user_id: str) -> Optional[Dict]:
-        """الحصول على بيانات المستخدم - بدون إرجاع user_id"""
+        """
+        الحصول على بيانات المستخدم
+        ⚠️ هام: لا يُرجع user_id أبداً - فقط البيانات العامة
+        """
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -278,6 +281,7 @@ class Database:
                 user_dict = dict(row)
                 if not user_dict.get('theme'):
                     user_dict['theme'] = 'أبيض'
+                # لا نُرجع user_id هنا
                 return user_dict
             return None
     
@@ -293,7 +297,7 @@ class Database:
                 VALUES(?, ?, 0, 0, 1, ?, ?)
             ''', (user_id, name, now, now))
             cursor.execute("INSERT OR IGNORE INTO user_preferences(user_id, theme) VALUES(?, 'أبيض')", (user_id,))
-            logger.info(f"New user created: {name}")
+            logger.info(f"✓ New user created: {name}")
             return True
     
     @retry_on_locked()
@@ -324,13 +328,13 @@ class Database:
     
     @retry_on_locked()
     def update_user_name(self, user_id: str, name: str) -> bool:
-        """تحديث اسم المستخدم"""
+        """تحديث اسم المستخدم من LINE"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             name = name[:50] if name else "مستخدم"
             cursor.execute('UPDATE users SET name = ?, last_activity = ? WHERE user_id = ?', 
                          (name, datetime.now(), user_id))
-            logger.info(f"Updated username to: {name}")
+            logger.info(f"✓ Updated username to: {name}")
             return True
     
     @retry_on_locked()
@@ -371,11 +375,15 @@ class Database:
                 VALUES(?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET theme = ?, last_theme_change = ?
             ''', (user_id, theme, theme, datetime.now()))
+            logger.info(f"✓ Theme set to: {theme}")
             return True
     
     @retry_on_locked()
     def get_leaderboard_all(self, limit: int = 20) -> List:
-        """الحصول على لوحة الصدارة"""
+        """
+        الحصول على لوحة الصدارة
+        ⚠️ يُرجع فقط: name, points, is_registered (بدون user_id)
+        """
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -527,7 +535,7 @@ class Database:
             ''', (cutoff,))
             deleted = cursor.rowcount
             if deleted > 0:
-                logger.info(f"Cleaned up {deleted} inactive users")
+                logger.info(f"✓ Cleaned up {deleted} inactive users")
             return deleted
     
     def _start_maintenance_thread(self):
@@ -557,12 +565,12 @@ class Database:
                 WHERE completed = 1 AND completed_at < ?
             ''', (old_date,))
             
-            logger.info("Periodic maintenance completed")
+            logger.info("✓ Periodic maintenance completed")
     
     def close(self):
         """إغلاق قاعدة البيانات"""
         self.pool.close_all()
-        logger.info("Database closed")
+        logger.info("✓ Database closed")
 
 
 _db_instance = None
