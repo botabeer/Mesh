@@ -1,28 +1,22 @@
 """
-لعبة الرياضيات - Bot Mesh v20.0 ENHANCED
+لعبة رياضيات - Bot Mesh v20.1 FINAL
 Created by: Abeer Aldosari © 2025
-✅ تلميح: عدد الخانات
-✅ نقطة واحدة | عرض السؤال السابق
+✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | بدون وقت
 """
 
 from games.base_game import BaseGame
 import random
-import time
 from typing import Dict, Any, Optional
 
 
 class MathGame(BaseGame):
-    """لعبة الرياضيات - عمليات حسابية متدرجة الصعوبة"""
+    """لعبة رياضيات"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "رياضيات"
-        self.game_icon = ""
         self.supports_hint = True
         self.supports_reveal = True
-
-        self.round_time = 25
-        self.round_start_time = None
 
         self.difficulty_levels = {
             1: {"name": "سهل", "min": 1, "max": 20, "ops": ['+', '-']},
@@ -35,7 +29,7 @@ class MathGame(BaseGame):
         self.current_question_data = None
 
     def generate_math_question(self):
-        """توليد سؤال رياضي حسب المستوى الحالي"""
+        """توليد سؤال رياضي"""
         level = min(self.current_question + 1, 5)
         config = self.difficulty_levels[level]
         operation = random.choice(config["ops"])
@@ -56,7 +50,7 @@ class MathGame(BaseGame):
             b = random.randint(2, max_factor)
             answer = a * b
             question = f"{a} × {b} = ؟"
-        else:  # '÷'
+        else:
             result = random.randint(2, 20)
             divisor = random.randint(2, 15)
             a = result * divisor
@@ -82,45 +76,14 @@ class MathGame(BaseGame):
         q_data = self.generate_math_question()
         self.current_question_data = q_data
         self.current_answer = q_data["answer"]
-        self.round_start_time = time.time()
-
-        if self.can_use_hint() and self.can_reveal_answer():
-            additional_info = f"الوقت {self.round_time} ثانية | المستوى: {q_data['level_name']}\nاكتب لمح او جاوب"
-        else:
-            additional_info = f"الوقت {self.round_time} ثانية | المستوى: {q_data['level_name']}"
 
         return self.build_question_flex(
             question_text=q_data["question"],
-            additional_info=additional_info
+            additional_info=f"المستوى {q_data['level_name']}"
         )
 
-    def _time_expired(self) -> bool:
-        if not self.round_start_time:
-            return False
-        return (time.time() - self.round_start_time) > self.round_time
-
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        if not self.game_active:
-            return None
-
-        if self._time_expired():
-            self.previous_question = self.current_question_data["question"] if self.current_question_data else None
-            self.previous_answer = self.current_answer
-            self.current_question += 1
-            self.answered_users.clear()
-
-            if self.current_question >= self.questions_count:
-                result = self.end_game()
-                result["message"] = f"انتهى الوقت\nالإجابة: {self.current_answer}\n\n{result.get('message', '')}"
-                return result
-
-            return {
-                "message": f"انتهى الوقت\nالإجابة: {self.current_answer}",
-                "response": self.get_question(),
-                "points": 0
-            }
-
-        if user_id in self.answered_users:
+        if not self.game_active or user_id in self.answered_users:
             return None
 
         if self.team_mode and user_id not in self.joined_users:
@@ -129,19 +92,14 @@ class MathGame(BaseGame):
         answer = user_answer.strip()
         normalized = self.normalize_text(answer)
 
-        # التلميح: عدد الخانات
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"الجواب من {len(self.current_answer)} خانة"
+            hint = f"الجواب من {len(self.current_answer)} رقم"
             if len(self.current_answer) > 1:
-                hint = f"الجواب من {len(self.current_answer)} خانات"
-            return {
-                "message": hint,
-                "response": self._create_text_message(hint),
-                "points": 0
-            }
+                hint = f"الجواب من {len(self.current_answer)} ارقام"
+            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
 
         if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"الجواب: {self.current_answer}"
+            reveal = f"الجواب {self.current_answer}"
             self.previous_question = self.current_question_data["question"] if self.current_question_data else None
             self.previous_answer = self.current_answer
             self.current_question += 1
@@ -152,11 +110,7 @@ class MathGame(BaseGame):
                 result["message"] = f"{reveal}\n\n{result.get('message', '')}"
                 return result
 
-            return {
-                "message": reveal,
-                "response": self.get_question(),
-                "points": 0
-            }
+            return {"message": reveal, "response": self.get_question(), "points": 0}
 
         if self.team_mode and normalized in ["لمح", "جاوب"]:
             return None
@@ -164,26 +118,19 @@ class MathGame(BaseGame):
         try:
             user_num = int(answer)
         except:
-            return {
-                "message": "يرجى إدخال رقم صحيح",
-                "response": self._create_text_message("يرجى إدخال رقم صحيح"),
-                "points": 0
-            }
+            return None
 
         if user_num == int(self.current_answer):
             total_points = 1
 
             if self.team_mode:
-                team = self.get_user_team(user_id)
-                if not team:
-                    team = self.assign_to_team(user_id)
+                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
                 self.add_team_score(team, total_points)
             else:
                 self.add_score(user_id, display_name, total_points)
 
             self.previous_question = self.current_question_data["question"] if self.current_question_data else None
             self.previous_answer = self.current_answer
-
             self.current_question += 1
             self.answered_users.clear()
 
@@ -192,14 +139,6 @@ class MathGame(BaseGame):
                 result["points"] = total_points
                 return result
 
-            return {
-                "message": f"إجابة صحيحة\n+{total_points} نقطة",
-                "response": self.get_question(),
-                "points": total_points
-            }
+            return {"message": f"صحيح +{total_points}", "response": self.get_question(), "points": total_points}
 
-        return {
-            "message": "إجابة خاطئة",
-            "response": self._create_text_message("إجابة خاطئة"),
-            "points": 0
-        }
+        return None
