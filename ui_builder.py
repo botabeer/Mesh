@@ -175,7 +175,7 @@ def build_help_window(theme=DEFAULT_THEME):
         "body":{
             "type":"box","layout":"vertical",
             "contents":[
-                _gradient_header("المساعدة",theme),
+                _gradient_header("Bot Mesh",theme),
                 {"type":"text","text":"دليل استخدام البوت","size":"sm","color":c["text2"],"align":"center","margin":"sm"},
                 _separator_3d(theme),
                 {"type":"box","layout":"vertical","contents":[
@@ -230,8 +230,8 @@ def build_help_window(theme=DEFAULT_THEME):
                     ],"margin":"md"}
                 ],"backgroundColor":c["card"],"cornerRadius":"16px","paddingAll":"16px","borderWidth":"1px","borderColor":c["border"],"margin":"md","offsetBottom":"4px"},
                 _3d_card([
-                    {"type":"text","text":"✓ نصيحة","size":"xs","weight":"bold","color":c["info"],"align":"center"},
-                    {"type":"text","text":"لعبة توافق متاحة للجميع بدون تسجيل","size":"xs","color":c["text2"],"align":"center","margin":"xs"}
+                    {"type":"text","text":"✓ ملاحظة","size":"xs","weight":"bold","color":c["info"],"align":"center"},
+                    {"type":"text","text":"البوت يعمل في الخاص وفي المجموعات.","size":"xs","color":c["text2"],"align":"center","margin":"xs"}
                 ],theme,"12px"),
                 {"type":"box","layout":"horizontal","spacing":"sm","margin":"lg","contents":[
                     _premium_button("البداية","بداية","primary",theme),
