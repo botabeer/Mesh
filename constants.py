@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_NAME = "Bot Mesh"
-BOT_VERSION = "22.2 PRO 3D"
+BOT_VERSION = "22.3 PRO 3D"
 BOT_RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -287,7 +287,7 @@ DEFAULT_THEME = "أبيض"
 
 GAME_CONFIG = {
     "ذكاء": {"display": "ذكاء", "hint": True, "reveal": True, "timer": 0},
-    "رياضيات": {"display": "رياضيات", "hint": True, "reveal": True, "timer": 0},
+    "روليت": {"display": "روليت", "hint": True, "reveal": True, "timer": 0},
     "خمن": {"display": "خمن", "hint": True, "reveal": True, "timer": 0},
     "أغنيه": {"display": "أغنيه", "hint": True, "reveal": True, "timer": 0},
     "ترتيب": {"display": "ترتيب", "hint": True, "reveal": True, "timer": 0},
@@ -297,7 +297,8 @@ GAME_CONFIG = {
     "أسرع": {"display": "أسرع", "hint": False, "reveal": False, "timer": 20},
     "سلسلة": {"display": "سلسلة", "hint": False, "reveal": False, "timer": 0},
     "لون": {"display": "لون", "hint": True, "reveal": True, "timer": 0},
-    "توافق": {"display": "توافق", "hint": False, "reveal": False, "timer": 0}
+    "توافق": {"display": "توافق", "hint": False, "reveal": False, "timer": 0},
+    "مافيا": {"display": "مافيا", "hint": False, "reveal": False, "timer": 0}
 }
 
 GAME_LIST = [(k, v["display"]) for k, v in GAME_CONFIG.items()]
@@ -306,7 +307,7 @@ DISPLAY_TO_CLASS = {v["display"]: k for k, v in GAME_CONFIG.items()}
 
 GAME_COMMANDS = set(DISPLAY_TO_CLASS.keys())
 
-FIXED_GAME_QR = [{"label": v["display"], "text": v["display"]} for k, v in GAME_CONFIG.items()] + [{"label": "إيقاف", "text": "إيقاف"}]
+FIXED_GAME_QR = [{"label": v["display"], "text": v["display"]} for k, v in GAME_CONFIG.items()] + [{"label": "مافيا", "text": "مافيا"}]
 
 PRIVACY_SETTINGS = {
     "auto_delete_inactive_days": 90,
@@ -337,14 +338,12 @@ ALLOWED_COMMANDS = {
     "انسحب", "leave", "خروج",
     "فريقين", "teams", "فرق", "فردي", "solo",
     "ثيمات", "themes", "مظهر",
-    "إيقاف", "stop", "انهاء",
     "لمح", "hint",
     "جاوب", "reveal", "answer"
 }
 
 
 def normalize_text(text: str) -> str:
-    """تطبيع النص العربي"""
     if not text or not isinstance(text, str):
         return ""
     text = text[:SECURITY_SETTINGS["max_message_length"]].strip().lower()
@@ -357,7 +356,6 @@ def normalize_text(text: str) -> str:
 
 
 def sanitize_input(text: str) -> str:
-    """تنظيف المدخلات من الهجمات"""
     if not text:
         return ""
     if SECURITY_SETTINGS["enable_sql_injection_protection"]:
@@ -374,17 +372,14 @@ def sanitize_input(text: str) -> str:
 
 
 def get_theme_colors(theme_name: Optional[str] = None) -> Dict[str, str]:
-    """الحصول على ألوان الثيم"""
     return THEMES.get(theme_name or DEFAULT_THEME, THEMES[DEFAULT_THEME])
 
 
 def validate_theme(theme_name: str) -> str:
-    """التحقق من صحة اسم الثيم"""
     return theme_name if theme_name in THEMES else DEFAULT_THEME
 
 
 def get_username(profile) -> str:
-    """الحصول على اسم المستخدم من الملف الشخصي"""
     try:
         name = profile.display_name if hasattr(profile, 'display_name') else "مستخدم"
         if not name or not isinstance(name, str):
@@ -396,27 +391,22 @@ def get_username(profile) -> str:
 
 
 def get_game_display_name(internal_name: str) -> str:
-    """تحويل الاسم الداخلي للعبة إلى اسم العرض"""
     return GAME_NAMES.get(internal_name, internal_name)
 
 
 def get_game_class_name(display_name: str) -> str:
-    """تحويل اسم العرض إلى الاسم الداخلي"""
     return DISPLAY_TO_CLASS.get(display_name, display_name)
 
 
 def get_game_config(game_name: str) -> Dict:
-    """الحصول على إعدادات اللعبة"""
     return GAME_CONFIG.get(game_name, {})
 
 
 def is_valid_game(game_name: str) -> bool:
-    """التحقق من صحة اسم اللعبة"""
     return game_name in GAME_NAMES.values() or game_name in GAME_CONFIG.keys()
 
 
 def is_allowed_command(text: str) -> bool:
-    """التحقق من أن الأمر مسموح"""
     if not text or not isinstance(text, str):
         return False
     lowered = text.lower().strip()
