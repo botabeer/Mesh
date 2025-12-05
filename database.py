@@ -261,7 +261,7 @@ class Database:
     
     @retry_on_locked()
     def get_user(self, user_id: str) -> Optional[Dict]:
-        """الحصول على بيانات المستخدم"""
+        """الحصول على بيانات المستخدم مع تحويل التواريخ"""
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -276,8 +276,19 @@ class Database:
             
             if row:
                 user_dict = dict(row)
+                
+                # تحويل التواريخ النصية لـ datetime
+                for date_field in ['last_online', 'created_at', 'last_activity']:
+                    if user_dict.get(date_field) and isinstance(user_dict[date_field], str):
+                        try:
+                            user_dict[date_field] = datetime.fromisoformat(user_dict[date_field])
+                        except ValueError:
+                            user_dict[date_field] = datetime.min
+                
+                # التأكد من وجود ثيم
                 if not user_dict.get('theme'):
                     user_dict['theme'] = 'أبيض'
+                
                 return user_dict
             return None
     
@@ -293,7 +304,7 @@ class Database:
                 VALUES(?, ?, 0, 0, 1, ?, ?)
             ''', (user_id, name, now, now))
             cursor.execute("INSERT OR IGNORE INTO user_preferences(user_id, theme) VALUES(?, 'أبيض')", (user_id,))
-            logger.info(f"✓ New user created: {name}")
+            logger.info(f"✓ New user created: {name[:20]}")
             return True
     
     @retry_on_locked()
@@ -320,7 +331,7 @@ class Database:
             values.extend([datetime.now(), user_id])
             query = f"UPDATE users SET {', '.join(fields)} WHERE user_id = ?"
             cursor.execute(query, values)
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def update_user_name(self, user_id: str, name: str) -> bool:
@@ -328,10 +339,22 @@ class Database:
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             name = name[:50] if name else "مستخدم"
-            cursor.execute('UPDATE users SET name = ?, last_activity = ? WHERE user_id = ?', 
-                         (name, datetime.now(), user_id))
-            logger.info(f"✓ Updated username to: {name}")
-            return True
+            now = datetime.now()
+            
+            # تحديث الاسم والنشاط
+            cursor.execute('''
+                UPDATE users 
+                SET name = ?, last_activity = ? 
+                WHERE user_id = ?
+            ''', (name, now, user_id))
+            
+            affected = cursor.rowcount
+            if affected > 0:
+                logger.info(f"✓ Updated username for {user_id[:10]}: {name[:20]}")
+                return True
+            else:
+                logger.warning(f"⚠ Failed to update username for {user_id[:10]}")
+                return False
     
     @retry_on_locked()
     def add_points(self, user_id: str, points: int) -> bool:
@@ -341,7 +364,7 @@ class Database:
             cursor.execute('''
                 UPDATE users SET points = points + ?, last_activity = ? WHERE user_id = ?
             ''', (points, datetime.now(), user_id))
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def update_activity(self, user_id: str) -> bool:
@@ -349,7 +372,7 @@ class Database:
         with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('UPDATE users SET last_activity = ? WHERE user_id = ?', (datetime.now(), user_id))
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def set_user_online(self, user_id: str, is_online: bool) -> bool:
@@ -359,7 +382,7 @@ class Database:
             cursor.execute('''
                 UPDATE users SET is_online = ?, last_online = ? WHERE user_id = ?
             ''', (1 if is_online else 0, datetime.now(), user_id))
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def set_user_theme(self, user_id: str, theme: str) -> bool:
@@ -372,7 +395,7 @@ class Database:
                 ON CONFLICT(user_id) DO UPDATE SET theme = ?, last_theme_change = ?
             ''', (user_id, theme, theme, datetime.now()))
             logger.info(f"✓ Theme set to: {theme}")
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def get_leaderboard_all(self, limit: int = 20) -> List:
@@ -407,7 +430,7 @@ class Database:
             cursor.execute('''
                 UPDATE game_sessions SET completed = 1, score = ?, completed_at = ? WHERE session_id = ?
             ''', (score, datetime.now(), session_id))
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def add_team_member(self, session_id: int, user_id: str, team_name: str) -> bool:
@@ -433,7 +456,7 @@ class Database:
                 UPDATE team_scores SET score = score + ?, updated_at = ? 
                 WHERE session_id = ? AND team_name = ?
             ''', (points, datetime.now(), session_id, team_name))
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def get_team_points(self, session_id: int) -> Dict[str, int]:
@@ -462,7 +485,7 @@ class Database:
                     last_played = ?
             ''', (user_id, game_name, 1 if won else 0, score, score, datetime.now(),
                   1 if won else 0, score, score, score, datetime.now()))
-            return True
+            return cursor.rowcount > 0
     
     @retry_on_locked()
     def get_user_game_stats(self, user_id: str) -> Dict:
