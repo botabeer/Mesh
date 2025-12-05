@@ -189,27 +189,46 @@ def launch_game_instance(game_id, owner_id, game_class_name, line_api, theme=Non
 
 def get_user_display_name(line_api, user_id):
     """
-    الحصول على اسم المستخدم الحقيقي من LINE
-    مع معالجة محسّنة للأخطاء
+    الحصول على اسم المستخدم من LINE مع معالجة محسّنة للأخطاء
     """
     try:
         profile = line_api.get_profile(user_id)
         
-        # جلب الاسم من الـ profile
+        # محاولة الحصول على الاسم بطرق متعددة
         username = None
-        if hasattr(profile, 'display_name') and profile.display_name:
-            username = str(profile.display_name).strip()
+        
+        # الطريقة 1: display_name attribute
+        if hasattr(profile, 'display_name'):
+            username = getattr(profile, 'display_name', None)
+        
+        # الطريقة 2: التحقق من الكائن كـ dictionary
+        if not username and isinstance(profile, dict):
+            username = profile.get('display_name') or profile.get('displayName')
+        
+        # الطريقة 3: محاولة تحويل الكائن لـ dict
+        if not username:
+            try:
+                profile_dict = profile.to_dict() if hasattr(profile, 'to_dict') else vars(profile)
+                username = profile_dict.get('display_name') or profile_dict.get('displayName')
+            except:
+                pass
         
         # التحقق من صحة الاسم
-        if username and len(username) > 0 and username != "مستخدم":
-            logger.info(f"✓ Got username from LINE: {username[:20]}")
-            return username[:50]  # حد أقصى 50 حرف
+        if username:
+            username = str(username).strip()
+            # التحقق من أن الاسم ليس فارغاً أو مسافات فقط
+            if username and len(username) > 0 and not username.isspace():
+                logger.info(f"✓ Got username from LINE: {username[:20]}")
+                return username[:50]  # حد أقصى 50 حرف
         
-        logger.warning(f"⚠ LINE profile has no valid display_name for user")
+        logger.warning(f"⚠ LINE profile has no valid display_name for user: {user_id}")
         return "مستخدم"
         
+    except AttributeError as e:
+        logger.error(f"✗ AttributeError getting profile: {str(e)}")
+        return "مستخدم"
     except Exception as e:
-        logger.error(f"✗ Failed to get LINE profile: {str(e)[:100]}")
+        logger.error(f"✗ Failed to get LINE profile: {type(e).__name__}: {str(e)[:100]}")
         return "مستخدم"
 
 
@@ -246,8 +265,18 @@ def get_user_data(line_api, user_id):
         if datetime.now() - last_update > timedelta(hours=1):
             fresh_username = get_user_display_name(line_api, user_id)
             if fresh_username != "مستخدم" and fresh_username != user.get('name'):
+                # تحديث الاسم في قاعدة البيانات
                 db.update_user_name(user_id, fresh_username)
+                # تحديث وقت النشاط
+                db.update_activity(user_id)
+                
+                # إزالة الكاش القديم
+                user_cache.remove(user_id)
+                
+                # تحديث البيانات الحالية
                 user['name'] = fresh_username
+                user['last_activity'] = datetime.now()
+                
                 logger.info(f"✓ Updated username to: {fresh_username[:20]}")
     
     # تحديث الكاش
@@ -288,340 +317,4 @@ def callback():
 @app.route("/", methods=['GET'])
 def status_page():
     stats = db.get_stats_summary()
-    return f"""<html><head><title>{BOT_NAME}</title><style>body{{font-family:'Segoe UI',sans-serif;padding:40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;}}.container{{max-width:800px;margin:0 auto;background:rgba(255,255,255,0.95);padding:40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);color:#333;}}h1{{color:#667eea;margin:0 0 10px;font-size:2.5em;}}.version{{color:#999;margin-bottom:30px;}}.stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:30px 0;}}.stat-card{{background:#f8f9fa;padding:20px;border-radius:15px;text-align:center;border:2px solid #e9ecef;}}.stat-value{{font-size:2em;font-weight:bold;color:#667eea;margin:10px 0;}}.stat-label{{color:#666;font-size:0.9em;text-transform:uppercase;}}.footer{{margin-top:30px;padding-top:20px;border-top:2px solid #e9ecef;text-align:center;color:#999;font-size:0.85em;}}</style></head><body><div class="container"><h1>{BOT_NAME}</h1><div class="version">Version {BOT_VERSION}</div><div class="stats"><div class="stat-card"><div class="stat-label">Active Games</div><div class="stat-value">{len(active_games)}</div></div><div class="stat-card"><div class="stat-label">Available Games</div><div class="stat-value">{len(AVAILABLE_GAMES)}</div></div><div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value">{stats.get('total_users',0)}</div></div><div class="stat-card"><div class="stat-label">Registered Users</div><div class="stat-value">{stats.get('registered_users',0)}</div></div><div class="stat-card"><div class="stat-label">Total Sessions</div><div class="stat-value">{stats.get('total_sessions',0)}</div></div></div><div class="footer">{BOT_RIGHTS}</div></div></body></html>"""
-
-
-@app.route("/health", methods=['GET'])
-def health_check():
-    return jsonify({
-        "status": "ok",
-        "version": BOT_VERSION,
-        "active_games": len(active_games),
-        "available_games": len(AVAILABLE_GAMES)
-    })
-
-
-@handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event):
-    try:
-        user_id = event.source.user_id
-        text = event.message.text.strip()
-        
-        if not text:
-            return
-        
-        in_group = hasattr(event.source, 'group_id')
-        game_id = event.source.group_id if in_group else user_id
-        is_command = is_allowed_command(text)
-        is_game_active = game_id in active_games
-        
-        if not is_command and not is_game_active:
-            return
-        
-        if is_rate_limited(user_id):
-            return
-        
-        lock = get_session_lock(game_id)
-        
-        with lock:
-            source_type = "group" if in_group else "user"
-            
-            with ApiClient(configuration) as api_client:
-                line_api = MessagingApi(api_client)
-                
-                # الحصول على بيانات المستخدم
-                user = get_user_data(line_api, user_id)
-                username = user.get('name', 'مستخدم')
-                
-                db.update_activity(user_id)
-                db.set_user_online(user_id, True)
-                
-                current_theme = user.get("theme") or DEFAULT_THEME
-                lowered = text.lower()
-                reply_message = None
-                
-                # معالجة الأوامر
-                if lowered in ["مساعدة", "help"]:
-                    reply_message = build_help_window(current_theme)
-                
-                elif lowered in ["بداية", "home", "الرئيسية", "start"]:
-                    current_mode = team_mode_state.get(game_id, False)
-                    mode_label = "فريقين" if current_mode else "فردي"
-                    reply_message = build_enhanced_home(
-                        username, 
-                        user['points'], 
-                        user.get('is_registered'), 
-                        current_theme, 
-                        mode_label
-                    )
-                
-                elif lowered in ["ألعاب", "games", "العاب"]:
-                    top_games = db.get_top_games(12)
-                    reply_message = build_games_menu(current_theme, top_games)
-                
-                elif lowered in ["نقاطي", "points", "نقاط"]:
-                    stats = db.get_user_game_stats(user_id)
-                    reply_message = build_my_points(username, user['points'], stats, current_theme)
-                
-                elif lowered in ["صدارة", "leaderboard", "مستوى"]:
-                    top = db.get_leaderboard_all(20)
-                    reply_message = build_leaderboard(top, current_theme)
-                
-                elif lowered in ["انضم", "join", "تسجيل"]:
-                    if not user.get('is_registered'):
-                        # جلب الاسم الطازج من LINE عند التسجيل
-                        fresh_username = get_user_display_name(line_api, user_id)
-                        if fresh_username != "مستخدم":
-                            db.update_user_name(user_id, fresh_username)
-                            username = fresh_username
-                            user['name'] = fresh_username
-                        
-                        db.update_user(user_id, is_registered=1)
-                        user_cache.remove(user_id)
-                        logger.info(f"✓ User registered: {username[:20]}")
-                    
-                    reply_message = build_registration_status(username, user['points'], current_theme)
-                
-                elif lowered in ["انسحب", "leave", "خروج"]:
-                    if user.get('is_registered'):
-                        db.update_user(user_id, is_registered=0)
-                        user_cache.remove(user_id)
-                        logger.info(f"✓ User unregistered: {username[:20]}")
-                        reply_message = build_unregister_confirmation(username, user['points'], current_theme)
-                    else:
-                        return
-                
-                elif lowered in ["فريقين", "teams", "فرق", "فردي", "solo"]:
-                    if in_group:
-                        current = team_mode_state.get(game_id, False)
-                        team_mode_state[game_id] = not current
-                        new_mode = team_mode_state[game_id]
-                        mode_label = "فريقين" if new_mode else "فردي"
-                        reply_message = TextMessage(text=f"✓ تم التبديل إلى وضع {mode_label}")
-                    else:
-                        return
-                
-                elif lowered.startswith("ثيم "):
-                    theme_name = text.replace("ثيم ", "").strip()
-                    from constants import THEMES
-                    if theme_name in THEMES:
-                        db.set_user_theme(user_id, theme_name)
-                        user_cache.remove(user_id)
-                        user = get_user_data(line_api, user_id)
-                        current_mode = team_mode_state.get(game_id, False)
-                        mode_label = "فريقين" if current_mode else "فردي"
-                        logger.info(f"✓ Theme changed to: {theme_name}")
-                        reply_message = build_enhanced_home(
-                            username, 
-                            user['points'], 
-                            user.get('is_registered'), 
-                            theme_name, 
-                            mode_label
-                        )
-                    else:
-                        reply_message = build_theme_selector(current_theme)
-                
-                elif lowered in ["ثيمات", "themes", "مظهر"]:
-                    reply_message = build_theme_selector(current_theme)
-                
-                elif lowered in ["إيقاف", "stop", "انهاء"]:
-                    if game_id in active_games:
-                        game_name = session_meta.get(game_id, {}).get("current_game_name", "اللعبة")
-                        del active_games[game_id]
-                        session_meta.pop(game_id, None)
-                        reply_message = build_game_stopped(game_name, current_theme)
-                    else:
-                        return
-                
-                elif text in GAME_COMMANDS:
-                    game_class_name = get_game_class_name(text)
-                    
-                    if game_class_name == "توافق":
-                        try:
-                            game_instance = launch_game_instance(
-                                game_id, user_id, game_class_name, line_api, current_theme, False, source_type
-                            )
-                            start_msg = game_instance.start_game()
-                            attach_quick_reply(start_msg)
-                            line_api.reply_message(
-                                ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg])
-                            )
-                            return
-                        except Exception as e:
-                            logger.error(f"Error starting compatibility: {e}")
-                            logger.error(traceback.format_exc())
-                            return
-                    
-                    elif not user.get('is_registered'):
-                        reply_message = build_registration_required(current_theme)
-                    
-                    else:
-                        meta = ensure_session_meta(game_id)
-                        team_mode = team_mode_state.get(game_id, False)
-                        
-                        try:
-                            game_instance = launch_game_instance(
-                                game_id, user_id, game_class_name, line_api, current_theme, team_mode, source_type
-                            )
-                            
-                            if team_mode:
-                                logger.info(f"Team mode active for game {game_class_name}")
-                            
-                            start_msg = game_instance.start_game()
-                            attach_quick_reply(start_msg)
-                            line_api.reply_message(
-                                ReplyMessageRequest(reply_token=event.reply_token, messages=[start_msg])
-                            )
-                            return
-                        except Exception as e:
-                            logger.error(f"Error starting game: {e}")
-                            logger.error(traceback.format_exc())
-                            return
-                
-                elif game_id in active_games:
-                    meta = ensure_session_meta(game_id)
-                    is_compatibility = meta.get("current_game_name") == "توافق"
-                    
-                    if is_compatibility:
-                        game_instance = active_games[game_id]
-                        try:
-                            result = game_instance.check_answer(text, user_id, username)
-                            if not result:
-                                return
-                            
-                            if result.get('game_over'):
-                                if result.get('response'):
-                                    response_msg = result['response']
-                                    attach_quick_reply(response_msg)
-                                    line_api.reply_message(
-                                        ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg])
-                                    )
-                                del active_games[game_id]
-                                session_meta.pop(game_id, None)
-                                return
-                            else:
-                                if result.get('response'):
-                                    response_msg = result['response']
-                                    attach_quick_reply(response_msg)
-                                    line_api.reply_message(
-                                        ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg])
-                                    )
-                                    return
-                        except Exception as e:
-                            logger.error(f"Error in check_answer: {e}")
-                            logger.error(traceback.format_exc())
-                            if game_id in active_games:
-                                del active_games[game_id]
-                            return
-                    
-                    else:
-                        if not user.get('is_registered'):
-                            return
-                        
-                        game_instance = active_games[game_id]
-                        try:
-                            result = game_instance.check_answer(text, user_id, username)
-                            if not result:
-                                return
-                            
-                            pts = handle_game_answer(game_id, result, user_id, meta)
-                            
-                            if result.get('game_over'):
-                                if meta.get("session_id"):
-                                    db.finish_session(meta["session_id"], pts)
-                                
-                                if meta.get("team_mode"):
-                                    team_pts = db.get_team_points(meta["session_id"])
-                                    reply_message = build_team_game_end(team_pts, current_theme)
-                                else:
-                                    reply_message = build_winner_announcement(
-                                        username, 
-                                        meta.get("current_game_name", "اللعبة"), 
-                                        pts, 
-                                        user['points'] + pts, 
-                                        current_theme
-                                    )
-                                
-                                del active_games[game_id]
-                                session_meta.pop(game_id, None)
-                            else:
-                                if result.get('response'):
-                                    response_msg = result['response']
-                                    attach_quick_reply(response_msg)
-                                    line_api.reply_message(
-                                        ReplyMessageRequest(reply_token=event.reply_token, messages=[response_msg])
-                                    )
-                                    return
-                                else:
-                                    return
-                        except Exception as e:
-                            logger.error(f"Error in check_answer: {e}")
-                            logger.error(traceback.format_exc())
-                            if game_id in active_games:
-                                del active_games[game_id]
-                            return
-                else:
-                    return
-                
-                if reply_message:
-                    attach_quick_reply(reply_message)
-                    line_api.reply_message(
-                        ReplyMessageRequest(reply_token=event.reply_token, messages=[reply_message])
-                    )
-    
-    except Exception as e:
-        logger.error(f"General error in handle_message: {e}")
-        logger.error(traceback.format_exc())
-
-
-def periodic_cleanup():
-    def _cleanup():
-        while True:
-            try:
-                cleanup_hours = PRIVACY_SETTINGS["cleanup_interval_hours"]
-                time.sleep(cleanup_hours * 3600)
-                
-                now = datetime.utcnow()
-                timeout_minutes = PRIVACY_SETTINGS["cache_timeout_minutes"]
-                current_time = time.time()
-                old_sessions = []
-                
-                for gid, meta in list(session_meta.items()):
-                    start_time = meta.get('start_time', 0)
-                    if (gid not in active_games and start_time > 0 and current_time - start_time > 3600):
-                        old_sessions.append(gid)
-                
-                for gid in old_sessions:
-                    session_meta.pop(gid, None)
-                
-                if old_sessions:
-                    logger.info(f"Cleaned {len(old_sessions)} old sessions")
-                
-                delete_days = PRIVACY_SETTINGS["auto_delete_inactive_days"]
-                deleted = db.cleanup_inactive_users(delete_days)
-                
-                if deleted > 0:
-                    logger.info(f"Deleted {deleted} inactive users")
-                
-                logger.info("Periodic cleanup completed")
-            except Exception as e:
-                logger.error(f"Cleanup error: {e}")
-    
-    t = threading.Thread(target=_cleanup, daemon=True)
-    t.start()
-
-
-periodic_cleanup()
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 10000))
-    logger.info("=" * 70)
-    logger.info(f"{BOT_NAME} v{BOT_VERSION}")
-    logger.info(f"{BOT_RIGHTS}")
-    logger.info(f"Available games: {len(AVAILABLE_GAMES)}")
-    logger.info(f"✓ Enhanced username handling from LINE API")
-    logger.info(f"✓ Auto-update every hour + on registration")
-    logger.info(f"✓ Improved error handling")
-    logger.info(f"Port: {port}")
-    logger.info("=" * 70)
-    app.run(host="0.0.0.0", port=port, debug=False)
+    return f"""<html><head><title>{BOT_NAME}</title><style>body{{font-family:'Segoe UI',sans-serif;padding:40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;}}.container{{max-width:800px;margin:0 auto;background:rgba(255,255,255,0.95);padding:40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);color:#333;}}h1{{color:#667eea;margin:0 0 10px;font-size:2.5em;}}.version{{color:#999;margin-bottom:30px;}}.stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:30px 0;}}.stat-card{{background:#f8f9fa;padding:20px;border-radius:15px;text-align:center;border:2px solid #e9ecef;}}.stat-value{{font-size:2em;font-weight:bold;color:#667eea;margin:10px 0;}}.stat-label{{color:#666;font-size:0.9em;text-transform:uppercase;}}.footer{{margin-top:30px;padding-top:20px;border-top:2px solid #e9ecef;text-align:center;color:#999;font-size:0.85em;}}</style></head><body><div class="container"><h1>{BOT_NAME}</h1><div class="version">Version {BOT_VERSION}</div><div class="stats"><div class="stat-card"><div class="stat-label">Active Games</div><div class="stat-value">{len(active_games)}</div></div><div class="stat-card"><div class="stat-label">Available Games</div><div class="stat-value">{len(AVAILABLE_GAMES)}</div></div><div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value">{stats.get('total_users',0)}</div></div><div class="stat-card"><div class="stat-label">Registered Users</div><div class="stat-value">{stats.get('registered_users',0)}</div></div><div class="stat-card"><div class="stat-label">Total Sessions</div><div class="stat-value">{stats.get('total_sessions',0)}</div></div></div><div
