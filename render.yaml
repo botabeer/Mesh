@@ -5,14 +5,11 @@ services:
     region: singapore
     plan: free
     
-    # أوامر البناء والتشغيل
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --preload --log-level info app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --worker-class gthread --timeout 25 --graceful-timeout 15 --keep-alive 5 --preload --log-level info app:app
     
-    # الفحص الصحي
     healthCheckPath: /health
     
-    # متغيرات البيئة
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.7
@@ -26,8 +23,4 @@ services:
       - key: PORT
         value: 10000
     
-    # إعدادات إضافية
     autoDeploy: true
-    
-    # ملاحظة: قاعدة البيانات ستكون مؤقتة في الخطة المجانية
-    # للحصول على تخزين دائم، يجب الترقية لخطة مدفوعة
