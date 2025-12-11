@@ -67,46 +67,46 @@ def get_user_profile(line_api, user_id: str):
 @app.route("/", methods=['GET'])
 def home():
     stats = db.get_stats()
-    active_games = game_mgr.get_active_count()
+    active = game_mgr.get_active_count()
+    total = game_mgr.get_total_games()
     return f"""<!DOCTYPE html>
 <html dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{Config.BOT_NAME}</title><style>*{{margin:0;padding:0;box-sizing:border-box}}
 body{{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
 min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}}
-.container{{max-width:600px;width:100%;background:white;border-radius:20px;padding:40px;
+.c{{max-width:600px;width:100%;background:white;border-radius:20px;padding:40px;
 box-shadow:0 20px 60px rgba(0,0,0,0.3)}}h1{{color:#667eea;margin-bottom:10px;font-size:2.5em}}
-.version{{color:#999;margin-bottom:20px}}.status{{display:inline-block;padding:8px 20px;
+.v{{color:#999;margin-bottom:20px}}.st{{display:inline-block;padding:8px 20px;
 background:#28a745;color:white;border-radius:25px;font-weight:bold;margin:15px 0}}
 .stats{{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin:30px 0}}
 .stat{{background:#f8f9fa;padding:25px;border-radius:15px;text-align:center;border:2px solid #e9ecef}}
-.stat-value{{font-size:2.5em;font-weight:bold;color:#667eea;margin:10px 0}}
-.stat-label{{color:#666;font-size:0.9em}}
-.footer{{margin-top:30px;padding-top:20px;border-top:2px solid #eee;text-align:center;color:#999}}
-</style></head><body><div class="container"><h1>{Config.BOT_NAME}</h1>
-<div class="version">v{Config.VERSION}</div><div class="status">Online</div>
-<div class="stats"><div class="stat"><div class="stat-label">Active Games</div>
-<div class="stat-value">{active_games}</div></div><div class="stat">
-<div class="stat-label">Total Games</div><div class="stat-value">{game_mgr.get_total_games()}</div></div>
-<div class="stat"><div class="stat-label">Users</div><div class="stat-value">{stats.get('total_users',0)}</div></div>
-<div class="stat"><div class="stat-label">Registered</div><div class="stat-value">{stats.get('registered_users',0)}</div>
-</div></div><div class="footer">{Config.RIGHTS}</div></div></body></html>"""
+.sv{{font-size:2.5em;font-weight:bold;color:#667eea;margin:10px 0}}
+.sl{{color:#666;font-size:0.9em}}
+.f{{margin-top:30px;padding-top:20px;border-top:2px solid #eee;text-align:center;color:#999}}
+</style></head><body><div class="c"><h1>{Config.BOT_NAME}</h1>
+<div class="v">v{Config.VERSION}</div><div class="st">Online</div>
+<div class="stats"><div class="stat"><div class="sl">Active</div>
+<div class="sv">{active}</div></div><div class="stat">
+<div class="sl">Total</div><div class="sv">{total}</div></div>
+<div class="stat"><div class="sl">Users</div><div class="sv">{stats.get('total_users',0)}</div></div>
+<div class="stat"><div class="sl">Registered</div><div class="sv">{stats.get('registered_users',0)}</div>
+</div></div><div class="f">{Config.RIGHTS}</div></div></body></html>"""
 
 @app.route("/health", methods=['GET'])
 def health():
-    return jsonify({"status":"healthy","timestamp":datetime.now().isoformat(),
-                   "active_games":game_mgr.get_active_count()}), 200
+    return jsonify({"status":"ok","ts":datetime.now().isoformat(),"active":game_mgr.get_active_count()}), 200
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers.get('X-Line-Signature', '')
+    sig = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     try:
-        handler.handle(body, signature)
+        handler.handle(body, sig)
     except InvalidSignatureError:
-        logger.warning("Invalid signature")
+        logger.warning("Invalid sig")
         abort(400)
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        logger.error(f"Webhook err: {e}")
     return "OK", 200
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -119,9 +119,9 @@ def handle_message(event):
         if is_rate_limited(user_id):
             return
         
-        source_type = event.source.type
-        context_id = event.source.group_id if source_type == "group" else (
-            event.source.room_id if source_type == "room" else user_id)
+        src_type = event.source.type
+        ctx_id = event.source.group_id if src_type == "group" else (
+            event.source.room_id if src_type == "room" else user_id)
         
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
@@ -131,7 +131,7 @@ def handle_message(event):
             
             username = user.get('name', 'User')
             points = user.get('points', 0)
-            is_registered = bool(user.get('is_registered', 0))
+            is_reg = bool(user.get('is_registered', 0))
             theme = user.get('theme', 'ابيض')
             
             if user_id in pending_registrations:
@@ -142,62 +142,62 @@ def handle_message(event):
                     del pending_registrations[user_id]
                     msg = ui.registration_success(text, points, theme)
                 else:
-                    msg = TextMessage(text="Invalid name")
+                    msg = TextMessage(text="الاسم غير صالح")
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            normalized = Config.normalize(text)
+            norm = Config.normalize(text)
             
-            if normalized in ["بداية", "home", "start"]:
-                mode = user_sessions.get(context_id, {}).get('mode', 'فردي')
-                msg = ui.home_screen(username, points, is_registered, theme, mode)
+            if norm in ["بداية", "home", "start"]:
+                mode = user_sessions.get(ctx_id, {}).get('mode', 'فردي')
+                msg = ui.home_screen(username, points, is_reg, theme, mode)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if normalized in ["العاب", "games"]:
-                top_games = db.get_popular_games(13)
-                msg = ui.games_menu(theme, top_games)
+            if norm in ["العاب", "games"]:
+                top = db.get_popular_games(13)
+                msg = ui.games_menu(theme, top)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if normalized == "مساعدة":
+            if norm == "مساعدة":
                 msg = ui.help_screen(theme)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if normalized == "نقاطي":
-                stats = db.get_user_stats(user_id) if is_registered else None
+            if norm == "نقاطي":
+                stats = db.get_user_stats(user_id) if is_reg else None
                 msg = ui.my_points(username, points, stats, theme)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if normalized == "صدارة":
+            if norm == "صدارة":
                 top = db.get_leaderboard(20)
                 msg = ui.leaderboard(top, theme)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if normalized == "انضم":
-                if is_registered:
-                    msg = TextMessage(text=f"Registered: {username}\nPoints: {points}")
+            if norm == "انضم":
+                if is_reg:
+                    msg = TextMessage(text=f"مسجل\n\n{username}\nالنقاط: {points}")
                 else:
                     pending_registrations[user_id] = True
                     msg = ui.registration_prompt(theme)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if normalized == "انسحب":
-                if is_registered:
+            if norm == "انسحب":
+                if is_reg:
                     db.update_user(user_id, is_registered=0)
                     user_cache.pop(user_id, None)
                     msg = ui.unregister_confirm(username, points, theme)
                 else:
-                    msg = TextMessage(text="Not registered")
+                    msg = TextMessage(text="غير مسجل")
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if normalized == "ايقاف":
-                stopped = game_mgr.stop_game(context_id)
+            if norm == "ايقاف":
+                stopped = game_mgr.stop_game(ctx_id)
                 if stopped:
                     msg = ui.game_stopped(stopped, theme)
                     line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
@@ -208,38 +208,38 @@ def handle_message(event):
                 if Config.is_valid_theme(theme_name):
                     db.set_user_theme(user_id, theme_name)
                     user_cache.pop(user_id, None)
-                    mode = user_sessions.get(context_id, {}).get('mode', 'فردي')
-                    msg = ui.home_screen(username, points, is_registered, theme_name, mode)
+                    mode = user_sessions.get(ctx_id, {}).get('mode', 'فردي')
+                    msg = ui.home_screen(username, points, is_reg, theme_name, mode)
                 else:
-                    msg = TextMessage(text="Invalid theme")
+                    msg = TextMessage(text="ثيم غير صالح")
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
-            if source_type in ["group", "room"]:
-                if normalized == "فريقين":
-                    user_sessions.setdefault(context_id, {})['mode'] = "فريقين"
-                    msg = TextMessage(text="Team mode")
+            if src_type in ["group", "room"]:
+                if norm == "فريقين":
+                    user_sessions.setdefault(ctx_id, {})['mode'] = "فريقين"
+                    msg = TextMessage(text="تم تفعيل وضع الفريقين")
                     line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                     return
-                if normalized == "فردي":
-                    user_sessions.setdefault(context_id, {})['mode'] = "فردي"
-                    msg = TextMessage(text="Solo mode")
+                if norm == "فردي":
+                    user_sessions.setdefault(ctx_id, {})['mode'] = "فردي"
+                    msg = TextMessage(text="تم تفعيل الوضع الفردي")
                     line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                     return
             
-            result = game_mgr.process_message(context_id, user_id, username, text, 
-                                             is_registered, theme, source_type)
+            result = game_mgr.process_message(ctx_id, user_id, username, text, 
+                                             is_reg, theme, src_type)
             if result:
-                messages = result.get('messages', [])
-                if messages:
-                    line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=messages))
+                msgs = result.get('messages', [])
+                if msgs:
+                    line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=msgs))
                 if result.get('points', 0) > 0:
                     db.add_points(user_id, result['points'])
                     user_cache.pop(user_id, None)
     except Exception as e:
-        logger.error(f"Handler error: {e}")
+        logger.error(f"Handler err: {e}")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
-    logger.info(f"Starting on port {port}")
+    logger.info(f"Starting on {port}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
