@@ -44,21 +44,24 @@ def is_rate_limited(user_id: str) -> bool:
     user_rate_limit[user_id].append(now)
     return False
 
-def get_user_profile(line_api, user_id: str):
+def get_user_profile(line_api, user_id: str, src_type: str):
     if user_id in user_cache:
         cached = user_cache[user_id]
         if datetime.utcnow() - cached.get('_cached_at', datetime.min) < timedelta(minutes=5):
             return cached
+    
     user = db.get_user(user_id)
     if not user:
-        try:
-            profile = line_api.get_profile(user_id)
-            name = profile.display_name if hasattr(profile, 'display_name') else 'User'
-            db.create_user(user_id, name[:50])
-            user = db.get_user(user_id)
-        except Exception as e:
-            logger.error(f"Profile error: {e}")
-            return None
+        name = 'User'
+        if src_type == "user":
+            try:
+                profile = line_api.get_profile(user_id)
+                name = profile.display_name if hasattr(profile, 'display_name') else 'User'
+            except Exception as e:
+                logger.error(f"Profile error: {e}")
+        db.create_user(user_id, name[:50])
+        user = db.get_user(user_id)
+    
     if user:
         user['_cached_at'] = datetime.utcnow()
         user_cache[user_id] = user
@@ -125,7 +128,7 @@ def handle_message(event):
         
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
-            user = get_user_profile(line_api, user_id)
+            user = get_user_profile(line_api, user_id, src_type)
             if not user:
                 return
             
@@ -179,7 +182,7 @@ def handle_message(event):
             
             if norm == "انضم":
                 if is_reg:
-                    msg = TextMessage(text=f"مسجل\n\n{username}\nالنقاط: {points}")
+                    msg = TextMessage(text=f"مسجل\n\n{username}\nالنقاط {points}")
                 else:
                     pending_registrations[user_id] = True
                     msg = ui.registration_prompt(theme)
@@ -237,7 +240,7 @@ def handle_message(event):
                     db.add_points(user_id, result['points'])
                     user_cache.pop(user_id, None)
     except Exception as e:
-        logger.error(f"Handler err: {e}")
+        logger.error(f"Handler err: {e}", exc_info=True)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
