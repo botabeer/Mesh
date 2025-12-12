@@ -20,16 +20,38 @@ services:
     healthCheckPath: /health
 
     envVars:
+      # نسخة Python
       - key: PYTHON_VERSION
         value: 3.11.7
 
+      # متغيرات LINE
       - key: LINE_CHANNEL_SECRET
         sync: false
-
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
 
+      # منفذ السيرفر
       - key: PORT
         value: 10000
 
+      # إعدادات قاعدة البيانات
+      - key: DATABASE_URL
+        value: ""       # سيتم ملؤه تلقائياً من PostgreSQL
+        sync: false
+
+    persistentStorage:
+      # هذا المجلد لتخزين ملفات SQLite إذا أردنا استخدام SQLite بدلاً من PostgreSQL
+      - source: /data
+        target: /app/data
+
     autoDeploy: true
+
+  - type: postgresql
+    name: bot-mesh-db
+    plan: free
+    envVars:
+      - key: POSTGRES_USER
+      - key: POSTGRES_PASSWORD
+      - key: POSTGRES_DB
+      - key: DATABASE_URL
+        sync: true
