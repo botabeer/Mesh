@@ -16,12 +16,12 @@ class GameManager:
 
     def _load_games(self) -> Dict[str, type]:
         try:
+            # استيراد ألعاب النقاط
             from games.iq_game import IqGame
             from games.guess_game import GuessGame
             from games.opposite_game import OppositeGame
             from games.scramble_word_game import ScrambleWordGame
             from games.math_game import MathGame
-            from games.compatibility_game import CompatibilityGame
             from games.song_game import SongGame
             from games.word_color_game import WordColorGame
             from games.letters_words_game import LettersWordsGame
@@ -29,10 +29,10 @@ class GameManager:
             from games.chain_words_game import ChainWordsGame
             from games.fast_typing_game import FastTypingGame
             from games.roulette_game import RouletteGame
-            from games.mafia_game import MafiaGame
             
-            # ✅ التصحيح: استيراد الألعاب النصية بشكل منفصل
+            # استيراد الألعاب الترفيهية
             from games.text_games import QuestionGame, MentionGame, ChallengeGame, ConfessionGame
+            from games.compatibility_game import CompatibilityGame
             
             return {
                 "ذكاء": IqGame,
@@ -40,7 +40,6 @@ class GameManager:
                 "ضد": OppositeGame,
                 "ترتيب": ScrambleWordGame,
                 "رياضيات": MathGame,
-                "توافق": CompatibilityGame,
                 "اغنيه": SongGame,
                 "لون": WordColorGame,
                 "تكوين": LettersWordsGame,
@@ -48,11 +47,11 @@ class GameManager:
                 "سلسلة": ChainWordsGame,
                 "اسرع": FastTypingGame,
                 "روليت": RouletteGame,
-                "مافيا": MafiaGame,
                 "سؤال": QuestionGame,
                 "منشن": MentionGame,
                 "تحدي": ChallengeGame,
-                "اعتراف": ConfessionGame
+                "اعتراف": ConfessionGame,
+                "توافق": CompatibilityGame
             }
         except Exception as e:
             logger.error(f"Error loading games: {e}", exc_info=True)
@@ -60,9 +59,6 @@ class GameManager:
 
     def get_active_count(self) -> int:
         return len(self.active_games)
-
-    def get_total_games(self) -> int:
-        return len(self.games)
 
     def is_game_active(self, context_id: str) -> bool:
         return context_id in self.active_games
@@ -83,13 +79,17 @@ class GameManager:
         if game_name not in self.games:
             return {"messages": [TextMessage(text="اللعبة غير موجودة")], "points": 0}
         
-        config = Config.get_game_config(game_name)
+        # التحقق من متطلبات اللعبة
+        is_point_game = game_name in Config.POINT_GAMES
+        is_fun_game = game_name in Config.FUN_GAMES
         
-        if config.get("requires_registration") and not is_registered:
+        if is_point_game and not is_registered:
             return {"messages": [TextMessage(text="يجب التسجيل اولا\nاكتب: انضم")], "points": 0}
         
-        if config.get("group_only") and source_type not in ("group", "room"):
-            return {"messages": [TextMessage(text="هذه اللعبة للمجموعات فقط")], "points": 0}
+        if is_fun_game:
+            game_config = Config.FUN_GAMES.get(game_name, {})
+            if game_config.get("group_only") and source_type not in ("group", "room"):
+                return {"messages": [TextMessage(text="هذه اللعبة للمجموعات فقط")], "points": 0}
         
         try:
             GameClass = self.games[game_name]
@@ -103,7 +103,7 @@ class GameManager:
             
             self.active_games[context_id] = game
             
-            if config.get("requires_registration"):
+            if is_point_game:
                 session_id = self.db.create_session(user_id, game_name)
                 self.game_sessions[context_id] = {
                     "session_id": session_id,
