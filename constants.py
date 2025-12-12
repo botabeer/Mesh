@@ -1,9 +1,3 @@
-"""
-Bot Mesh Constants Module
-الثوابت والثيمات
-Created by: Abeer Aldosari - 2025
-"""
-
 DEFAULT_THEME = "ابيض"
 
 THEMES = {
