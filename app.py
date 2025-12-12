@@ -3,6 +3,7 @@ import sys
 import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
+from typing import Optional, Dict, Any
 
 from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
@@ -11,6 +12,7 @@ from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
     ReplyMessageRequest, TextMessage
 )
+from linebot.v3.messaging.exceptions import ApiException
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
 from config import Config
@@ -27,6 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("botmesh")
 
+# Validate config on startup
 try:
     Config.validate()
     logger.info("تم التحقق من الإعدادات بنجاح")
@@ -41,10 +44,10 @@ db = Database(Config.DATABASE_PATH)
 ui = UIBuilder()
 game_mgr = GameManager(db)
 
-user_sessions = {}
-pending_registrations = {}
+user_sessions: Dict[str, Any] = {}
+pending_registrations: Dict[str, bool] = {}
 user_rate_limit = defaultdict(list)
-user_cache = {}
+user_cache: Dict[str, dict] = {}
 
 
 def is_rate_limited(user_id: str) -> bool:
@@ -52,23 +55,49 @@ def is_rate_limited(user_id: str) -> bool:
     window = timedelta(seconds=Config.RATE_LIMIT_WINDOW)
     timestamps = [t for t in user_rate_limit[user_id] if now - t < window]
     user_rate_limit[user_id] = timestamps
-    
+
     if len(timestamps) >= Config.RATE_LIMIT_MESSAGES:
         logger.warning(f"تجاوز معدل الرسائل: {user_id}")
         return True
-    
+
     user_rate_limit[user_id].append(now)
     return False
 
 
-def get_user_profile(line_api, user_id: str, src_type: str):
-    if user_id in user_cache:
-        cached = user_cache[user_id]
-        if datetime.utcnow() - cached.get("_cached_at", datetime.min) < timedelta(minutes=5):
-            return cached
-    
+def safe_reply(line_api: MessagingApi, reply_token: str, messages: list):
+    """
+    Wrapper لـ line_api.reply_message يحمي من ApiException ويطبع تفاصيل قابلة للتّتبُّع.
+    """
+    try:
+        if not messages:
+            return
+        line_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+    except ApiException as e:
+        # اطبع تفاصيل الخطأ من LINE (إذا متاحة في الاستجابة)
+        try:
+            body = getattr(e, "body", None)
+            status = getattr(e, "status", None)
+            logger.error(f"ApiException أثناء الرد (status={status}) body={body}")
+        except Exception:
+            logger.exception("ApiException غير متوقعة عند محاولة قراءة تفاصيل الاستجابة.")
+        # لا نعيد رفع الاستثناء كي لا ينهار السيرفر، لكن نسجل تريل تريس
+        logger.exception("فشل إرسال الرسالة إلى LINE API.")
+
+
+def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Optional[dict]:
+    """
+    إحضار المستخدم من الكاش أو من قاعدة البيانات. 
+    إذا غير موجود، ننشئه (مع محاولة جلب الملف الشخصي من LINE).
+    """
+    if not user_id:
+        return None
+
+    cached = user_cache.get(user_id)
+    if cached and datetime.utcnow() - cached.get("_cached_at", datetime.min) < timedelta(minutes=5):
+        return cached
+
     user = db.get_user(user_id)
-    
+
     if not user:
         name = "مستخدم"
         if src_type == "user":
@@ -77,13 +106,13 @@ def get_user_profile(line_api, user_id: str, src_type: str):
                 if hasattr(profile, "display_name"):
                     name = profile.display_name or "مستخدم"
             except Exception as e:
-                logger.error(f"خطأ في جلب الملف الشخصي: {e}")
-        
+                logger.error(f"خطأ في جلب الملف الشخصي من LINE: {e}")
         db.create_user(user_id, name[:100])
         user = db.get_user(user_id)
-    
-    user["_cached_at"] = datetime.utcnow()
-    user_cache[user_id] = user
+
+    if user:
+        user["_cached_at"] = datetime.utcnow()
+        user_cache[user_id] = user
     return user
 
 
@@ -91,8 +120,11 @@ def get_user_profile(line_api, user_id: str, src_type: str):
 def home():
     stats = db.get_stats()
     active = game_mgr.get_active_count()
-    db_size = db.get_database_size() / 1024 / 1024
-    
+    try:
+        db_size = db.get_database_size() / 1024 / 1024
+    except Exception:
+        db_size = 0.0
+
     return f"""<!DOCTYPE html>
 <html dir="rtl">
 <head>
@@ -205,108 +237,106 @@ def health():
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
-    
+
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         logger.warning("توقيع غير صالح")
         abort(400)
     except Exception as e:
-        logger.error(f"خطأ في معالجة Webhook: {e}", exc_info=True)
-    
+        logger.exception(f"خطأ في معالجة Webhook: {e}")
+        # لا نعيد رفع الخطأ لأن Line يتوقع 200/OK عادة لتجنب retries مفرطة
     return "OK", 200
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     try:
-        user_id = event.source.user_id
+        # التأكد من وجود user_id (في بعض أنواع الأحداث قد لا يتوفر)
+        user_id = getattr(event.source, "user_id", None)
+        if not user_id:
+            logger.warning("حدث بدون user_id؛ تجاهلنا الرسالة.")
+            return
+
         text = (event.message.text or "").strip()
-        
         if not text or len(text) > 1000:
             return
-        
+
         if is_rate_limited(user_id):
             return
-        
+
         src_type = event.source.type
         ctx_id = (
             event.source.group_id if src_type == "group" else
             event.source.room_id if src_type == "room" else
             user_id
         )
-        
+
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
             user = get_user_profile(line_api, user_id, src_type)
-            
+
             if not user:
+                # إذا لم نستطع إنشاء/جلب المستخدم، نرسل رسالة بسيطة (أو نتجاهل)
+                safe_reply(line_api, event.reply_token, [TextMessage(text="خطأ فني: تعذر جلب بيانات المستخدم.")])
                 return
-            
+
             username = user.get("name", "مستخدم")
             points = user.get("points", 0)
             is_reg = bool(user.get("is_registered", 0))
             theme = user.get("theme", "فاتح")
-            
-            # تسجيل اسم جديد
+
+            # تسجيل اسم جديد (قيد التسجيل)
             if user_id in pending_registrations:
                 if 0 < len(text) <= 100:
                     db.update_user(user_id, name=text, is_registered=1)
                     user_cache.pop(user_id, None)
-                    del pending_registrations[user_id]
+                    pending_registrations.pop(user_id, None)
                     msg = ui.registration_success(text, points, theme)
                 else:
                     msg = TextMessage(text="الاسم غير صالح")
-                
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
+
             norm = Config.normalize(text)
-            
-            # شاشة البداية
+
+            # شاشات وأوامر ثابتة
             if norm in ["بداية", "start", "home"]:
                 msg = ui.home_screen(username, points, is_reg, theme)
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # قائمة الألعاب
+
             if norm in ["العاب", "games", "الالعاب"]:
                 msg = ui.games_menu(theme)
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # مساعدة
+
             if norm in ["مساعدة", "help"]:
                 msg = ui.help_screen(theme)
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # نقاطي
+
             if norm == "نقاطي":
                 stats = db.get_user_stats(user_id) if is_reg else None
                 msg = ui.my_points(username, points, stats, theme)
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # صدارة
+
             if norm == "صدارة":
                 top = db.get_leaderboard(20)
                 msg = ui.leaderboard(top, theme)
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # تسجيل
+
             if norm == "انضم":
                 if is_reg:
                     msg = TextMessage(text=f"انت مسجل بالفعل\nالاسم: {username}\nالنقاط: {points}")
                 else:
                     pending_registrations[user_id] = True
                     msg = ui.registration_prompt(theme)
-                
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # إلغاء التسجيل
+
             if norm == "انسحب":
                 if is_reg:
                     db.update_user(user_id, is_registered=0)
@@ -314,53 +344,49 @@ def handle_message(event):
                     msg = ui.unregister_confirm(username, points, theme)
                 else:
                     msg = TextMessage(text="انت غير مسجل")
-                
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # إيقاف الألعاب
+
             if norm in ["ايقاف", "stop"]:
                 stopped = game_mgr.stop_game(ctx_id)
                 if stopped:
                     msg = ui.game_stopped(stopped, theme)
-                    line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                    safe_reply(line_api, event.reply_token, [msg])
                 return
-            
-            # تغيير الثيم
+
             if text.startswith("ثيم "):
                 new_theme = text.split(maxsplit=1)[1].strip()
-                
                 if Config.is_valid_theme(new_theme):
                     db.set_user_theme(user_id, new_theme)
                     user_cache.pop(user_id, None)
                     msg = ui.home_screen(username, points, is_reg, new_theme)
                 else:
                     msg = TextMessage(text="ثيم غير موجود\nالثيمات المتاحة:\nفاتح - داكن")
-                
-                line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
+                safe_reply(line_api, event.reply_token, [msg])
                 return
-            
+
             # تمرير الرسالة لمدير الألعاب
             result = game_mgr.process_message(
                 ctx_id, user_id, username, text,
                 is_reg, theme, src_type
             )
-            
+
             if result:
                 msgs = result.get("messages", [])
                 if msgs:
-                    line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=msgs))
-                
+                    safe_reply(line_api, event.reply_token, msgs)
+
                 gained = result.get("points", 0)
                 if gained > 0 and is_reg:
                     db.add_points(user_id, gained)
                     user_cache.pop(user_id, None)
-    
+
     except Exception as e:
-        logger.error(f"خطأ في معالج الرسائل: {e}", exc_info=True)
+        logger.exception(f"خطأ في معالج الرسائل: {e}")
 
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", Config.DEFAULT_PORT))
     logger.info(f"بدء التطبيق على المنفذ {port}")
+    # debug=False و use_reloader=False في بيئة الإنتاج
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
