@@ -16,7 +16,7 @@ class GameManager:
 
     def _load_games(self) -> Dict[str, type]:
         try:
-            # استيراد ألعاب النقاط
+            # ألعاب النقاط
             from games.iq_game import IqGame
             from games.guess_game import GuessGame
             from games.opposite_game import OppositeGame
@@ -28,12 +28,11 @@ class GameManager:
             from games.human_animal_plant_game import HumanAnimalPlantGame
             from games.chain_words_game import ChainWordsGame
             from games.fast_typing_game import FastTypingGame
-            from games.roulette_game import RouletteGame
-            
-            # استيراد الألعاب الترفيهية
-            from games.text_games import QuestionGame, MentionGame, ChallengeGame, ConfessionGame
+
+            # ألعاب ترفيهية
+            from text_games import QuestionGame, MentionGame, ChallengeGame, ConfessionGame
             from games.compatibility_game import CompatibilityGame
-            
+
             return {
                 "ذكاء": IqGame,
                 "خمن": GuessGame,
@@ -46,13 +45,15 @@ class GameManager:
                 "لعبة": HumanAnimalPlantGame,
                 "سلسلة": ChainWordsGame,
                 "اسرع": FastTypingGame,
-                "روليت": RouletteGame,
+
+                # ألعاب ترفيهية
                 "سؤال": QuestionGame,
                 "منشن": MentionGame,
                 "تحدي": ChallengeGame,
                 "اعتراف": ConfessionGame,
-                "توافق": CompatibilityGame
+                "توافق": CompatibilityGame,
             }
+
         except Exception as e:
             logger.error(f"Error loading games: {e}", exc_info=True)
             return {}
@@ -66,43 +67,45 @@ class GameManager:
     def stop_game(self, context_id: str) -> Optional[str]:
         game = self.active_games.pop(context_id, None)
         self.game_sessions.pop(context_id, None)
-        
+
         if game:
             logger.info(f"Stopped game {game.game_name}")
             return game.game_name
-        
+
         return None
 
     def start_game(self, context_id: str, game_name: str, user_id: str,
                    username: str, is_registered: bool, theme: str,
                    source_type: str) -> Optional[Dict]:
+
         if game_name not in self.games:
             return {"messages": [TextMessage(text="اللعبة غير موجودة")], "points": 0}
-        
-        # التحقق من متطلبات اللعبة
+
         is_point_game = game_name in Config.POINT_GAMES
         is_fun_game = game_name in Config.FUN_GAMES
-        
+
+        # يتطلب تسجيل
         if is_point_game and not is_registered:
             return {"messages": [TextMessage(text="يجب التسجيل اولا\nاكتب: انضم")], "points": 0}
-        
+
+        # ترفيهي — للمجموعات فقط
         if is_fun_game:
-            game_config = Config.FUN_GAMES.get(game_name, {})
-            if game_config.get("group_only") and source_type not in ("group", "room"):
+            game_cfg = Config.FUN_GAMES.get(game_name, {})
+            if game_cfg.get("group_only") and source_type not in ("group", "room"):
                 return {"messages": [TextMessage(text="هذه اللعبة للمجموعات فقط")], "points": 0}
-        
+
         try:
             GameClass = self.games[game_name]
             game = GameClass(None)
-            
+
             if hasattr(game, "set_theme"):
                 game.set_theme(theme)
-            
+
             if hasattr(game, "set_database"):
                 game.set_database(self.db)
-            
+
             self.active_games[context_id] = game
-            
+
             if is_point_game:
                 session_id = self.db.create_session(user_id, game_name)
                 self.game_sessions[context_id] = {
@@ -110,60 +113,62 @@ class GameManager:
                     "user_id": user_id,
                     "game_name": game_name
                 }
-            
-            question = game.start_game()
-            logger.info(f"Started game {game_name} for user {user_id}")
-            
-            return {"messages": [question], "points": 0}
-        
+
+            q = game.start_game()
+            logger.info(f"Started game {game_name} for {user_id}")
+
+            return {"messages": [q], "points": 0}
+
         except Exception as e:
             logger.error(f"Error starting game {game_name}: {e}", exc_info=True)
-            return {"messages": [TextMessage(text="حدث خطأ في بدء اللعبة")], "points": 0}
+            return {"messages": [TextMessage(text="خطأ في بدء اللعبة")], "points": 0}
 
     def process_message(self, context_id: str, user_id: str, username: str,
                         text: str, is_registered: bool, theme: str,
                         source_type: str) -> Optional[Dict]:
-        normalized = Config.normalize(text)
-        
-        # بدء لعبة جديدة
-        if normalized in self.games:
-            return self.start_game(context_id, normalized, user_id, username,
+
+        norm = Config.normalize(text)
+
+        # بدء لعبة
+        if norm in self.games:
+            return self.start_game(context_id, norm, user_id, username,
                                    is_registered, theme, source_type)
-        
-        # معالجة إجابة لعبة نشطة
+
+        # لا يوجد لعبة نشطة
         if context_id not in self.active_games:
             return None
-        
+
         game = self.active_games[context_id]
-        
+
         try:
             result = game.check_answer(text, user_id, username)
             if not result:
                 return None
-            
-            messages = []
-            points = result.get("points", 0)
-            
+
+            msgs = []
+            pts = result.get("points", 0)
+
             if result.get("message"):
-                messages.append(TextMessage(text=result["message"]))
-            
+                msgs.append(TextMessage(text=result["message"]))
+
+            if result.get("response"):
+                msgs.append(result["response"])
+
+            # انتهاء اللعبة
             if result.get("game_over"):
-                session = self.game_sessions.pop(context_id, None)
+                sess = self.game_sessions.pop(context_id, None)
                 self.active_games.pop(context_id, None)
-                
-                if session:
-                    self.db.complete_session(session["session_id"], points)
-                
-                if points > 0 and is_registered:
-                    self.db.record_game_stat(user_id, game.game_name, points, True)
-                
-                logger.info(f"Game {game.game_name} ended - User: {user_id}, Points: {points}")
-            
-            elif result.get("response"):
-                messages.append(result["response"])
-            
-            return {"messages": messages, "points": points}
-        
+
+                if sess:
+                    self.db.complete_session(sess["session_id"], pts)
+
+                if pts > 0 and is_registered:
+                    self.db.record_game_stat(user_id, game.game_name, pts, True)
+
+                logger.info(f"Game finished: {game.game_name}, User={user_id}, Points={pts}")
+
+            return {"messages": msgs, "points": pts}
+
         except Exception as e:
-            logger.error(f"Error processing answer in game {game.game_name}: {e}", exc_info=True)
+            logger.error(f"Error processing answer in {game.game_name}: {e}", exc_info=True)
             return None
