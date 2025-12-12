@@ -7,17 +7,14 @@ logger = logging.getLogger(__name__)
 
 
 class GameManager:
-    """مدير الألعاب المركزي"""
-
     def __init__(self, db):
         self.db = db
         self.active_games: Dict[str, object] = {}
         self.game_sessions: Dict[str, dict] = {}
         self.games = self._load_games()
-        logger.info(f"تم تحميل {len(self.games)} لعبة")
+        logger.info(f"Loaded {len(self.games)} games")
 
     def _load_games(self) -> Dict[str, type]:
-        """تحميل الألعاب"""
         try:
             from games.iq_game import IqGame
             from games.guess_game import GuessGame
@@ -32,6 +29,8 @@ class GameManager:
             from games.chain_words_game import ChainWordsGame
             from games.fast_typing_game import FastTypingGame
             from games.roulette_game import RouletteGame
+            from games.mafia_game import MafiaGame
+            from games.text_games import QuestionGame, MentionGame, ChallengeGame, ConfessionGame
             
             return {
                 "ذكاء": IqGame,
@@ -46,31 +45,32 @@ class GameManager:
                 "لعبة": HumanAnimalPlantGame,
                 "سلسلة": ChainWordsGame,
                 "اسرع": FastTypingGame,
-                "روليت": RouletteGame
+                "روليت": RouletteGame,
+                "مافيا": MafiaGame,
+                "سؤال": QuestionGame,
+                "منشن": MentionGame,
+                "تحدي": ChallengeGame,
+                "اعتراف": ConfessionGame
             }
         except Exception as e:
-            logger.error(f"خطأ في تحميل الألعاب: {e}", exc_info=True)
+            logger.error(f"Error loading games: {e}", exc_info=True)
             return {}
 
     def get_active_count(self) -> int:
-        """عدد الألعاب النشطة"""
         return len(self.active_games)
 
     def get_total_games(self) -> int:
-        """إجمالي الألعاب"""
         return len(self.games)
 
     def is_game_active(self, context_id: str) -> bool:
-        """التحقق من وجود لعبة نشطة"""
         return context_id in self.active_games
 
     def stop_game(self, context_id: str) -> Optional[str]:
-        """إيقاف لعبة نشطة"""
         game = self.active_games.pop(context_id, None)
         self.game_sessions.pop(context_id, None)
         
         if game:
-            logger.info(f"تم إيقاف لعبة {game.game_name}")
+            logger.info(f"Stopped game {game.game_name}")
             return game.game_name
         
         return None
@@ -78,7 +78,6 @@ class GameManager:
     def start_game(self, context_id: str, game_name: str, user_id: str,
                    username: str, is_registered: bool, theme: str,
                    source_type: str) -> Optional[Dict]:
-        """بدء لعبة جديدة"""
         if game_name not in self.games:
             return {"messages": [TextMessage(text="اللعبة غير موجودة")], "points": 0}
         
@@ -111,18 +110,17 @@ class GameManager:
                 }
             
             question = game.start_game()
-            logger.info(f"تم بدء لعبة {game_name}")
+            logger.info(f"Started game {game_name}")
             
             return {"messages": [question], "points": 0}
         
         except Exception as e:
-            logger.error(f"خطأ في بدء اللعبة: {e}", exc_info=True)
+            logger.error(f"Error starting game: {e}", exc_info=True)
             return {"messages": [TextMessage(text="حدث خطأ في بدء اللعبة")], "points": 0}
 
     def process_message(self, context_id: str, user_id: str, username: str,
                         text: str, is_registered: bool, theme: str,
                         source_type: str) -> Optional[Dict]:
-        """معالجة رسالة المستخدم"""
         normalized = Config.normalize(text)
         
         if normalized in self.games:
@@ -155,7 +153,7 @@ class GameManager:
                 if points > 0 and is_registered:
                     self.db.record_game_stat(user_id, game.game_name, points, True)
                 
-                logger.info(f"انتهت لعبة {game.game_name} - النقاط: {points}")
+                logger.info(f"Game {game.game_name} ended - Points: {points}")
             
             elif result.get("response"):
                 messages.append(result["response"])
@@ -163,5 +161,5 @@ class GameManager:
             return {"messages": messages, "points": points}
         
         except Exception as e:
-            logger.error(f"خطأ في معالجة الإجابة: {e}", exc_info=True)
+            logger.error(f"Error processing answer: {e}", exc_info=True)
             return None
