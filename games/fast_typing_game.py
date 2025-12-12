@@ -1,9 +1,3 @@
-"""
-لعبة أسرع - Bot Mesh v20.1 FINAL
-Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | مع وقت 20 ثانية
-"""
-
 from games.base_game import BaseGame
 import random
 import time
@@ -11,9 +5,9 @@ from typing import Dict, Any, Optional
 
 
 class FastTypingGame(BaseGame):
-    """لعبة أسرع - الوحيدة مع وقت"""
+    """لعبة أسرع محسّنة"""
 
-    def __init__(self, line_bot_api):
+    def __init__(self, line_bot_api=None):
         super().__init__(line_bot_api, questions_count=5)
         self.game_name = "أسرع"
         self.supports_hint = False
@@ -37,7 +31,6 @@ class FastTypingGame(BaseGame):
             "السكينة في الطاعة", "اجعل نيتك لله", "الحق أحق أن يتبع", "اللهم حسن الخاتمة",
             "التوبة بداية جديدة", "لا حول ولا قوة إلا بالله"
         ]
-
         random.shuffle(self.phrases)
         self.used_phrases = []
 
@@ -75,6 +68,7 @@ class FastTypingGame(BaseGame):
         if not self.game_active:
             return None
 
+        # انتهاء الوقت
         if self._time_expired():
             self.previous_question = self.current_answer
             self.previous_answer = self.current_answer
