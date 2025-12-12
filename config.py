@@ -70,6 +70,17 @@ class Config:
         "مافيا": {"group_only": True}
     }
 
+    COMMANDS = {
+        "home": ["بداية", "start", "home"],
+        "games": ["العاب", "games", "الالعاب"],
+        "help": ["مساعدة", "help"],
+        "points": ["نقاطي"],
+        "leaderboard": ["صدارة"],
+        "join": ["انضم"],
+        "leave": ["انسحب"],
+        "stop": ["ايقاف", "stop"]
+    }
+
     @classmethod
     def validate(cls):
         if not cls.LINE_SECRET:
@@ -79,23 +90,27 @@ class Config:
         return True
 
     @classmethod
+    def get_port(cls) -> int:
+        try:
+            return int(os.getenv("PORT", cls.DEFAULT_PORT))
+        except Exception:
+            return cls.DEFAULT_PORT
+
+    @classmethod
     def normalize(cls, text: str) -> str:
         if not text:
             return ""
-        
         text = text[:1000].strip().lower()
-        
         replacements = {
             "أ": "ا", "إ": "ا", "آ": "ا",
             "ى": "ي", "ة": "ه",
             "ؤ": "و", "ئ": "ي"
         }
-        
         for old, new in replacements.items():
             text = text.replace(old, new)
-        
+        # إزالة التشكيل والرموز الخاصة
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-        
+        text = re.sub(r"[^\w\sء-ي]", "", text)
         return text
 
     @classmethod
@@ -107,6 +122,10 @@ class Config:
     @classmethod
     def is_valid_theme(cls, name: str) -> bool:
         return name in cls.THEMES
+
+    @classmethod
+    def list_themes(cls) -> list:
+        return list(cls.THEMES.keys())
 
     @classmethod
     def get_all_games(cls):
