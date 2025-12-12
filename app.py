@@ -70,12 +70,12 @@ def get_user_profile(line_api, user_id: str, src_type: str):
     user = db.get_user(user_id)
     
     if not user:
-        name = "User"
+        name = "مستخدم"
         if src_type == "user":
             try:
                 profile = line_api.get_profile(user_id)
                 if hasattr(profile, "display_name"):
-                    name = profile.display_name or "User"
+                    name = profile.display_name or "مستخدم"
             except Exception as e:
                 logger.error(f"خطأ في جلب الملف الشخصي: {e}")
         
@@ -243,7 +243,7 @@ def handle_message(event):
             if not user:
                 return
             
-            username = user.get("name", "User")
+            username = user.get("name", "مستخدم")
             points = user.get("points", 0)
             is_reg = bool(user.get("is_registered", 0))
             theme = user.get("theme", "فاتح")
@@ -270,13 +270,13 @@ def handle_message(event):
                 return
             
             # قائمة الألعاب
-            if norm in ["العاب", "games"]:
+            if norm in ["العاب", "games", "الالعاب"]:
                 msg = ui.games_menu(theme)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
             
             # مساعدة
-            if norm == "مساعدة":
+            if norm in ["مساعدة", "help"]:
                 msg = ui.help_screen(theme)
                 line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
                 return
@@ -319,7 +319,7 @@ def handle_message(event):
                 return
             
             # إيقاف الألعاب
-            if norm == "ايقاف":
+            if norm in ["ايقاف", "stop"]:
                 stopped = game_mgr.stop_game(ctx_id)
                 if stopped:
                     msg = ui.game_stopped(stopped, theme)
@@ -352,7 +352,7 @@ def handle_message(event):
                     line_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=msgs))
                 
                 gained = result.get("points", 0)
-                if gained > 0:
+                if gained > 0 and is_reg:
                     db.add_points(user_id, gained)
                     user_cache.pop(user_id, None)
     
