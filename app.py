@@ -22,6 +22,7 @@ from game_manager import GameManager
 
 app = Flask(__name__)
 
+# إعداد Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -29,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("botmesh")
 
-# Validate config on startup
+# التحقق من الإعدادات
 try:
     Config.validate()
     logger.info("تم التحقق من الإعدادات بنجاح")
@@ -37,13 +38,16 @@ except Exception as e:
     logger.error(f"خطأ في الإعدادات: {e}")
     sys.exit(1)
 
+# إعداد LINE SDK
 configuration = Configuration(access_token=Config.LINE_ACCESS_TOKEN)
 handler = WebhookHandler(Config.LINE_SECRET)
 
+# إعداد المكونات
 db = Database(Config.DATABASE_PATH)
 ui = UIBuilder()
 game_mgr = GameManager(db)
 
+# التخزين المؤقت
 user_sessions: Dict[str, Any] = {}
 pending_registrations: Dict[str, bool] = {}
 user_rate_limit = defaultdict(list)
@@ -51,6 +55,7 @@ user_cache: Dict[str, dict] = {}
 
 
 def is_rate_limited(user_id: str) -> bool:
+    """فحص معدل الرسائل"""
     now = datetime.utcnow()
     window = timedelta(seconds=Config.RATE_LIMIT_WINDOW)
     timestamps = [t for t in user_rate_limit[user_id] if now - t < window]
@@ -65,39 +70,37 @@ def is_rate_limited(user_id: str) -> bool:
 
 
 def safe_reply(line_api: MessagingApi, reply_token: str, messages: list):
-    """
-    Wrapper لـ line_api.reply_message يحمي من ApiException ويطبع تفاصيل قابلة للتّتبُّع.
-    """
+    """إرسال الرد بشكل آمن"""
     try:
         if not messages:
             return
-        line_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+        line_api.reply_message(
+            ReplyMessageRequest(reply_token=reply_token, messages=messages)
+        )
     except ApiException as e:
-        # اطبع تفاصيل الخطأ من LINE (إذا متاحة في الاستجابة)
         try:
             body = getattr(e, "body", None)
             status = getattr(e, "status", None)
-            logger.error(f"ApiException أثناء الرد (status={status}) body={body}")
+            logger.error(f"ApiException (status={status}) body={body}")
         except Exception:
-            logger.exception("ApiException غير متوقعة عند محاولة قراءة تفاصيل الاستجابة.")
-        # لا نعيد رفع الاستثناء كي لا ينهار السيرفر، لكن نسجل تريل تريس
-        logger.exception("فشل إرسال الرسالة إلى LINE API.")
+            logger.exception("ApiException غير متوقعة")
+        logger.exception("فشل إرسال الرسالة")
 
 
 def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Optional[dict]:
-    """
-    إحضار المستخدم من الكاش أو من قاعدة البيانات. 
-    إذا غير موجود، ننشئه (مع محاولة جلب الملف الشخصي من LINE).
-    """
+    """الحصول على معلومات المستخدم"""
     if not user_id:
         return None
 
+    # التحقق من الكاش
     cached = user_cache.get(user_id)
     if cached and datetime.utcnow() - cached.get("_cached_at", datetime.min) < timedelta(minutes=5):
         return cached
 
+    # الحصول من قاعدة البيانات
     user = db.get_user(user_id)
 
+    # إنشاء مستخدم جديد
     if not user:
         name = "مستخدم"
         if src_type == "user":
@@ -106,10 +109,11 @@ def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Opt
                 if hasattr(profile, "display_name"):
                     name = profile.display_name or "مستخدم"
             except Exception as e:
-                logger.error(f"خطأ في جلب الملف الشخصي من LINE: {e}")
+                logger.error(f"خطأ في جلب الملف الشخصي: {e}")
         db.create_user(user_id, name[:100])
         user = db.get_user(user_id)
 
+    # حفظ في الكاش
     if user:
         user["_cached_at"] = datetime.utcnow()
         user_cache[user_id] = user
@@ -118,6 +122,7 @@ def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Opt
 
 @app.route("/", methods=["GET"])
 def home():
+    """الصفحة الرئيسية"""
     stats = db.get_stats()
     active = game_mgr.get_active_count()
     try:
@@ -126,7 +131,7 @@ def home():
         db_size = 0.0
 
     return f"""<!DOCTYPE html>
-<html dir="rtl">
+<html dir="rtl" lang="ar">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -225,6 +230,7 @@ h1 {{
 
 @app.route("/health", methods=["GET"])
 def health():
+    """فحص صحة التطبيق"""
     return jsonify({
         "status": "ok",
         "timestamp": datetime.utcnow().isoformat(),
@@ -235,6 +241,7 @@ def health():
 
 @app.route("/callback", methods=["POST"])
 def callback():
+    """معالجة رسائل LINE"""
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
 
@@ -245,17 +252,16 @@ def callback():
         abort(400)
     except Exception as e:
         logger.exception(f"خطأ في معالجة Webhook: {e}")
-        # لا نعيد رفع الخطأ لأن Line يتوقع 200/OK عادة لتجنب retries مفرطة
     return "OK", 200
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
+    """معالجة الرسائل النصية"""
     try:
-        # التأكد من وجود user_id (في بعض أنواع الأحداث قد لا يتوفر)
         user_id = getattr(event.source, "user_id", None)
         if not user_id:
-            logger.warning("حدث بدون user_id؛ تجاهلنا الرسالة.")
+            logger.warning("حدث بدون user_id")
             return
 
         text = (event.message.text or "").strip()
@@ -277,8 +283,9 @@ def handle_message(event):
             user = get_user_profile(line_api, user_id, src_type)
 
             if not user:
-                # إذا لم نستطع إنشاء/جلب المستخدم، نرسل رسالة بسيطة (أو نتجاهل)
-                safe_reply(line_api, event.reply_token, [TextMessage(text="خطأ فني: تعذر جلب بيانات المستخدم.")])
+                safe_reply(line_api, event.reply_token, [
+                    TextMessage(text="خطأ فني: تعذر جلب بيانات المستخدم.")
+                ])
                 return
 
             username = user.get("name", "مستخدم")
@@ -286,7 +293,7 @@ def handle_message(event):
             is_reg = bool(user.get("is_registered", 0))
             theme = user.get("theme", "فاتح")
 
-            # تسجيل اسم جديد (قيد التسجيل)
+            # معالجة التسجيل
             if user_id in pending_registrations:
                 if 0 < len(text) <= 100:
                     db.update_user(user_id, name=text, is_registered=1)
@@ -294,13 +301,13 @@ def handle_message(event):
                     pending_registrations.pop(user_id, None)
                     msg = ui.registration_success(text, points, theme)
                 else:
-                    msg = TextMessage(text="الاسم غير صالح")
+                    msg = TextMessage(text="الاسم غير صالح (1-100 حرف)")
                 safe_reply(line_api, event.reply_token, [msg])
                 return
 
             norm = Config.normalize(text)
 
-            # شاشات وأوامر ثابتة
+            # الأوامر الأساسية
             if norm in ["بداية", "start", "home"]:
                 msg = ui.home_screen(username, points, is_reg, theme)
                 safe_reply(line_api, event.reply_token, [msg])
@@ -330,7 +337,7 @@ def handle_message(event):
 
             if norm == "انضم":
                 if is_reg:
-                    msg = TextMessage(text=f"انت مسجل بالفعل\nالاسم: {username}\nالنقاط: {points}")
+                    msg = TextMessage(text=f"أنت مسجل بالفعل\nالاسم: {username}\nالنقاط: {points}")
                 else:
                     pending_registrations[user_id] = True
                     msg = ui.registration_prompt(theme)
@@ -343,7 +350,7 @@ def handle_message(event):
                     user_cache.pop(user_id, None)
                     msg = ui.unregister_confirm(username, points, theme)
                 else:
-                    msg = TextMessage(text="انت غير مسجل")
+                    msg = TextMessage(text="أنت غير مسجل")
                 safe_reply(line_api, event.reply_token, [msg])
                 return
 
@@ -361,7 +368,7 @@ def handle_message(event):
                     user_cache.pop(user_id, None)
                     msg = ui.home_screen(username, points, is_reg, new_theme)
                 else:
-                    msg = TextMessage(text="ثيم غير موجود\nالثيمات المتاحة:\nفاتح - داكن")
+                    msg = TextMessage(text="ثيم غير موجود\nالثيمات المتاحة:\n• فاتح\n• داكن")
                 safe_reply(line_api, event.reply_token, [msg])
                 return
 
@@ -388,5 +395,4 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", Config.DEFAULT_PORT))
     logger.info(f"بدء التطبيق على المنفذ {port}")
-    # debug=False و use_reloader=False في بيئة الإنتاج
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
