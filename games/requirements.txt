@@ -1,0 +1,9 @@
+line-bot-sdk
+Flask
+Werkzeug
+gunicorn
+requests
+google-generativeai
+python-dateutil
+python-dotenv
+gevent
