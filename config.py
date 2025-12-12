@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class Config:
     BOT_NAME = "Bot Mesh"
     VERSION = "1.0"
@@ -108,7 +107,6 @@ class Config:
         }
         for old, new in replacements.items():
             text = text.replace(old, new)
-        # إزالة التشكيل والرموز الخاصة
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
         text = re.sub(r"[^\w\sء-ي]", "", text)
         return text
