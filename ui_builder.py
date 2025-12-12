@@ -1,29 +1,37 @@
 from typing import Dict, List, Optional
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
+from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
 
 class UIBuilder:
-    """بناء واجهات Flex Messages بتصميم iOS"""
-
     def __init__(self):
         self.config = Config
 
     def _create_flex(self, alt_text: str, flex_dict: dict) -> FlexMessage:
-        """إنشاء رسالة Flex"""
-        return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_dict))
+        return FlexMessage(
+            alt_text=alt_text,
+            contents=FlexContainer.from_dict(flex_dict),
+            quick_reply=self._get_quick_reply()
+        )
 
     def _create_text(self, text: str) -> TextMessage:
-        """إنشاء رسالة نصية"""
-        return TextMessage(text=text)
+        return TextMessage(text=text, quick_reply=self._get_quick_reply())
+
+    def _get_quick_reply(self) -> QuickReply:
+        return QuickReply(items=[
+            QuickReplyItem(action=MessageAction(label="بداية", text="بداية")),
+            QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
+            QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
+            QuickReplyItem(action=MessageAction(label="صدارة", text="صدارة")),
+            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
+            QuickReplyItem(action=MessageAction(label="ايقاف", text="ايقاف"))
+        ])
 
     def _get_colors(self, theme: str = None) -> Dict[str, str]:
-        """الحصول على ألوان الثيم"""
         return self.config.get_theme(theme)
 
     def home_screen(self, username: str, points: int, is_registered: bool, 
                     theme: str, mode: str = "فردي") -> FlexMessage:
-        """شاشة البداية"""
         c = self._get_colors(theme)
         status = "مسجل" if is_registered else "زائر"
         status_color = c["success"] if is_registered else c["text3"]
@@ -150,7 +158,6 @@ class UIBuilder:
         })
 
     def help_screen(self, theme: str) -> FlexMessage:
-        """شاشة المساعدة"""
         c = self._get_colors(theme)
         
         return self._create_flex("المساعدة", {
@@ -237,7 +244,7 @@ class UIBuilder:
                             },
                             {
                                 "type": "text",
-                                "text": "ثيم [الاسم]\nمثال: ثيم اسود",
+                                "text": "ثيم فاتح او ثيم داكن",
                                 "size": "sm",
                                 "color": c["text2"],
                                 "wrap": True,
@@ -250,7 +257,6 @@ class UIBuilder:
         })
 
     def my_points(self, username: str, points: int, stats: Optional[Dict], theme: str) -> FlexMessage:
-        """شاشة النقاط"""
         c = self._get_colors(theme)
         
         rows = []
@@ -281,7 +287,7 @@ class UIBuilder:
         else:
             rows.append({
                 "type": "text",
-                "text": "لا توجد إحصائيات\nابدأ باللعب الآن",
+                "text": "لا توجد احصائيات",
                 "size": "sm",
                 "color": c["text3"],
                 "align": "center",
@@ -366,7 +372,6 @@ class UIBuilder:
         })
 
     def leaderboard(self, top_users: List[tuple], theme: str) -> FlexMessage:
-        """لوحة الصدارة"""
         c = self._get_colors(theme)
         rows = []
         
@@ -443,23 +448,18 @@ class UIBuilder:
         })
 
     def registration_prompt(self, theme: str) -> TextMessage:
-        """رسالة طلب التسجيل"""
-        return self._create_text("ارسل اسمك للتسجيل\nالاسم يجب ان يكون من 1-100 حرف")
+        return self._create_text("ارسل اسمك للتسجيل")
 
     def registration_success(self, username: str, points: int, theme: str) -> TextMessage:
-        """رسالة نجاح التسجيل"""
         return self._create_text(f"تم التسجيل بنجاح\n\nالاسم: {username}\nالنقاط: {points}")
 
     def unregister_confirm(self, username: str, points: int, theme: str) -> TextMessage:
-        """رسالة تأكيد الانسحاب"""
         return self._create_text(f"تم الانسحاب\n\nالاسم: {username}\nالنقاط: {points}")
 
     def game_stopped(self, game_name: str, theme: str) -> TextMessage:
-        """رسالة إيقاف اللعبة"""
         return self._create_text(f"تم ايقاف لعبة {game_name}")
 
     def games_menu(self, theme: str, top_games: List[str] = None) -> FlexMessage:
-        """قائمة الألعاب"""
         c = self._get_colors(theme)
         all_games = self.config.get_all_games()
         
@@ -468,7 +468,7 @@ class UIBuilder:
         else:
             order = all_games
         
-        order = order[:12]
+        order = order[:18]
         
         rows = []
         for i in range(0, len(order), 3):
