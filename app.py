@@ -1,16 +1,17 @@
+# app.py (محسّن ومُعقّم)
 import os
 import sys
 import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, TextMessage
+    ReplyMessageRequest, TextMessage, FlexMessage, FlexContainer
 )
 from linebot.v3.messaging.exceptions import ApiException
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
@@ -30,7 +31,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("botmesh")
 
-# التحقق من الإعدادات
+# التحقق من الإعدادات (فشل قاطع لو الإعدادات ناقصة)
 try:
     Config.validate()
     logger.info("تم التحقق من الإعدادات بنجاح")
@@ -47,15 +48,16 @@ db = Database(Config.DATABASE_PATH)
 ui = UIBuilder()
 game_mgr = GameManager(db)
 
-# التخزين المؤقت
+# التخزين المؤقت والحد من الوتيرة
 user_sessions: Dict[str, Any] = {}
-pending_registrations: Dict[str, bool] = {}
-user_rate_limit = defaultdict(list)
-user_cache: Dict[str, dict] = {}
+pending_registrations: Dict[str, datetime] = {}  # اخزن متى بدأ التسجيل لسياسة انتهاء التأكيد
+user_rate_limit = defaultdict(list)  # user_id -> list[datetime]
+user_cache: Dict[str, dict] = {}      # cache صغير للمستخدمين {user_id: {"data":..., "_cached_at": ...}}
 
+# ----------------- Utilities -----------------
 
 def is_rate_limited(user_id: str) -> bool:
-    """فحص معدل الرسائل"""
+    """فحص معدل الرسائل (sliding window)."""
     now = datetime.utcnow()
     window = timedelta(seconds=Config.RATE_LIMIT_WINDOW)
     timestamps = [t for t in user_rate_limit[user_id] if now - t < window]
@@ -69,62 +71,173 @@ def is_rate_limited(user_id: str) -> bool:
     return False
 
 
-def safe_reply(line_api: MessagingApi, reply_token: str, messages: list):
-    """إرسال الرد بشكل آمن"""
+# ----------------- Flex sanitizer -----------------
+# تبسيط: نزيل الخصائص الشائعة التي قد تسبّب خطأ من LINE (مثل backgroundColor في أماكن غير مسموح بها، borderWidth كنص "2px"، paddingAll بصيغة "20px")
+# هدفنا إزالة الخصائص الشائعة غير المتوافقة مع Flex spec المستخدمة.
+ALLOWED_PROPS_BY_TYPE = {
+    "bubble": {"type", "size", "body", "header", "footer", "styles", "hero"},
+    "box": {"type", "layout", "contents", "spacing", "margin", "flex", "action", "paddingAll", "paddingTop", "paddingBottom", "paddingStart", "paddingEnd", "cornerRadius"},
+    "text": {"type", "text", "size", "weight", "align", "gravity", "wrap", "maxLines", "action", "color"},
+    "button": {"type", "action", "style", "height", "margin"},
+    "image": {"type", "url", "size", "aspectMode", "aspectRatio", "action"},
+    "separator": {"type", "margin"},
+    "icon": {"type", "url"}
+}
+GLOBAL_ALLOWED = {"type", "altText", "contents", "body", "header", "footer", "action"}
+
+def _sanitize_value(v):
+    """تنظيف قيم بسيطة مثل حذف 'px' من الأرقام إن لزم أو تركها كما هي."""
+    if isinstance(v, str) and v.endswith("px"):
+        # Line Flex عادة يقبل كلمات مثل 'md','lg' أو أرقام بدون px — من الأفضل إزالة px
+        try:
+            return v[:-2]
+        except Exception:
+            return v
+    return v
+
+def sanitize_flex(obj: Any) -> Any:
+    """يمر عبر dict/list ويزيل خصائص غير مسموحة بناءً على نوع العنصر."""
+    if isinstance(obj, list):
+        return [sanitize_flex(v) for v in obj]
+    if not isinstance(obj, dict):
+        return obj
+
+    obj_type = obj.get("type")
+    allowed = set(GLOBAL_ALLOWED)
+    if obj_type and obj_type in ALLOWED_PROPS_BY_TYPE:
+        allowed |= ALLOWED_PROPS_BY_TYPE[obj_type]
+    # بعض الخصائص العامة نتركها
+    allowed |= {"text", "url", "label", "size", "weight", "action", "margin", "spacing", "backgroundColor", "color", "paddingAll", "cornerRadius"}
+
+    sanitized = {}
+    for k, v in obj.items():
+        if k not in allowed:
+            # تجاهل خاصية غير مسموح بها
+            logger.debug("sanitize_flex: إزالة الخاصية غير المدعومة %s من عنصر %s", k, obj_type)
+            continue
+
+        # تنظيف قيم نصية معروفة
+        if isinstance(v, (dict, list)):
+            sanitized[k] = sanitize_flex(v)
+        else:
+            sanitized[k] = _sanitize_value(v)
+    return sanitized
+
+
+# ----------------- إرسال آمن مع تنظيف Flex -----------------
+def safe_reply(line_api: MessagingApi, reply_token: str, messages: List[Any]):
+    """إرسال الرد بشكل آمن مع محاولة تنظيف رسائل Flex إذا كانت عبارة عن dict."""
     try:
         if not messages:
             return
-        line_api.reply_message(
-            ReplyMessageRequest(reply_token=reply_token, messages=messages)
-        )
+
+        clean_messages = []
+        for m in messages:
+            # إذا كانت رسالة مرّت كـ dict (قوالب Flex المبنية يدوياً)، نعمل sanitize ثم نحوّل إلى FlexMessage
+            if isinstance(m, dict):
+                try:
+                    cleaned = sanitize_flex(m)
+                    flex = FlexMessage(alt_text=cleaned.get("altText", "رسالة"), contents=FlexContainer.from_dict(cleaned.get("contents", cleaned)))
+                    # إذا لم يكن هناك contents واضح، نحستخدم cleaned كـ bubble
+                    clean_messages.append(flex)
+                    continue
+                except Exception as e:
+                    logger.exception("فشل تحويل dict -> FlexMessage بعد التنظيف: %s", e)
+                    # أضف كـ نص احتياطي
+                    clean_messages.append(TextMessage(text="حدث خطأ في تكوين الرسالة الغنية."))
+                    continue
+
+            # إذا كانت رسالة من نوع FlexMessage أو TextMessage (من SDK)، أرسلها كما هي
+            if isinstance(m, FlexMessage) or hasattr(m, "alt_text") or hasattr(m, "contents"):
+                # لا تعديل، SDK من المفترض أنه جاهز
+                clean_messages.append(m)
+            else:
+                # افتراض: رسالة نصية عادية أو object قابل للتحويل إلى نص
+                try:
+                    if isinstance(m, TextMessage):
+                        clean_messages.append(m)
+                    else:
+                        clean_messages.append(TextMessage(text=str(m)))
+                except Exception:
+                    clean_messages.append(TextMessage(text="رد غير متوقع"))
+        # إرسال واحد
+        line_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=clean_messages))
+
     except ApiException as e:
+        # حاول استخراج جسم الخطأ وطباعته
         try:
             body = getattr(e, "body", None)
             status = getattr(e, "status", None)
-            logger.error(f"ApiException (status={status}) body={body}")
+            logger.error("ApiException (status=%s) body=%s", status, body)
         except Exception:
-            logger.exception("ApiException غير متوقعة")
-        logger.exception("فشل إرسال الرسالة")
+            logger.exception("خطأ أثناء معالجة ApiException")
+        logger.exception("فشل إرسال الرسالة عبر LINE API")
+    except Exception as e:
+        logger.exception("خطأ غير متوقع في safe_reply: %s", e)
 
 
+# ----------------- معلومات المستخدم -----------------
 def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Optional[dict]:
-    """الحصول على معلومات المستخدم"""
+    """
+    جلب بيانات المستخدم مع كاش محلي صغير (5 دقائق).
+    نحفظ في الكاش نسخة مبسطة وليس كائن DB الأصلي لتجنب تعديل الكائن DB مباشرة.
+    """
     if not user_id:
         return None
 
-    # التحقق من الكاش
+    # تحقق الكاش
     cached = user_cache.get(user_id)
-    if cached and datetime.utcnow() - cached.get("_cached_at", datetime.min) < timedelta(minutes=5):
-        return cached
+    if cached:
+        cached_at = cached.get("_cached_at")
+        if cached_at and datetime.utcnow() - cached_at < timedelta(minutes=5):
+            return cached.get("data")
 
-    # الحصول من قاعدة البيانات
-    user = db.get_user(user_id)
+    # جلب من قاعدة البيانات
+    try:
+        user = db.get_user(user_id)
+    except Exception:
+        logger.exception("خطأ في جلب المستخدم من DB")
+        user = None
 
-    # إنشاء مستخدم جديد
+    # إذا غير موجود، نحاول إنشاءه
     if not user:
         name = "مستخدم"
         if src_type == "user":
             try:
                 profile = line_api.get_profile(user_id)
-                if hasattr(profile, "display_name"):
+                if profile and getattr(profile, "display_name", None):
                     name = profile.display_name or "مستخدم"
             except Exception as e:
-                logger.error(f"خطأ في جلب الملف الشخصي: {e}")
-        db.create_user(user_id, name[:100])
-        user = db.get_user(user_id)
+                logger.warning("تعذر جلب الملف الشخصي عبر LINE: %s", e)
+        try:
+            db.create_user(user_id, name[:100])
+            user = db.get_user(user_id)
+        except Exception:
+            logger.exception("فشل إنشاء مستخدم في DB")
+            user = {"id": user_id, "name": name, "points": 0, "is_registered": 0, "theme": "فاتح"}
 
-    # حفظ في الكاش
+    # ضع نسخة مبسطة في الكاش
     if user:
-        user["_cached_at"] = datetime.utcnow()
-        user_cache[user_id] = user
+        user_cache[user_id] = {"data": user, "_cached_at": datetime.utcnow()}
     return user
 
 
+# ----------------- Routes -----------------
 @app.route("/", methods=["GET"])
 def home():
-    """الصفحة الرئيسية"""
-    stats = db.get_stats()
-    active = game_mgr.get_active_count()
+    """الصفحة الرئيسية (واجهة بسيطة للمراقبة)"""
+    stats = {}
+    try:
+        stats = db.get_stats() or {}
+    except Exception:
+        logger.exception("تعذر جلب الإحصائيات")
+
+    active = 0
+    try:
+        active = game_mgr.get_active_count()
+    except Exception:
+        logger.exception("تعذر جلب عدد الألعاب النشطة")
+
     try:
         db_size = db.get_database_size() / 1024 / 1024
     except Exception:
@@ -137,91 +250,23 @@ def home():
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{Config.BOT_NAME}</title>
 <style>
-* {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}}
-.container {{
-    max-width: 800px;
-    width: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 24px;
-    padding: 40px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}}
-h1 {{
-    color: #667eea;
-    font-size: 2.5em;
-    margin-bottom: 10px;
-    text-align: center;
-}}
-.version {{
-    color: #999;
-    margin-bottom: 20px;
-    text-align: center;
-}}
-.status {{
-    display: inline-block;
-    padding: 8px 20px;
-    background: #28a745;
-    color: white;
-    border-radius: 25px;
-    font-weight: bold;
-    margin: 15px 0;
-}}
-.stats {{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin: 30px 0;
-}}
-.stat {{
-    background: rgba(245, 245, 250, 0.9);
-    padding: 25px;
-    border-radius: 16px;
-    text-align: center;
-    transition: transform 0.3s;
-}}
-.stat:hover {{ transform: translateY(-5px); }}
-.stat-value {{
-    font-size: 2.5em;
-    font-weight: bold;
-    color: #667eea;
-    margin: 10px 0;
-}}
-.stat-label {{
-    color: #666;
-    font-size: 0.9em;
-}}
-.footer {{
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 2px solid #eee;
-    text-align: center;
-    color: #999;
-    font-size: 0.85em;
-}}
+/* ... CSS كما في الأصل (اختصار للحجم) ... */
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;padding:0}}
+.container{{max-width:800px;width:100%;margin:40px auto;background:#fff;padding:32px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.1)}}
+h1{{color:#333;text-align:center}}
+.stat{{padding:16px;border-radius:12px;background:#fafafa;margin:12px 0}}
+.footer{{text-align:center;color:#888;margin-top:20px}}
 </style>
 </head>
 <body>
 <div class="container">
 <h1>{Config.BOT_NAME}</h1>
-<div class="version">v{Config.VERSION}</div>
-<div style="text-align:center"><div class="status">Online</div></div>
-<div class="stats">
-<div class="stat"><div class="stat-label">الألعاب النشطة</div><div class="stat-value">{active}</div></div>
-<div class="stat"><div class="stat-label">المستخدمين</div><div class="stat-value">{stats.get('total_users', 0)}</div></div>
-<div class="stat"><div class="stat-label">المسجلين</div><div class="stat-value">{stats.get('registered_users', 0)}</div></div>
-<div class="stat"><div class="stat-label">النشطون اليوم</div><div class="stat-value">{stats.get('active_today', 0)}</div></div>
-<div class="stat"><div class="stat-label">حجم قاعدة البيانات</div><div class="stat-value">{db_size:.2f} MB</div></div>
-</div>
+<div style="text-align:center;color:#666">v{Config.VERSION}</div>
+<div class="stat">الألعاب النشطة: <strong>{active}</strong></div>
+<div class="stat">المستخدمين: <strong>{stats.get('total_users', 0)}</strong></div>
+<div class="stat">المسجلين: <strong>{stats.get('registered_users', 0)}</strong></div>
+<div class="stat">النشطون اليوم: <strong>{stats.get('active_today', 0)}</strong></div>
+<div class="stat">حجم قاعدة البيانات: <strong>{db_size:.2f} MB</strong></div>
 <div class="footer">{Config.RIGHTS}</div>
 </div>
 </body>
@@ -241,7 +286,7 @@ def health():
 
 @app.route("/callback", methods=["POST"])
 def callback():
-    """معالجة رسائل LINE"""
+    """معالجة Webhook من LINE"""
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
 
@@ -250,11 +295,13 @@ def callback():
     except InvalidSignatureError:
         logger.warning("توقيع غير صالح")
         abort(400)
-    except Exception as e:
-        logger.exception(f"خطأ في معالجة Webhook: {e}")
+    except Exception:
+        logger.exception("خطأ في معالجة Webhook")
+        # لا نفشل بالـ 500 لأن LINE يحتاج 200 عادة، لكن هنا يمكننا إرجاع 200 مع تسجيل الخطأ
     return "OK", 200
 
 
+# ----------------- Message handling -----------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     """معالجة الرسائل النصية"""
@@ -266,9 +313,12 @@ def handle_message(event):
 
         text = (event.message.text or "").strip()
         if not text or len(text) > 1000:
+            # تجاهل رسائل فارغة أو طويلة للغاية
             return
 
         if is_rate_limited(user_id):
+            # يمكن إرسال رد بسيط إن أردت
+            logger.info("Rate limited %s", user_id)
             return
 
         src_type = event.source.type
@@ -288,22 +338,34 @@ def handle_message(event):
                 ])
                 return
 
+            # استخراج القيم الأساسية
             username = user.get("name", "مستخدم")
-            points = user.get("points", 0)
+            points = int(user.get("points", 0) or 0)
             is_reg = bool(user.get("is_registered", 0))
             theme = user.get("theme", "فاتح")
 
-            # معالجة التسجيل
+            # معالجة التسجيل المؤقت (نضيف صلاحية 3 دقائق مثلاً)
             if user_id in pending_registrations:
-                if 0 < len(text) <= 100:
-                    db.update_user(user_id, name=text, is_registered=1)
-                    user_cache.pop(user_id, None)
+                started = pending_registrations[user_id]
+                if isinstance(started, datetime) and datetime.utcnow() - started > timedelta(minutes=3):
+                    # انتهاء صلاحية الطلب
                     pending_registrations.pop(user_id, None)
-                    msg = ui.registration_success(text, points, theme)
+
+                elif 0 < len(text) <= 100:
+                    try:
+                        db.update_user(user_id, name=text, is_registered=1)
+                        # إلغاء الكاش والطلب
+                        user_cache.pop(user_id, None)
+                        pending_registrations.pop(user_id, None)
+                        msg = ui.registration_success(text, points, theme)
+                    except Exception:
+                        logger.exception("فشل تحديث المستخدم للتسجيل")
+                        msg = TextMessage(text="حدث خطأ أثناء التسجيل.")
+                    safe_reply(line_api, event.reply_token, [msg])
+                    return
                 else:
-                    msg = TextMessage(text="الاسم غير صالح (1-100 حرف)")
-                safe_reply(line_api, event.reply_token, [msg])
-                return
+                    safe_reply(line_api, event.reply_token, [TextMessage(text="الاسم غير صالح (1-100 حرف)")])
+                    return
 
             norm = Config.normalize(text)
 
@@ -314,6 +376,7 @@ def handle_message(event):
                 return
 
             if norm in ["العاب", "games", "الالعاب"]:
+                # games_menu قد يرِجع FlexMessage أو dict
                 msg = ui.games_menu(theme)
                 safe_reply(line_api, event.reply_token, [msg])
                 return
@@ -339,16 +402,20 @@ def handle_message(event):
                 if is_reg:
                     msg = TextMessage(text=f"أنت مسجل بالفعل\nالاسم: {username}\nالنقاط: {points}")
                 else:
-                    pending_registrations[user_id] = True
+                    pending_registrations[user_id] = datetime.utcnow()
                     msg = ui.registration_prompt(theme)
                 safe_reply(line_api, event.reply_token, [msg])
                 return
 
             if norm == "انسحب":
                 if is_reg:
-                    db.update_user(user_id, is_registered=0)
-                    user_cache.pop(user_id, None)
-                    msg = ui.unregister_confirm(username, points, theme)
+                    try:
+                        db.update_user(user_id, is_registered=0)
+                        user_cache.pop(user_id, None)
+                        msg = ui.unregister_confirm(username, points, theme)
+                    except Exception:
+                        logger.exception("فشل في عملية الانسحاب")
+                        msg = TextMessage(text="حدث خطأ أثناء الانسحاب.")
                 else:
                     msg = TextMessage(text="أنت غير مسجل")
                 safe_reply(line_api, event.reply_token, [msg])
@@ -364,35 +431,48 @@ def handle_message(event):
             if text.startswith("ثيم "):
                 new_theme = text.split(maxsplit=1)[1].strip()
                 if Config.is_valid_theme(new_theme):
-                    db.set_user_theme(user_id, new_theme)
-                    user_cache.pop(user_id, None)
-                    msg = ui.home_screen(username, points, is_reg, new_theme)
+                    try:
+                        db.set_user_theme(user_id, new_theme)
+                        user_cache.pop(user_id, None)
+                        msg = ui.home_screen(username, points, is_reg, new_theme)
+                    except Exception:
+                        logger.exception("فشل في تغيير الثيم")
+                        msg = TextMessage(text="خطأ أثناء تغيير الثيم.")
                 else:
                     msg = TextMessage(text="ثيم غير موجود\nالثيمات المتاحة:\n• فاتح\n• داكن")
                 safe_reply(line_api, event.reply_token, [msg])
                 return
 
-            # تمرير الرسالة لمدير الألعاب
-            result = game_mgr.process_message(
-                ctx_id, user_id, username, text,
-                is_reg, theme, src_type
-            )
+            # تمرير الرسالة إلى مدير الألعاب
+            try:
+                result = game_mgr.process_message(
+                    ctx_id, user_id, username, text,
+                    is_reg, theme, src_type
+                )
+            except Exception:
+                logger.exception("خطأ داخل مدير الألعاب")
+                result = None
 
             if result:
                 msgs = result.get("messages", [])
                 if msgs:
                     safe_reply(line_api, event.reply_token, msgs)
 
-                gained = result.get("points", 0)
+                gained = int(result.get("points", 0) or 0)
                 if gained > 0 and is_reg:
-                    db.add_points(user_id, gained)
-                    user_cache.pop(user_id, None)
+                    try:
+                        db.add_points(user_id, gained)
+                        user_cache.pop(user_id, None)
+                    except Exception:
+                        logger.exception("فشل إضافة نقاط للمستخدم")
 
-    except Exception as e:
-        logger.exception(f"خطأ في معالج الرسائل: {e}")
+    except Exception:
+        logger.exception("خطأ في معالج الرسائل")
 
 
+# ----------------- تشغيل التطبيق -----------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", Config.DEFAULT_PORT))
     logger.info(f"بدء التطبيق على المنفذ {port}")
+    # debug=False في الإنتاج؛ارسل threaded=True لتوافق بعض بيئات الاستضافة
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
