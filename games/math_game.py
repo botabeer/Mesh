@@ -1,9 +1,3 @@
-"""
-لعبة رياضيات - Bot Mesh v20.1 FINAL
-Created by: Abeer Aldosari © 2025
-✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | بدون وقت
-"""
-
 from games.base_game import BaseGame
 import random
 from typing import Dict, Any, Optional
@@ -65,6 +59,7 @@ class MathGame(BaseGame):
         }
 
     def start_game(self):
+        """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
         self.previous_question = None
@@ -73,20 +68,19 @@ class MathGame(BaseGame):
         return self.get_question()
 
     def get_question(self):
+        """الحصول على سؤال"""
         q_data = self.generate_math_question()
         self.current_question_data = q_data
         self.current_answer = q_data["answer"]
 
         return self.build_question_flex(
             question_text=q_data["question"],
-            additional_info=f"المستوى {q_data['level_name']}"
+            additional_info=f"المستوى: {q_data['level_name']}"
         )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        """التحقق من الإجابة"""
         if not self.game_active or user_id in self.answered_users:
-            return None
-
-        if self.team_mode and user_id not in self.joined_users:
             return None
 
         answer = user_answer.strip()
@@ -96,10 +90,10 @@ class MathGame(BaseGame):
             hint = f"الجواب من {len(self.current_answer)} رقم"
             if len(self.current_answer) > 1:
                 hint = f"الجواب من {len(self.current_answer)} ارقام"
-            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
+            return {"message": hint, "points": 0}
 
         if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"الجواب {self.current_answer}"
+            reveal = f"الجواب: {self.current_answer}"
             self.previous_question = self.current_question_data["question"] if self.current_question_data else None
             self.previous_answer = self.current_answer
             self.current_question += 1
@@ -107,13 +101,10 @@ class MathGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"{reveal}\n\n{result.get('message', '')}"
+                result["message"] = f"{reveal}\n\nانتهت اللعبة"
                 return result
 
             return {"message": reveal, "response": self.get_question(), "points": 0}
-
-        if self.team_mode and normalized in ["لمح", "جاوب"]:
-            return None
 
         try:
             user_num = int(answer)
@@ -123,11 +114,7 @@ class MathGame(BaseGame):
         if user_num == int(self.current_answer):
             total_points = 1
 
-            if self.team_mode:
-                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
-                self.add_team_score(team, total_points)
-            else:
-                self.add_score(user_id, display_name, total_points)
+            self.add_score(user_id, display_name, total_points)
 
             self.previous_question = self.current_question_data["question"] if self.current_question_data else None
             self.previous_answer = self.current_answer
