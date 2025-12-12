@@ -30,6 +30,8 @@ class GameManager:
             from games.fast_typing_game import FastTypingGame
             from games.roulette_game import RouletteGame
             from games.mafia_game import MafiaGame
+            
+            # ✅ التصحيح: استيراد الألعاب النصية بشكل منفصل
             from games.text_games import QuestionGame, MentionGame, ChallengeGame, ConfessionGame
             
             return {
@@ -110,12 +112,12 @@ class GameManager:
                 }
             
             question = game.start_game()
-            logger.info(f"Started game {game_name}")
+            logger.info(f"Started game {game_name} for user {user_id}")
             
             return {"messages": [question], "points": 0}
         
         except Exception as e:
-            logger.error(f"Error starting game: {e}", exc_info=True)
+            logger.error(f"Error starting game {game_name}: {e}", exc_info=True)
             return {"messages": [TextMessage(text="حدث خطأ في بدء اللعبة")], "points": 0}
 
     def process_message(self, context_id: str, user_id: str, username: str,
@@ -123,10 +125,12 @@ class GameManager:
                         source_type: str) -> Optional[Dict]:
         normalized = Config.normalize(text)
         
+        # بدء لعبة جديدة
         if normalized in self.games:
             return self.start_game(context_id, normalized, user_id, username,
                                    is_registered, theme, source_type)
         
+        # معالجة إجابة لعبة نشطة
         if context_id not in self.active_games:
             return None
         
@@ -153,7 +157,7 @@ class GameManager:
                 if points > 0 and is_registered:
                     self.db.record_game_stat(user_id, game.game_name, points, True)
                 
-                logger.info(f"Game {game.game_name} ended - Points: {points}")
+                logger.info(f"Game {game.game_name} ended - User: {user_id}, Points: {points}")
             
             elif result.get("response"):
                 messages.append(result["response"])
@@ -161,5 +165,5 @@ class GameManager:
             return {"messages": messages, "points": points}
         
         except Exception as e:
-            logger.error(f"Error processing answer: {e}", exc_info=True)
+            logger.error(f"Error processing answer in game {game.game_name}: {e}", exc_info=True)
             return None
