@@ -3,10 +3,10 @@ from typing import Dict, Any, Optional
 import re
 
 
-class CompatibilitySystem(BaseGame):
-    """نظام توافق مستقل محسّن"""
+class CompatibilityGame(BaseGame):
+    """لعبة توافق"""
 
-    def __init__(self, line_bot_api=None):
+    def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
         self.game_name = "توافق"
         self.supports_hint = False
@@ -17,7 +17,7 @@ class CompatibilitySystem(BaseGame):
         return not bool(re.search(r"[@#0-9A-Za-z!$%^&*()_+=\[\]{};:'\"\\|,.<>/?~`]", text))
 
     def parse_names(self, text: str) -> tuple:
-        """معالجة ذكية للأسماء"""
+        """معالجة الأسماء"""
         text = ' '.join(text.split())
         if ' و ' in text:
             parts = text.split(' و ', 1)
@@ -33,7 +33,7 @@ class CompatibilitySystem(BaseGame):
         return (None, None)
 
     def calculate_compatibility(self, name1: str, name2: str) -> int:
-        """حساب نسبة التوافق بطريقة مستقلة عن ترتيب الأسماء"""
+        """حساب نسبة التوافق"""
         n1 = self.normalize_text(name1)
         n2 = self.normalize_text(name2)
         names = sorted([n1, n2])
@@ -43,7 +43,7 @@ class CompatibilitySystem(BaseGame):
         return percentage
 
     def get_compatibility_message(self, percentage: int) -> str:
-        """رسالة التوافق حسب النسبة"""
+        """رسالة التوافق"""
         if percentage >= 90:
             return "توافق عالي جداً"
         elif percentage >= 75:
@@ -67,6 +67,7 @@ class CompatibilitySystem(BaseGame):
         )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        """التحقق من الإجابة"""
         if not self.game_active:
             return None
 
@@ -74,10 +75,18 @@ class CompatibilitySystem(BaseGame):
         name1, name2 = self.parse_names(text)
 
         if not name1 or not name2:
-            return {'response': self._create_text_message("الصيغة غير صحيحة\nاكتب اسم و اسم\nمثال: ميش و عبير"), 'points': 0}
+            from linebot.v3.messaging import TextMessage
+            return {
+                'response': TextMessage(text="الصيغة غير صحيحة\nاكتب: اسم و اسم\nمثال: ميش و عبير"),
+                'points': 0
+            }
 
         if not self.is_valid_text(name1) or not self.is_valid_text(name2):
-            return {'response': self._create_text_message("غير مسموح بإدخال رموز او أرقام\nاكتب اسمين نصيين فقط"), 'points': 0}
+            from linebot.v3.messaging import TextMessage
+            return {
+                'response': TextMessage(text="غير مسموح بإدخال رموز او أرقام\nاكتب اسمين نصيين فقط"),
+                'points': 0
+            }
 
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
@@ -90,18 +99,74 @@ class CompatibilitySystem(BaseGame):
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "نتيجة التوافق", "size": "xl", "weight": "bold", "color": colors["primary"], "align": "center"},
+                    {
+                        "type": "text",
+                        "text": "نتيجة التوافق",
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": colors["primary"],
+                        "align": "center"
+                    },
                     {"type": "separator", "margin": "lg", "color": colors["border"]},
-                    {"type": "text", "text": f"{name1} و {name2}", "size": "lg", "weight": "bold", "color": colors["text"], "align": "center", "wrap": True, "margin": "lg"},
-                    {"type": "box", "layout": "vertical", "contents": [{"type": "text", "text": f"{percentage}%", "size": "xxl", "weight": "bold", "color": colors["primary"], "align": "center"}],
-                     "cornerRadius": "25px", "paddingAll": "20px", "borderWidth": "2px", "borderColor": colors["primary"], "margin": "xl"},
-                    {"type": "text", "text": message_text, "size": "lg", "color": colors["text"], "align": "center", "wrap": True, "margin": "md", "weight": "bold"},
-                    {"type": "separator", "margin": "lg", "color": colors["border"]},
-                    {"type": "text", "text": f"نفس النتيجة لو كتبت {name2} و {name1}", "size": "xs", "color": colors["text2"], "align": "center", "wrap": True, "margin": "md"},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xl", "contents": [
-                        {"type": "button", "action": {"type": "message", "label": "إعادة", "text": "توافق"}, "style": "primary", "height": "sm", "color": colors["primary"]},
-                        {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "height": "sm"}
-                    ]}
+                    {
+                        "type": "text",
+                        "text": f"{name1} و {name2}",
+                        "size": "lg",
+                        "weight": "bold",
+                        "color": colors["text"],
+                        "align": "center",
+                        "wrap": True,
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"{percentage}%",
+                                "size": "xxl",
+                                "weight": "bold",
+                                "color": colors["primary"],
+                                "align": "center"
+                            }
+                        ],
+                        "cornerRadius": "25px",
+                        "paddingAll": "24px",
+                        "backgroundColor": colors["card"],
+                        "margin": "xl"
+                    },
+                    {
+                        "type": "text",
+                        "text": message_text,
+                        "size": "lg",
+                        "color": colors["text"],
+                        "align": "center",
+                        "wrap": True,
+                        "margin": "md",
+                        "weight": "bold"
+                    },
+                    {"type": "separator", "margin": "xl", "color": colors["border"]},
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "md",
+                        "margin": "xl",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "إعادة", "text": "توافق"},
+                                "style": "primary",
+                                "height": "sm"
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                                "style": "secondary",
+                                "height": "sm"
+                            }
+                        ]
+                    }
                 ],
                 "paddingAll": "24px",
                 "spacing": "sm",
@@ -109,7 +174,8 @@ class CompatibilitySystem(BaseGame):
             }
         }
 
-        result_message = self._create_flex_with_buttons("نتيجة التوافق", flex_content)
+        from linebot.v3.messaging import FlexMessage, FlexContainer
+        result_message = FlexMessage(alt_text="نتيجة التوافق", contents=FlexContainer.from_dict(flex_content))
         self.game_active = False
 
         return {'response': result_message, 'points': 0, 'game_over': True}
