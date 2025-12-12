@@ -69,25 +69,22 @@ class ChainWordsGame(BaseGame):
 
             total_points = 1
 
-            # إضافة النقاط حسب الوضع (فردي أو جماعي)
+            # إضافة النقاط بشكل صحيح
             if self.team_mode:
                 team = self.get_user_team(user_id) or self.assign_to_team(user_id)
                 self.add_team_score(team, total_points)
-                points_to_db = self.team_scores[team]
+                points_to_return = total_points
             else:
                 self.add_score(user_id, display_name, total_points)
-                points_to_db = self.scores[user_id]["points"]
-
-            # تحديث قاعدة البيانات مباشرة
-            if self.db:
-                self.db.add_points(user_id, total_points)
+                points_to_return = total_points
 
             self.current_question += 1
             self.answered_users.clear()
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["points"] = points_to_db
+                # الخطأ هنا: كنا نحاول الوصول إلى team_scores غير الموجود
+                result["points"] = points_to_return
                 return result
 
             return {
