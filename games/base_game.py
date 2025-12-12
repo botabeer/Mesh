@@ -1,17 +1,12 @@
-"""
-Bot Mesh Base Game Module
-الكلاس الأساسي لجميع الألعاب
-Created by: Abeer Aldosari - 2025
-"""
-
 from typing import Dict, Any, Optional
 from datetime import datetime
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
-import re
+from config import Config
 from constants import THEMES, DEFAULT_THEME
+import re
 
 class BaseGame:
-    """الكلاس الأساسي لجميع الألعاب"""
+    """الكلاس الأساسي لجميع الألعاب - محسّن"""
     
     game_name = "لعبة"
     supports_hint = True
@@ -42,36 +37,22 @@ class BaseGame:
         self.session_type = "solo"
         self.db = None
     
-    def can_use_hint(self) -> bool:
-        """التحقق من إمكانية استخدام التلميح"""
-        return (not self.team_mode) and self.supports_hint
-    
-    def can_reveal_answer(self) -> bool:
-        """التحقق من إمكانية كشف الإجابة"""
-        return (not self.team_mode) and self.supports_reveal
+    # ======== نصوص وأساليب التطبيع ========
     
     def normalize_text(self, text: str) -> str:
-        """تطبيع النص العربي"""
-        if not text:
-            return ""
-        
-        text = text.strip().lower()
-        
-        replacements = {
-            'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
-            'ى': 'ي', 'ة': 'ه',
-            'ؤ': 'و', 'ئ': 'ي'
-        }
-        
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        
-        text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
-        
-        return text
+        """تطبيع النص العربي باستخدام Config"""
+        return Config.normalize(text)
+    
+    # ======== النقاط ========
     
     def add_score(self, user_id: str, display_name: str, points: int = 1) -> int:
-        """إضافة نقاط للاعب"""
+        """إضافة نقاط للاعب الفردي أو الفريق"""
+        if self.team_mode:
+            team = self.user_teams.get(user_id)
+            if team:
+                return self.add_team_score(team, points)
+            return 0
+        
         if user_id in self.answered_users:
             return 0
         
@@ -88,6 +69,8 @@ class BaseGame:
         if team_name in self.team_scores:
             self.team_scores[team_name] += points
         return points
+    
+    # ======== إدارة الفرق ========
     
     def assign_to_team(self, user_id: str) -> str:
         """تعيين المستخدم لفريق"""
@@ -107,10 +90,6 @@ class BaseGame:
         """الحصول على فريق المستخدم"""
         return self.user_teams.get(user_id)
     
-    def is_user_joined(self, user_id: str) -> bool:
-        """التحقق من انضمام المستخدم"""
-        return user_id in self.joined_users
-    
     def join_user(self, user_id: str):
         """إضافة مستخدم للعبة"""
         self.joined_users.add(user_id)
@@ -118,18 +97,24 @@ class BaseGame:
             return self.assign_to_team(user_id)
         return None
     
+    def is_user_joined(self, user_id: str) -> bool:
+        return user_id in self.joined_users
+    
+    # ======== ثيم اللعبة ========
+    
     def get_theme_colors(self) -> Dict[str, str]:
-        """الحصول على ألوان الثيم"""
         return THEMES.get(self.current_theme, THEMES[DEFAULT_THEME])
     
     def set_theme(self, theme_name: str):
-        """تعيين الثيم"""
         if theme_name in THEMES:
             self.current_theme = theme_name
     
+    # ======== قاعدة البيانات ========
+    
     def set_database(self, db):
-        """تعيين قاعدة البيانات"""
         self.db = db
+    
+    # ======== إدارة اللعبة ========
     
     def start_game(self):
         """بدء اللعبة"""
@@ -143,11 +128,11 @@ class BaseGame:
         return self.get_question()
     
     def get_question(self):
-        """الحصول على السؤال التالي - يجب تطبيقها في كل لعبة"""
+        """الحصول على السؤال التالي - يجب تطبيقها في الكلاس الفرعي"""
         raise NotImplementedError("يجب تطبيق get_question في الكلاس الفرعي")
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """التحقق من الإجابة - يجب تطبيقها في كل لعبة"""
+        """التحقق من الإجابة - يجب تطبيقها في الكلاس الفرعي"""
         raise NotImplementedError("يجب تطبيق check_answer في الكلاس الفرعي")
     
     def end_game(self) -> Dict[str, Any]:
@@ -201,12 +186,12 @@ class BaseGame:
             "message": message
         }
     
+    # ======== رسائل Line ========
+    
     def _create_text_message(self, text: str) -> TextMessage:
-        """إنشاء رسالة نصية"""
         return TextMessage(text=text)
     
     def _create_flex_with_buttons(self, alt_text: str, flex_content: dict) -> FlexMessage:
-        """إنشاء رسالة Flex"""
         return FlexMessage(
             alt_text=alt_text,
             contents=FlexContainer.from_dict(flex_content)
@@ -227,62 +212,10 @@ class BaseGame:
                 "weight": "bold",
                 "color": c["primary"],
                 "align": "center"
-            },
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": progress_text,
-                                "size": "xs",
-                                "color": c["text2"],
-                                "flex": 1
-                            },
-                            {
-                                "type": "text",
-                                "text": f"{progress_percent}%",
-                                "size": "xs",
-                                "color": c["primary"],
-                                "weight": "bold",
-                                "align": "end",
-                                "flex": 0
-                            }
-                        ]
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [],
-                                "width": f"{progress_percent}%",
-                                "backgroundColor": c["primary"],
-                                "height": "6px",
-                                "cornerRadius": "3px"
-                            }
-                        ],
-                        "backgroundColor": c["border"],
-                        "height": "6px",
-                        "cornerRadius": "3px",
-                        "margin": "sm"
-                    }
-                ],
-                "margin": "md"
-            },
-            {
-                "type": "separator",
-                "margin": "lg",
-                "color": c["border"]
             }
         ]
         
+        # عرض السؤال السابق إذا موجود
         if self.previous_question and self.previous_answer:
             prev_ans = self.previous_answer
             if isinstance(prev_ans, list) and prev_ans:
@@ -298,45 +231,9 @@ class BaseGame:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {
-                        "type": "text",
-                        "text": "السؤال السابق",
-                        "size": "xs",
-                        "color": c["text3"],
-                        "weight": "bold"
-                    },
-                    {
-                        "type": "text",
-                        "text": prev_q,
-                        "size": "xs",
-                        "color": c["text2"],
-                        "wrap": True,
-                        "margin": "xs"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "الاجابة:",
-                                "size": "xs",
-                                "color": c["text3"],
-                                "flex": 0
-                            },
-                            {
-                                "type": "text",
-                                "text": prev_ans[:50],
-                                "size": "xs",
-                                "color": c["success"],
-                                "wrap": True,
-                                "weight": "bold",
-                                "flex": 1,
-                                "margin": "xs"
-                            }
-                        ],
-                        "margin": "xs"
-                    }
+                    {"type": "text", "text": "السؤال السابق", "size": "xs", "color": c["text3"], "weight": "bold"},
+                    {"type": "text", "text": prev_q, "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"},
+                    {"type": "text", "text": f"الاجابة: {prev_ans}", "size": "xs", "color": c["success"], "wrap": True, "margin": "xs"}
                 ],
                 "backgroundColor": c["card"],
                 "cornerRadius": "12px",
@@ -345,27 +242,11 @@ class BaseGame:
                 "borderColor": c["border"],
                 "margin": "md"
             })
-            
-            contents.append({
-                "type": "separator",
-                "margin": "lg",
-                "color": c["border"]
-            })
         
         contents.append({
             "type": "box",
             "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": question_text,
-                    "size": "xl",
-                    "color": c["text"],
-                    "align": "center",
-                    "wrap": True,
-                    "weight": "bold"
-                }
-            ],
+            "contents": [{"type": "text", "text": question_text, "size": "xl", "color": c["text"], "align": "center", "wrap": True, "weight": "bold"}],
             "backgroundColor": c["card"],
             "cornerRadius": "15px",
             "paddingAll": "20px",
@@ -385,54 +266,25 @@ class BaseGame:
                 "margin": "md"
             })
         
+        # أزرار التلميح والإجابة
         if self.can_use_hint() and self.can_reveal_answer():
-            contents.extend([
-                {
-                    "type": "separator",
-                    "margin": "xl",
-                    "color": c["border"]
-                },
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "margin": "lg",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "لمح", "text": "لمح"},
-                            "style": "secondary",
-                            "height": "sm",
-                            "color": c["secondary"]
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
-                            "style": "secondary",
-                            "height": "sm",
-                            "color": c["secondary"]
-                        }
-                    ]
-                }
-            ])
+            contents.append({
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "lg",
+                "contents": [
+                    {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "height": "sm", "color": c["secondary"]},
+                    {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "height": "sm", "color": c["secondary"]}
+                ]
+            })
         
         return self._create_flex_with_buttons(
             self.game_name,
-            {
-                "type": "bubble",
-                "size": "mega",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": contents,
-                    "paddingAll": "24px",
-                    "backgroundColor": c["bg"]
-                }
-            }
+            {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "24px", "backgroundColor": c["bg"]}}
         )
     
     def get_game_info(self) -> Dict[str, Any]:
-        """معلومات اللعبة"""
         return {
             "name": self.game_name,
             "questions_count": self.questions_count,
