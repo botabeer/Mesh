@@ -1,8 +1,8 @@
-# Environment Files
+# Environment
 .env
 .env.*
 *.env
-!env.example
+!.env.example
 
 # Python
 __pycache__/
@@ -11,43 +11,30 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-
-# Virtual Environment
 venv/
 env/
-ENV/
 .venv/
 
-# Databases
+# Database
 *.db
 *.sqlite
 *.sqlite3
 data/
-db/
 
 # Logs
 *.log
 logs/
-log/
 
-# IDE / Editor
+# IDE
 .vscode/
 .idea/
 *.swp
-*.swo
-*.bak
 
-# OS Files
+# OS
 .DS_Store
 Thumbs.db
 
-# Caches
+# Cache
 .cache/
 .mypy_cache/
 .pytest_cache/
-coverage/
-htmlcov/
-
-# Docker
-docker-data/
-*.pid
