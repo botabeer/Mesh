@@ -1,9 +1,3 @@
-"""
-Bot Mesh Configuration Module
-نظام الإعدادات المركزي للبوت
-Created by: Abeer Aldosari - 2025
-"""
-
 import os
 import re
 from dotenv import load_dotenv
@@ -11,22 +5,23 @@ from constants import THEMES, DEFAULT_THEME
 
 load_dotenv()
 
+
 class Config:
-    """إعدادات البوت المركزية"""
-    
-    # معلومات البوت
+    """الإعدادات المركزية لبوت Mesh"""
+
+    # معلومات عامة
     BOT_NAME = "Bot Mesh"
     VERSION = "24.0"
     RIGHTS = "عبير الدوسري 2025"
-    
+
     # إعدادات LINE
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-    
-    # الثيمات المتوفرة
+
+    # الثيمات
     THEMES = THEMES
     DEFAULT_THEME = DEFAULT_THEME
-    
+
     # إعدادات الألعاب
     GAMES = {
         "ذكاء": {
@@ -142,80 +137,88 @@ class Config:
             "description": "لعبة مافيا جماعية"
         }
     }
-    
-    # إعدادات التحكم بالمعدل
+
+    # معدل الاستخدام
     RATE_LIMIT_MESSAGES = 30
     RATE_LIMIT_WINDOW = 60
-    
-    # إعدادات قاعدة البيانات
+
+    # قاعدة البيانات
     DATABASE_PATH = "botmesh.db"
     DATABASE_CLEANUP_DAYS = 90
-    
-    # إعدادات الخادم
+
+    # الخادم
     DEFAULT_PORT = 10000
-    
+
+    # --------------------------------------------------------
+
     @classmethod
     def validate(cls):
-        """التحقق من صحة الإعدادات المطلوبة"""
+        """التحقق من وجود المتغيرات الضرورية"""
         if not cls.LINE_SECRET:
             raise ValueError("LINE_CHANNEL_SECRET مفقود في متغيرات البيئة")
         if not cls.LINE_ACCESS_TOKEN:
             raise ValueError("LINE_CHANNEL_ACCESS_TOKEN مفقود في متغيرات البيئة")
         return True
-    
+
     @classmethod
     def normalize(cls, text: str) -> str:
-        """تطبيع النص العربي للمقارنة"""
+        """تطبيع النص العربي للمقارنة والبحث"""
         if not text:
             return ""
-        
+
         text = text[:1000].strip().lower()
-        
+
         replacements = {
-            'أ': 'ا', 'إ': 'ا', 'آ': 'ا',
-            'ى': 'ي', 'ة': 'ه',
-            'ؤ': 'و', 'ئ': 'ي'
+            "أ": "ا", "إ": "ا", "آ": "ا",
+            "ى": "ي", "ة": "ه",
+            "ؤ": "و", "ئ": "ي"
         }
-        
+
         for old, new in replacements.items():
             text = text.replace(old, new)
-        
-        text = re.sub(r'[\u064B-\u065F\u0670]', '', text)
-        
+
+        text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
+
         return text
-    
+
     @classmethod
     def get_theme(cls, name: str = None):
-        """الحصول على ثيم محدد أو الافتراضي"""
+        """إرجاع ثيم معين أو الافتراضي"""
         if name and name in cls.THEMES:
             return cls.THEMES[name]
         return cls.THEMES[cls.DEFAULT_THEME]
-    
+
     @classmethod
     def is_valid_theme(cls, name: str) -> bool:
         """التحقق من صحة اسم الثيم"""
         return name in cls.THEMES
-    
+
     @classmethod
     def get_game_config(cls, name: str):
-        """الحصول على إعدادات لعبة محددة"""
+        """إرجاع إعدادات لعبة محددة"""
         return cls.GAMES.get(name, {})
-    
+
     @classmethod
     def get_all_games(cls):
-        """الحصول على قائمة بجميع الألعاب"""
+        """إرجاع قائمة جميع الألعاب"""
         return list(cls.GAMES.keys())
-    
+
     @classmethod
     def get_games_by_type(cls, game_type: str):
-        """تصنيف الألعاب حسب النوع"""
+        """البحث عن الألعاب حسب نوع خاص"""
         if game_type == "registration_required":
-            return [name for name, config in cls.GAMES.items() 
-                   if not config.get("no_registration", False)]
-        elif game_type == "group_only":
-            return [name for name, config in cls.GAMES.items() 
-                   if config.get("group_only", False)]
-        elif game_type == "timed":
-            return [name for name, config in cls.GAMES.items() 
-                   if config.get("timer")]
+            return [
+                name for name, cfg in cls.GAMES.items()
+                if not cfg.get("no_registration", False)
+            ]
+        if game_type == "group_only":
+            return [
+                name for name, cfg in cls.GAMES.items()
+                if cfg.get("group_only", False)
+            ]
+        if game_type == "timed":
+            return [
+                name for name, cfg in cls.GAMES.items()
+                if cfg.get("timer")
+            ]
         return []
