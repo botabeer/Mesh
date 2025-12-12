@@ -6,31 +6,23 @@ load_dotenv()
 
 
 class Config:
-    """إعدادات النظام المركزية"""
-
-    # معلومات البوت
     BOT_NAME = "Bot Mesh"
     VERSION = "24.0"
     RIGHTS = "عبير الدوسري 2025"
 
-    # LINE API
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
-    # قاعدة البيانات
     DATABASE_PATH = "botmesh.db"
     DATABASE_CLEANUP_DAYS = 90
 
-    # الخادم
     DEFAULT_PORT = 10000
 
-    # معدل الاستخدام
     RATE_LIMIT_MESSAGES = 30
     RATE_LIMIT_WINDOW = 60
 
-    # الثيمات
     THEMES = {
-        "ابيض": {
+        "فاتح": {
             "bg": "#F2F2F7",
             "card": "#FFFFFF",
             "primary": "#007AFF",
@@ -43,7 +35,7 @@ class Config:
             "error": "#FF3B30",
             "warning": "#FF9500"
         },
-        "اسود": {
+        "داكن": {
             "bg": "#000000",
             "card": "#1C1C1E",
             "primary": "#0A84FF",
@@ -55,25 +47,11 @@ class Config:
             "border": "#38383A",
             "error": "#FF453A",
             "warning": "#FFD60A"
-        },
-        "ازرق": {
-            "bg": "#EBF4FF",
-            "card": "#FFFFFF",
-            "primary": "#0066CC",
-            "secondary": "#3399FF",
-            "success": "#28A745",
-            "text": "#001F3F",
-            "text2": "#003366",
-            "text3": "#6699CC",
-            "border": "#B3D9FF",
-            "error": "#DC3545",
-            "warning": "#FFC107"
         }
     }
 
-    DEFAULT_THEME = "ابيض"
+    DEFAULT_THEME = "فاتح"
 
-    # الألعاب
     GAMES = {
         "ذكاء": {"requires_registration": True, "group_only": False},
         "روليت": {"requires_registration": True, "group_only": False},
@@ -87,12 +65,16 @@ class Config:
         "سلسلة": {"requires_registration": True, "group_only": False},
         "لون": {"requires_registration": True, "group_only": False},
         "رياضيات": {"requires_registration": True, "group_only": False},
-        "توافق": {"requires_registration": False, "group_only": False}
+        "توافق": {"requires_registration": False, "group_only": False},
+        "مافيا": {"requires_registration": False, "group_only": True},
+        "سؤال": {"requires_registration": False, "group_only": False},
+        "منشن": {"requires_registration": False, "group_only": False},
+        "تحدي": {"requires_registration": False, "group_only": False},
+        "اعتراف": {"requires_registration": False, "group_only": False}
     }
 
     @classmethod
     def validate(cls):
-        """التحقق من المتغيرات الضرورية"""
         if not cls.LINE_SECRET:
             raise ValueError("LINE_CHANNEL_SECRET مفقود")
         if not cls.LINE_ACCESS_TOKEN:
@@ -101,7 +83,6 @@ class Config:
 
     @classmethod
     def normalize(cls, text: str) -> str:
-        """تطبيع النص العربي"""
         if not text:
             return ""
         
@@ -122,22 +103,18 @@ class Config:
 
     @classmethod
     def get_theme(cls, name: str = None):
-        """الحصول على الثيم"""
         if name and name in cls.THEMES:
             return cls.THEMES[name]
         return cls.THEMES[cls.DEFAULT_THEME]
 
     @classmethod
     def is_valid_theme(cls, name: str) -> bool:
-        """التحقق من صحة الثيم"""
         return name in cls.THEMES
 
     @classmethod
     def get_game_config(cls, name: str):
-        """الحصول على إعدادات اللعبة"""
         return cls.GAMES.get(name, {})
 
     @classmethod
     def get_all_games(cls):
-        """الحصول على جميع الألعاب"""
         return list(cls.GAMES.keys())
