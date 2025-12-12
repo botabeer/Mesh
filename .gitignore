@@ -1,7 +1,8 @@
-# Environment
+# Environment Files
 .env
-.env.local
+.env.*
 *.env
+!env.example
 
 # Python
 __pycache__/
@@ -15,27 +16,38 @@ build/
 venv/
 env/
 ENV/
+.venv/
 
-# Database
+# Databases
 *.db
 *.sqlite
 *.sqlite3
 data/
+db/
 
 # Logs
 *.log
 logs/
+log/
 
-# IDE
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
+*.swo
+*.bak
 
-# OS
+# OS Files
 .DS_Store
 Thumbs.db
 
-# Cache
-.cache
+# Caches
+.cache/
 .mypy_cache/
 .pytest_cache/
+coverage/
+htmlcov/
+
+# Docker
+docker-data/
+*.pid
