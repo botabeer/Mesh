@@ -76,7 +76,7 @@ class ChainWordsGame(BaseGame):
                 points_to_db = self.team_scores[team]
             else:
                 self.add_score(user_id, display_name, total_points)
-                points_to_db = self.scores[user_id]["score"]
+                points_to_db = self.scores[user_id]["points"]
 
             # تحديث قاعدة البيانات مباشرة
             if self.db:
