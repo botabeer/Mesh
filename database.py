@@ -1,238 +1,607 @@
-import sqlite3
-import logging
-from datetime import datetime, timedelta
-from typing import Optional, Dict, List, Tuple
-from contextlib import contextmanager
-from threading import Lock
-
-logger = logging.getLogger(__name__)
+from typing import Dict, List, Optional
+from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
+from config import Config
 
 
-class Database:
-    def __init__(self, db_path: str = "botmesh.db"):
-        self.db_path = db_path
-        self.lock = Lock()
-        self.init_db()
-        logger.info(f"Database initialized: {db_path}")
+class UIBuilder:
+    def __init__(self):
+        self.config = Config
 
-    @contextmanager
-    def get_conn(self):
-        conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
+    def _get_quick_reply(self) -> QuickReply:
+        """أزرار سريعة ثابتة أسفل الشاشة"""
+        return QuickReply(items=[
+            QuickReplyItem(action=MessageAction(label="بداية", text="بداية")),
+            QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
+            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
+            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
+            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
+            QuickReplyItem(action=MessageAction(label="توافق", text="توافق"))
+        ])
+
+    def _create_flex(self, alt_text: str, flex_dict: dict) -> FlexMessage:
+        return FlexMessage(
+            alt_text=alt_text,
+            contents=FlexContainer.from_dict(flex_dict),
+            quick_reply=self._get_quick_reply()
+        )
+
+    def _create_text(self, text: str) -> TextMessage:
+        return TextMessage(text=text, quick_reply=self._get_quick_reply())
+
+    def _get_colors(self, theme: str = None) -> Dict[str, str]:
+        return self.config.get_theme(theme)
+
+    def home_screen(self, username: str, points: int, is_registered: bool, theme: str) -> FlexMessage:
+        """شاشة البداية مع اختيار الثيم"""
+        c = self._get_colors(theme)
         
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            logger.error(f"Database error: {e}", exc_info=True)
-            raise
-        finally:
-            conn.close()
+        return self._create_flex("البداية", {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "0px",
+                "backgroundColor": c["bg"],
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "paddingAll": "24px",
+                        "backgroundColor": c["glass"],
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": self.config.BOT_NAME,
+                                "size": "xxl",
+                                "weight": "bold",
+                                "color": c["text"],
+                                "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": f"v{self.config.VERSION}",
+                                "size": "xs",
+                                "color": c["text3"],
+                                "align": "center",
+                                "margin": "xs"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "paddingAll": "20px",
+                        "spacing": "md",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "backgroundColor": c["card"],
+                                "cornerRadius": "16px",
+                                "paddingAll": "20px",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": username[:30],
+                                        "size": "lg",
+                                        "weight": "bold",
+                                        "color": c["text"],
+                                        "align": "center"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "مسجل" if is_registered else "زائر",
+                                        "size": "sm",
+                                        "color": c["success"] if is_registered else c["text3"],
+                                        "align": "center",
+                                        "margin": "sm"
+                                    },
+                                    {
+                                        "type": "box",
+                                        "layout": "baseline",
+                                        "spacing": "sm",
+                                        "margin": "md",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": "النقاط",
+                                                "size": "sm",
+                                                "color": c["text2"],
+                                                "flex": 0
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": str(points),
+                                                "size": "xl",
+                                                "weight": "bold",
+                                                "color": c["primary"],
+                                                "align": "end",
+                                                "flex": 1
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "backgroundColor": c["card"],
+                                "cornerRadius": "16px",
+                                "paddingAll": "16px",
+                                "spacing": "sm",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "المظهر",
+                                        "size": "sm",
+                                        "color": c["text2"],
+                                        "align": "center",
+                                        "margin": "none"
+                                    },
+                                    {
+                                        "type": "box",
+                                        "layout": "horizontal",
+                                        "spacing": "sm",
+                                        "margin": "sm",
+                                        "contents": [
+                                            {
+                                                "type": "button",
+                                                "style": "primary" if theme == "فاتح" else "secondary",
+                                                "height": "sm",
+                                                "color": c["primary"] if theme == "فاتح" else c["text3"],
+                                                "action": {"type": "message", "label": "فاتح", "text": "ثيم فاتح"}
+                                            },
+                                            {
+                                                "type": "button",
+                                                "style": "primary" if theme == "داكن" else "secondary",
+                                                "height": "sm",
+                                                "color": c["primary"] if theme == "داكن" else c["text3"],
+                                                "action": {"type": "message", "label": "داكن", "text": "ثيم داكن"}
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "spacing": "sm",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "style": "primary",
+                                        "height": "sm",
+                                        "color": c["primary"],
+                                        "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}
+                                    },
+                                    {
+                                        "type": "button",
+                                        "style": "primary",
+                                        "height": "sm",
+                                        "color": c["success"],
+                                        "action": {"type": "message", "label": "العاب", "text": "العاب"}
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": self.config.RIGHTS,
+                                "size": "xxs",
+                                "color": c["text3"],
+                                "align": "center",
+                                "wrap": True
+                            }
+                        ]
+                    }
+                ]
+            }
+        })
 
-    def init_db(self):
-        with self.lock:
-            with self.get_conn() as conn:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS users (
-                        user_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        points INTEGER DEFAULT 0,
-                        is_registered BOOLEAN DEFAULT 0,
-                        theme TEXT DEFAULT 'فاتح',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS sessions (
-                        session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id TEXT NOT NULL,
-                        game_name TEXT NOT NULL,
-                        score INTEGER DEFAULT 0,
-                        completed BOOLEAN DEFAULT 0,
-                        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        completed_at TIMESTAMP,
-                        FOREIGN KEY(user_id) REFERENCES users(user_id)
-                    )
-                """)
-                
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS game_stats (
-                        user_id TEXT NOT NULL,
-                        game_name TEXT NOT NULL,
-                        plays INTEGER DEFAULT 0,
-                        wins INTEGER DEFAULT 0,
-                        total_score INTEGER DEFAULT 0,
-                        last_played TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY(user_id, game_name),
-                        FOREIGN KEY(user_id) REFERENCES users(user_id)
-                    )
-                """)
-                
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, started_at DESC)")
+    def help_screen(self, theme: str) -> FlexMessage:
+        """شاشة المساعدة"""
+        c = self._get_colors(theme)
+        
+        return self._create_flex("المساعدة", {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "24px",
+                "backgroundColor": c["bg"],
+                "spacing": "md",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "دليل الاستخدام",
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": c["text"],
+                                "align": "center"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "الاوامر الاساسية", "size": "sm", "weight": "bold", "color": c["text"]},
+                            {"type": "text", "text": "بداية - العاب - مساعدة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "الحساب", "size": "sm", "weight": "bold", "color": c["text"]},
+                            {"type": "text", "text": "انضم - انسحب - نقاطي - صدارة", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "اثناء اللعب", "size": "sm", "weight": "bold", "color": c["text"]},
+                            {"type": "text", "text": "لمح - جاوب - ايقاف", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "الالعاب الترفيهية", "size": "sm", "weight": "bold", "color": c["text"]},
+                            {"type": "text", "text": "سؤال - تحدي - اعتراف - منشن - توافق", "size": "xs", "color": c["text2"], "wrap": True, "margin": "xs"}
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "margin": "md",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "height": "sm",
+                                "color": c["primary"],
+                                "action": {"type": "message", "label": "بداية", "text": "بداية"}
+                            },
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "height": "sm",
+                                "color": c["success"],
+                                "action": {"type": "message", "label": "العاب", "text": "العاب"}
+                            }
+                        ]
+                    }
+                ]
+            }
+        })
 
-    def get_user(self, user_id: str) -> Optional[Dict]:
-        with self.get_conn() as conn:
-            row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
-            return dict(row) if row else None
+    def games_menu(self, theme: str) -> FlexMessage:
+        """قائمة الالعاب الشاملة"""
+        c = self._get_colors(theme)
+        
+        point_games = self.config.get_all_point_games()
+        fun_games = self.config.get_all_fun_games()
+        
+        point_buttons = []
+        for i in range(0, len(point_games), 3):
+            row = {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "sm" if i > 0 else "md",
+                "contents": []
+            }
+            for g in point_games[i:i+3]:
+                row["contents"].append({
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "color": c["primary"],
+                    "action": {"type": "message", "label": self.config.POINT_GAMES[g]["name"], "text": g}
+                })
+            point_buttons.append(row)
+        
+        fun_buttons = []
+        for i in range(0, len(fun_games), 3):
+            row = {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "sm" if i > 0 else "md",
+                "contents": []
+            }
+            for g in fun_games[i:i+3]:
+                row["contents"].append({
+                    "type": "button",
+                    "style": "secondary",
+                    "height": "sm",
+                    "action": {"type": "message", "label": self.config.FUN_GAMES[g]["name"], "text": g}
+                })
+            fun_buttons.append(row)
+        
+        return self._create_flex("الالعاب", {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "24px",
+                "backgroundColor": c["bg"],
+                "spacing": "md",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "الالعاب المتاحة",
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": c["text"],
+                                "align": "center"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "العاب النقاط",
+                                "size": "sm",
+                                "weight": "bold",
+                                "color": c["text"],
+                                "align": "center"
+                            },
+                            *point_buttons
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "العاب ترفيهية",
+                                "size": "sm",
+                                "weight": "bold",
+                                "color": c["text"],
+                                "align": "center"
+                            },
+                            *fun_buttons
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "height": "sm",
+                                "color": c["secondary"],
+                                "action": {"type": "message", "label": "تسجيل", "text": "انضم"}
+                            },
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "height": "sm",
+                                "color": c["primary"],
+                                "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}
+                            },
+                            {
+                                "type": "button",
+                                "style": "secondary",
+                                "height": "sm",
+                                "action": {"type": "message", "label": "صدارة", "text": "صدارة"}
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "margin": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "style": "secondary",
+                                "height": "sm",
+                                "action": {"type": "message", "label": "انسحب", "text": "انسحب"}
+                            },
+                            {
+                                "type": "button",
+                                "style": "secondary",
+                                "height": "sm",
+                                "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"}
+                            },
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "height": "sm",
+                                "color": c["success"],
+                                "action": {"type": "message", "label": "بداية", "text": "بداية"}
+                            }
+                        ]
+                    }
+                ]
+            }
+        })
 
-    def create_user(self, user_id: str, name: str) -> bool:
-        try:
-            with self.lock:
-                with self.get_conn() as conn:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO users (user_id, name, last_activity) VALUES (?, ?, ?)",
-                        (user_id, name[:100], datetime.now())
-                    )
-            return True
-        except Exception as e:
-            logger.error(f"Error creating user: {e}")
-            return False
+    def my_points(self, username: str, points: int, stats: Optional[Dict], theme: str) -> FlexMessage:
+        """شاشة النقاط"""
+        c = self._get_colors(theme)
+        
+        stats_content = []
+        if stats:
+            for game, data in stats.items():
+                stats_content.append({
+                    "type": "box",
+                    "layout": "horizontal",
+                    "margin": "sm",
+                    "contents": [
+                        {"type": "text", "text": game, "size": "sm", "color": c["text"], "flex": 2},
+                        {"type": "text", "text": f"{data['plays']} مرة", "size": "xs", "color": c["text3"], "flex": 1, "align": "end"}
+                    ]
+                })
+        else:
+            stats_content.append({
+                "type": "text",
+                "text": "لا توجد احصائيات",
+                "size": "sm",
+                "color": c["text3"],
+                "align": "center"
+            })
+        
+        return self._create_flex("نقاطي", {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "24px",
+                "backgroundColor": c["bg"],
+                "spacing": "md",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {"type": "text", "text": "احصائياتي", "size": "xl", "weight": "bold", "color": c["text"], "align": "center"}
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "20px",
+                        "contents": [
+                            {"type": "text", "text": username[:30], "size": "lg", "weight": "bold", "color": c["text"], "align": "center"},
+                            {"type": "text", "text": "اجمالي النقاط", "size": "sm", "color": c["text2"], "align": "center", "margin": "md"},
+                            {"type": "text", "text": str(points), "size": "xxl", "weight": "bold", "color": c["primary"], "align": "center", "margin": "xs"}
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {"type": "text", "text": "الالعاب الاكثر لعبا", "size": "sm", "weight": "bold", "color": c["text"], "align": "center"},
+                            *stats_content
+                        ]
+                    }
+                ]
+            }
+        })
 
-    def record_game_stat(self, user_id: str, game_name: str, score: int, won: bool = False) -> bool:
-        try:
-            with self.lock:
-                with self.get_conn() as conn:
-                    conn.execute(
-                        """
-                        INSERT INTO game_stats (user_id, game_name, plays, wins, total_score, last_played)
-                        VALUES (?, ?, 1, ?, ?, ?)
-                        ON CONFLICT(user_id, game_name) DO UPDATE SET
-                            plays = plays + 1,
-                            wins = wins + ?,
-                            total_score = total_score + ?,
-                            last_played = ?
-                        """,
-                        (user_id, game_name, int(won), score, datetime.now(),
-                         int(won), score, datetime.now())
-                    )
-            return True
-        except Exception as e:
-            logger.error(f"Error recording game stat: {e}")
-            return False
-
-    def get_user_stats(self, user_id: str) -> Dict:
-        with self.get_conn() as conn:
-            rows = conn.execute(
-                "SELECT game_name, plays, wins, total_score FROM game_stats WHERE user_id = ? ORDER BY plays DESC",
-                (user_id,)
-            ).fetchall()
+    def leaderboard(self, top_users: List[tuple], theme: str) -> FlexMessage:
+        """لوحة الصدارة"""
+        c = self._get_colors(theme)
+        
+        rows = []
+        for i, (name, pts) in enumerate(top_users[:20], start=1):
+            rank_color = c["primary"] if i <= 3 else c["text2"]
             
-            return {
-                r["game_name"]: {
-                    "plays": r["plays"],
-                    "wins": r["wins"],
-                    "score": r["total_score"]
-                }
-                for r in rows
+            rows.append({
+                "type": "box",
+                "layout": "horizontal",
+                "paddingAll": "12px",
+                "margin": "xs",
+                "backgroundColor": c["card"],
+                "cornerRadius": "12px",
+                "contents": [
+                    {"type": "text", "text": str(i), "size": "md", "weight": "bold", "color": rank_color, "flex": 0},
+                    {"type": "text", "text": name[:20], "size": "sm", "color": c["text"], "flex": 3, "margin": "md"},
+                    {"type": "text", "text": str(pts), "size": "sm", "weight": "bold", "color": c["primary"], "flex": 1, "align": "end"}
+                ]
+            })
+        
+        return self._create_flex("الصدارة", {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "24px",
+                "backgroundColor": c["bg"],
+                "spacing": "md",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {"type": "text", "text": "لوحة الصدارة", "size": "xl", "weight": "bold", "color": c["text"], "align": "center"}
+                        ]
+                    },
+                    {"type": "box", "layout": "vertical", "contents": rows}
+                ]
             }
+        })
 
-    def get_popular_games(self, limit: int = 13) -> List[str]:
-        with self.get_conn() as conn:
-            rows = conn.execute(
-                "SELECT game_name, SUM(plays) AS total FROM game_stats GROUP BY game_name ORDER BY total DESC LIMIT ?",
-                (limit,)
-            ).fetchall()
-            return [r["game_name"] for r in rows]
+    def registration_prompt(self, theme: str) -> TextMessage:
+        return self._create_text("ارسل اسمك للتسجيل")
 
-    def get_stats(self) -> Dict:
-        with self.get_conn() as conn:
-            return {
-                "total_users": conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"],
-                "registered_users": conn.execute("SELECT COUNT(*) AS c FROM users WHERE is_registered = 1").fetchone()["c"],
-                "total_sessions": conn.execute("SELECT COUNT(*) AS c FROM sessions").fetchone()["c"],
-                "active_today": conn.execute(
-                    "SELECT COUNT(*) AS c FROM users WHERE DATE(last_activity) = DATE(?)",
-                    (datetime.now(),)
-                ).fetchone()["c"]
-            }
+    def registration_success(self, username: str, points: int, theme: str) -> TextMessage:
+        return self._create_text(f"تم التسجيل بنجاح\n\nالاسم: {username}\nالنقاط: {points}")
 
-    def get_database_size(self) -> int:
-        import os
-        try:
-            return os.path.getsize(self.db_path)
-        except:
-            return 0
+    def unregister_confirm(self, username: str, points: int, theme: str) -> TextMessage:
+        return self._create_text(f"تم الانسحاب\n\nالاسم: {username}\nالنقاط: {points}")
 
-    def update_user(self, user_id: str, **kwargs) -> bool:
-        if not kwargs:
-            return False
-        
-        allowed = {"name", "points", "is_registered", "theme"}
-        fields = []
-        values = []
-        
-        for key, value in kwargs.items():
-            if key in allowed:
-                fields.append(f"{key} = ?")
-                values.append(value)
-        
-        if not fields:
-            return False
-        
-        fields.append("last_activity = ?")
-        values.append(datetime.now())
-        values.append(user_id)
-        
-        try:
-            with self.lock:
-                with self.get_conn() as conn:
-                    conn.execute(f"UPDATE users SET {', '.join(fields)} WHERE user_id = ?", values)
-            return True
-        except Exception as e:
-            logger.error(f"Error updating user: {e}")
-            return False
-
-    def update_user_name(self, user_id: str, name: str) -> bool:
-        return self.update_user(user_id, name=name[:100])
-
-    def add_points(self, user_id: str, points: int) -> bool:
-        try:
-            with self.lock:
-                with self.get_conn() as conn:
-                    conn.execute(
-                        "UPDATE users SET points = points + ?, last_activity = ? WHERE user_id = ?",
-                        (points, datetime.now(), user_id)
-                    )
-            return True
-        except Exception as e:
-            logger.error(f"Error adding points: {e}")
-            return False
-
-    def set_user_theme(self, user_id: str, theme: str) -> bool:
-        return self.update_user(user_id, theme=theme)
-
-    def get_leaderboard(self, limit: int = 20) -> List[Tuple[str, int, bool]]:
-        with self.get_conn() as conn:
-            rows = conn.execute(
-                "SELECT name, points, is_registered FROM users WHERE points > 0 ORDER BY points DESC LIMIT ?",
-                (limit,)
-            ).fetchall()
-            return [(r["name"], r["points"], bool(r["is_registered"])) for r in rows]
-
-    def create_session(self, user_id: str, game_name: str) -> int:
-        with self.lock:
-            with self.get_conn() as conn:
-                cursor = conn.execute(
-                    "INSERT INTO sessions (user_id, game_name, started_at) VALUES (?, ?, ?)",
-                    (user_id, game_name, datetime.now())
-                )
-                return cursor.lastrowid
-
-    def complete_session(self, session_id: int, score: int) -> bool:
-        try:
-            with self.lock:
-                with self.get_conn() as conn:
-                    conn.execute(
-                        "UPDATE sessions SET completed = 1, score = ?, completed_at = ? WHERE session_id = ?",
-                        (score, datetime.now(), session_id)
-                    )
-            return True
-        except Exception as e:
-            logger.error(f"Error completing session: {e}")
-            return False
+    def game_stopped(self, game_name: str, theme: str) -> TextMessage:
+        return self._create_text(f"تم ايقاف لعبة {game_name}")
