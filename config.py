@@ -7,7 +7,7 @@ load_dotenv()
 
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "24.0"
+    VERSION = "24.1"
     RIGHTS = "عبير الدوسري 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -22,35 +22,45 @@ class Config:
     RATE_LIMIT_WINDOW = 60
 
     THEMES = {
-        "فاتح": {
-            "bg": "#F2F2F7",
-            "card": "#FFFFFF",
-            "primary": "#007AFF",
-            "secondary": "#5AC8FA",
-            "success": "#34C759",
-            "text": "#000000",
-            "text2": "#1C1C1E",
-            "text3": "#8E8E93",
-            "border": "#D1D1D6",
-            "error": "#FF3B30",
-            "warning": "#FF9500"
-        },
-        "داكن": {
-            "bg": "#000000",
-            "card": "#1C1C1E",
-            "primary": "#0A84FF",
-            "secondary": "#64D2FF",
-            "success": "#30D158",
-            "text": "#FFFFFF",
-            "text2": "#E5E5EA",
-            "text3": "#8E8E93",
-            "border": "#38383A",
-            "error": "#FF453A",
-            "warning": "#FFD60A"
-        }
+        "ابيض": {"bg": "#FFFFFF", "card": "#F8F9FA", "primary": "#007AFF", 
+                 "secondary": "#5AC8FA", "success": "#34C759", "text": "#000000", 
+                 "text2": "#333333", "text3": "#666666", "border": "#DDDDDD", 
+                 "error": "#FF3B30", "warning": "#FF9500"},
+        "اسود": {"bg": "#000000", "card": "#1C1C1E", "primary": "#0A84FF", 
+                 "secondary": "#64D2FF", "success": "#30D158", "text": "#FFFFFF", 
+                 "text2": "#E5E5EA", "text3": "#8E8E93", "border": "#38383A", 
+                 "error": "#FF453A", "warning": "#FFD60A"},
+        "ازرق": {"bg": "#E3F2FD", "card": "#FFFFFF", "primary": "#2196F3", 
+                 "secondary": "#03A9F4", "success": "#4CAF50", "text": "#000000", 
+                 "text2": "#424242", "text3": "#757575", "border": "#90CAF9", 
+                 "error": "#F44336", "warning": "#FF9800"},
+        "بنفسجي": {"bg": "#F3E5F5", "card": "#FFFFFF", "primary": "#9C27B0", 
+                   "secondary": "#BA68C8", "success": "#66BB6A", "text": "#000000", 
+                   "text2": "#424242", "text3": "#757575", "border": "#CE93D8", 
+                   "error": "#F44336", "warning": "#FF9800"},
+        "وردي": {"bg": "#FCE4EC", "card": "#FFFFFF", "primary": "#E91E63", 
+                 "secondary": "#F06292", "success": "#66BB6A", "text": "#000000", 
+                 "text2": "#424242", "text3": "#757575", "border": "#F8BBD0", 
+                 "error": "#F44336", "warning": "#FF9800"},
+        "اخضر": {"bg": "#E8F5E9", "card": "#FFFFFF", "primary": "#4CAF50", 
+                 "secondary": "#66BB6A", "success": "#8BC34A", "text": "#000000", 
+                 "text2": "#424242", "text3": "#757575", "border": "#A5D6A7", 
+                 "error": "#F44336", "warning": "#FF9800"},
+        "رمادي": {"bg": "#F5F5F5", "card": "#FFFFFF", "primary": "#607D8B", 
+                  "secondary": "#78909C", "success": "#4CAF50", "text": "#000000", 
+                  "text2": "#424242", "text3": "#757575", "border": "#BDBDBD", 
+                  "error": "#F44336", "warning": "#FF9800"},
+        "احمر": {"bg": "#FFEBEE", "card": "#FFFFFF", "primary": "#F44336", 
+                 "secondary": "#EF5350", "success": "#66BB6A", "text": "#000000", 
+                 "text2": "#424242", "text3": "#757575", "border": "#FFCDD2", 
+                 "error": "#D32F2F", "warning": "#FF9800"},
+        "بني": {"bg": "#EFEBE9", "card": "#FFFFFF", "primary": "#795548", 
+                "secondary": "#8D6E63", "success": "#66BB6A", "text": "#000000", 
+                "text2": "#424242", "text3": "#757575", "border": "#BCAAA4", 
+                "error": "#F44336", "warning": "#FF9800"}
     }
 
-    DEFAULT_THEME = "فاتح"
+    DEFAULT_THEME = "ابيض"
 
     GAMES = {
         "ذكاء": {"requires_registration": True, "group_only": False},
