@@ -7,6 +7,14 @@ class UIBuilder:
     def __init__(self):
         self.config = Config
 
+    def _get_quick_reply(self) -> QuickReply:
+        """أزرار سريعة ثابتة في كل رسالة"""
+        return QuickReply(items=[
+            QuickReplyItem(action=MessageAction(label="🏠 بداية", text="بداية")),
+            QuickReplyItem(action=MessageAction(label="🎮 الألعاب", text="العاب")),
+            QuickReplyItem(action=MessageAction(label="❓ مساعدة", text="مساعدة"))
+        ])
+
     def _create_flex(self, alt_text: str, flex_dict: dict) -> FlexMessage:
         return FlexMessage(
             alt_text=alt_text,
@@ -17,24 +25,14 @@ class UIBuilder:
     def _create_text(self, text: str) -> TextMessage:
         return TextMessage(text=text, quick_reply=self._get_quick_reply())
 
-    def _get_quick_reply(self) -> QuickReply:
-        return QuickReply(items=[
-            QuickReplyItem(action=MessageAction(label="بداية", text="بداية")),
-            QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
-            QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
-            QuickReplyItem(action=MessageAction(label="صدارة", text="صدارة")),
-            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
-            QuickReplyItem(action=MessageAction(label="ايقاف", text="ايقاف"))
-        ])
-
     def _get_colors(self, theme: str = None) -> Dict[str, str]:
         return self.config.get_theme(theme)
 
-    def home_screen(self, username: str, points: int, is_registered: bool, 
-                    theme: str, mode: str = "فردي") -> FlexMessage:
+    def home_screen(self, username: str, points: int, is_registered: bool, theme: str) -> FlexMessage:
         c = self._get_colors(theme)
         status = "مسجل" if is_registered else "زائر"
         status_color = c["success"] if is_registered else c["text3"]
+        other_theme = "داكن" if theme == "فاتح" else "فاتح"
 
         return self._create_flex("الرئيسية", {
             "type": "bubble",
@@ -42,7 +40,7 @@ class UIBuilder:
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "paddingAll": "24px",
+                "paddingAll": "20px",
                 "backgroundColor": c["bg"],
                 "contents": [
                     {
@@ -61,14 +59,14 @@ class UIBuilder:
                         "align": "center",
                         "margin": "xs"
                     },
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
+                    {"type": "separator", "margin": "md", "color": c["border"]},
                     {
                         "type": "box",
                         "layout": "vertical",
                         "backgroundColor": c["card"],
                         "cornerRadius": "16px",
-                        "paddingAll": "20px",
-                        "margin": "lg",
+                        "paddingAll": "16px",
+                        "margin": "md",
                         "contents": [
                             {
                                 "type": "text",
@@ -86,11 +84,11 @@ class UIBuilder:
                                 "align": "center",
                                 "margin": "sm"
                             },
-                            {"type": "separator", "margin": "md", "color": c["border"]},
+                            {"type": "separator", "margin": "sm", "color": c["border"]},
                             {
                                 "type": "box",
                                 "layout": "horizontal",
-                                "margin": "md",
+                                "margin": "sm",
                                 "contents": [
                                     {
                                         "type": "text",
@@ -102,7 +100,7 @@ class UIBuilder:
                                     {
                                         "type": "text",
                                         "text": str(points),
-                                        "size": "xxl",
+                                        "size": "xl",
                                         "weight": "bold",
                                         "color": c["primary"],
                                         "flex": 0,
@@ -115,29 +113,29 @@ class UIBuilder:
                     {
                         "type": "box",
                         "layout": "horizontal",
-                        "spacing": "md",
-                        "margin": "xl",
+                        "spacing": "sm",
+                        "margin": "md",
                         "contents": [
                             {
                                 "type": "button",
                                 "style": "primary",
                                 "height": "sm",
                                 "color": c["primary"],
-                                "action": {"type": "message", "label": "انضم", "text": "انضم"}
+                                "action": {"type": "message", "label": "الألعاب", "text": "العاب"}
                             },
                             {
                                 "type": "button",
                                 "style": "secondary",
                                 "height": "sm",
-                                "action": {"type": "message", "label": "العاب", "text": "العاب"}
+                                "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}
                             }
                         ]
                     },
                     {
                         "type": "box",
                         "layout": "horizontal",
-                        "spacing": "md",
-                        "margin": "md",
+                        "spacing": "sm",
+                        "margin": "sm",
                         "contents": [
                             {
                                 "type": "button",
@@ -152,6 +150,23 @@ class UIBuilder:
                                 "action": {"type": "message", "label": "صدارة", "text": "صدارة"}
                             }
                         ]
+                    },
+                    {
+                        "type": "button",
+                        "style": "secondary",
+                        "height": "sm",
+                        "margin": "sm",
+                        "action": {"type": "message", "label": f"ثيم {other_theme}", "text": f"ثيم {other_theme}"}
+                    },
+                    {"type": "separator", "margin": "md", "color": c["border"]},
+                    {
+                        "type": "text",
+                        "text": self.config.RIGHTS,
+                        "size": "xxs",
+                        "color": c["text3"],
+                        "align": "center",
+                        "wrap": True,
+                        "margin": "sm"
                     }
                 ]
             }
@@ -166,89 +181,232 @@ class UIBuilder:
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "paddingAll": "24px",
+                "paddingAll": "20px",
                 "backgroundColor": c["bg"],
                 "contents": [
                     {
                         "type": "text",
                         "text": "دليل الاستخدام",
-                        "size": "xxl",
+                        "size": "xl",
                         "weight": "bold",
                         "color": c["primary"],
                         "align": "center"
                     },
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
+                    {"type": "separator", "margin": "md", "color": c["border"]},
                     {
                         "type": "box",
                         "layout": "vertical",
                         "backgroundColor": c["card"],
-                        "cornerRadius": "16px",
-                        "paddingAll": "20px",
-                        "margin": "lg",
+                        "cornerRadius": "12px",
+                        "paddingAll": "14px",
+                        "margin": "md",
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "الاوامر الاساسية",
+                                "text": "الأوامر الأساسية",
                                 "size": "md",
                                 "weight": "bold",
                                 "color": c["text"]
                             },
                             {
                                 "type": "text",
-                                "text": "بداية - العاب - نقاطي - صدارة",
+                                "text": "• بداية - الصفحة الرئيسية\n• العاب - قائمة الألعاب\n• نقاطي - إحصائياتي\n• صدارة - لوحة الصدارة\n• مساعدة - هذه الصفحة",
                                 "size": "sm",
                                 "color": c["text2"],
                                 "wrap": True,
                                 "margin": "sm"
-                            },
-                            {"type": "separator", "margin": "md", "color": c["border"]},
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "14px",
+                        "margin": "sm",
+                        "contents": [
                             {
                                 "type": "text",
-                                "text": "اوامر الحساب",
+                                "text": "أوامر الحساب",
                                 "size": "md",
                                 "weight": "bold",
-                                "color": c["text"],
-                                "margin": "md"
+                                "color": c["text"]
                             },
                             {
                                 "type": "text",
-                                "text": "انضم - انسحب",
-                                "size": "sm",
-                                "color": c["text2"],
-                                "margin": "sm"
-                            },
-                            {"type": "separator", "margin": "md", "color": c["border"]},
-                            {
-                                "type": "text",
-                                "text": "اوامر اللعبة",
-                                "size": "md",
-                                "weight": "bold",
-                                "color": c["text"],
-                                "margin": "md"
-                            },
-                            {
-                                "type": "text",
-                                "text": "لمح - جاوب - ايقاف",
-                                "size": "sm",
-                                "color": c["text2"],
-                                "margin": "sm"
-                            },
-                            {"type": "separator", "margin": "md", "color": c["border"]},
-                            {
-                                "type": "text",
-                                "text": "تغيير الثيم",
-                                "size": "md",
-                                "weight": "bold",
-                                "color": c["text"],
-                                "margin": "md"
-                            },
-                            {
-                                "type": "text",
-                                "text": "ثيم فاتح او ثيم داكن",
+                                "text": "• تسجيل - التسجيل (للنقاط)\n• انسحب - إلغاء التسجيل",
                                 "size": "sm",
                                 "color": c["text2"],
                                 "wrap": True,
                                 "margin": "sm"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "14px",
+                        "margin": "sm",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "أوامر اللعبة",
+                                "size": "md",
+                                "weight": "bold",
+                                "color": c["text"]
+                            },
+                            {
+                                "type": "text",
+                                "text": "• لمح - تلميح للإجابة\n• جاوب - إظهار الإجابة\n• ايقاف - إيقاف اللعبة",
+                                "size": "sm",
+                                "color": c["text2"],
+                                "wrap": True,
+                                "margin": "sm"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "14px",
+                        "margin": "sm",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "الثيمات",
+                                "size": "md",
+                                "weight": "bold",
+                                "color": c["text"]
+                            },
+                            {
+                                "type": "text",
+                                "text": "• ثيم فاتح\n• ثيم داكن",
+                                "size": "sm",
+                                "color": c["text2"],
+                                "wrap": True,
+                                "margin": "sm"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "height": "sm",
+                        "color": c["primary"],
+                        "margin": "md",
+                        "action": {"type": "message", "label": "رجوع للبداية", "text": "بداية"}
+                    }
+                ]
+            }
+        })
+
+    def games_menu(self, theme: str) -> FlexMessage:
+        c = self._get_colors(theme)
+        
+        point_games_buttons = []
+        for i in range(0, len(self.config.POINT_GAMES), 3):
+            row = {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "xs" if i > 0 else "md",
+                "contents": []
+            }
+            for g in self.config.POINT_GAMES[i:i+3]:
+                row["contents"].append({
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "color": c["primary"],
+                    "action": {"type": "message", "label": g, "text": g}
+                })
+            point_games_buttons.append(row)
+        
+        fun_games_buttons = []
+        for i in range(0, len(self.config.FUN_GAMES), 3):
+            row = {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "xs" if i > 0 else "md",
+                "contents": []
+            }
+            for g in self.config.FUN_GAMES[i:i+3]:
+                row["contents"].append({
+                    "type": "button",
+                    "style": "secondary",
+                    "height": "sm",
+                    "action": {"type": "message", "label": g, "text": g}
+                })
+            fun_games_buttons.append(row)
+        
+        return self._create_flex("الألعاب", {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "20px",
+                "backgroundColor": c["bg"],
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "الألعاب المتاحة",
+                        "size": "xl",
+                        "weight": "bold",
+                        "color": c["primary"],
+                        "align": "center"
+                    },
+                    {"type": "separator", "margin": "md", "color": c["border"]},
+                    {
+                        "type": "text",
+                        "text": "ألعاب النقاط",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": c["text"],
+                        "margin": "md"
+                    },
+                    *point_games_buttons,
+                    {"type": "separator", "margin": "md", "color": c["border"]},
+                    {
+                        "type": "text",
+                        "text": "ألعاب ترفيهية",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": c["text"],
+                        "margin": "md"
+                    },
+                    *fun_games_buttons,
+                    {"type": "separator", "margin": "md", "color": c["border"]},
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "margin": "md",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "style": "primary",
+                                "height": "sm",
+                                "color": c["success"],
+                                "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}
+                            },
+                            {
+                                "type": "button",
+                                "style": "secondary",
+                                "height": "sm",
+                                "action": {"type": "message", "label": "انسحب", "text": "انسحب"}
+                            },
+                            {
+                                "type": "button",
+                                "style": "secondary",
+                                "height": "sm",
+                                "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"}
                             }
                         ]
                     }
@@ -287,7 +445,7 @@ class UIBuilder:
         else:
             rows.append({
                 "type": "text",
-                "text": "لا توجد احصائيات",
+                "text": "لا توجد إحصائيات",
                 "size": "sm",
                 "color": c["text3"],
                 "align": "center",
@@ -300,25 +458,25 @@ class UIBuilder:
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "paddingAll": "24px",
+                "paddingAll": "20px",
                 "backgroundColor": c["bg"],
                 "contents": [
                     {
                         "type": "text",
-                        "text": "احصائياتي",
-                        "size": "xxl",
+                        "text": "إحصائياتي",
+                        "size": "xl",
                         "weight": "bold",
                         "color": c["primary"],
                         "align": "center"
                     },
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
+                    {"type": "separator", "margin": "md", "color": c["border"]},
                     {
                         "type": "box",
                         "layout": "vertical",
                         "backgroundColor": c["card"],
                         "cornerRadius": "16px",
-                        "paddingAll": "20px",
-                        "margin": "lg",
+                        "paddingAll": "16px",
+                        "margin": "md",
                         "contents": [
                             {
                                 "type": "text",
@@ -330,11 +488,11 @@ class UIBuilder:
                             },
                             {
                                 "type": "text",
-                                "text": "اجمالي النقاط",
+                                "text": "إجمالي النقاط",
                                 "size": "sm",
                                 "color": c["text2"],
                                 "align": "center",
-                                "margin": "md"
+                                "margin": "sm"
                             },
                             {
                                 "type": "text",
@@ -352,18 +510,18 @@ class UIBuilder:
                         "layout": "vertical",
                         "backgroundColor": c["card"],
                         "cornerRadius": "16px",
-                        "paddingAll": "20px",
-                        "margin": "md",
+                        "paddingAll": "16px",
+                        "margin": "sm",
                         "contents": [
                             {
                                 "type": "text",
-                                "text": "الالعاب الاكثر لعبا",
+                                "text": "الألعاب الأكثر لعباً",
                                 "size": "md",
                                 "weight": "bold",
                                 "color": c["text"],
                                 "align": "center"
                             },
-                            {"type": "separator", "margin": "md", "color": c["border"]},
+                            {"type": "separator", "margin": "sm", "color": c["border"]},
                             *rows
                         ]
                     }
@@ -377,16 +535,14 @@ class UIBuilder:
         
         for i, (name, pts, reg) in enumerate(top_users[:20], start=1):
             rank_color = c["primary"] if i <= 3 else c["text2"]
-            badge = "R" if reg else "G"
-            badge_color = c["success"] if reg else c["text3"]
             
             rows.append({
                 "type": "box",
                 "layout": "horizontal",
-                "paddingAll": "12px",
+                "paddingAll": "10px",
                 "margin": "xs",
                 "backgroundColor": c["card"],
-                "cornerRadius": "12px",
+                "cornerRadius": "10px",
                 "contents": [
                     {
                         "type": "text",
@@ -402,7 +558,7 @@ class UIBuilder:
                         "size": "sm",
                         "color": c["text"],
                         "flex": 3,
-                        "margin": "md"
+                        "margin": "sm"
                     },
                     {
                         "type": "text",
@@ -411,14 +567,6 @@ class UIBuilder:
                         "weight": "bold",
                         "color": c["primary"],
                         "flex": 1,
-                        "align": "center"
-                    },
-                    {
-                        "type": "text",
-                        "text": badge,
-                        "size": "xs",
-                        "color": badge_color,
-                        "flex": 0,
                         "align": "end"
                     }
                 ]
@@ -430,25 +578,25 @@ class UIBuilder:
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "paddingAll": "24px",
+                "paddingAll": "20px",
                 "backgroundColor": c["bg"],
                 "contents": [
                     {
                         "type": "text",
                         "text": "لوحة الصدارة",
-                        "size": "xxl",
+                        "size": "xl",
                         "weight": "bold",
                         "color": c["primary"],
                         "align": "center"
                     },
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "box", "layout": "vertical", "margin": "lg", "contents": rows}
+                    {"type": "separator", "margin": "md", "color": c["border"]},
+                    {"type": "box", "layout": "vertical", "margin": "md", "contents": rows}
                 ]
             }
         })
 
     def registration_prompt(self, theme: str) -> TextMessage:
-        return self._create_text("ارسل اسمك للتسجيل")
+        return self._create_text("أرسل اسمك للتسجيل")
 
     def registration_success(self, username: str, points: int, theme: str) -> TextMessage:
         return self._create_text(f"تم التسجيل بنجاح\n\nالاسم: {username}\nالنقاط: {points}")
@@ -457,75 +605,4 @@ class UIBuilder:
         return self._create_text(f"تم الانسحاب\n\nالاسم: {username}\nالنقاط: {points}")
 
     def game_stopped(self, game_name: str, theme: str) -> TextMessage:
-        return self._create_text(f"تم ايقاف لعبة {game_name}")
-
-    def games_menu(self, theme: str, top_games: List[str] = None) -> FlexMessage:
-        c = self._get_colors(theme)
-        all_games = self.config.get_all_games()
-        
-        if top_games:
-            order = top_games + [g for g in all_games if g not in top_games]
-        else:
-            order = all_games
-        
-        order = order[:18]
-        
-        rows = []
-        for i in range(0, len(order), 3):
-            row = {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "sm" if i > 0 else "lg",
-                "contents": []
-            }
-            for g in order[i:i+3]:
-                row["contents"].append({
-                    "type": "button",
-                    "style": "primary",
-                    "height": "sm",
-                    "color": c["primary"],
-                    "action": {"type": "message", "label": g, "text": g}
-                })
-            rows.append(row)
-        
-        return self._create_flex("الالعاب", {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "paddingAll": "24px",
-                "backgroundColor": c["bg"],
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "الالعاب المتاحة",
-                        "size": "xxl",
-                        "weight": "bold",
-                        "color": c["primary"],
-                        "align": "center"
-                    },
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
-                    *rows,
-                    {"type": "separator", "margin": "xl", "color": c["border"]},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "backgroundColor": c["card"],
-                        "cornerRadius": "12px",
-                        "paddingAll": "16px",
-                        "margin": "md",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": "لمح - جاوب - ايقاف",
-                                "size": "sm",
-                                "color": c["text2"],
-                                "align": "center"
-                            }
-                        ]
-                    }
-                ]
-            }
-        })
+        return self._create_text(f"تم إيقاف لعبة {game_name}")
