@@ -2,15 +2,15 @@ from games.base_game import BaseGame
 from typing import Dict, Any, Optional
 import re
 
-
 class CompatibilityGame(BaseGame):
-    """لعبة توافق"""
+    """لعبة توافق (للترفيه فقط)"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=1)
         self.game_name = "توافق"
         self.supports_hint = False
         self.supports_reveal = False
+        self.points_enabled = False  # للتأكيد أنها للترفيه فقط
 
     def is_valid_text(self, text: str) -> bool:
         """التحقق من أن النص أسماء فقط"""
@@ -67,7 +67,7 @@ class CompatibilityGame(BaseGame):
         )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """التحقق من الإجابة"""
+        """التحقق من الإجابة وعرض النتيجة"""
         if not self.game_active:
             return None
 
