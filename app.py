@@ -30,9 +30,9 @@ logger = logging.getLogger("botmesh")
 
 try:
     Config.validate()
-    logger.info("تم التحقق من الاعدادات")
+    logger.info("Validated configuration")
 except Exception as e:
-    logger.error(f"خطأ في الاعدادات: {e}")
+    logger.error(f"Configuration error: {e}")
     sys.exit(1)
 
 configuration = Configuration(access_token=Config.LINE_ACCESS_TOKEN)
@@ -53,7 +53,7 @@ def is_rate_limited(user_id: str) -> bool:
     timestamps = [t for t in user_rate_limit[user_id] if now - t < window]
     user_rate_limit[user_id] = timestamps
     if len(timestamps) >= Config.RATE_LIMIT_MESSAGES:
-        logger.warning(f"تجاوز معدل الرسائل: {user_id}")
+        logger.warning(f"Rate limit exceeded: {user_id}")
         return True
     user_rate_limit[user_id].append(now)
     return False
@@ -92,13 +92,13 @@ def safe_reply(line_api: MessagingApi, reply_token: str, messages: List[Any]):
                 try:
                     cleaned = sanitize_flex(m)
                     flex = FlexMessage(
-                        alt_text=cleaned.get("altText", "رسالة"),
+                        alt_text=cleaned.get("altText", "Message"),
                         contents=FlexContainer.from_dict(cleaned.get("contents", cleaned))
                     )
                     clean_messages.append(flex)
                     continue
                 except Exception:
-                    clean_messages.append(TextMessage(text="حدث خطأ في الرسالة"))
+                    clean_messages.append(TextMessage(text="Error in message"))
                     continue
             if isinstance(m, (FlexMessage, TextMessage)):
                 clean_messages.append(m)
@@ -106,7 +106,7 @@ def safe_reply(line_api: MessagingApi, reply_token: str, messages: List[Any]):
                 clean_messages.append(TextMessage(text=str(m)))
         line_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=clean_messages))
     except Exception:
-        logger.exception("فشل ارسال الرسالة")
+        logger.exception("Failed to send message")
 
 def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Optional[dict]:
     if not user_id:
@@ -121,12 +121,12 @@ def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Opt
     except Exception:
         user = None
     if not user:
-        name = "مستخدم"
+        name = "User"
         if src_type == "user":
             try:
                 profile = line_api.get_profile(user_id)
                 if profile and getattr(profile, "display_name", None):
-                    name = profile.display_name or "مستخدم"
+                    name = profile.display_name or "User"
             except Exception:
                 pass
         try:
@@ -148,11 +148,11 @@ def home():
 <head><meta charset="utf-8"><title>{Config.BOT_NAME}</title></head>
 <body>
 <h1>{Config.BOT_NAME}</h1>
-<p>الالعاب النشطة: {active}</p>
-<p>المستخدمين: {stats.get('total_users', 0)}</p>
-<p>المسجلين: {stats.get('registered_users', 0)}</p>
-<p>النشطون اليوم: {stats.get('active_today', 0)}</p>
-<p>حجم قاعدة البيانات: {db_size:.2f} MB</p>
+<p>Active Games: {active}</p>
+<p>Total Users: {stats.get('total_users', 0)}</p>
+<p>Registered: {stats.get('registered_users', 0)}</p>
+<p>Active Today: {stats.get('active_today', 0)}</p>
+<p>Database: {db_size:.2f} MB</p>
 <p>{Config.RIGHTS}</p>
 </body>
 </html>"""
@@ -176,7 +176,7 @@ def callback():
     except InvalidSignatureError:
         abort(400)
     except Exception:
-        logger.exception("خطأ في Webhook")
+        logger.exception("Webhook error")
     return "OK", 200
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -196,19 +196,19 @@ def handle_message(event):
             line_api = MessagingApi(api_client)
             user = get_user_profile(line_api, user_id, src_type)
             if not user:
-                safe_reply(line_api, event.reply_token, [TextMessage(text="خطأ فني")])
+                safe_reply(line_api, event.reply_token, [TextMessage(text="Technical error")])
                 return
-            username = user.get("name", "مستخدم")
+            username = user.get("name", "User")
             points = int(user.get("points", 0) or 0)
             is_reg = bool(user.get("is_registered", 0))
             theme = user.get("theme", "فاتح")
             
-            # معالجة الاوامر والالعاب هنا
+            # Process commands and games here
             
     except Exception:
-        logger.exception("خطأ في معالج الرسائل")
+        logger.exception("Message handler error")
 
 if __name__ == "__main__":
     port = Config.get_port()
-    logger.info(f"بدء التطبيق على المنفذ {port}")
+    logger.info(f"Starting app on port {port}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
