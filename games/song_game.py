@@ -1,5 +1,5 @@
 """
-لعبة أغنيه - Bot Mesh v20.1 FINAL
+لعبة أغنيه - Bot Mesh v21.0 FINAL
 Created by: Abeer Aldosari © 2025
 ✅ نقطة واحدة لكل إجابة | ثيمات | سؤال سابق | أزرار | بدون وقت
 """
@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 
 
 class SongGame(BaseGame):
-    """لعبة أغنيه"""
+    """لعبة أغنيه محسّنة"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
@@ -115,13 +115,13 @@ class SongGame(BaseGame):
         self.previous_question = None
         self.previous_answer = None
         self.answered_users.clear()
-        self.used_songs = []
+        self.used_songs.clear()
         return self.get_question()
 
     def get_question(self):
         available = [s for s in self.songs if s not in self.used_songs]
         if not available:
-            self.used_songs = []
+            self.used_songs.clear()
             available = self.songs.copy()
 
         q_data = random.choice(available)
@@ -142,13 +142,15 @@ class SongGame(BaseGame):
 
         normalized = self.normalize_text(user_answer)
 
+        # تلميح
         if self.can_use_hint() and normalized == "لمح":
             artist = self.current_answer[0]
-            hint = f"يبدأ بـ {artist[0]}\nعدد الحروف {len(artist)}"
+            hint = f"يبدأ بـ {artist[0]} | عدد الحروف {len(artist)}"
             return {"message": hint, "response": self._create_text_message(hint), "points": 0}
 
+        # كشف الإجابة
         if self.can_reveal_answer() and normalized == "جاوب":
-            reveal = f"المغني {self.current_answer[0]}"
+            reveal = f"المغني: {self.current_answer[0]}"
             self.previous_question = self.used_songs[-1]["lyrics"] if self.used_songs else None
             self.previous_answer = self.current_answer[0]
             self.current_question += 1
@@ -161,14 +163,10 @@ class SongGame(BaseGame):
 
             return {"message": reveal, "response": self.get_question(), "points": 0}
 
-        if self.team_mode and normalized in ["لمح", "جاوب"]:
-            return None
-
         correct_normalized = self.normalize_text(self.current_answer[0])
         
         if normalized == correct_normalized:
             total_points = 1
-
             if self.team_mode:
                 team = self.get_user_team(user_id) or self.assign_to_team(user_id)
                 self.add_team_score(team, total_points)
