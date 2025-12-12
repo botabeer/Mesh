@@ -1,8 +1,3 @@
-"""
-العاب نصية - Bot Mesh
-العاب لا تتطلب اجابات صحيحة
-"""
-
 from games.base_game import BaseGame
 from linebot.v3.messaging import FlexMessage, FlexContainer
 import random
