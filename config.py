@@ -7,7 +7,7 @@ load_dotenv()
 class Config:
     BOT_NAME = "Bot Mesh"
     VERSION = "1.0"
-    RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
+    RIGHTS = "Created by Abeer Aldossari 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
@@ -19,10 +19,10 @@ class Config:
     RATE_LIMIT_WINDOW = 60
 
     THEMES = {
-        "فاتح": {
+        "light": {
             "bg": "#F2F2F7",
-            "glass": "rgba(255, 255, 255, 0.8)",
-            "card": "rgba(255, 255, 255, 0.95)",
+            "glass": "rgba(255,255,255,0.8)",
+            "card": "rgba(255,255,255,0.95)",
             "primary": "#007AFF",
             "secondary": "#5AC8FA",
             "success": "#34C759",
@@ -31,13 +31,13 @@ class Config:
             "text": "#000000",
             "text2": "#3C3C43",
             "text3": "#8E8E93",
-            "border": "rgba(60, 60, 67, 0.18)",
-            "shadow": "rgba(0, 0, 0, 0.1)"
+            "border": "rgba(60,60,67,0.18)",
+            "shadow": "rgba(0,0,0,0.1)"
         },
-        "داكن": {
+        "dark": {
             "bg": "#000000",
-            "glass": "rgba(28, 28, 30, 0.8)",
-            "card": "rgba(44, 44, 46, 0.95)",
+            "glass": "rgba(28,28,30,0.8)",
+            "card": "rgba(44,44,46,0.95)",
             "primary": "#0A84FF",
             "secondary": "#64D2FF",
             "success": "#30D158",
@@ -46,46 +46,46 @@ class Config:
             "text": "#FFFFFF",
             "text2": "#EBEBF5",
             "text3": "#8E8E93",
-            "border": "rgba(142, 142, 147, 0.18)",
-            "shadow": "rgba(255, 255, 255, 0.1)"
+            "border": "rgba(142,142,147,0.18)",
+            "shadow": "rgba(255,255,255,0.1)"
         }
     }
 
-    DEFAULT_THEME = "فاتح"
+    DEFAULT_THEME = "light"
 
     POINT_GAMES = [
-        "ذكاء", "خمن", "ضد", "ترتيب", "رياضيات",
-        "اغنيه", "لون", "تكوين", "لعبة", "سلسلة", "اسرع"
+        "iq", "guess", "opposite", "scramble", "math",
+        "song", "color", "letters", "game", "chain", "fast"
     ]
 
     FUN_GAMES = {
-        "سؤال": {"group_only": False},
-        "منشن": {"group_only": False},
-        "تحدي": {"group_only": False},
-        "اعتراف": {"group_only": False},
-        "موقف": {"group_only": False},
-        "اقتباس": {"group_only": False},
-        "توافق": {"group_only": False},
-        "مافيا": {"group_only": True}
+        "question": {"group_only": False},
+        "mention": {"group_only": False},
+        "challenge": {"group_only": False},
+        "confession": {"group_only": False},
+        "situation": {"group_only": False},
+        "quote": {"group_only": False},
+        "compatibility": {"group_only": False},
+        "mafia": {"group_only": True}
     }
 
     COMMANDS = {
-        "home": ["بداية", "start", "home"],
-        "games": ["العاب", "games", "الالعاب"],
-        "help": ["مساعدة", "help"],
-        "points": ["نقاطي"],
-        "leaderboard": ["صدارة"],
-        "join": ["انضم"],
-        "leave": ["انسحب"],
-        "stop": ["ايقاف", "stop"]
+        "home": ["start", "home"],
+        "games": ["games"],
+        "help": ["help"],
+        "points": ["points"],
+        "leaderboard": ["top"],
+        "join": ["join"],
+        "leave": ["leave"],
+        "stop": ["stop"]
     }
 
     @classmethod
     def validate(cls):
         if not cls.LINE_SECRET:
-            raise ValueError("LINE_CHANNEL_SECRET مفقود")
+            raise ValueError("LINE_CHANNEL_SECRET missing")
         if not cls.LINE_ACCESS_TOKEN:
-            raise ValueError("LINE_CHANNEL_ACCESS_TOKEN مفقود")
+            raise ValueError("LINE_CHANNEL_ACCESS_TOKEN missing")
         return True
 
     @classmethod
