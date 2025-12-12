@@ -1,16 +1,17 @@
 """
-ألعاب نصية - Bot Mesh
-الألعاب التي لا تتطلب إجابات صحيحة
+العاب نصية - Bot Mesh
+الالعاب التي لا تتطلب اجابات صحيحة
 """
 
 from games.base_game import BaseGame
+from linebot.v3.messaging import FlexMessage, FlexContainer
 import random
 from typing import Dict, Any, Optional
 from pathlib import Path
 
 
 class TextGame(BaseGame):
-    """قاعدة للألعاب النصية"""
+    """قاعدة للالعاب النصية"""
     
     def __init__(self, line_bot_api, file_name: str, game_name: str):
         super().__init__(line_bot_api, questions_count=1)
@@ -20,7 +21,6 @@ class TextGame(BaseGame):
         self.items = self._load_items(file_name)
         
         if not self.items:
-            # قائمة احتياطية في حال فشل التحميل
             self.items = [f"{game_name} - محتوى افتراضي"]
         
         random.shuffle(self.items)
@@ -29,15 +29,13 @@ class TextGame(BaseGame):
     def _load_items(self, file_name: str) -> list:
         """تحميل العناصر من ملف"""
         try:
-            # محاولة المسار الكامل أولاً
             file_path = Path(__file__).parent / file_name
             
             if not file_path.exists():
-                # محاولة المسار النسبي
                 file_path = Path("games") / file_name
             
             if not file_path.exists():
-                raise FileNotFoundError(f"File not found: {file_name}")
+                return []
             
             with open(file_path, 'r', encoding='utf-8') as f:
                 items = [line.strip() for line in f if line.strip()]
@@ -64,19 +62,102 @@ class TextGame(BaseGame):
         item = random.choice(available)
         self.used_items.append(item)
         
-        return self.build_question_flex(
-            question_text=item,
-            additional_info=None
+        # استخدام build_question_flex من BaseGame
+        colors = self.get_theme_colors()
+        
+        flex_dict = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": self.game_name,
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": colors["primary"],
+                        "align": "center"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": colors["border"]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": item,
+                                "size": "lg",
+                                "color": colors["text"],
+                                "align": "center",
+                                "wrap": True,
+                                "weight": "bold"
+                            }
+                        ],
+                        "backgroundColor": colors["card"],
+                        "cornerRadius": "15px",
+                        "paddingAll": "20px",
+                        "borderWidth": "2px",
+                        "borderColor": colors["primary"],
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "xl",
+                        "color": colors["border"]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "margin": "lg",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "message",
+                                    "label": "اعادة",
+                                    "text": self.game_name
+                                },
+                                "style": "primary",
+                                "height": "sm",
+                                "color": colors["primary"]
+                            },
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "message",
+                                    "label": "بداية",
+                                    "text": "بداية"
+                                },
+                                "style": "secondary",
+                                "height": "sm"
+                            }
+                        ]
+                    }
+                ],
+                "paddingAll": "24px",
+                "backgroundColor": colors["bg"]
+            }
+        }
+        
+        return FlexMessage(
+            alt_text=f"{self.game_name}: {item[:50]}",
+            contents=FlexContainer.from_dict(flex_dict)
         )
     
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
-        """الألعاب النصية لا تحتاج تحقق من الإجابة"""
-        # يمكن إضافة منطق هنا إذا أردت تتبع الردود
+        """الالعاب النصية لا تحتاج تحقق من الاجابة"""
         return None
 
 
 class QuestionGame(TextGame):
-    """لعبة سؤال - أسئلة عشوائية للنقاش"""
+    """لعبة سؤال - اسئلة عشوائية للنقاش"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, "questions.txt", "سؤال")
@@ -97,7 +178,7 @@ class ChallengeGame(TextGame):
 
 
 class ConfessionGame(TextGame):
-    """لعبة اعتراف - أسئلة اعترافات"""
+    """لعبة اعتراف - اسئلة اعترافات"""
     
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, "confessions.txt", "اعتراف")
