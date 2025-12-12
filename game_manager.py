@@ -16,7 +16,6 @@ class GameManager:
 
     def _load_games(self) -> Dict[str, type]:
         try:
-            # ألعاب النقاط
             from games.iq_game import IqGame
             from games.guess_game import GuessGame
             from games.opposite_game import OppositeGame
@@ -29,9 +28,9 @@ class GameManager:
             from games.chain_words_game import ChainWordsGame
             from games.fast_typing_game import FastTypingGame
 
-            # ألعاب ترفيهية
             from text_games import QuestionGame, MentionGame, ChallengeGame, ConfessionGame
             from games.compatibility_game import CompatibilityGame
+            from games.mafia_game import MafiaGame
 
             return {
                 "ذكاء": IqGame,
@@ -46,12 +45,12 @@ class GameManager:
                 "سلسلة": ChainWordsGame,
                 "اسرع": FastTypingGame,
 
-                # ألعاب ترفيهية
                 "سؤال": QuestionGame,
                 "منشن": MentionGame,
                 "تحدي": ChallengeGame,
                 "اعتراف": ConfessionGame,
                 "توافق": CompatibilityGame,
+                "مافيا": MafiaGame,
             }
 
         except Exception as e:
@@ -84,11 +83,9 @@ class GameManager:
         is_point_game = game_name in Config.POINT_GAMES
         is_fun_game = game_name in Config.FUN_GAMES
 
-        # يتطلب تسجيل
         if is_point_game and not is_registered:
             return {"messages": [TextMessage(text="يجب التسجيل اولا\nاكتب: انضم")], "points": 0}
 
-        # ترفيهي — للمجموعات فقط
         if is_fun_game:
             game_cfg = Config.FUN_GAMES.get(game_name, {})
             if game_cfg.get("group_only") and source_type not in ("group", "room"):
@@ -129,12 +126,10 @@ class GameManager:
 
         norm = Config.normalize(text)
 
-        # بدء لعبة
         if norm in self.games:
             return self.start_game(context_id, norm, user_id, username,
                                    is_registered, theme, source_type)
 
-        # لا يوجد لعبة نشطة
         if context_id not in self.active_games:
             return None
 
@@ -154,7 +149,6 @@ class GameManager:
             if result.get("response"):
                 msgs.append(result["response"])
 
-            # انتهاء اللعبة
             if result.get("game_over"):
                 sess = self.game_sessions.pop(context_id, None)
                 self.active_games.pop(context_id, None)
