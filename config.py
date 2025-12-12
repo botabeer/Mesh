@@ -52,29 +52,16 @@ class Config:
     DEFAULT_THEME = "فاتح"
 
     # ألعاب نقاط (تتطلب تسجيل)
-    POINT_GAMES = {
-        "ذكاء": {"name": "ذكاء", "group_only": False},
-        "روليت": {"name": "روليت", "group_only": False},
-        "خمن": {"name": "خمن", "group_only": False},
-        "اغنيه": {"name": "أغنية", "group_only": False},
-        "ترتيب": {"name": "ترتيب", "group_only": False},
-        "تكوين": {"name": "تكوين", "group_only": False},
-        "ضد": {"name": "ضد", "group_only": False},
-        "لعبة": {"name": "لعبة", "group_only": False},
-        "اسرع": {"name": "أسرع", "group_only": False},
-        "سلسلة": {"name": "سلسلة", "group_only": False},
-        "لون": {"name": "لون", "group_only": False},
-        "رياضيات": {"name": "رياضيات", "group_only": False}
-    }
+    POINT_GAMES = [
+        "ذكاء", "مافيا", "خمن", "اغنيه", "ترتيب", 
+        "تكوين", "ضد", "لعبة", "اسرع", "سلسلة", 
+        "لون", "رياضيات"
+    ]
 
     # ألعاب ترفيهية (بدون تسجيل ولا نقاط)
-    FUN_GAMES = {
-        "سؤال": {"name": "سؤال", "group_only": False},
-        "منشن": {"name": "منشن", "group_only": True},
-        "تحدي": {"name": "تحدي", "group_only": False},
-        "اعتراف": {"name": "اعتراف", "group_only": False},
-        "توافق": {"name": "توافق", "group_only": False}
-    }
+    FUN_GAMES = [
+        "سؤال", "منشن", "تحدي", "اعتراف", "توافق", "موقف", "اقتباس",
+    ]
 
     @classmethod
     def validate(cls):
@@ -115,13 +102,9 @@ class Config:
         return name in cls.THEMES
 
     @classmethod
-    def get_all_point_games(cls):
-        return list(cls.POINT_GAMES.keys())
-
-    @classmethod
-    def get_all_fun_games(cls):
-        return list(cls.FUN_GAMES.keys())
-
-    @classmethod
     def get_all_games(cls):
-        return cls.get_all_point_games() + cls.get_all_fun_games()
+        return cls.POINT_GAMES + cls.FUN_GAMES
+
+    @classmethod
+    def is_point_game(cls, game_name: str) -> bool:
+        return game_name in cls.POINT_GAMES
