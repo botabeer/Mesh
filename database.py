@@ -9,17 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    """مدير قاعدة البيانات"""
-
     def __init__(self, db_path: str = "botmesh.db"):
         self.db_path = db_path
         self.lock = Lock()
         self.init_db()
-        logger.info(f"تم تهيئة قاعدة البيانات: {db_path}")
+        logger.info(f"Database initialized: {db_path}")
 
     @contextmanager
     def get_conn(self):
-        """الحصول على اتصال آمن"""
         conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
@@ -30,13 +27,12 @@ class Database:
             conn.commit()
         except Exception as e:
             conn.rollback()
-            logger.error(f"خطأ في قاعدة البيانات: {e}", exc_info=True)
+            logger.error(f"Database error: {e}", exc_info=True)
             raise
         finally:
             conn.close()
 
     def init_db(self):
-        """إنشاء الجداول"""
         with self.lock:
             with self.get_conn() as conn:
                 conn.execute("""
@@ -45,7 +41,7 @@ class Database:
                         name TEXT NOT NULL,
                         points INTEGER DEFAULT 0,
                         is_registered BOOLEAN DEFAULT 0,
-                        theme TEXT DEFAULT 'ابيض',
+                        theme TEXT DEFAULT 'فاتح',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
@@ -79,17 +75,13 @@ class Database:
                 
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC)")
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, started_at DESC)")
-                
-                logger.info("تم إنشاء الجداول بنجاح")
 
     def get_user(self, user_id: str) -> Optional[Dict]:
-        """الحصول على بيانات المستخدم"""
         with self.get_conn() as conn:
             row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
             return dict(row) if row else None
 
     def create_user(self, user_id: str, name: str) -> bool:
-        """إنشاء مستخدم جديد"""
         try:
             with self.lock:
                 with self.get_conn() as conn:
@@ -99,11 +91,10 @@ class Database:
                     )
             return True
         except Exception as e:
-            logger.error(f"خطأ في إنشاء المستخدم: {e}")
+            logger.error(f"Error creating user: {e}")
             return False
 
     def record_game_stat(self, user_id: str, game_name: str, score: int, won: bool = False) -> bool:
-        """تسجيل إحصائيات اللعبة"""
         try:
             with self.lock:
                 with self.get_conn() as conn:
@@ -122,11 +113,10 @@ class Database:
                     )
             return True
         except Exception as e:
-            logger.error(f"خطأ في تسجيل الإحصائية: {e}")
+            logger.error(f"Error recording game stat: {e}")
             return False
 
     def get_user_stats(self, user_id: str) -> Dict:
-        """الحصول على إحصائيات المستخدم"""
         with self.get_conn() as conn:
             rows = conn.execute(
                 "SELECT game_name, plays, wins, total_score FROM game_stats WHERE user_id = ? ORDER BY plays DESC",
@@ -143,7 +133,6 @@ class Database:
             }
 
     def get_popular_games(self, limit: int = 13) -> List[str]:
-        """الحصول على الألعاب الأكثر شعبية"""
         with self.get_conn() as conn:
             rows = conn.execute(
                 "SELECT game_name, SUM(plays) AS total FROM game_stats GROUP BY game_name ORDER BY total DESC LIMIT ?",
@@ -152,7 +141,6 @@ class Database:
             return [r["game_name"] for r in rows]
 
     def get_stats(self) -> Dict:
-        """الحصول على الإحصائيات العامة"""
         with self.get_conn() as conn:
             return {
                 "total_users": conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"],
@@ -165,7 +153,6 @@ class Database:
             }
 
     def get_database_size(self) -> int:
-        """الحصول على حجم قاعدة البيانات"""
         import os
         try:
             return os.path.getsize(self.db_path)
@@ -173,7 +160,6 @@ class Database:
             return 0
 
     def update_user(self, user_id: str, **kwargs) -> bool:
-        """تحديث بيانات المستخدم"""
         if not kwargs:
             return False
         
@@ -199,15 +185,13 @@ class Database:
                     conn.execute(f"UPDATE users SET {', '.join(fields)} WHERE user_id = ?", values)
             return True
         except Exception as e:
-            logger.error(f"خطأ في التحديث: {e}")
+            logger.error(f"Error updating user: {e}")
             return False
 
     def update_user_name(self, user_id: str, name: str) -> bool:
-        """تحديث اسم المستخدم"""
         return self.update_user(user_id, name=name[:100])
 
     def add_points(self, user_id: str, points: int) -> bool:
-        """إضافة نقاط للمستخدم"""
         try:
             with self.lock:
                 with self.get_conn() as conn:
@@ -217,15 +201,13 @@ class Database:
                     )
             return True
         except Exception as e:
-            logger.error(f"خطأ في إضافة النقاط: {e}")
+            logger.error(f"Error adding points: {e}")
             return False
 
     def set_user_theme(self, user_id: str, theme: str) -> bool:
-        """تعيين ثيم المستخدم"""
         return self.update_user(user_id, theme=theme)
 
     def get_leaderboard(self, limit: int = 20) -> List[Tuple[str, int, bool]]:
-        """الحصول على لوحة الصدارة"""
         with self.get_conn() as conn:
             rows = conn.execute(
                 "SELECT name, points, is_registered FROM users WHERE points > 0 ORDER BY points DESC LIMIT ?",
@@ -234,7 +216,6 @@ class Database:
             return [(r["name"], r["points"], bool(r["is_registered"])) for r in rows]
 
     def create_session(self, user_id: str, game_name: str) -> int:
-        """إنشاء جلسة لعب"""
         with self.lock:
             with self.get_conn() as conn:
                 cursor = conn.execute(
@@ -244,7 +225,6 @@ class Database:
                 return cursor.lastrowid
 
     def complete_session(self, session_id: int, score: int) -> bool:
-        """إكمال جلسة اللعب"""
         try:
             with self.lock:
                 with self.get_conn() as conn:
@@ -254,5 +234,5 @@ class Database:
                     )
             return True
         except Exception as e:
-            logger.error(f"خطأ في إكمال الجلسة: {e}")
+            logger.error(f"Error completing session: {e}")
             return False
