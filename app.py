@@ -30,9 +30,9 @@ logger = logging.getLogger("botmesh")
 
 try:
     Config.validate()
-    logger.info("تم التحقق من الإعدادات بنجاح")
+    logger.info("تم التحقق من الاعدادات")
 except Exception as e:
-    logger.error(f"خطأ في الإعدادات: {e}")
+    logger.error(f"خطأ في الاعدادات: {e}")
     sys.exit(1)
 
 configuration = Configuration(access_token=Config.LINE_ACCESS_TOKEN)
@@ -47,7 +47,6 @@ pending_registrations: Dict[str, datetime] = {}
 user_rate_limit = defaultdict(list)
 user_cache: Dict[str, dict] = {}
 
-# ---------------- Utilities ----------------
 def is_rate_limited(user_id: str) -> bool:
     now = datetime.utcnow()
     window = timedelta(seconds=Config.RATE_LIMIT_WINDOW)
@@ -59,44 +58,28 @@ def is_rate_limited(user_id: str) -> bool:
     user_rate_limit[user_id].append(now)
     return False
 
-# ---------------- Flex sanitizer ----------------
-ALLOWED_PROPS_BY_TYPE = {
-    "bubble": {"type", "size", "body", "header", "footer", "styles", "hero"},
-    "box": {"type", "layout", "contents", "spacing", "margin", "flex", "action", "paddingAll", "paddingTop", "paddingBottom", "paddingStart", "paddingEnd", "cornerRadius"},
-    "text": {"type", "text", "size", "weight", "align", "gravity", "wrap", "maxLines", "action", "color"},
-    "button": {"type", "action", "style", "height", "margin"},
-    "image": {"type", "url", "size", "aspectMode", "aspectRatio", "action"},
-    "separator": {"type", "margin"},
-    "icon": {"type", "url"}
+ALLOWED_PROPS = {
+    "type", "altText", "contents", "body", "header", "footer", "action",
+    "layout", "spacing", "margin", "flex", "paddingAll", "paddingTop",
+    "paddingBottom", "paddingStart", "paddingEnd", "cornerRadius",
+    "text", "size", "weight", "align", "gravity", "wrap", "maxLines",
+    "color", "style", "height", "url", "aspectMode", "aspectRatio",
+    "backgroundColor", "borderWidth", "borderColor", "label"
 }
-GLOBAL_ALLOWED = {"type", "altText", "contents", "body", "header", "footer", "action"}
-
-def _sanitize_value(v):
-    if isinstance(v, str) and v.endswith("px"):
-        try:
-            return v[:-2]
-        except Exception:
-            return v
-    return v
 
 def sanitize_flex(obj: Any) -> Any:
     if isinstance(obj, list):
         return [sanitize_flex(v) for v in obj]
     if not isinstance(obj, dict):
         return obj
-    obj_type = obj.get("type")
-    allowed = set(GLOBAL_ALLOWED)
-    if obj_type and obj_type in ALLOWED_PROPS_BY_TYPE:
-        allowed |= ALLOWED_PROPS_BY_TYPE[obj_type]
-    allowed |= {"text", "url", "label", "size", "weight", "action", "margin", "spacing", "backgroundColor", "color", "paddingAll", "cornerRadius"}
     sanitized = {}
     for k, v in obj.items():
-        if k not in allowed:
+        if k not in ALLOWED_PROPS:
             continue
         if isinstance(v, (dict, list)):
             sanitized[k] = sanitize_flex(v)
         else:
-            sanitized[k] = _sanitize_value(v)
+            sanitized[k] = v[:-2] if isinstance(v, str) and v.endswith("px") else v
     return sanitized
 
 def safe_reply(line_api: MessagingApi, reply_token: str, messages: List[Any]):
@@ -115,23 +98,16 @@ def safe_reply(line_api: MessagingApi, reply_token: str, messages: List[Any]):
                     clean_messages.append(flex)
                     continue
                 except Exception:
-                    clean_messages.append(TextMessage(text="حدث خطأ في تكوين الرسالة الغنية."))
+                    clean_messages.append(TextMessage(text="حدث خطأ في الرسالة"))
                     continue
-            if isinstance(m, FlexMessage) or hasattr(m, "alt_text") or hasattr(m, "contents"):
+            if isinstance(m, (FlexMessage, TextMessage)):
                 clean_messages.append(m)
             else:
-                try:
-                    if isinstance(m, TextMessage):
-                        clean_messages.append(m)
-                    else:
-                        clean_messages.append(TextMessage(text=str(m)))
-                except Exception:
-                    clean_messages.append(TextMessage(text="رد غير متوقع"))
+                clean_messages.append(TextMessage(text=str(m)))
         line_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=clean_messages))
     except Exception:
-        logger.exception("فشل إرسال الرسالة")
+        logger.exception("فشل ارسال الرسالة")
 
-# ---------------- User profile ----------------
 def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Optional[dict]:
     if not user_id:
         return None
@@ -162,18 +138,17 @@ def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Opt
         user_cache[user_id] = {"data": user, "_cached_at": datetime.utcnow()}
     return user
 
-# ---------------- Routes ----------------
 @app.route("/", methods=["GET"])
 def home():
     stats = db.get_stats() or {}
-    active = game_mgr.get_active_count()
+    active = len([g for g in game_mgr.active_games.values() if g])
     db_size = db.get_database_size() / 1024 / 1024
     return f"""<!DOCTYPE html>
 <html dir="rtl">
 <head><meta charset="utf-8"><title>{Config.BOT_NAME}</title></head>
 <body>
 <h1>{Config.BOT_NAME}</h1>
-<p>الألعاب النشطة: {active}</p>
+<p>الالعاب النشطة: {active}</p>
 <p>المستخدمين: {stats.get('total_users', 0)}</p>
 <p>المسجلين: {stats.get('registered_users', 0)}</p>
 <p>النشطون اليوم: {stats.get('active_today', 0)}</p>
@@ -184,10 +159,11 @@ def home():
 
 @app.route("/health", methods=["GET"])
 def health():
+    active_count = len([g for g in game_mgr.active_games.values() if g])
     return jsonify({
         "status": "ok",
         "timestamp": datetime.utcnow().isoformat(),
-        "active_games": game_mgr.get_active_count(),
+        "active_games": active_count,
         "version": Config.VERSION
     }), 200
 
@@ -203,7 +179,6 @@ def callback():
         logger.exception("خطأ في Webhook")
     return "OK", 200
 
-# ---------------- Message handling ----------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     try:
@@ -221,17 +196,18 @@ def handle_message(event):
             line_api = MessagingApi(api_client)
             user = get_user_profile(line_api, user_id, src_type)
             if not user:
-                safe_reply(line_api, event.reply_token, [TextMessage(text="خطأ فني: تعذر جلب بيانات المستخدم.")])
+                safe_reply(line_api, event.reply_token, [TextMessage(text="خطأ فني")])
                 return
             username = user.get("name", "مستخدم")
             points = int(user.get("points", 0) or 0)
             is_reg = bool(user.get("is_registered", 0))
             theme = user.get("theme", "فاتح")
-            # هنا يمكن إدراج كل معالجة الأوامر والألعاب كما في الكود السابق
+            
+            # معالجة الاوامر والالعاب هنا
+            
     except Exception:
         logger.exception("خطأ في معالج الرسائل")
 
-# ---------------- تشغيل التطبيق ----------------
 if __name__ == "__main__":
     port = Config.get_port()
     logger.info(f"بدء التطبيق على المنفذ {port}")
