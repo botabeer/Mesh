@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional
 
 
 class ScrambleWordGame(BaseGame):
-    """لعبة ترتيب محسّنة"""
+    """لعبة ترتيب"""
 
     def __init__(self, line_bot_api):
         super().__init__(line_bot_api, questions_count=5)
@@ -13,16 +13,12 @@ class ScrambleWordGame(BaseGame):
         self.supports_reveal = True
 
         self.words = [
-            "مدرسة","كتاب","قلم","باب","نافذة","طاولة","كرسي","سيارة","طائرة","قطار",
-            "سفينة","دراجة","تفاحة","موز","برتقال","عنب","بطيخ","فراولة","شمس","قمر",
-            "نجمة","سماء","بحر","جبل","نهر","أسد","نمر","فيل","زرافة","حصان",
-            "غزال","ورد","شجرة","زهرة","عشب","ورقة","منزل","مسجد","حديقة","ملعب",
-            "مطعم","مكتبة","صديق","عائلة","أخ","أخت","والد","والدة","مطر","ريح",
-            "برق","رعد","غيم","ثلج","جليد","نار","ماء","هواء","تراب","صخرة",
-            "رمل","وادي","صحراء","غابة","حقل","مزرعة","بستان","طريق","شارع","جسر",
-            "نفق","ميدان","حديقة","متحف","سوق","محطة","مطار","ميناء","قرية","مدينة",
-            "دولة","قارة","كوكب","نجم","فضاء","سماء","أرض","تلفاز","راديو","هاتف",
-            "حاسوب","لوحة","مفتاح","قفل","ساعة","تقويم","صورة","مرآة","فرشاة","صابون"
+            "مدرسة", "كتاب", "قلم", "باب", "نافذة", "طاولة", "كرسي", "سيارة",
+            "طائرة", "قطار", "تفاحة", "موز", "برتقال", "عنب", "بطيخ", "شمس",
+            "قمر", "نجمة", "سماء", "بحر", "جبل", "نهر", "أسد", "نمر", "فيل",
+            "زرافة", "حصان", "ورد", "شجرة", "زهرة", "منزل", "مسجد", "حديقة",
+            "ملعب", "مطعم", "مكتبة", "صديق", "عائلة", "مطر", "ريح", "برق",
+            "غيم", "ثلج", "نار", "ماء", "هواء", "صخرة", "رمل", "غابة"
         ]
         random.shuffle(self.words)
         self.used_words = []
@@ -41,6 +37,7 @@ class ScrambleWordGame(BaseGame):
         return ' '.join(word[::-1])
 
     def start_game(self):
+        """بدء اللعبة"""
         self.current_question = 0
         self.game_active = True
         self.previous_question = None
@@ -50,6 +47,7 @@ class ScrambleWordGame(BaseGame):
         return self.get_question()
 
     def get_question(self):
+        """الحصول على سؤال"""
         available = [w for w in self.words if w not in self.used_words]
         if not available:
             self.used_words.clear()
@@ -62,24 +60,20 @@ class ScrambleWordGame(BaseGame):
 
         return self.build_question_flex(
             question_text=f"رتب الحروف\n\n{self.current_scrambled}",
-            additional_info=f"عدد الحروف {len(word)}"
+            additional_info=f"عدد الحروف: {len(word)}"
         )
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
+        """التحقق من الإجابة"""
         if not self.game_active or user_id in self.answered_users:
-            return None
-
-        if self.team_mode and user_id not in self.joined_users:
             return None
 
         normalized = self.normalize_text(user_answer)
 
-        # تلميح
         if self.can_use_hint() and normalized == "لمح":
-            hint = f"تبدأ بـ {self.current_answer[0]} | عدد الحروف {len(self.current_answer)}"
-            return {"message": hint, "response": self._create_text_message(hint), "points": 0}
+            hint = f"تبدأ بـ {self.current_answer[0]}\nعدد الحروف: {len(self.current_answer)}"
+            return {"message": hint, "points": 0}
 
-        # كشف الإجابة
         if self.can_reveal_answer() and normalized == "جاوب":
             reveal = f"الإجابة: {self.current_answer}"
             self.previous_question = self.current_scrambled
@@ -89,20 +83,15 @@ class ScrambleWordGame(BaseGame):
 
             if self.current_question >= self.questions_count:
                 result = self.end_game()
-                result["message"] = f"{reveal}\n\n{result.get('message', '')}"
+                result["message"] = f"{reveal}\n\nانتهت اللعبة"
                 return result
 
             return {"message": reveal, "response": self.get_question(), "points": 0}
 
-        # التحقق من صحة الإجابة
         if normalized == self.normalize_text(self.current_answer):
             total_points = 1
 
-            if self.team_mode:
-                team = self.get_user_team(user_id) or self.assign_to_team(user_id)
-                self.add_team_score(team, total_points)
-            else:
-                self.add_score(user_id, display_name, total_points)
+            self.add_score(user_id, display_name, total_points)
 
             self.previous_question = self.current_scrambled
             self.previous_answer = self.current_answer
