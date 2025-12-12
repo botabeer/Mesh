@@ -1,16 +1,13 @@
-# game_manager.py
-import logging, random
+import logging
+import random
 from typing import Dict, Any, Optional
-from linebot.v3.messaging import TextMessage, FlexMessage
+from linebot.v3.messaging import TextMessage
 from database import Database
 from config import Config
-from ui_builder import UIBuilder
 
 logger = logging.getLogger(__name__)
 
-# ------------------ ألعاب نصية عامة ------------------
 class TextGame:
-    """ألعاب نصية مستقلة تعتمد على ملفات .txt أو JSON"""
     def __init__(self, file_name: Optional[str], game_name: str):
         self.game_name = game_name
         self.items = self._load_items(file_name) if file_name else []
@@ -27,7 +24,7 @@ class TextGame:
             with open(f"games/{file_name}", "r", encoding="utf-8") as f:
                 return [line.strip() for line in f if line.strip()]
         except Exception as e:
-            logger.error(f"Load {file_name} error: {e}")
+            logger.error(f"فشل تحميل {file_name}: {e}")
             return []
 
     def start_game(self) -> TextMessage:
@@ -49,22 +46,17 @@ class TextGame:
         return TextMessage(text=f"{self.game_name} - جولة {self.current_round}: {question}")
 
     def check_answer(self, answer: str, user_id: str, username: str) -> Dict[str, Any]:
-        # كل إجابة صحيحة تمنح نقطة واحدة
         points = 1
         self.current_round += 1
         game_over = self.current_round > self.max_rounds
         return {"message": None, "points": points, "game_over": game_over}
 
-
-# ------------------ مدير الألعاب ------------------
 class GameManager:
     def __init__(self, db: Database):
         self.db = db
-        self.ui = UIBuilder()
         self.active_games: Dict[str, Any] = {}
         self.game_sessions: Dict[str, dict] = {}
 
-        # استيراد جميع الألعاب
         from games.iq_game import IqGame
         from games.guess_game import GuessGame
         from games.opposite_game import OppositeGame
@@ -76,35 +68,37 @@ class GameManager:
         from games.human_animal_plant_game import HumanAnimalPlantGame
         from games.chain_words_game import ChainWordsGame
         from games.fast_typing_game import FastTypingGame
-        from games.PersonalityGame import PersonalityGame
         from games.compatibility_game import CompatibilityGame
         from games.mafia_game import MafiaGame
 
-        # ألعاب نصية تعتمد على الملفات
         self.text_games_files = {
             "سؤال": "questions.txt",
             "منشن": "mentions.txt",
             "تحدي": "challenges.txt",
             "اعتراف": "confessions.txt",
             "موقف": "situations.txt",
-            "اقتباس": "quotes.txt",
-            "شخصية": "personality.txt"
+            "اقتباس": "quotes.txt"
         }
 
         self.games = {
-            "ذكاء": IqGame, "خمن": GuessGame, "ضد": OppositeGame,
-            "ترتيب": ScrambleWordGame, "رياضيات": MathGame, "اغنيه": SongGame,
-            "لون": WordColorGame, "تكوين": LettersWordsGame, "لعبة": HumanAnimalPlantGame,
-            "سلسلة": ChainWordsGame, "اسرع": FastTypingGame,
-            "توافق": CompatibilityGame, "مافيا": MafiaGame,
-            "شخصية": PersonalityGame
+            "ذكاء": IqGame,
+            "خمن": GuessGame,
+            "ضد": OppositeGame,
+            "ترتيب": ScrambleWordGame,
+            "رياضيات": MathGame,
+            "اغنيه": SongGame,
+            "لون": WordColorGame,
+            "تكوين": LettersWordsGame,
+            "لعبة": HumanAnimalPlantGame,
+            "سلسلة": ChainWordsGame,
+            "اسرع": FastTypingGame,
+            "توافق": CompatibilityGame,
+            "مافيا": MafiaGame
         }
 
-        # إنشاء نسخ من الألعاب النصية
         for k, f in self.text_games_files.items():
             self.games[k] = lambda f=f, k=k: TextGame(f, k)
 
-    # ------------------ بدء اللعبة ------------------
     def start_game(self, context_id: str, game_name: str, user_id: str) -> TextMessage:
         if game_name not in self.games:
             return TextMessage(text="اللعبة غير موجودة")
@@ -114,11 +108,14 @@ class GameManager:
         self.active_games[context_id] = game
 
         session_id = self.db.create_session(user_id, game_name)
-        self.game_sessions[context_id] = {"session_id": session_id, "user_id": user_id, "game_name": game_name}
+        self.game_sessions[context_id] = {
+            "session_id": session_id,
+            "user_id": user_id,
+            "game_name": game_name
+        }
 
         return game.start_game()
 
-    # ------------------ معالجة الرسائل ------------------
     def process_message(self, context_id: str, user_id: str, username: str, text: str) -> Optional[TextMessage]:
         if context_id not in self.active_games:
             return None
@@ -137,20 +134,17 @@ class GameManager:
                 self.db.add_points(user_id, points)
             if game_over:
                 self.db.complete_session(sess["session_id"], points)
-                self.active_games.pop(context_id)
-                self.game_sessions.pop(context_id)
+                self.active_games.pop(context_id, None)
+                self.game_sessions.pop(context_id, None)
 
         if not game_over:
             return game.get_question()
         else:
-            return TextMessage(text=f"انتهت اللعبة! نقاطك: {points}")
+            return TextMessage(text=f"انتهت اللعبة - نقاطك: {points}")
 
-    # ------------------ تسجيل المستخدم ------------------
-    def register_user(self, user_id: str, username: str) -> TextMessage:
-        points = self.db.register_user(user_id, username)
-        return self.ui.registration_success(username, points, "فاتح")
+    def stop_game(self, context_id: str):
+        self.active_games.pop(context_id, None)
+        self.game_sessions.pop(context_id, None)
 
-    def unregister_user(self, user_id: str, username: str) -> TextMessage:
-        points = self.db.get_points(user_id)
-        self.db.unregister_user(user_id)
-        return self.ui.unregister_confirm(username, points, "فاتح")
+    def get_active_count(self) -> int:
+        return len(self.active_games)
