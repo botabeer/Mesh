@@ -6,24 +6,19 @@ load_dotenv()
 
 
 class Config:
-    # معلومات البوت
     BOT_NAME = "Bot Mesh"
     VERSION = "1.0"
     RIGHTS = "تم إنشاء هذا البوت بواسطة عبير الدوسري © 2025"
 
-    # بيانات LINE
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
-    # قاعدة البيانات
     DATABASE_PATH = "botmesh.db"
     DEFAULT_PORT = 10000
 
-    # الحد من الرسائل
     RATE_LIMIT_MESSAGES = 30
     RATE_LIMIT_WINDOW = 60
 
-    # ثيمين فقط: فاتح وداكن (تصميم iOS زجاجي)
     THEMES = {
         "فاتح": {
             "bg": "#F2F2F7",
@@ -59,20 +54,24 @@ class Config:
 
     DEFAULT_THEME = "فاتح"
 
-    # ألعاب النقاط (تتطلب تسجيل)
     POINT_GAMES = [
         "ذكاء", "خمن", "ضد", "ترتيب", "رياضيات",
         "اغنيه", "لون", "تكوين", "لعبة", "سلسلة", "اسرع"
     ]
 
-    # ألعاب ترفيهية (بدون نقاط)
-    FUN_GAMES = [
-        "سؤال", "منشن", "تحدي", "اعتراف", "موقف", "اقتباس", "توافق"
-    ]
+    FUN_GAMES = {
+        "سؤال": {"group_only": False},
+        "منشن": {"group_only": False},
+        "تحدي": {"group_only": False},
+        "اعتراف": {"group_only": False},
+        "موقف": {"group_only": False},
+        "اقتباس": {"group_only": False},
+        "توافق": {"group_only": False},
+        "مافيا": {"group_only": True}
+    }
 
     @classmethod
     def validate(cls):
-        """التحقق من الإعدادات الأساسية"""
         if not cls.LINE_SECRET:
             raise ValueError("LINE_CHANNEL_SECRET مفقود")
         if not cls.LINE_ACCESS_TOKEN:
@@ -81,13 +80,11 @@ class Config:
 
     @classmethod
     def normalize(cls, text: str) -> str:
-        """توحيد النص العربي"""
         if not text:
             return ""
         
         text = text[:1000].strip().lower()
         
-        # توحيد الأحرف العربية
         replacements = {
             "أ": "ا", "إ": "ا", "آ": "ا",
             "ى": "ي", "ة": "ه",
@@ -97,34 +94,28 @@ class Config:
         for old, new in replacements.items():
             text = text.replace(old, new)
         
-        # إزالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
         
         return text
 
     @classmethod
     def get_theme(cls, name: str = None):
-        """الحصول على الثيم"""
         if name and name in cls.THEMES:
             return cls.THEMES[name]
         return cls.THEMES[cls.DEFAULT_THEME]
 
     @classmethod
     def is_valid_theme(cls, name: str) -> bool:
-        """التحقق من صحة الثيم"""
         return name in cls.THEMES
 
     @classmethod
     def get_all_games(cls):
-        """جميع الألعاب"""
-        return cls.POINT_GAMES + cls.FUN_GAMES
+        return cls.POINT_GAMES + list(cls.FUN_GAMES.keys())
 
     @classmethod
     def is_point_game(cls, game_name: str) -> bool:
-        """هل اللعبة تتطلب نقاط"""
         return game_name in cls.POINT_GAMES
 
     @classmethod
     def is_fun_game(cls, game_name: str) -> bool:
-        """هل اللعبة ترفيهية"""
         return game_name in cls.FUN_GAMES
