@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import os
@@ -67,7 +67,7 @@ scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
 def add_quick_reply(message):
-    from linebot.models import QuickReply, QuickReplyButton, MessageAction
+    from linebot.models import QuickReply, QuickReplyButton, MessageAction, FlexSendMessage
     
     quick_reply = QuickReply(items=[
         QuickReplyButton(action=MessageAction(label="بداية", text="بداية")),
@@ -136,18 +136,21 @@ def process_command(text, user_id, group_id):
     display_name = user_data['display_name'] if user_data else "مستخدم"
     
     if text_normalized in ["بداية", "start", "بدايه"]:
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="بوت الحوت",
             contents=ui_builder.welcome_card(display_name, is_registered)
         )
     
     if text_normalized in ["مساعدة", "help", "مساعده"]:
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="المساعدة",
             contents=ui_builder.help_card()
         )
     
     if text in ["العاب", "ألعاب"]:
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="قائمة الالعاب",
             contents=ui_builder.games_menu_card()
@@ -159,6 +162,7 @@ def process_command(text, user_id, group_id):
     if text_normalized in ["نقاطي", "احصائياتي"]:
         if not is_registered:
             return TextSendMessage(text="يجب التسجيل اولا\nاكتب: تسجيل")
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="احصائياتك",
             contents=ui_builder.stats_card(display_name, user_data)
@@ -166,6 +170,7 @@ def process_command(text, user_id, group_id):
     
     if text_normalized in ["الصدارة", "المتصدرين", "الصداره"]:
         leaders = Database.get_leaderboard(20)
+        from linebot.models import FlexSendMessage
         return FlexSendMessage(
             alt_text="لوحة الصدارة",
             contents=ui_builder.leaderboard_card(leaders)
