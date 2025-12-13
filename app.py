@@ -105,17 +105,24 @@ def handle_message(event):
             user_id = event.source.user_id
             group_id = getattr(event.source, 'group_id', None) or user_id
             
+            logger.info(f"Received message: {text} from user: {user_id}")
+            
             Database.update_last_activity(user_id)
             
             response = process_command(text, user_id, group_id)
             
-            if response:
-                if isinstance(response, list):
-                    for msg in response:
-                        add_quick_reply(msg)
-                    line_bot_api.reply_message(event.reply_token, response)
-                else:
-                    line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
+            if response is None:
+                response = TextSendMessage(text="اكتب 'بداية' لعرض القائمة")
+            
+            if isinstance(response, list):
+                for msg in response:
+                    add_quick_reply(msg)
+                line_bot_api.reply_message(event.reply_token, response)
+            else:
+                line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
+            
+            logger.info(f"Reply sent successfully to user: {user_id}")
+            
         except Exception as e:
             logger.error(f"Message processing error: {e}", exc_info=True)
             try:
@@ -123,8 +130,8 @@ def handle_message(event):
                     event.reply_token,
                     TextSendMessage(text="حدث خطا، حاول مرة اخرى")
                 )
-            except:
-                pass
+            except Exception as reply_error:
+                logger.error(f"Failed to send error reply: {reply_error}")
     
     task_queue.put(process_message)
 
@@ -138,7 +145,7 @@ def process_command(text, user_id, group_id):
     if text_normalized in ["بداية", "start", "بدايه"]:
         from linebot.models import FlexSendMessage
         return FlexSendMessage(
-            alt_text="بوت الحوت",
+            alt_text="Bot Mesh",
             contents=ui_builder.welcome_card(display_name, is_registered)
         )
     
@@ -206,6 +213,13 @@ def health_check():
         'status': 'healthy',
         'service': 'bot-alhoot',
         'timestamp': datetime.now().isoformat()
+    }, 200
+
+@app.route('/')
+def index():
+    return {
+        'status': 'running',
+        'service': 'bot-alhoot'
     }, 200
 
 if __name__ == "__main__":
