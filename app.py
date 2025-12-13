@@ -1,20 +1,23 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError, LineBotApiError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 import os
 import logging
+import atexit
 from threading import Thread
 from queue import Queue
-from datetime import datetime
 
 from database import Database
 from game_engine import GameEngine
+from ui_builder import UIBuilder
 
-# إعداد السجلات
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.FileHandler('bot.log'), logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
@@ -24,172 +27,202 @@ app = Flask(__name__)
 required_env = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
 for var in required_env:
     if not os.getenv(var):
-        logger.error(f"Missing environment variable: {var}")
         raise ValueError(f"Missing {var}")
 
-# تهيئة LINE Bot
-try:
-    line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
-    handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
-    logger.info("LINE Bot API initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize LINE Bot API: {e}")
-    raise
+line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-# تهيئة قاعدة البيانات ومحرك الألعاب
-try:
-    db = Database("botmesh.db")
-    game_engine = GameEngine(line_bot_api, db)
-    logger.info("Database and Game Engine initialized")
-except Exception as e:
-    logger.error(f"Failed to initialize components: {e}")
-    raise
+# تهيئة المكونات
+Database.init()
+game_engine = GameEngine(line_bot_api)
+ui_builder = UIBuilder()
 
-# قائمة المهام الخلفية
-task_queue = Queue(maxsize=1000)
+# طابور المهام الخلفية
+task_queue = Queue()
 
 def background_worker():
     """معالج المهام الخلفية"""
+    from queue import Empty
     while True:
         try:
             task = task_queue.get(timeout=1)
             if task is None:
                 break
             task()
+            task_queue.task_done()
+        except Empty:
+            continue
         except Exception as e:
             logger.error(f"Background task error: {e}", exc_info=True)
-        finally:
-            try:
-                task_queue.task_done()
-            except:
-                pass
 
-# تشغيل 4 معالجات خلفية
-for i in range(4):
-    t = Thread(target=background_worker, daemon=True, name=f"Worker-{i}")
+# بدء worker threads
+for _ in range(4):
+    t = Thread(target=background_worker, daemon=True)
     t.start()
-    logger.info(f"Started background worker {i}")
 
-@app.route("/", methods=['GET'])
-def home():
-    """الصفحة الرئيسية - للتحقق من تشغيل الخادم"""
-    return {
-        "status": "online",
-        "service": "Bot Mesh",
-        "version": "1.0",
-        "timestamp": datetime.now().isoformat()
-    }, 200
+# جدولة التنظيف
+scheduler = BackgroundScheduler()
+scheduler.add_job(
+    func=Database.cleanup_inactive_users,
+    trigger="interval",
+    hours=24,
+    id='cleanup',
+    replace_existing=True
+)
+scheduler.start()
+atexit.register(lambda: scheduler.shutdown())
 
-@app.route("/health", methods=['GET'])
-def health_check():
-    """فحص الصحة"""
-    return {
-        'status': 'healthy',
-        'queue_size': task_queue.qsize(),
-        'timestamp': datetime.now().isoformat()
-    }, 200
+def add_quick_reply(message):
+    """اضافة ازرار سريعة"""
+    from linebot.models import QuickReply, QuickReplyButton, MessageAction
+    
+    quick_reply = QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label="بداية", text="بداية")),
+        QuickReplyButton(action=MessageAction(label="تسجيل", text="تسجيل")),
+        QuickReplyButton(action=MessageAction(label="العاب", text="العاب")),
+        QuickReplyButton(action=MessageAction(label="نقاطي", text="نقاطي")),
+        QuickReplyButton(action=MessageAction(label="الصدارة", text="الصدارة")),
+        QuickReplyButton(action=MessageAction(label="ايقاف", text="ايقاف"))
+    ])
+    
+    if isinstance(message, (TextSendMessage, FlexSendMessage)):
+        message.quick_reply = quick_reply
+    return message
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    """استقبال Webhook من LINE"""
+    """معالج Webhook - يرجع فورا"""
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
-    logger.info(f"Webhook received - Signature present: {bool(signature)}")
-
     try:
         handler.handle(body, signature)
-        logger.info("Webhook handled successfully")
     except InvalidSignatureError:
         logger.error("Invalid signature")
         abort(400)
     except Exception as e:
         logger.error(f"Callback error: {e}", exc_info=True)
-
+    
     return 'OK', 200
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """معالج الرسائل النصية"""
-    try:
-        text = event.message.text.strip()
-        user_id = event.source.user_id
-        group_id = getattr(event.source, 'group_id', None) or user_id
-        reply_token = event.reply_token
-        
-        logger.info(f"Message from {user_id}: {text[:50]}")
-
-        def process():
-            try:
-                # الحصول على اسم المستخدم
-                display_name = "مستخدم"
-                try:
-                    if hasattr(event.source, 'group_id'):
-                        profile = line_bot_api.get_group_member_profile(
-                            event.source.group_id, user_id
-                        )
-                    else:
-                        profile = line_bot_api.get_profile(user_id)
-                    display_name = profile.display_name
-                except:
-                    pass
-
-                # معالجة الرسالة
-                response = game_engine.process_message(
-                    text=text,
-                    user_id=user_id,
-                    group_id=group_id,
-                    display_name=display_name
-                )
-
-                if not response:
-                    logger.warning("No response generated")
-                    return
-
-                # إرسال الرد
-                try:
-                    messages = response if isinstance(response, list) else [response]
-                    line_bot_api.reply_message(reply_token, messages)
-                    logger.info(f"Reply sent successfully to {user_id}")
-                except LineBotApiError as e:
-                    logger.error(f"Reply failed, trying push: {e}")
-                    # محاولة الإرسال المباشر إذا فشل الرد
-                    msg = messages[0] if isinstance(messages, list) else messages
-                    line_bot_api.push_message(user_id, msg)
-                    logger.info(f"Push message sent to {user_id}")
-
-            except Exception as e:
-                logger.error(f"Message processing error: {e}", exc_info=True)
-                try:
-                    line_bot_api.push_message(
-                        user_id,
-                        TextSendMessage(text="حدث خطأ، حاول مرة أخرى")
-                    )
-                except Exception as push_error:
-                    logger.error(f"Failed to send error message: {push_error}")
-
-        # إضافة المهمة للقائمة
+    """معالج الرسائل - يضيف للطابور"""
+    def process_message():
         try:
-            task_queue.put(process, timeout=1)
-            logger.info("Task queued successfully")
+            text = event.message.text.strip()
+            user_id = event.source.user_id
+            group_id = getattr(event.source, 'group_id', None) or user_id
+            
+            Database.update_last_activity(user_id)
+            
+            response = process_command(text, user_id, group_id)
+            
+            if response:
+                if isinstance(response, list):
+                    for msg in response:
+                        add_quick_reply(msg)
+                    line_bot_api.reply_message(event.reply_token, response)
+                else:
+                    line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
         except Exception as e:
-            logger.error(f"Queue full or error: {e}")
-            # معالجة فورية إذا فشلت القائمة
-            process()
+            logger.error(f"Message processing error: {e}", exc_info=True)
+            try:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="حدث خطا، حاول مرة اخرى")
+                )
+            except:
+                pass
+    
+    # اضافة للطابور بدلا من المعالجة المباشرة
+    task_queue.put(process_message)
 
-    except Exception as e:
-        logger.error(f"Handler error: {e}", exc_info=True)
+def process_command(text, user_id, group_id):
+    """معالجة الاوامر"""
+    text_normalized = text.lower().strip()
+    
+    user_data = Database.get_user_stats(user_id)
+    is_registered = user_data is not None
+    display_name = user_data['display_name'] if user_data else "مستخدم"
+    
+    # اوامر اساسية
+    if text_normalized in ["بداية", "start", "بدايه"]:
+        return FlexSendMessage(
+            alt_text="بوت الحوت",
+            contents=ui_builder.welcome_card(display_name, is_registered)
+        )
+    
+    if text_normalized in ["مساعدة", "help", "مساعده"]:
+        return FlexSendMessage(
+            alt_text="المساعدة",
+            contents=ui_builder.help_card()
+        )
+    
+    if text in ["العاب", "ألعاب"]:
+        return FlexSendMessage(
+            alt_text="قائمة الالعاب",
+            contents=ui_builder.games_menu_card()
+        )
+    
+    # التسجيل
+    if text_normalized in ["تسجيل", "تغيير"]:
+        return handle_registration(user_id, is_registered, display_name)
+    
+    # النقاط والاحصائيات
+    if text_normalized in ["نقاطي", "احصائياتي"]:
+        if not is_registered:
+            return TextSendMessage(text="يجب التسجيل اولا\nاكتب: تسجيل")
+        return FlexSendMessage(
+            alt_text="احصائياتك",
+            contents=ui_builder.stats_card(display_name, user_data)
+        )
+    
+    if text_normalized in ["الصدارة", "المتصدرين", "الصداره"]:
+        leaders = Database.get_leaderboard(20)
+        return FlexSendMessage(
+            alt_text="لوحة الصدارة",
+            contents=ui_builder.leaderboard_card(leaders)
+        )
+    
+    # ايقاف اللعبة
+    if text_normalized in ["ايقاف", "stop", "إيقاف"]:
+        stopped = game_engine.stop_game(group_id)
+        return TextSendMessage(text="تم ايقاف اللعبة" if stopped else "لا توجد لعبة نشطة")
+    
+    # معالجة الالعاب
+    game_response = game_engine.process_message(
+        text=text,
+        user_id=user_id,
+        group_id=group_id,
+        display_name=display_name,
+        is_registered=is_registered
+    )
+    
+    return game_response
 
-@app.errorhandler(404)
-def not_found(error):
-    return {"error": "Not found"}, 404
+def handle_registration(user_id, is_registered, current_name):
+    """معالجة التسجيل"""
+    game_engine.set_waiting_for_name(user_id, True)
+    
+    if is_registered:
+        msg = f"انت مسجل حاليا باسم: {current_name}\n\nادخل الاسم الجديد:"
+    else:
+        msg = "ادخل اسمك للتسجيل:"
+    
+    return TextSendMessage(text=msg)
 
-@app.errorhandler(500)
-def internal_error(error):
-    logger.error(f"Internal error: {error}")
-    return {"error": "Internal server error"}, 500
+@app.route('/health', methods=['GET'])
+def health_check():
+    """فحص صحة الخدمة"""
+    return {
+        'status': 'healthy',
+        'service': 'bot-alhoot',
+        'timestamp': datetime.now().isoformat()
+    }, 200
 
 if __name__ == "__main__":
-    port = int(os.getenv('PORT', 10000))
-    logger.info(f"Starting Flask app on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    logger.info(f"Starting Bot Alhoot on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=debug)
