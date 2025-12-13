@@ -1,9 +1,9 @@
 Flask
-Werkzeug
 line-bot-sdk
-python-dotenv
-requests
-urllib3
-gunicorn
-python-dateutil
 APScheduler
+python-dotenv
+gunicorn
+pytz
+Werkzeug
+Jinja2
+itsdangerous
