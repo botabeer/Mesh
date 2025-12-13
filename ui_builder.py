@@ -1,4 +1,4 @@
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
+from linebot.models import FlexSendMessage, FlexBubble, FlexBox, FlexText, FlexSeparator, FlexButton
 from typing import List, Dict
 
 class UIBuilder:
@@ -9,27 +9,15 @@ class UIBuilder:
                 "warning": "#FF9500", "danger": "#FF3B30", "bg": "#F2F2F7",
                 "card": "#FFFFFF", "text": "#000000", "text2": "#3C3C43",
                 "text3": "#8E8E93", "border": "#E5E5EA"
-            },
-            "dark": {
-                "primary": "#0A84FF", "secondary": "#64D2FF", "success": "#30D158",
-                "warning": "#FF9F0A", "danger": "#FF453A", "bg": "#000000",
-                "card": "#1C1C1E", "text": "#FFFFFF", "text2": "#EBEBF5",
-                "text3": "#8E8E93", "border": "#3A3A3C"
             }
         }
-
+    
     def _colors(self, theme: str = "light") -> Dict[str, str]:
         return self.themes.get(theme, self.themes["light"])
-
-    def _flex(self, alt: str, contents: dict) -> FlexMessage:
-        return FlexMessage(alt_text=alt, contents=FlexContainer.from_dict(contents))
-
-    def _text(self, text: str) -> TextMessage:
-        return TextMessage(text=text)
-
-    def welcome_card(self, name: str, registered: bool, points: int = 0, theme: str = "light") -> FlexMessage:
+    
+    def welcome_card(self, name: str, registered: bool, theme: str = "light"):
         c = self._colors(theme)
-        status = f"مسجل | النقاط: {points}" if registered else "غير مسجل"
+        status = "مسجل" if registered else "غير مسجل"
         color = c["success"] if registered else c["warning"]
         
         buttons = [
@@ -61,9 +49,9 @@ class UIBuilder:
                 ]
             }
         }
-        return self._flex("بداية", flex)
-
-    def games_menu_card(self, theme: str = "light") -> FlexMessage:
+        return flex
+    
+    def games_menu_card(self, theme: str = "light"):
         c = self._colors(theme)
         games = [
             "ذكاء", "خمن", "ضد", "ترتيب", "رياضيات", "اغنيه",
@@ -86,21 +74,21 @@ class UIBuilder:
                 "type": "box", "layout": "vertical", "paddingAll": "20px",
                 "backgroundColor": c["card"],
                 "contents": [
-                    {"type": "text", "text": "الألعاب", "size": "xl",
+                    {"type": "text", "text": "الالعاب", "size": "xl",
                      "weight": "bold", "color": c["primary"], "align": "center"},
                     {"type": "separator", "margin": "lg", "color": c["border"]},
                     {"type": "box", "layout": "vertical", "margin": "lg", "contents": buttons}
                 ]
             }
         }
-        return self._flex("الألعاب", flex)
-
-    def leaderboard_card(self, leaders: List[tuple], theme: str = "light") -> FlexMessage:
+        return flex
+    
+    def leaderboard_card(self, leaders: List[tuple], theme: str = "light"):
         c = self._colors(theme)
         items = []
         
         for i, (name, pts) in enumerate(leaders[:10]):
-            rank = str(i + 1) if i >= 3 else ["1", "2", "3"][i]
+            rank = str(i + 1)
             items.append({
                 "type": "box", "layout": "horizontal", "margin": "sm",
                 "contents": [
@@ -125,12 +113,13 @@ class UIBuilder:
                 ]
             }
         }
-        return self._flex("الصدارة", flex)
-
-    def stats_card(self, name: str, user_data: dict, theme: str = "light") -> FlexMessage:
+        return flex
+    
+    def stats_card(self, name: str, user_data: dict, theme: str = "light"):
         c = self._colors(theme)
-        points = user_data.get("points", 0)
-        temp = user_data.get("temp_points", 0)
+        points = user_data.get("total_points", 0)
+        games = user_data.get("games_played", 0)
+        wins = user_data.get("wins", 0)
         
         flex = {
             "type": "bubble", "size": "mega",
@@ -146,15 +135,17 @@ class UIBuilder:
                          {"type": "text", "text": f"الاسم: {name}", "size": "md", "color": c["text"]},
                          {"type": "text", "text": f"النقاط: {points}", "size": "md",
                           "color": c["primary"], "weight": "bold", "margin": "md"},
-                         {"type": "text", "text": f"نقاط مؤقتة: {temp}", "size": "sm",
-                          "color": c["text3"], "margin": "sm"}
+                         {"type": "text", "text": f"الالعاب: {games}", "size": "sm",
+                          "color": c["text2"], "margin": "sm"},
+                         {"type": "text", "text": f"الفوز: {wins}", "size": "sm",
+                          "color": c["text2"], "margin": "sm"}
                      ]}
                 ]
             }
         }
-        return self._flex("احصائياتي", flex)
-
-    def help_card(self, theme: str = "light") -> FlexMessage:
+        return flex
+    
+    def help_card(self, theme: str = "light"):
         c = self._colors(theme)
         
         flex = {
@@ -166,14 +157,11 @@ class UIBuilder:
                     {"type": "text", "text": "المساعدة", "size": "xl",
                      "weight": "bold", "color": c["primary"], "align": "center"},
                     {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "text", "text": "الأوامر المتاحة:", "size": "md",
+                    {"type": "text", "text": "الاوامر المتاحة:", "size": "md",
                      "color": c["text"], "weight": "bold", "margin": "lg"},
-                    {"type": "text", "text": "بداية - القائمة الرئيسية\nالعاب - عرض الألعاب\nنقاطي - عرض النقاط\nالصدارة - لوحة المتصدرين\nتسجيل - التسجيل في النظام",
+                    {"type": "text", "text": "بداية - القائمة الرئيسية\nالعاب - عرض الالعاب\nنقاطي - عرض النقاط\nالصدارة - لوحة المتصدرين\nتسجيل - التسجيل في النظام",
                      "size": "sm", "color": c["text2"], "wrap": True, "margin": "md"}
                 ]
             }
         }
-        return self._flex("المساعدة", flex)
-
-    def registration_success(self, name: str, points: int, theme: str = "light") -> TextMessage:
-        return self._text(f"تم التسجيل بنجاح\nالاسم: {name}\nالنقاط: {points}")
+        return flex
