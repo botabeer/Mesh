@@ -1,3 +1,7 @@
+# ========================================
+# app.py - Main Application File
+# ========================================
+
 import os
 import sys
 import logging
@@ -11,7 +15,7 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, TextMessage, FlexMessage, FlexContainer
+    ReplyMessageRequest, TextMessage, FlexMessage
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
@@ -19,6 +23,8 @@ from config import Config
 from database import Database
 from ui_builder import UIBuilder
 from game_manager import GameManager
+
+# -------------------------------------------------
 
 app = Flask(__name__)
 
@@ -29,12 +35,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("botmesh")
 
-try:
-    Config.validate()
-    logger.info("Validated configuration")
-except Exception as e:
-    logger.error(f"Configuration error: {e}")
-    sys.exit(1)
+# -------------------------------------------------
+# Configuration
+# -------------------------------------------------
+
+Config.validate()
 
 configuration = Configuration(access_token=Config.LINE_ACCESS_TOKEN)
 handler = WebhookHandler(Config.LINE_SECRET)
@@ -43,10 +48,18 @@ db = Database(Config.DATABASE_PATH)
 ui = UIBuilder()
 game_mgr = GameManager(db)
 
+# -------------------------------------------------
+# Runtime State
+# -------------------------------------------------
+
 user_sessions: Dict[str, Any] = {}
 pending_registrations: Dict[str, datetime] = {}
 user_rate_limit = defaultdict(list)
 user_cache: Dict[str, dict] = {}
+
+# -------------------------------------------------
+# Helpers
+# -------------------------------------------------
 
 def is_rate_limited(user_id: str) -> bool:
     now = datetime.utcnow()
@@ -54,208 +67,191 @@ def is_rate_limited(user_id: str) -> bool:
     timestamps = [t for t in user_rate_limit[user_id] if now - t < window]
     user_rate_limit[user_id] = timestamps
     if len(timestamps) >= Config.RATE_LIMIT_MESSAGES:
-        logger.warning(f"Rate limit exceeded: {user_id}")
         return True
     user_rate_limit[user_id].append(now)
     return False
 
-ALLOWED_PROPS = {
-    "type", "altText", "contents", "body", "header", "footer", "action",
-    "layout", "spacing", "margin", "flex", "paddingAll", "paddingTop",
-    "paddingBottom", "paddingStart", "paddingEnd", "cornerRadius",
-    "text", "size", "weight", "align", "gravity", "wrap", "maxLines",
-    "color", "style", "height", "url", "aspectMode", "aspectRatio",
-    "backgroundColor", "borderWidth", "borderColor", "label"
-}
-
-def sanitize_flex(obj: Any) -> Any:
-    if isinstance(obj, list):
-        return [sanitize_flex(v) for v in obj]
-    if not isinstance(obj, dict):
-        return obj
-    sanitized = {}
-    for k, v in obj.items():
-        if k not in ALLOWED_PROPS:
-            continue
-        if isinstance(v, (dict, list)):
-            sanitized[k] = sanitize_flex(v)
-        else:
-            sanitized[k] = v[:-2] if isinstance(v, str) and v.endswith("px") else v
-    return sanitized
 
 def safe_reply(line_api: MessagingApi, reply_token: str, messages: List[Any]):
+    if not messages:
+        return
+    clean = []
+    for m in messages:
+        if isinstance(m, (FlexMessage, TextMessage)):
+            clean.append(m)
+        else:
+            clean.append(TextMessage(text=str(m)))
     try:
-        if not messages:
-            return
-        clean_messages = []
-        for m in messages:
-            if isinstance(m, dict):
-                try:
-                    cleaned = sanitize_flex(m)
-                    flex = FlexMessage(
-                        alt_text=cleaned.get("altText", "Message"),
-                        contents=FlexContainer.from_dict(cleaned.get("contents", cleaned))
-                    )
-                    clean_messages.append(flex)
-                    continue
-                except Exception:
-                    clean_messages.append(TextMessage(text="Error in message"))
-                    continue
-            if isinstance(m, (FlexMessage, TextMessage)):
-                clean_messages.append(m)
-            else:
-                clean_messages.append(TextMessage(text=str(m)))
-        line_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=clean_messages))
+        line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=reply_token,
+                messages=clean
+            )
+        )
     except Exception:
-        logger.exception("Failed to send message")
+        logger.exception("Reply failed")
+
 
 def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Optional[dict]:
-    if not user_id:
-        return None
     cached = user_cache.get(user_id)
-    if cached:
-        cached_at = cached.get("_cached_at")
-        if cached_at and datetime.utcnow() - cached_at < timedelta(minutes=5):
-            return cached.get("data")
-    try:
-        user = db.get_user(user_id)
-    except Exception:
-        user = None
+    if cached and datetime.utcnow() - cached["_cached_at"] < timedelta(minutes=5):
+        return cached["data"]
+
+    user = db.get_user(user_id)
     if not user:
         name = "User"
         if src_type == "user":
             try:
                 profile = line_api.get_profile(user_id)
-                if profile and getattr(profile, "display_name", None):
-                    name = profile.display_name or "User"
+                name = profile.display_name or name
             except Exception:
                 pass
-        try:
-            db.create_user(user_id, name[:100])
-            user = db.get_user(user_id)
-        except Exception:
-            user = {"id": user_id, "name": name, "points": 0, "is_registered": 0, "theme": "فاتح"}
-    if user:
-        user_cache[user_id] = {"data": user, "_cached_at": datetime.utcnow()}
+        db.create_user(user_id, name[:100])
+        user = db.get_user(user_id)
+
+    user_cache[user_id] = {
+        "data": user,
+        "_cached_at": datetime.utcnow()
+    }
     return user
 
-# ============================================
-# 🔹 المنطق الثقيل في Background Thread
-# ============================================
+# -------------------------------------------------
+# Async Message Processor
+# -------------------------------------------------
+
 def process_message_async(event, line_api):
-    """معالجة الرسالة في خلفية منفصلة"""
     try:
-        user_id = getattr(event.source, "user_id", None)
-        if not user_id:
-            return
-        
+        user_id = event.source.user_id
         text = (event.message.text or "").strip()
-        if not text or len(text) > 1000:
+        if not text or is_rate_limited(user_id):
             return
-        
-        if is_rate_limited(user_id):
-            return
-        
+
         src_type = event.source.type
-        ctx_id = getattr(event.source, "group_id", None) or getattr(event.source, "room_id", None) or user_id
-        
+        ctx_id = (
+            getattr(event.source, "group_id", None)
+            or getattr(event.source, "room_id", None)
+            or user_id
+        )
+
         user = get_user_profile(line_api, user_id, src_type)
         if not user:
-            safe_reply(line_api, event.reply_token, [TextMessage(text="خطأ تقني")])
             return
-        
-        username = user.get("name", "User")
-        points = int(user.get("points", 0) or 0)
-        is_reg = bool(user.get("is_registered", 0))
-        theme = user.get("theme", "فاتح")
-        
-        # معالجة الأوامر والألعاب هنا...
-        # مثال بسيط:
-        if text == "بداية":
-            safe_reply(line_api, event.reply_token, [TextMessage(text=f"مرحباً {username}!\nالنقاط: {points}")])
-        elif text == "العاب":
-            safe_reply(line_api, event.reply_token, [TextMessage(text="قائمة الألعاب:\nذكاء، خمن، ضد، ترتيب...")])
-        else:
-            # معالجة الألعاب
+
+        username = user["name"]
+        points = int(user["points"])
+        is_reg = bool(user["is_registered"])
+        theme = user.get("theme", "light")
+
+        normalized = Config.normalize(text)
+
+        if normalized in ("بداية", "start", "home"):
+            safe_reply(line_api, event.reply_token, [
+                ui.home_screen(username, points, is_reg, theme)
+            ])
+            return
+
+        if normalized in ("العاب", "games"):
+            safe_reply(line_api, event.reply_token, [
+                ui.games_menu(theme)
+            ])
+            return
+
+        if normalized in ("مساعدة", "help"):
+            safe_reply(line_api, event.reply_token, [
+                ui.help_screen(theme)
+            ])
+            return
+
+        if normalized in ("نقاط", "points"):
+            safe_reply(line_api, event.reply_token, [
+                ui.points_screen(username, points, is_reg, theme)
+            ])
+            return
+
+        if normalized in ("انضم", "join"):
+            if is_reg:
+                safe_reply(line_api, event.reply_token, [
+                    TextMessage(text="انت مسجل بالفعل")
+                ])
+            else:
+                pending_registrations[user_id] = datetime.utcnow()
+                safe_reply(line_api, event.reply_token, [
+                    TextMessage(text="ارسل اسمك للتسجيل")
+                ])
+            return
+
+        if user_id in pending_registrations:
+            if datetime.utcnow() - pending_registrations[user_id] < timedelta(minutes=5):
+                name = text[:50].strip()
+                if len(name) >= 2:
+                    db.update_user(user_id, name=name, is_registered=1)
+                    pending_registrations.pop(user_id, None)
+                    user_cache.pop(user_id, None)
+                    safe_reply(line_api, event.reply_token, [
+                        TextMessage(text=f"تم التسجيل: {name}")
+                    ])
+            return
+
+        if ctx_id in game_mgr.active_games:
             result = game_mgr.process_message(ctx_id, user_id, username, text)
             if result:
                 safe_reply(line_api, event.reply_token, [result])
-            else:
-                safe_reply(line_api, event.reply_token, [TextMessage(text="أرسل 'بداية' للبدء")])
-                
+            return
+
+        safe_reply(line_api, event.reply_token, [
+            TextMessage(text="ارسل 'بداية' للقائمة الرئيسية")
+        ])
+
     except Exception:
-        logger.exception("Error in async message processing")
+        logger.exception("Async processing error")
+
+# -------------------------------------------------
+# Routes
+# -------------------------------------------------
 
 @app.route("/", methods=["GET"])
 def home():
-    stats = db.get_stats() or {}
-    active = len([g for g in game_mgr.active_games.values() if g])
-    db_size = db.get_database_size() / 1024 / 1024
-    return f"""<!DOCTYPE html>
-<html dir="rtl">
-<head><meta charset="utf-8"><title>{Config.BOT_NAME}</title></head>
-<body>
-<h1>{Config.BOT_NAME}</h1>
-<p>Active Games: {active}</p>
-<p>Total Users: {stats.get('total_users', 0)}</p>
-<p>Registered: {stats.get('registered_users', 0)}</p>
-<p>Active Today: {stats.get('active_today', 0)}</p>
-<p>Database: {db_size:.2f} MB</p>
-<p>{Config.RIGHTS}</p>
-</body>
-</html>"""
+    stats = db.get_stats()
+    active = len(game_mgr.active_games)
+    return f"BotMesh | Active games: {active} | Users: {stats.get('total_users', 0)}"
+
 
 @app.route("/health", methods=["GET"])
 def health():
-    active_count = len([g for g in game_mgr.active_games.values() if g])
     return jsonify({
         "status": "ok",
-        "timestamp": datetime.utcnow().isoformat(),
-        "active_games": active_count,
-        "version": Config.VERSION
-    }), 200
+        "time": datetime.utcnow().isoformat()
+    })
 
-# ============================================
-# 🔴 الحل: Webhook يرجع 200 فوراً
-# ============================================
+
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
-    
+
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.error("Invalid signature")
         abort(400)
-    except Exception as e:
+    except Exception:
         logger.exception("Webhook error")
-    
-    # ✅ نرجع 200 فوراً بدون انتظار
+
     return "OK", 200
 
-# ============================================
-# 🔹 Handler خفيف - يرسل للخلفية فقط
-# ============================================
+# -------------------------------------------------
+# LINE Handler
+# -------------------------------------------------
+
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """استقبال فوري + إرسال للخلفية"""
-    try:
-        # ✅ نستخرج LINE API ونرسل للخلفية
-        with ApiClient(configuration) as api_client:
-            line_api = MessagingApi(api_client)
-            
-            # 🔹 تشغيل المعالجة في thread منفصل
-            threading.Thread(
-                target=process_message_async,
-                args=(event, line_api),
-                daemon=True
-            ).start()
-            
-    except Exception:
-        logger.exception("Handler dispatch error")
+    with ApiClient(configuration) as api_client:
+        line_api = MessagingApi(api_client)
+        threading.Thread(
+            target=process_message_async,
+            args=(event, line_api),
+            daemon=True
+        ).start()
+
 
 if __name__ == "__main__":
-    port = Config.get_port()
-    logger.info(f"Starting app on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=Config.get_port(), threaded=True)
