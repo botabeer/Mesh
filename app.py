@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Environment variables
+# Validate environment variables
 required_env = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
 for var in required_env:
     if not os.getenv(var):
@@ -47,6 +47,10 @@ def background_worker():
 for _ in range(4):
     Thread(target=background_worker, daemon=True).start()
 
+@app.route("/", methods=['GET'])
+def home():
+    return "Bot Server Running", 200
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
@@ -63,7 +67,6 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    # خذ البيانات بسرعة
     text = event.message.text.strip()
     user_id = event.source.user_id
     group_id = getattr(event.source, 'group_id', None) or user_id
@@ -71,7 +74,6 @@ def handle_message(event):
 
     def process():
         try:
-            # لا نستخدم get_profile هنا
             display_name = "مستخدم"
 
             response = game_engine.process_message(
@@ -84,14 +86,12 @@ def handle_message(event):
             if not response:
                 return
 
-            # حاول reply أولاً
             try:
                 line_bot_api.reply_message(
                     reply_token,
                     response if isinstance(response, list) else [response]
                 )
             except Exception:
-                # fallback push
                 line_bot_api.push_message(
                     user_id,
                     response if not isinstance(response, list) else response[0]
