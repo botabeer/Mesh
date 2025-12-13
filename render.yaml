@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bot-alhoot
+    name: bot-mesh
     env: python
     region: oregon
     plan: starter
@@ -18,3 +18,5 @@ services:
         value: production
       - key: FLASK_DEBUG
         value: 0
+      - key: PYTHONUNBUFFERED
+        value: 1
