@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import threading
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Optional, Dict, Any, List
@@ -138,6 +139,53 @@ def get_user_profile(line_api: MessagingApi, user_id: str, src_type: str) -> Opt
         user_cache[user_id] = {"data": user, "_cached_at": datetime.utcnow()}
     return user
 
+# ============================================
+# 🔹 المنطق الثقيل في Background Thread
+# ============================================
+def process_message_async(event, line_api):
+    """معالجة الرسالة في خلفية منفصلة"""
+    try:
+        user_id = getattr(event.source, "user_id", None)
+        if not user_id:
+            return
+        
+        text = (event.message.text or "").strip()
+        if not text or len(text) > 1000:
+            return
+        
+        if is_rate_limited(user_id):
+            return
+        
+        src_type = event.source.type
+        ctx_id = getattr(event.source, "group_id", None) or getattr(event.source, "room_id", None) or user_id
+        
+        user = get_user_profile(line_api, user_id, src_type)
+        if not user:
+            safe_reply(line_api, event.reply_token, [TextMessage(text="خطأ تقني")])
+            return
+        
+        username = user.get("name", "User")
+        points = int(user.get("points", 0) or 0)
+        is_reg = bool(user.get("is_registered", 0))
+        theme = user.get("theme", "فاتح")
+        
+        # معالجة الأوامر والألعاب هنا...
+        # مثال بسيط:
+        if text == "بداية":
+            safe_reply(line_api, event.reply_token, [TextMessage(text=f"مرحباً {username}!\nالنقاط: {points}")])
+        elif text == "العاب":
+            safe_reply(line_api, event.reply_token, [TextMessage(text="قائمة الألعاب:\nذكاء، خمن، ضد، ترتيب...")])
+        else:
+            # معالجة الألعاب
+            result = game_mgr.process_message(ctx_id, user_id, username, text)
+            if result:
+                safe_reply(line_api, event.reply_token, [result])
+            else:
+                safe_reply(line_api, event.reply_token, [TextMessage(text="أرسل 'بداية' للبدء")])
+                
+    except Exception:
+        logger.exception("Error in async message processing")
+
 @app.route("/", methods=["GET"])
 def home():
     stats = db.get_stats() or {}
@@ -167,46 +215,45 @@ def health():
         "version": Config.VERSION
     }), 200
 
+# ============================================
+# 🔴 الحل: Webhook يرجع 200 فوراً
+# ============================================
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
+    
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
+        logger.error("Invalid signature")
         abort(400)
-    except Exception:
+    except Exception as e:
         logger.exception("Webhook error")
+    
+    # ✅ نرجع 200 فوراً بدون انتظار
     return "OK", 200
 
+# ============================================
+# 🔹 Handler خفيف - يرسل للخلفية فقط
+# ============================================
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
+    """استقبال فوري + إرسال للخلفية"""
     try:
-        user_id = getattr(event.source, "user_id", None)
-        if not user_id:
-            return
-        text = (event.message.text or "").strip()
-        if not text or len(text) > 1000:
-            return
-        if is_rate_limited(user_id):
-            return
-        src_type = event.source.type
-        ctx_id = getattr(event.source, "group_id", None) or getattr(event.source, "room_id", None) or user_id
+        # ✅ نستخرج LINE API ونرسل للخلفية
         with ApiClient(configuration) as api_client:
             line_api = MessagingApi(api_client)
-            user = get_user_profile(line_api, user_id, src_type)
-            if not user:
-                safe_reply(line_api, event.reply_token, [TextMessage(text="Technical error")])
-                return
-            username = user.get("name", "User")
-            points = int(user.get("points", 0) or 0)
-            is_reg = bool(user.get("is_registered", 0))
-            theme = user.get("theme", "فاتح")
             
-            # Process commands and games here
+            # 🔹 تشغيل المعالجة في thread منفصل
+            threading.Thread(
+                target=process_message_async,
+                args=(event, line_api),
+                daemon=True
+            ).start()
             
     except Exception:
-        logger.exception("Message handler error")
+        logger.exception("Handler dispatch error")
 
 if __name__ == "__main__":
     port = Config.get_port()
