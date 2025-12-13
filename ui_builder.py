@@ -1,4 +1,3 @@
-from linebot.models import FlexSendMessage, FlexBubble, FlexBox, FlexText, FlexSeparator, FlexButton
 from typing import List, Dict
 
 class UIBuilder:
