@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# التحقق من المتغيرات البيئية
 required_env = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
 for var in required_env:
     if not os.getenv(var):
@@ -32,16 +31,13 @@ for var in required_env:
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-# تهيئة المكونات
 Database.init()
-game_engine = GameEngine(line_bot_api)
+game_engine = GameEngine(line_bot_api, Database)
 ui_builder = UIBuilder()
 
-# طابور المهام الخلفية
 task_queue = Queue()
 
 def background_worker():
-    """معالج المهام الخلفية"""
     from queue import Empty
     while True:
         try:
@@ -55,12 +51,10 @@ def background_worker():
         except Exception as e:
             logger.error(f"Background task error: {e}", exc_info=True)
 
-# بدء worker threads
 for _ in range(4):
     t = Thread(target=background_worker, daemon=True)
     t.start()
 
-# جدولة التنظيف
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     func=Database.cleanup_inactive_users,
@@ -73,7 +67,6 @@ scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
 def add_quick_reply(message):
-    """اضافة ازرار سريعة"""
     from linebot.models import QuickReply, QuickReplyButton, MessageAction
     
     quick_reply = QuickReply(items=[
@@ -91,7 +84,6 @@ def add_quick_reply(message):
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    """معالج Webhook - يرجع فورا"""
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
@@ -107,7 +99,6 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """معالج الرسائل - يضيف للطابور"""
     def process_message():
         try:
             text = event.message.text.strip()
@@ -135,18 +126,15 @@ def handle_message(event):
             except:
                 pass
     
-    # اضافة للطابور بدلا من المعالجة المباشرة
     task_queue.put(process_message)
 
 def process_command(text, user_id, group_id):
-    """معالجة الاوامر"""
     text_normalized = text.lower().strip()
     
     user_data = Database.get_user_stats(user_id)
     is_registered = user_data is not None
     display_name = user_data['display_name'] if user_data else "مستخدم"
     
-    # اوامر اساسية
     if text_normalized in ["بداية", "start", "بدايه"]:
         return FlexSendMessage(
             alt_text="بوت الحوت",
@@ -165,11 +153,9 @@ def process_command(text, user_id, group_id):
             contents=ui_builder.games_menu_card()
         )
     
-    # التسجيل
     if text_normalized in ["تسجيل", "تغيير"]:
         return handle_registration(user_id, is_registered, display_name)
     
-    # النقاط والاحصائيات
     if text_normalized in ["نقاطي", "احصائياتي"]:
         if not is_registered:
             return TextSendMessage(text="يجب التسجيل اولا\nاكتب: تسجيل")
@@ -185,12 +171,10 @@ def process_command(text, user_id, group_id):
             contents=ui_builder.leaderboard_card(leaders)
         )
     
-    # ايقاف اللعبة
     if text_normalized in ["ايقاف", "stop", "إيقاف"]:
         stopped = game_engine.stop_game(group_id)
         return TextSendMessage(text="تم ايقاف اللعبة" if stopped else "لا توجد لعبة نشطة")
     
-    # معالجة الالعاب
     game_response = game_engine.process_message(
         text=text,
         user_id=user_id,
@@ -202,7 +186,6 @@ def process_command(text, user_id, group_id):
     return game_response
 
 def handle_registration(user_id, is_registered, current_name):
-    """معالجة التسجيل"""
     game_engine.set_waiting_for_name(user_id, True)
     
     if is_registered:
@@ -214,7 +197,6 @@ def handle_registration(user_id, is_registered, current_name):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """فحص صحة الخدمة"""
     return {
         'status': 'healthy',
         'service': 'bot-alhoot',
