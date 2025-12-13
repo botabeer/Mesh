@@ -7,8 +7,6 @@ from contextlib import contextmanager
 logger = logging.getLogger(__name__)
 
 class Database:
-    """ادارة قاعدة البيانات المحسنة"""
-    
     _lock = Lock()
     _conn = None
     _initialized = False
@@ -20,7 +18,6 @@ class Database:
     @staticmethod
     @contextmanager
     def get_connection():
-        """الحصول على اتصال قاعدة البيانات"""
         if Database._conn is None:
             Database._conn = sqlite3.connect(
                 'game_scores.db',
@@ -29,7 +26,6 @@ class Database:
             )
             Database._conn.row_factory = sqlite3.Row
             
-            # تهيئة تلقائية عند اول اتصال
             if not Database._initialized:
                 Database._create_tables()
                 Database._initialized = True
@@ -44,7 +40,6 @@ class Database:
     
     @staticmethod
     def _create_tables():
-        """انشاء الجداول - يستدعى تلقائيا"""
         try:
             conn = Database._conn
             cursor = conn.cursor()
@@ -96,69 +91,6 @@ class Database:
     
     @staticmethod
     def init():
-        """تهيئة قاعدة البيانات - للتوافق مع الكود القديم"""
-        try:
-            with Database.get_connection() as conn:
-                pass
-            logger.info("Database initialized successfully")
-        except Exception as e:
-            logger.error(f"Database init error: {e}")
-            raise
-    
-    @staticmethod
-    def init():
-        """تهيئة قاعدة البيانات"""
-        try:
-            with Database.get_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS users (
-                        user_id TEXT PRIMARY KEY,
-                        display_name TEXT NOT NULL,
-                        total_points INTEGER DEFAULT 0,
-                        games_played INTEGER DEFAULT 0,
-                        wins INTEGER DEFAULT 0,
-                        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS game_history (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id TEXT NOT NULL,
-                        game_type TEXT NOT NULL,
-                        points INTEGER DEFAULT 0,
-                        won BOOLEAN DEFAULT 0,
-                        played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-                    )
-                ''')
-                
-                cursor.execute('''
-                    CREATE INDEX IF NOT EXISTS idx_users_points 
-                    ON users(total_points DESC, games_played DESC)
-                ''')
-                
-                cursor.execute('''
-                    CREATE INDEX IF NOT EXISTS idx_game_history 
-                    ON game_history(user_id, played_at DESC)
-                ''')
-                
-                cursor.execute('PRAGMA foreign_keys = ON')
-                cursor.execute('PRAGMA journal_mode = WAL')
-                cursor.execute('PRAGMA synchronous = NORMAL')
-                
-                logger.info("Database initialized successfully")
-        
-        except Exception as e:
-            logger.error(f"Database init error: {e}")
-            raise
-    
-    @staticmethod
-    def init():
-        """تهيئة قاعدة البيانات - للتوافق مع الكود القديم"""
         try:
             with Database.get_connection() as conn:
                 pass
@@ -169,7 +101,6 @@ class Database:
     
     @staticmethod
     def register_or_update_user(user_id, display_name):
-        """تسجيل او تحديث مستخدم"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -190,7 +121,6 @@ class Database:
     
     @staticmethod
     def update_last_activity(user_id):
-        """تحديث آخر نشاط"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -205,7 +135,6 @@ class Database:
     
     @staticmethod
     def update_user_points(user_id, points, won, game_type):
-        """تحديث نقاط المستخدم"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
@@ -235,7 +164,6 @@ class Database:
     
     @staticmethod
     def get_user_stats(user_id):
-        """الحصول على احصائيات المستخدم"""
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
@@ -259,7 +187,6 @@ class Database:
     
     @staticmethod
     def get_leaderboard(limit=20, force_refresh=False):
-        """الحصول على لوحة الصدارة"""
         from time import time
         now = time()
         
@@ -281,12 +208,7 @@ class Database:
                 
                 results = cursor.fetchall()
                 leaders = [
-                    {
-                        'display_name': row[0],
-                        'total_points': row[1],
-                        'games_played': row[2],
-                        'wins': row[3]
-                    }
+                    (row[0], row[1])
                     for row in results
                 ]
                 
@@ -300,7 +222,6 @@ class Database:
     
     @staticmethod
     def cleanup_inactive_users():
-        """تنظيف المستخدمين غير النشطين"""
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
