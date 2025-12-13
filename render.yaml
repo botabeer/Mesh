@@ -1,38 +1,20 @@
 services:
   - type: web
-    name: bot-mesh
+    name: bot-alhoot
     env: python
-    region: singapore
-    plan: free
-
-    buildCommand: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-
-    startCommand: |
-      gunicorn --bind 0.0.0.0:$PORT \
-      --workers 1 \
-      --threads 4 \
-      --worker-class gthread \
-      --timeout 30 \
-      --graceful-timeout 15 \
-      --keep-alive 5 \
-      --log-level info \
-      app:app
-
+    region: oregon
+    plan: starter
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn app:app -c gunicorn_config.py
     healthCheckPath: /health
-
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.7
-
-      - key: LINE_CHANNEL_SECRET
-        sync: false
-
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
-
-      - key: PORT
-        value: 10000
-
-    autoDeploy: true
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: 0
