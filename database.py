@@ -1,129 +1,323 @@
 import sqlite3
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional
+from threading import Lock
+from datetime import datetime, timedelta
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
 class Database:
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self.init_db()
-
+    """ادارة قاعدة البيانات المحسنة"""
+    
+    _lock = Lock()
+    _conn = None
+    _initialized = False
+    _leaderboard_cache = None
+    _leaderboard_cache_time = 0
+    CACHE_TTL = 300
+    INACTIVITY_DAYS = 30
+    
+    @staticmethod
     @contextmanager
-    def _get_connection(self):
-        conn = sqlite3.connect(self.db_path, timeout=10, detect_types=sqlite3.PARSE_DECLTYPES)
-        conn.row_factory = sqlite3.Row
+    def get_connection():
+        """الحصول على اتصال قاعدة البيانات"""
+        if Database._conn is None:
+            Database._conn = sqlite3.connect(
+                'game_scores.db',
+                check_same_thread=False,
+                timeout=10.0
+            )
+            Database._conn.row_factory = sqlite3.Row
+            
+            # تهيئة تلقائية عند اول اتصال
+            if not Database._initialized:
+                Database._create_tables()
+                Database._initialized = True
+        
+        conn = Database._conn
         try:
             yield conn
             conn.commit()
-        except Exception as e:
+        except Exception:
             conn.rollback()
-            logger.error(f"Database error: {e}")
             raise
-        finally:
-            conn.close()
-
-    def init_db(self):
+    
+    @staticmethod
+    def _create_tables():
+        """انشاء الجداول - يستدعى تلقائيا"""
         try:
-            with self._get_connection() as conn:
-                c = conn.cursor()
-                c.execute("""
+            conn = Database._conn
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id TEXT PRIMARY KEY,
+                    display_name TEXT NOT NULL,
+                    total_points INTEGER DEFAULT 0,
+                    games_played INTEGER DEFAULT 0,
+                    wins INTEGER DEFAULT 0,
+                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS game_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    game_type TEXT NOT NULL,
+                    points INTEGER DEFAULT 0,
+                    won BOOLEAN DEFAULT 0,
+                    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_users_points 
+                ON users(total_points DESC, games_played DESC)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_game_history 
+                ON game_history(user_id, played_at DESC)
+            ''')
+            
+            cursor.execute('PRAGMA foreign_keys = ON')
+            cursor.execute('PRAGMA journal_mode = WAL')
+            cursor.execute('PRAGMA synchronous = NORMAL')
+            
+            conn.commit()
+            logger.info("Database tables created successfully")
+        
+        except Exception as e:
+            logger.error(f"Database table creation error: {e}")
+            raise
+    
+    @staticmethod
+    def init():
+        """تهيئة قاعدة البيانات - للتوافق مع الكود القديم"""
+        try:
+            with Database.get_connection() as conn:
+                pass
+            logger.info("Database initialized successfully")
+        except Exception as e:
+            logger.error(f"Database init error: {e}")
+            raise
+    
+    @staticmethod
+    def init():
+        """تهيئة قاعدة البيانات"""
+        try:
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         user_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        points INTEGER DEFAULT 0,
-                        temp_points INTEGER DEFAULT 0,
-                        is_registered INTEGER DEFAULT 0,
-                        theme TEXT DEFAULT 'light',
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                        last_active TEXT DEFAULT CURRENT_TIMESTAMP
+                        display_name TEXT NOT NULL,
+                        total_points INTEGER DEFAULT 0,
+                        games_played INTEGER DEFAULT 0,
+                        wins INTEGER DEFAULT 0,
+                        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                """)
-                c.execute("CREATE INDEX IF NOT EXISTS idx_users_points ON users(points DESC)")
-                c.execute("CREATE INDEX IF NOT EXISTS idx_users_registered ON users(is_registered)")
-                logger.info("Database initialized")
+                ''')
+                
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS game_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id TEXT NOT NULL,
+                        game_type TEXT NOT NULL,
+                        points INTEGER DEFAULT 0,
+                        won BOOLEAN DEFAULT 0,
+                        played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                    )
+                ''')
+                
+                cursor.execute('''
+                    CREATE INDEX IF NOT EXISTS idx_users_points 
+                    ON users(total_points DESC, games_played DESC)
+                ''')
+                
+                cursor.execute('''
+                    CREATE INDEX IF NOT EXISTS idx_game_history 
+                    ON game_history(user_id, played_at DESC)
+                ''')
+                
+                cursor.execute('PRAGMA foreign_keys = ON')
+                cursor.execute('PRAGMA journal_mode = WAL')
+                cursor.execute('PRAGMA synchronous = NORMAL')
+                
+                logger.info("Database initialized successfully")
+        
         except Exception as e:
-            logger.error(f"Init error: {e}")
-
-    def get_user(self, user_id: str) -> Optional[Dict]:
+            logger.error(f"Database init error: {e}")
+            raise
+    
+    @staticmethod
+    def init():
+        """تهيئة قاعدة البيانات - للتوافق مع الكود القديم"""
         try:
-            with self._get_connection() as conn:
-                c = conn.cursor()
-                c.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
-                row = c.fetchone()
-                return dict(row) if row else None
+            with Database.get_connection() as conn:
+                pass
+            logger.info("Database initialized successfully")
         except Exception as e:
-            logger.error(f"Get user error: {e}")
+            logger.error(f"Database init error: {e}")
+            raise
+    
+    @staticmethod
+    def register_or_update_user(user_id, display_name):
+        """تسجيل او تحديث مستخدم"""
+        with Database._lock:
+            try:
+                with Database.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        INSERT INTO users (user_id, display_name, last_activity)
+                        VALUES (?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(user_id) DO UPDATE SET
+                            display_name = excluded.display_name,
+                            last_activity = CURRENT_TIMESTAMP
+                    ''', (user_id, display_name))
+                    
+                    logger.info(f"User registered: {user_id}")
+                    return True
+            except Exception as e:
+                logger.error(f"Register error: {e}")
+                return False
+    
+    @staticmethod
+    def update_last_activity(user_id):
+        """تحديث آخر نشاط"""
+        try:
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users SET last_activity = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                ''', (user_id,))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Update activity error: {e}")
+            return False
+    
+    @staticmethod
+    def update_user_points(user_id, points, won, game_type):
+        """تحديث نقاط المستخدم"""
+        with Database._lock:
+            try:
+                with Database.get_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    cursor.execute('''
+                        UPDATE users
+                        SET total_points = total_points + ?,
+                            games_played = games_played + 1,
+                            wins = wins + ?,
+                            last_activity = CURRENT_TIMESTAMP
+                        WHERE user_id = ?
+                    ''', (points, 1 if won else 0, user_id))
+                    
+                    cursor.execute('''
+                        INSERT INTO game_history (user_id, game_type, points, won)
+                        VALUES (?, ?, ?, ?)
+                    ''', (user_id, game_type, points, won))
+                    
+                    Database._leaderboard_cache = None
+                    
+                    logger.info(f"Points updated for {user_id}: +{points}")
+                    return True
+            except Exception as e:
+                logger.error(f"Update points error: {e}")
+                return False
+    
+    @staticmethod
+    def get_user_stats(user_id):
+        """الحصول على احصائيات المستخدم"""
+        try:
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT total_points, games_played, wins, display_name
+                    FROM users WHERE user_id = ?
+                ''', (user_id,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'total_points': row[0],
+                        'games_played': row[1],
+                        'wins': row[2],
+                        'display_name': row[3]
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Get stats error: {e}")
             return None
-
-    def create_user(self, user_id: str, name: str, is_registered: int = 0):
+    
+    @staticmethod
+    def get_leaderboard(limit=20, force_refresh=False):
+        """الحصول على لوحة الصدارة"""
+        from time import time
+        now = time()
+        
+        if (not force_refresh and 
+            Database._leaderboard_cache and 
+            now - Database._leaderboard_cache_time < Database.CACHE_TTL):
+            return Database._leaderboard_cache[:limit]
+        
         try:
-            with self._get_connection() as conn:
-                c = conn.cursor()
-                c.execute("INSERT OR IGNORE INTO users (user_id, name, is_registered) VALUES (?, ?, ?)",
-                         (user_id, name, is_registered))
-                logger.info(f"User created: {name}")
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT display_name, total_points, games_played, wins
+                    FROM users
+                    WHERE games_played > 0
+                    ORDER BY total_points DESC, wins DESC
+                    LIMIT ?
+                ''', (limit,))
+                
+                results = cursor.fetchall()
+                leaders = [
+                    {
+                        'display_name': row[0],
+                        'total_points': row[1],
+                        'games_played': row[2],
+                        'wins': row[3]
+                    }
+                    for row in results
+                ]
+                
+                Database._leaderboard_cache = leaders
+                Database._leaderboard_cache_time = now
+                
+                return leaders
         except Exception as e:
-            logger.error(f"Create user error: {e}")
-
-    def update_user(self, user_id: str, **kwargs):
-        try:
-            with self._get_connection() as conn:
-                c = conn.cursor()
-                updates, values = [], []
-                for key, value in kwargs.items():
-                    if key in ['name', 'points', 'temp_points', 'is_registered', 'theme']:
-                        updates.append(f"{key} = ?")
-                        values.append(value)
-                if updates:
-                    updates.append("last_active = ?")
-                    values.append(datetime.utcnow().isoformat())
-                    query = f"UPDATE users SET {', '.join(updates)} WHERE user_id = ?"
-                    values.append(user_id)
-                    c.execute(query, values)
-        except Exception as e:
-            logger.error(f"Update user error: {e}")
-
-    def add_points(self, user_id: str, points: int, name: str = "Unknown", temp: bool = False):
-        try:
-            user = self.get_user(user_id)
-            if not user:
-                self.create_user(user_id, name, is_registered=1)
-            elif name != "Unknown" and user.get("name") != name:
-                self.update_user(user_id, name=name)
-
-            field = "temp_points" if temp else "points"
-            with self._get_connection() as conn:
-                c = conn.cursor()
-                c.execute(f"UPDATE users SET {field} = {field} + ?, last_active = ? WHERE user_id = ?",
-                         (points, datetime.utcnow().isoformat(), user_id))
-        except Exception as e:
-            logger.error(f"Add points error: {e}")
-
-    def reset_temp_points(self):
-        try:
-            with self._get_connection() as conn:
-                c = conn.cursor()
-                c.execute("UPDATE users SET temp_points = 0")
-        except Exception as e:
-            logger.error(f"Reset temp points error: {e}")
-
-    def get_leaderboard(self, limit: int = 20, include_temp: bool = False) -> List[tuple]:
-        try:
-            with self._get_connection() as conn:
-                c = conn.cursor()
-                if include_temp:
-                    c.execute("""SELECT name, points + temp_points AS total 
-                                FROM users WHERE is_registered = 1 
-                                ORDER BY total DESC LIMIT ?""", (limit,))
-                    return [(r['name'], r['total']) for r in c.fetchall()]
-                else:
-                    c.execute("""SELECT name, points FROM users 
-                                WHERE is_registered = 1 
-                                ORDER BY points DESC LIMIT ?""", (limit,))
-                    return [(r['name'], r['points']) for r in c.fetchall()]
-        except Exception as e:
-            logger.error(f"Leaderboard error: {e}")
+            logger.error(f"Get leaderboard error: {e}")
             return []
+    
+    @staticmethod
+    def cleanup_inactive_users():
+        """تنظيف المستخدمين غير النشطين"""
+        with Database._lock:
+            try:
+                with Database.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cutoff = datetime.now() - timedelta(days=Database.INACTIVITY_DAYS)
+                    
+                    cursor.execute('''
+                        DELETE FROM users
+                        WHERE last_activity < ?
+                    ''', (cutoff.strftime('%Y-%m-%d %H:%M:%S'),))
+                    
+                    deleted = cursor.rowcount
+                    if deleted > 0:
+                        logger.info(f"Cleaned up {deleted} inactive users")
+                        Database._leaderboard_cache = None
+                    
+                    return deleted
+            except Exception as e:
+                logger.error(f"Cleanup error: {e}")
+                return 0
