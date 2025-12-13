@@ -44,6 +44,8 @@ class GameEngine:
     def process_message(self, text: str, user_id: str, group_id: str, display_name: str, is_registered: bool):
         text = text.strip()
         
+        logger.info(f"GameEngine processing: {text} for user {user_id}")
+        
         if user_id in self.waiting_for_name:
             return self._handle_registration(text, user_id)
         
@@ -59,6 +61,7 @@ class GameEngine:
         
         self.db.register_or_update_user(user_id, name)
         self.waiting_for_name.discard(user_id)
+        logger.info(f"User registered: {user_id} as {name}")
         return TextSendMessage(text=f"تم التسجيل بنجاح\nالاسم: {name}")
 
     def _handle_command(self, text: str, user_id: str, group_id: str, display_name: str, is_registered: bool):
@@ -82,7 +85,9 @@ class GameEngine:
             if hasattr(game, 'set_database'):
                 game.set_database(self.db)
             self.active_games[group_id] = game
-            return game.start_game()
+            result = game.start_game()
+            logger.info(f"Game started: {game_name} for group {group_id}")
+            return result if result else TextSendMessage(text="بدأت اللعبة")
         except Exception as e:
             logger.error(f"Start game error: {e}", exc_info=True)
             return TextSendMessage(text="فشل بدء اللعبة")
@@ -112,8 +117,13 @@ class GameEngine:
         
         try:
             result = game.check_answer(text, user_id, display_name)
+            
+            if result is None:
+                return None
+            
             if isinstance(result, TextSendMessage):
                 return result
+                
             if not isinstance(result, dict):
                 return None
             
@@ -123,6 +133,7 @@ class GameEngine:
             
             if result.get("game_over"):
                 del self.active_games[group_id]
+                logger.info(f"Game ended for group {group_id}")
             
             return result.get("response") or TextSendMessage(text=result.get("message", ""))
         
@@ -134,6 +145,7 @@ class GameEngine:
     def stop_game(self, group_id: str):
         if group_id in self.active_games:
             del self.active_games[group_id]
+            logger.info(f"Game stopped for group {group_id}")
             return True
         return False
 
