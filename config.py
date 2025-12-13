@@ -20,43 +20,23 @@ class Config:
 
     THEMES = {
         "light": {
-            "bg": "#F2F2F7",
-            "glass": "rgba(255,255,255,0.8)",
-            "card": "rgba(255,255,255,0.95)",
-            "primary": "#007AFF",
-            "secondary": "#5AC8FA",
-            "success": "#34C759",
-            "warning": "#FF9500",
-            "danger": "#FF3B30",
-            "text": "#000000",
-            "text2": "#3C3C43",
-            "text3": "#8E8E93",
-            "border": "rgba(60,60,67,0.18)",
-            "shadow": "rgba(0,0,0,0.1)"
+            "bg": "#F2F2F7", "card": "#FFFFFF", "primary": "#007AFF",
+            "secondary": "#5AC8FA", "success": "#34C759", "warning": "#FF9500",
+            "danger": "#FF3B30", "text": "#000000", "text2": "#3C3C43",
+            "text3": "#8E8E93", "border": "#E5E5EA"
         },
         "dark": {
-            "bg": "#000000",
-            "glass": "rgba(28,28,30,0.8)",
-            "card": "rgba(44,44,46,0.95)",
-            "primary": "#0A84FF",
-            "secondary": "#64D2FF",
-            "success": "#30D158",
-            "warning": "#FF9F0A",
-            "danger": "#FF453A",
-            "text": "#FFFFFF",
-            "text2": "#EBEBF5",
-            "text3": "#8E8E93",
-            "border": "rgba(142,142,147,0.18)",
-            "shadow": "rgba(255,255,255,0.1)"
+            "bg": "#000000", "card": "#1C1C1E", "primary": "#0A84FF",
+            "secondary": "#64D2FF", "success": "#30D158", "warning": "#FF9F0A",
+            "danger": "#FF453A", "text": "#FFFFFF", "text2": "#EBEBF5",
+            "text3": "#8E8E93", "border": "#3A3A3C"
         }
     }
 
     DEFAULT_THEME = "light"
 
-    POINT_GAMES = [
-        "iq", "guess", "opposite", "scramble", "math",
-        "song", "color", "letters", "game", "chain", "fast"
-    ]
+    POINT_GAMES = ["iq", "guess", "opposite", "scramble", "math",
+                   "song", "color", "letters", "game", "chain", "fast"]
 
     FUN_GAMES = {
         "question": {"group_only": False},
@@ -69,30 +49,17 @@ class Config:
         "mafia": {"group_only": True}
     }
 
-    COMMANDS = {
-        "home": ["start", "home"],
-        "games": ["games"],
-        "help": ["help"],
-        "points": ["points"],
-        "leaderboard": ["top"],
-        "join": ["join"],
-        "leave": ["leave"],
-        "stop": ["stop"]
-    }
-
     @classmethod
     def validate(cls):
-        if not cls.LINE_SECRET:
-            raise ValueError("LINE_CHANNEL_SECRET missing")
-        if not cls.LINE_ACCESS_TOKEN:
-            raise ValueError("LINE_CHANNEL_ACCESS_TOKEN missing")
+        if not cls.LINE_SECRET or not cls.LINE_ACCESS_TOKEN:
+            raise ValueError("LINE credentials missing")
         return True
 
     @classmethod
     def get_port(cls) -> int:
         try:
             return int(os.getenv("PORT", cls.DEFAULT_PORT))
-        except Exception:
+        except:
             return cls.DEFAULT_PORT
 
     @classmethod
@@ -100,11 +67,8 @@ class Config:
         if not text:
             return ""
         text = text[:1000].strip().lower()
-        replacements = {
-            "أ": "ا", "إ": "ا", "آ": "ا",
-            "ى": "ي", "ة": "ه",
-            "ؤ": "و", "ئ": "ي"
-        }
+        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي",
+                       "ة": "ه", "ؤ": "و", "ئ": "ي"}
         for old, new in replacements.items():
             text = text.replace(old, new)
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
@@ -113,26 +77,8 @@ class Config:
 
     @classmethod
     def get_theme(cls, name: str = None):
-        if name and name in cls.THEMES:
-            return cls.THEMES[name]
-        return cls.THEMES[cls.DEFAULT_THEME]
+        return cls.THEMES.get(name, cls.THEMES[cls.DEFAULT_THEME])
 
     @classmethod
     def is_valid_theme(cls, name: str) -> bool:
         return name in cls.THEMES
-
-    @classmethod
-    def list_themes(cls) -> list:
-        return list(cls.THEMES.keys())
-
-    @classmethod
-    def get_all_games(cls):
-        return cls.POINT_GAMES + list(cls.FUN_GAMES.keys())
-
-    @classmethod
-    def is_point_game(cls, game_name: str) -> bool:
-        return game_name in cls.POINT_GAMES
-
-    @classmethod
-    def is_fun_game(cls, game_name: str) -> bool:
-        return game_name in cls.FUN_GAMES
