@@ -3,7 +3,6 @@ import random
 import time
 from typing import Dict, Any, Optional
 
-
 class FastTypingGame(BaseGame):
     """لعبة أسرع محسّنة"""
 
@@ -12,7 +11,6 @@ class FastTypingGame(BaseGame):
         self.game_name = "أسرع"
         self.supports_hint = False
         self.supports_reveal = False
-
         self.round_time = 20
         self.round_start_time = None
 
@@ -60,9 +58,7 @@ class FastTypingGame(BaseGame):
         )
 
     def _time_expired(self) -> bool:
-        if not self.round_start_time:
-            return False
-        return (time.time() - self.round_start_time) > self.round_time
+        return self.round_start_time and (time.time() - self.round_start_time) > self.round_time
 
     def check_answer(self, user_answer: str, user_id: str, display_name: str) -> Optional[Dict[str, Any]]:
         if not self.game_active:
@@ -111,7 +107,7 @@ class FastTypingGame(BaseGame):
                 result["points"] = total_points
                 return result
 
-            msg = f"صحيح\nالوقت {time_taken:.1f}s\n+{total_points}"
+            msg = f"صحيح \nالوقت {time_taken:.1f}s\n+{total_points} نقطة"
             return {"message": msg, "response": self.get_question(), "points": total_points}
 
         return None
