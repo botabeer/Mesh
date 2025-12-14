@@ -1,8 +1,10 @@
 from typing import List, Dict
 
+
 class UIBuilder:
     def __init__(self, theme: str = "glass"):
         self.theme = theme
+
         self.themes = {
             "glass": {
                 "bg": "#F5F5F7",
@@ -17,12 +19,29 @@ class UIBuilder:
                 "border": "#D1D1D6",
                 "success": "#34C759",
                 "warning": "#FF9500"
+            },
+            "dark": {
+                "bg": "#1C1C1E",
+                "card": "#2C2C2ECC",
+                "primary": "#FFFFFF",
+                "secondary": "#EBEBF5",
+                "button": "#3A3A3C",
+                "button_active": "#48484A",
+                "text": "#FFFFFF",
+                "text2": "#AEAEB2",
+                "text3": "#8E8E93",
+                "border": "#3A3A3C",
+                "success": "#30D158",
+                "warning": "#FF9F0A"
             }
         }
-    
+
+    # =========================
+    # Helpers
+    # =========================
     def _colors(self) -> Dict[str, str]:
         return self.themes.get(self.theme, self.themes["glass"])
-    
+
     def _section_title(self, text: str) -> Dict:
         return {
             "type": "text",
@@ -32,7 +51,7 @@ class UIBuilder:
             "margin": "md",
             "color": self._colors()["primary"]
         }
-    
+
     def _two_buttons(self, text1: str, action1: str, text2: str, action2: str) -> Dict:
         c = self._colors()
         return {
@@ -56,12 +75,27 @@ class UIBuilder:
                 }
             ]
         }
-    
+
+    def _theme_toggle_button(self) -> Dict:
+        c = self._colors()
+        label = "الوضع الداكن" if self.theme != "dark" else "الوضع الفاتح"
+        return {
+            "type": "button",
+            "style": "secondary",
+            "height": "sm",
+            "action": {"type": "message", "label": label, "text": "تغيير_الثيم"},
+            "color": c["button"],
+            "margin": "sm"
+        }
+
+    # =========================
+    # Cards
+    # =========================
     def welcome_card(self, name: str, registered: bool):
         c = self._colors()
         status = f"{name} مسجل" if registered else f"{name} غير مسجل"
         status_color = c["success"] if registered else c["warning"]
-        
+
         contents = [
             {
                 "type": "box",
@@ -103,26 +137,28 @@ class UIBuilder:
                 ]
             }
         ]
-        
+
         if registered:
             contents.extend([
                 self._section_title("الحساب"),
                 self._two_buttons("تغيير الاسم", "تغيير", "نقاطي", "نقاطي"),
-                self._section_title("الاحصائيات"),
+                self._section_title("الإعدادات"),
+                self._theme_toggle_button(),
+                self._section_title("الإحصائيات"),
                 self._two_buttons("الصدارة", "الصدارة", "مساعدة", "مساعدة"),
                 self._section_title("القوائم"),
                 {
                     "type": "button",
                     "style": "primary",
                     "height": "sm",
-                    "action": {"type": "message", "label": "العاب", "text": "العاب"},
+                    "action": {"type": "message", "label": "الألعاب", "text": "العاب"},
                     "color": c["primary"],
                     "margin": "sm"
                 }
             ])
         else:
             contents.extend([
-                self._section_title("ابدأ الان"),
+                self._section_title("ابدأ الآن"),
                 {
                     "type": "button",
                     "style": "primary",
@@ -132,16 +168,16 @@ class UIBuilder:
                     "margin": "sm"
                 }
             ])
-        
+
         contents.append({
             "type": "text",
-            "text": "تم انشاء هذا البوت بواسطة\nعبير الدوسري 2025",
+            "text": "تم إنشاء هذا البوت بواسطة\nعبير الدوسري 2025",
             "align": "center",
             "size": "xs",
             "color": c["text3"],
             "margin": "lg"
         })
-        
+
         return {
             "type": "bubble",
             "styles": {"body": {"backgroundColor": c["bg"]}},
@@ -152,7 +188,7 @@ class UIBuilder:
                 "contents": contents
             }
         }
-    
+
     def games_menu_card(self):
         c = self._colors()
         games = [
