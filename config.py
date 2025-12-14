@@ -4,25 +4,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Config:
-    # معلومات البوت
     BOT_NAME = "Bot Mesh"
     VERSION = "2.0"
     RIGHTS = "Created by Abeer Aldossari 2025"
 
-    # إعدادات LINE
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
-    # قاعدة البيانات
     DATABASE_PATH = "botmesh.db"
-    DEFAULT_PORT = 10000
+    DEFAULT_PORT = 5000
 
-    # حدود المعدل
     RATE_LIMIT_MESSAGES = 30
     RATE_LIMIT_WINDOW = 60
 
-    # الثيمات
     THEMES = {
         "light": {
             "primary": "#000000",
@@ -72,7 +68,17 @@ class Config:
 
     DEFAULT_THEME = "light"
 
-    # الألعاب المتاحة
+    COMMAND_ALIASES = {
+        "بداية": ["start", "بدايه", "القائمة", "القائمه"],
+        "العاب": ["ألعاب", "الالعاب", "الألعاب", "games"],
+        "مساعدة": ["help", "مساعده", "ساعدني"],
+        "نقاطي": ["احصائياتي", "احصائيات", "نقاط"],
+        "الصدارة": ["المتصدرين", "الصداره", "leaderboard"],
+        "ايقاف": ["stop", "إيقاف", "توقف"],
+        "تسجيل": ["register", "انشاء حساب"],
+        "تغيير": ["تعديل", "تحديث"],
+    }
+
     POINT_GAMES = [
         "ذكاء", "خمن", "ضد", "ترتيب", "رياضيات", 
         "اغنيه", "لون", "تكوين", "لعبة", "سلسلة", "اسرع"
@@ -92,14 +98,14 @@ class Config:
     @classmethod
     def validate(cls):
         if not cls.LINE_SECRET or not cls.LINE_ACCESS_TOKEN:
-            raise ValueError("LINE credentials missing")
+            raise ValueError("LINE credentials missing in environment variables")
         return True
 
     @classmethod
     def get_port(cls) -> int:
         try:
             return int(os.getenv("PORT", cls.DEFAULT_PORT))
-        except:
+        except ValueError:
             return cls.DEFAULT_PORT
 
     @classmethod
@@ -107,8 +113,7 @@ class Config:
         if not text:
             return ""
         text = text[:1000].strip().lower()
-        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي",
-                        "ة": "ه", "ؤ": "و", "ئ": "ي"}
+        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
         for old, new in replacements.items():
             text = text.replace(old, new)
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
@@ -116,9 +121,19 @@ class Config:
         return text
 
     @classmethod
-    def get_theme(cls, name: str = None):
-        return cls.THEMES.get(name, cls.THEMES[cls.DEFAULT_THEME])
+    def get_theme(cls, name: str = None) -> dict:
+        return cls.THEMES.get(name, cls.THEMES.get(cls.DEFAULT_THEME))
 
     @classmethod
     def is_valid_theme(cls, name: str) -> bool:
         return name in cls.THEMES
+
+    @classmethod
+    def resolve_command(cls, text: str) -> str:
+        if not text:
+            return ""
+        text_lower = text.lower().strip()
+        for main_cmd, aliases in cls.COMMAND_ALIASES.items():
+            if text_lower == main_cmd or text_lower in aliases:
+                return main_cmd
+        return text_lower
