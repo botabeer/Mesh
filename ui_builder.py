@@ -1,87 +1,224 @@
 from typing import List, Dict
 
 class UIBuilder:
-    def __init__(self, theme: str = "light"):
+    def __init__(self, theme: str = "glass"):
         self.theme = theme
         self.themes = {
-            "light": {
-                "primary": "#007AFF", "secondary": "#5AC8FA", "success": "#34C759",
-                "warning": "#FF9500", "danger": "#FF3B30", "bg": "#F2F2F7",
-                "card": "#FFFFFF", "text": "#000000", "text2": "#3C3C43",
-                "text3": "#8E8E93", "border": "#E5E5EA"
+            "glass": {
+                "bg": "#F5F5F7",
+                "card": "#FFFFFFCC",
+                "primary": "#000000",
+                "secondary": "#3A3A3C",
+                "button": "#E5E5EA",
+                "button_active": "#D1D1D6",
+                "text": "#000000",
+                "text2": "#6E6E73",
+                "text3": "#8E8E93",
+                "border": "#D1D1D6",
+                "success": "#34C759",
+                "warning": "#FF9500"
             }
         }
     
     def _colors(self) -> Dict[str, str]:
-        return self.themes.get(self.theme, self.themes["light"])
+        return self.themes.get(self.theme, self.themes["glass"])
+    
+    def _section_title(self, text: str) -> Dict:
+        return {
+            "type": "text",
+            "text": text,
+            "weight": "bold",
+            "size": "md",
+            "margin": "md",
+            "color": self._colors()["primary"]
+        }
+    
+    def _two_buttons(self, text1: str, action1: str, text2: str, action2: str) -> Dict:
+        c = self._colors()
+        return {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "secondary",
+                    "height": "sm",
+                    "action": {"type": "message", "label": text1, "text": action1},
+                    "color": c["button"]
+                },
+                {
+                    "type": "button",
+                    "style": "secondary",
+                    "height": "sm",
+                    "action": {"type": "message", "label": text2, "text": action2},
+                    "color": c["button"]
+                }
+            ]
+        }
     
     def welcome_card(self, name: str, registered: bool):
         c = self._colors()
-        status = "مسجل" if registered else "غير مسجل"
-        color = c["success"] if registered else c["warning"]
+        status = f"{name} مسجل" if registered else f"{name} غير مسجل"
+        status_color = c["success"] if registered else c["warning"]
         
-        buttons = [
-            {"type": "button", "style": "primary", "height": "sm", "color": c["primary"],
-             "action": {"type": "message", "label": "العاب", "text": "العاب"}},
-            {"type": "button", "style": "secondary", "height": "sm",
-             "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"}},
-            {"type": "button", "style": "secondary", "height": "sm",
-             "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}}
-        ]
-        
-        if not registered:
-            buttons.append({"type": "button", "style": "secondary", "height": "sm",
-                          "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}})
-        
-        flex = {
-            "type": "bubble", "size": "mega",
-            "body": {
-                "type": "box", "layout": "vertical", "paddingAll": "20px",
+        contents = [
+            {
+                "type": "box",
+                "layout": "vertical",
                 "backgroundColor": c["card"],
+                "cornerRadius": "16px",
+                "paddingAll": "16px",
                 "contents": [
-                    {"type": "text", "text": f"مرحبا {name}", "size": "xl",
-                     "weight": "bold", "color": c["primary"], "align": "center"},
-                    {"type": "text", "text": status, "size": "sm",
-                     "color": color, "align": "center", "margin": "md"},
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "box", "layout": "vertical", "spacing": "sm",
-                     "margin": "lg", "contents": buttons}
+                    {
+                        "type": "text",
+                        "text": "Bot Mesh",
+                        "align": "center",
+                        "weight": "bold",
+                        "size": "xl",
+                        "color": c["primary"]
+                    }
+                ]
+            },
+            {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "8px",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "مرحبا",
+                        "align": "center",
+                        "weight": "bold",
+                        "size": "lg",
+                        "color": c["primary"]
+                    },
+                    {
+                        "type": "text",
+                        "text": status,
+                        "align": "center",
+                        "color": status_color,
+                        "size": "sm"
+                    }
                 ]
             }
+        ]
+        
+        if registered:
+            contents.extend([
+                self._section_title("الحساب"),
+                self._two_buttons("تغيير الاسم", "تغيير", "نقاطي", "نقاطي"),
+                self._section_title("الاحصائيات"),
+                self._two_buttons("الصدارة", "الصدارة", "مساعدة", "مساعدة"),
+                self._section_title("القوائم"),
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "action": {"type": "message", "label": "العاب", "text": "العاب"},
+                    "color": c["primary"],
+                    "margin": "sm"
+                }
+            ])
+        else:
+            contents.extend([
+                self._section_title("ابدأ الان"),
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
+                    "color": c["primary"],
+                    "margin": "sm"
+                }
+            ])
+        
+        contents.append({
+            "type": "text",
+            "text": "تم انشاء هذا البوت بواسطة\nعبير الدوسري 2025",
+            "align": "center",
+            "size": "xs",
+            "color": c["text3"],
+            "margin": "lg"
+        })
+        
+        return {
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": c["bg"]}},
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": contents
+            }
         }
-        return flex
     
     def games_menu_card(self):
         c = self._colors()
         games = [
-            "ذكاء", "خمن", "ضد", "ترتيب", "رياضيات", "اغنيه",
-            "لون", "تكوين", "لعبة", "سلسلة", "اسرع", "توافق", "مافيا"
+            ["ذكاء", "خمن", "ضد"],
+            ["ترتيب", "رياضيات", "اغنيه"],
+            ["لون", "تكوين", "لعبة"],
+            ["سلسلة", "اسرع", "توافق"],
+            ["مافيا", "سؤال", "منشن"]
         ]
         
         buttons = []
-        for i in range(0, len(games), 3):
-            row = {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": []}
-            for game in games[i:i+3]:
-                row["contents"].append({
-                    "type": "button", "style": "primary", "height": "sm",
-                    "action": {"type": "message", "label": game, "text": game}
+        for row in games:
+            row_buttons = {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "sm",
+                "contents": []
+            }
+            for game in row:
+                row_buttons["contents"].append({
+                    "type": "button",
+                    "style": "secondary",
+                    "height": "sm",
+                    "action": {"type": "message", "label": game, "text": game},
+                    "color": c["button"]
                 })
-            buttons.append(row)
+            buttons.append(row_buttons)
         
-        flex = {
-            "type": "bubble", "size": "mega",
+        return {
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": c["bg"]}},
             "body": {
-                "type": "box", "layout": "vertical", "paddingAll": "20px",
-                "backgroundColor": c["card"],
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
                 "contents": [
-                    {"type": "text", "text": "الالعاب", "size": "xl",
-                     "weight": "bold", "color": c["primary"], "align": "center"},
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "box", "layout": "vertical", "margin": "lg", "contents": buttons}
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "الالعاب",
+                                "align": "center",
+                                "weight": "bold",
+                                "size": "xl",
+                                "color": c["primary"]
+                            }
+                        ]
+                    },
+                    *buttons,
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "height": "sm",
+                        "action": {"type": "message", "label": "رجوع", "text": "بداية"},
+                        "color": c["primary"],
+                        "margin": "md"
+                    }
                 ]
             }
         }
-        return flex
     
     def leaderboard_card(self, leaders: List[tuple]):
         c = self._colors()
@@ -90,30 +227,56 @@ class UIBuilder:
         for i, (name, pts) in enumerate(leaders[:10]):
             rank = str(i + 1)
             items.append({
-                "type": "box", "layout": "horizontal", "margin": "sm",
+                "type": "box",
+                "layout": "horizontal",
+                "margin": "sm",
+                "backgroundColor": c["card"],
+                "cornerRadius": "8px",
+                "paddingAll": "8px",
                 "contents": [
-                    {"type": "text", "text": rank, "size": "sm", "color": c["text"], "flex": 0},
-                    {"type": "text", "text": name, "size": "sm", "color": c["text"],
-                     "flex": 3, "margin": "sm"},
-                    {"type": "text", "text": str(pts), "size": "sm",
-                     "color": c["primary"], "weight": "bold", "flex": 1, "align": "end"}
+                    {"type": "text", "text": rank, "size": "sm", "color": c["text"], "flex": 0, "weight": "bold"},
+                    {"type": "text", "text": name, "size": "sm", "color": c["text"], "flex": 3, "margin": "sm"},
+                    {"type": "text", "text": str(pts), "size": "sm", "color": c["primary"], "weight": "bold", "flex": 1, "align": "end"}
                 ]
             })
         
-        flex = {
-            "type": "bubble", "size": "mega",
+        return {
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": c["bg"]}},
             "body": {
-                "type": "box", "layout": "vertical", "paddingAll": "20px",
-                "backgroundColor": c["card"],
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
                 "contents": [
-                    {"type": "text", "text": "لوحة الصدارة", "size": "xl",
-                     "weight": "bold", "color": c["primary"], "align": "center"},
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "box", "layout": "vertical", "margin": "lg", "contents": items}
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "لوحة الصدارة",
+                                "align": "center",
+                                "weight": "bold",
+                                "size": "xl",
+                                "color": c["primary"]
+                            }
+                        ]
+                    },
+                    {"type": "box", "layout": "vertical", "spacing": "sm", "contents": items},
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "height": "sm",
+                        "action": {"type": "message", "label": "رجوع", "text": "بداية"},
+                        "color": c["primary"],
+                        "margin": "md"
+                    }
                 ]
             }
         }
-        return flex
     
     def stats_card(self, name: str, user_data: dict):
         c = self._colors()
@@ -121,47 +284,109 @@ class UIBuilder:
         games = user_data.get("games_played", 0)
         wins = user_data.get("wins", 0)
         
-        flex = {
-            "type": "bubble", "size": "mega",
+        return {
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": c["bg"]}},
             "body": {
-                "type": "box", "layout": "vertical", "paddingAll": "20px",
-                "backgroundColor": c["card"],
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
                 "contents": [
-                    {"type": "text", "text": "احصائياتي", "size": "xl",
-                     "weight": "bold", "color": c["primary"], "align": "center"},
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "box", "layout": "vertical", "margin": "lg",
-                     "contents": [
-                         {"type": "text", "text": f"الاسم: {name}", "size": "md", "color": c["text"]},
-                         {"type": "text", "text": f"النقاط: {points}", "size": "md",
-                          "color": c["primary"], "weight": "bold", "margin": "md"},
-                         {"type": "text", "text": f"الالعاب: {games}", "size": "sm",
-                          "color": c["text2"], "margin": "sm"},
-                         {"type": "text", "text": f"الفوز: {wins}", "size": "sm",
-                          "color": c["text2"], "margin": "sm"}
-                     ]}
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "احصائياتي",
+                                "align": "center",
+                                "weight": "bold",
+                                "size": "xl",
+                                "color": c["primary"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "16px",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": f"الاسم: {name}", "size": "md", "color": c["text"]},
+                            {"type": "text", "text": f"النقاط: {points}", "size": "lg", "color": c["primary"], "weight": "bold"},
+                            {"type": "text", "text": f"الالعاب: {games}", "size": "sm", "color": c["text2"]},
+                            {"type": "text", "text": f"الفوز: {wins}", "size": "sm", "color": c["text2"]}
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "height": "sm",
+                        "action": {"type": "message", "label": "رجوع", "text": "بداية"},
+                        "color": c["primary"],
+                        "margin": "md"
+                    }
                 ]
             }
         }
-        return flex
     
     def help_card(self):
         c = self._colors()
         
-        flex = {
-            "type": "bubble", "size": "mega",
+        return {
+            "type": "bubble",
+            "styles": {"body": {"backgroundColor": c["bg"]}},
             "body": {
-                "type": "box", "layout": "vertical", "paddingAll": "20px",
-                "backgroundColor": c["card"],
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
                 "contents": [
-                    {"type": "text", "text": "المساعدة", "size": "xl",
-                     "weight": "bold", "color": c["primary"], "align": "center"},
-                    {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "text", "text": "الاوامر المتاحة:", "size": "md",
-                     "color": c["text"], "weight": "bold", "margin": "lg"},
-                    {"type": "text", "text": "بداية - القائمة الرئيسية\nالعاب - عرض الالعاب\nنقاطي - عرض النقاط\nالصدارة - لوحة المتصدرين\nتسجيل - التسجيل في النظام",
-                     "size": "sm", "color": c["text2"], "wrap": True, "margin": "md"}
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "المساعدة",
+                                "align": "center",
+                                "weight": "bold",
+                                "size": "xl",
+                                "color": c["primary"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["card"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "16px",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": "الاوامر المتاحة:", "size": "md", "color": c["text"], "weight": "bold"},
+                            {"type": "text", "text": "بداية - القائمة الرئيسية", "size": "sm", "color": c["text2"], "wrap": True},
+                            {"type": "text", "text": "العاب - عرض الالعاب", "size": "sm", "color": c["text2"], "wrap": True},
+                            {"type": "text", "text": "نقاطي - عرض النقاط", "size": "sm", "color": c["text2"], "wrap": True},
+                            {"type": "text", "text": "الصدارة - المتصدرين", "size": "sm", "color": c["text2"], "wrap": True},
+                            {"type": "text", "text": "تسجيل - انشاء حساب", "size": "sm", "color": c["text2"], "wrap": True}
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "height": "sm",
+                        "action": {"type": "message", "label": "رجوع", "text": "بداية"},
+                        "color": c["primary"],
+                        "margin": "md"
+                    }
                 ]
             }
         }
-        return flex
