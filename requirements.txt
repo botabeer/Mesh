@@ -7,3 +7,8 @@ pytz
 Werkzeug
 Jinja2
 itsdangerous
+MarkupSafe
+click
+blinker
+tzlocal
+six
