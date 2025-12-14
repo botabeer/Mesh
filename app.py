@@ -1,81 +1,44 @@
-# ========================================
-# app.py
-# ========================================
-
+from flask import Flask, request, abort
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 import os
 import logging
 import atexit
-from datetime import datetime
 from threading import Thread
-from queue import Queue, Empty
+from queue import Queue
 
-from flask import Flask, request, abort
-
-from linebot.v3 import WebhookHandler
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import (
-    Configuration,
-    ApiClient,
-    MessagingApi,
-    ReplyMessageRequest,
-    TextMessage,
-    FlexMessage,
-    FlexContainer,
-    QuickReply,
-    QuickReplyItem,
-    MessageAction
-)
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
-
-from apscheduler.schedulers.background import BackgroundScheduler
-
-from config import Config
 from database import Database
 from game_engine import GameEngine
 from ui_builder import UIBuilder
 
-# ----------------------------------------
-# Logging
-# ----------------------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.FileHandler('bot.log'), logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
-# ----------------------------------------
-# Flask
-# ----------------------------------------
 app = Flask(__name__)
 
-# ----------------------------------------
-# Config validation
-# ----------------------------------------
-Config.validate()
+required_env = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']
+for var in required_env:
+    if not os.getenv(var):
+        raise ValueError(f"Missing {var}")
 
-# ----------------------------------------
-# LINE SDK
-# ----------------------------------------
-configuration = Configuration(access_token=Config.LINE_ACCESS_TOKEN)
-handler = WebhookHandler(Config.LINE_SECRET)
+line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-# ----------------------------------------
-# Core components
-# ----------------------------------------
 Database.init()
+game_engine = GameEngine(line_bot_api, Database)
 ui_builder = UIBuilder()
 
-api_client = ApiClient(configuration)
-messaging_api = MessagingApi(api_client)
-
-game_engine = GameEngine(messaging_api, Database)
-
-# ----------------------------------------
-# Task Queue (Anti-timeout)
-# ----------------------------------------
 task_queue = Queue()
 
 def background_worker():
+    from queue import Empty
     while True:
         try:
             task = task_queue.get(timeout=1)
@@ -86,199 +49,185 @@ def background_worker():
         except Empty:
             continue
         except Exception as e:
-            logger.error("Background error", exc_info=True)
+            logger.error(f"Background task error: {e}", exc_info=True)
 
-for _ in range(2):
-    Thread(target=background_worker, daemon=True).start()
+for _ in range(4):
+    t = Thread(target=background_worker, daemon=True)
+    t.start()
 
-# ----------------------------------------
-# Scheduler (only one worker)
-# ----------------------------------------
-scheduler = BackgroundScheduler(timezone="UTC")
+scheduler = BackgroundScheduler()
+scheduler.add_job(
+    func=Database.cleanup_inactive_users,
+    trigger="interval",
+    hours=24,
+    id='cleanup',
+    replace_existing=True
+)
+scheduler.start()
+atexit.register(lambda: scheduler.shutdown())
 
-def start_scheduler():
-    scheduler.add_job(
-        Database.cleanup_inactive_users,
-        trigger="interval",
-        hours=24,
-        id="cleanup_users",
-        replace_existing=True
-    )
-    scheduler.start()
-    logger.info("Scheduler started")
-
-if os.environ.get("GUNICORN_WORKER_ID") in (None, "0"):
-    start_scheduler()
-    atexit.register(lambda: scheduler.shutdown(wait=False))
-
-# ----------------------------------------
-# User themes (memory cache)
-# ----------------------------------------
-user_themes = {}
-
-def get_user_theme(user_id: str) -> str:
-    return user_themes.get(user_id, Config.DEFAULT_THEME)
-
-def set_user_theme(user_id: str, theme: str) -> bool:
-    if Config.is_valid_theme(theme):
-        user_themes[user_id] = theme
-        return True
-    return False
-
-# ----------------------------------------
-# Quick Reply
-# ----------------------------------------
-def build_quick_reply() -> QuickReply:
-    return QuickReply(items=[
-        QuickReplyItem(action=MessageAction(label="بداية", text="بداية")),
-        QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
-        QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
-        QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
-        QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
+def add_quick_reply(message):
+    from linebot.models import QuickReply, QuickReplyButton, MessageAction, FlexSendMessage
+    
+    quick_reply = QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label="بداية", text="بداية")),
+        QuickReplyButton(action=MessageAction(label="تسجيل", text="تسجيل")),
+        QuickReplyButton(action=MessageAction(label="العاب", text="العاب")),
+        QuickReplyButton(action=MessageAction(label="نقاطي", text="نقاطي")),
+        QuickReplyButton(action=MessageAction(label="الصدارة", text="الصدارة")),
+        QuickReplyButton(action=MessageAction(label="ايقاف", text="ايقاف"))
     ])
+    
+    if isinstance(message, (TextSendMessage, FlexSendMessage)):
+        message.quick_reply = quick_reply
+    return message
 
-# ----------------------------------------
-# Routes
-# ----------------------------------------
-@app.route("/", methods=["GET"])
-def index():
-    return {
-        "bot": Config.BOT_NAME,
-        "version": Config.VERSION,
-        "status": "running"
-    }, 200
-
-@app.route("/health", methods=["GET"])
-def health():
-    return {
-        "status": "healthy",
-        "time": datetime.utcnow().isoformat()
-    }, 200
-
-@app.route("/callback", methods=["POST"])
+@app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers.get("X-Line-Signature", "")
+    signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
-
+    
+    logger.info(f"Webhook received: signature={signature[:20]}... body_length={len(body)}")
+    
     try:
         handler.handle(body, signature)
-    except InvalidSignatureError:
+        logger.info("Webhook handled successfully")
+    except InvalidSignatureError as e:
+        logger.error(f"Invalid signature: {e}", exc_info=True)
         abort(400)
-    except Exception:
-        logger.error("Callback error", exc_info=True)
+    except Exception as e:
+        logger.error(f"Callback error: {e}", exc_info=True)
+        abort(500)
+    
+    return 'OK', 200
 
-    return "OK", 200
-
-# ----------------------------------------
-# Message Handler
-# ----------------------------------------
-@handler.add(MessageEvent, message=TextMessageContent)
+@handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    def process():
+    def process_message():
         try:
             text = event.message.text.strip()
             user_id = event.source.user_id
-
+            group_id = getattr(event.source, 'group_id', None) or user_id
+            
+            logger.info(f"Received message: {text} from user: {user_id}")
+            
             Database.update_last_activity(user_id)
-
-            response = process_command(text, user_id)
-
-            messages = []
-
+            
+            response = process_command(text, user_id, group_id)
+            
+            if response is None:
+                response = TextSendMessage(text="اكتب 'بداية' لعرض القائمة")
+            
             if isinstance(response, list):
                 for msg in response:
-                    messages.append(prepare_message(msg))
+                    add_quick_reply(msg)
+                line_bot_api.reply_message(event.reply_token, response)
             else:
-                messages.append(prepare_message(response))
-
-            messaging_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=messages
-                )
-            )
-
-        except Exception:
-            logger.error("Message handling error", exc_info=True)
+                line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
+            
+            logger.info(f"Reply sent successfully to user: {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Message processing error: {e}", exc_info=True)
             try:
-                messaging_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text="حدث خطأ، حاول لاحقاً")]
-                    )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="حدث خطا، حاول مرة اخرى")
                 )
-            except Exception:
-                pass
+            except Exception as reply_error:
+                logger.error(f"Failed to send error reply: {reply_error}")
+    
+    task_queue.put(process_message)
 
-    task_queue.put(process)
-
-def prepare_message(msg):
-    qr = build_quick_reply()
-
-    if isinstance(msg, dict):
-        flex = FlexMessage(
-            alt_text=Config.BOT_NAME,
-            contents=FlexContainer.from_dict(msg)
+def process_command(text, user_id, group_id):
+    text_normalized = text.lower().strip()
+    
+    user_data = Database.get_user_stats(user_id)
+    is_registered = user_data is not None
+    display_name = user_data['display_name'] if user_data else "مستخدم"
+    
+    if text_normalized in ["بداية", "start", "بدايه"]:
+        from linebot.models import FlexSendMessage
+        return FlexSendMessage(
+            alt_text="بوت الحوت",
+            contents=ui_builder.welcome_card(display_name, is_registered)
         )
-        flex.quick_reply = qr
-        return flex
-
-    msg.quick_reply = qr
-    return msg
-
-# ----------------------------------------
-# Command Processor
-# ----------------------------------------
-def process_command(text: str, user_id: str):
-    text_n = text.lower()
-    user = Database.get_user_stats(user_id)
-    registered = user is not None
-    name = user["display_name"] if user else "مستخدم"
-    theme = get_user_theme(user_id)
-
-    if text_n in ("بداية", "start"):
-        return ui_builder.welcome_card(name, registered, theme)
-
-    if text_n in ("العاب",):
-        return ui_builder.games_menu_card(theme)
-
-    if text_n in ("نقاطي",):
-        if not registered:
-            return TextMessage(text="يجب التسجيل أولاً\nاكتب: تسجيل")
-        return ui_builder.stats_card(name, user, theme)
-
-    if text_n in ("الصدارة",):
-        return ui_builder.leaderboard_card(
-            Database.get_leaderboard(),
-            theme
+    
+    if text_normalized in ["مساعدة", "help", "مساعده"]:
+        from linebot.models import FlexSendMessage
+        return FlexSendMessage(
+            alt_text="المساعدة",
+            contents=ui_builder.help_card()
         )
-
-    if text_n in ("مساعدة",):
-        return ui_builder.help_card(theme)
-
-    if text_n == "تسجيل":
-        if registered:
-            return TextMessage(text="أنت مسجل بالفعل")
-        game_engine.set_waiting_for_name(user_id, True)
-        return TextMessage(text="اكتب اسمك للتسجيل:")
-
-    if text_n == "ايقاف":
-        return TextMessage(
-            text="تم إيقاف اللعبة"
-            if game_engine.stop_game(user_id)
-            else "لا توجد لعبة نشطة"
+    
+    if text in ["العاب", "ألعاب"]:
+        from linebot.models import FlexSendMessage
+        return FlexSendMessage(
+            alt_text="قائمة الالعاب",
+            contents=ui_builder.games_menu_card()
         )
-
-    return game_engine.process_message(
-        text, user_id, user_id, name, registered
-    ) or TextMessage(text="أمر غير معروف\nاكتب: مساعدة")
-
-# ----------------------------------------
-# Local run
-# ----------------------------------------
-if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=Config.get_port(),
-        debug=False
+    
+    if text_normalized in ["تسجيل", "تغيير"]:
+        return handle_registration(user_id, is_registered, display_name)
+    
+    if text_normalized in ["نقاطي", "احصائياتي"]:
+        if not is_registered:
+            return TextSendMessage(text="يجب التسجيل اولا\nاكتب: تسجيل")
+        from linebot.models import FlexSendMessage
+        return FlexSendMessage(
+            alt_text="احصائياتك",
+            contents=ui_builder.stats_card(display_name, user_data)
+        )
+    
+    if text_normalized in ["الصدارة", "المتصدرين", "الصداره"]:
+        leaders = Database.get_leaderboard(20)
+        from linebot.models import FlexSendMessage
+        return FlexSendMessage(
+            alt_text="لوحة الصدارة",
+            contents=ui_builder.leaderboard_card(leaders)
+        )
+    
+    if text_normalized in ["ايقاف", "stop", "إيقاف"]:
+        stopped = game_engine.stop_game(group_id)
+        return TextSendMessage(text="تم ايقاف اللعبة" if stopped else "لا توجد لعبة نشطة")
+    
+    game_response = game_engine.process_message(
+        text=text,
+        user_id=user_id,
+        group_id=group_id,
+        display_name=display_name,
+        is_registered=is_registered
     )
+    
+    return game_response
+
+def handle_registration(user_id, is_registered, current_name):
+    game_engine.set_waiting_for_name(user_id, True)
+    
+    if is_registered:
+        msg = f"انت مسجل حاليا باسم: {current_name}\n\nادخل الاسم الجديد:"
+    else:
+        msg = "ادخل اسمك للتسجيل:"
+    
+    return TextSendMessage(text=msg)
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return {
+        'status': 'healthy',
+        'service': 'bot-alhoot',
+        'timestamp': datetime.now().isoformat()
+    }, 200
+
+@app.route('/')
+def index():
+    return {
+        'status': 'running',
+        'service': 'bot-alhoot'
+    }, 200
+
+if __name__ == "__main__":
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    logger.info(f"Starting Bot Alhoot on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=debug)
