@@ -1,11 +1,12 @@
 import os
+import multiprocessing
 
-bind = f"0.0.0.0:{os.getenv('PORT', 10000)}"
+bind = f"0.0.0.0:{os.getenv('PORT', 5000)}"
 backlog = 2048
 
-workers = 1
-worker_class = "sync"
-threads = 1
+workers = min(multiprocessing.cpu_count() * 2 + 1, 4)
+worker_class = "sync"  # يمكن تغييره لـ "gthread" عند كثرة الwebhooks
+threads = 2
 worker_connections = 1000
 max_requests = 1000
 max_requests_jitter = 50
@@ -23,5 +24,4 @@ proc_name = "bot-mesh"
 
 daemon = False
 preload_app = True
-
 reload = False
