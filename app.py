@@ -103,41 +103,39 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    def process_message():
+    try:
+        text = event.message.text.strip()
+        user_id = event.source.user_id
+        group_id = getattr(event.source, 'group_id', None) or user_id
+        
+        logger.info(f"Message received: '{text}' from user: {user_id}")
+        
+        Database.update_last_activity(user_id)
+        
+        response = process_command(text, user_id, group_id)
+        
+        if response is None:
+            logger.warning(f"No response generated for message: {text}")
+            response = TextSendMessage(text="اكتب 'بداية' لعرض القائمة")
+        
+        if isinstance(response, list):
+            for msg in response:
+                add_quick_reply(msg)
+            line_bot_api.reply_message(event.reply_token, response)
+        else:
+            line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
+        
+        logger.info(f"Reply sent successfully to user: {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Message processing error: {e}", exc_info=True)
         try:
-            text = event.message.text.strip()
-            user_id = event.source.user_id
-            group_id = getattr(event.source, 'group_id', None) or user_id
-            
-            logger.info(f"Received message: {text} from user: {user_id}")
-            
-            Database.update_last_activity(user_id)
-            
-            response = process_command(text, user_id, group_id)
-            
-            if response is None:
-                response = TextSendMessage(text="اكتب 'بداية' لعرض القائمة")
-            
-            if isinstance(response, list):
-                for msg in response:
-                    add_quick_reply(msg)
-                line_bot_api.reply_message(event.reply_token, response)
-            else:
-                line_bot_api.reply_message(event.reply_token, add_quick_reply(response))
-            
-            logger.info(f"Reply sent successfully to user: {user_id}")
-            
-        except Exception as e:
-            logger.error(f"Message processing error: {e}", exc_info=True)
-            try:
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text="حدث خطا، حاول مرة اخرى")
-                )
-            except Exception as reply_error:
-                logger.error(f"Failed to send error reply: {reply_error}")
-    
-    task_queue.put(process_message)
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="حدث خطا، حاول مرة اخرى")
+            )
+        except Exception as reply_error:
+            logger.error(f"Failed to send error reply: {reply_error}")
 
 def process_command(text, user_id, group_id):
     text_normalized = text.lower().strip()
