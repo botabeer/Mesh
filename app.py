@@ -1,7 +1,3 @@
-# ========================================
-# app.py - Bot Mesh Production Ready
-# ========================================
-
 import os
 import logging
 from threading import Thread
@@ -24,12 +20,9 @@ from database import Database
 from game_engine import GameEngine
 from ui_builder import UIBuilder
 
-# ----------------------------
-# Logging Setup
-# ----------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.FileHandler('bot.log'),
         logging.StreamHandler()
@@ -37,34 +30,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ----------------------------
-# Flask App
-# ----------------------------
 app = Flask(__name__)
 
-# ----------------------------
-# Environment Check
-# ----------------------------
 for var in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']:
     if not os.getenv(var):
         raise ValueError(f"Missing environment variable: {var}")
 
-# ----------------------------
-# LINE Bot Configuration
-# ----------------------------
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-# ----------------------------
-# Database & Engine Init
-# ----------------------------
 Database.init()
 game_engine = GameEngine(configuration, Database)
 ui_builder = UIBuilder()
 
-# ----------------------------
-# Background Task Queue
-# ----------------------------
 task_queue = Queue()
 
 def background_worker():
@@ -84,9 +62,6 @@ for _ in range(4):
     t = Thread(target=background_worker, daemon=True)
     t.start()
 
-# ----------------------------
-# Scheduler for Cleanup
-# ----------------------------
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     func=Database.cleanup_inactive_users,
@@ -98,19 +73,13 @@ scheduler.add_job(
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
-# ----------------------------
-# Webhook Route
-# ----------------------------
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
-    logger.info("Webhook received")
-    
     try:
         handler.handle(body, signature)
-        logger.info("Webhook handled successfully")
     except InvalidSignatureError:
         logger.error("Invalid signature")
         abort(400)
@@ -120,9 +89,6 @@ def callback():
     
     return 'OK', 200
 
-# ----------------------------
-# Message Handler
-# ----------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     task_queue.put(lambda: process_event(event))
@@ -132,7 +98,6 @@ def process_event(event):
         text = event.message.text.strip()
         user_id = event.source.user_id
         
-        logger.info(f"Message from {user_id}: '{text}'")
         Database.update_last_activity(user_id)
         
         user_theme = Database.get_user_theme(user_id)
@@ -160,14 +125,10 @@ def process_event(event):
                         messages=[response]
                     )
                 )
-        logger.info(f"Reply sent to {user_id}")
         
     except Exception as e:
         logger.error(f"Message processing error: {e}", exc_info=True)
 
-# ----------------------------
-# Command Processing
-# ----------------------------
 def process_command(text, user_id):
     text_normalized = text.lower().strip()
     
@@ -175,7 +136,6 @@ def process_command(text, user_id):
     is_registered = user_data is not None
     display_name = user_data['display_name'] if user_data else "مستخدم"
     
-    # Waiting for registration name
     if game_engine.is_waiting_for_name(user_id):
         name = text.strip()[:50]
         if len(name) >= 2:
@@ -184,25 +144,21 @@ def process_command(text, user_id):
             return safe_flex(ui_builder.welcome_card(name, True), "تم التسجيل")
         return TextMessage(text="الاسم يجب ان يكون حرفين على الاقل")
     
-    # Theme toggle
     if text_normalized == "تغيير_الثيم":
         new_theme = Database.toggle_user_theme(user_id)
         ui_builder.theme = new_theme
         theme_ar = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
         return safe_flex(ui_builder.welcome_card(display_name, is_registered), f"تم التغيير الى {theme_ar}")
     
-    # System commands
     resolved_command = Config.resolve_command(text_normalized)
     system_response = handle_system_commands(resolved_command, user_id, user_data, is_registered, display_name)
     if system_response:
         return system_response
     
-    # Registration
     registration_response = handle_registration(text_normalized, user_id, is_registered, display_name)
     if registration_response:
         return registration_response
     
-    # Game processing
     user_theme = Database.get_user_theme(user_id)
     return game_engine.process_message(
         text=text,
@@ -212,9 +168,6 @@ def process_command(text, user_id):
         theme=user_theme
     )
 
-# ----------------------------
-# System Commands
-# ----------------------------
 def handle_system_commands(command, user_id, user_data, is_registered, display_name):
     if command == "بداية":
         return safe_flex(ui_builder.welcome_card(display_name, is_registered), "القائمة الرئيسية")
@@ -234,21 +187,15 @@ def handle_system_commands(command, user_id, user_data, is_registered, display_n
         return TextMessage(text="تم ايقاف اللعبة" if stopped else "لا توجد لعبة نشطة")
     return None
 
-# ----------------------------
-# Registration Handling
-# ----------------------------
 def handle_registration(text_normalized, user_id, is_registered, display_name):
     if text_normalized in ["تسجيل", "تغيير"]:
         if game_engine.is_game_active(user_id):
-            return TextMessage(text="انه اللعبة اولا قبل تغيير الاسم")
+            return TextMessage(text="اوقف اللعبة اولا قبل تغيير الاسم")
         game_engine.set_waiting_for_name(user_id, True)
         msg = f"انت مسجل حاليا باسم: {display_name}\n\nادخل الاسم الجديد:" if is_registered else "ادخل اسمك للتسجيل:"
         return TextMessage(text=msg)
     return None
 
-# ----------------------------
-# Safe FlexMessage Helper
-# ----------------------------
 def safe_flex(card_dict, alt_text):
     try:
         return FlexMessage(
@@ -257,11 +204,8 @@ def safe_flex(card_dict, alt_text):
         )
     except Exception as e:
         logger.error(f"FlexMessage build error: {e}", exc_info=True)
-        return TextMessage(text="حدث خطأ أثناء إنشاء البطاقة")
+        return TextMessage(text="حدث خطأ في عرض البطاقة")
 
-# ----------------------------
-# Health Check
-# ----------------------------
 @app.route('/health', methods=['GET'])
 def health_check():
     return {
@@ -271,9 +215,6 @@ def health_check():
         'active_games': game_engine.get_active_games_count()
     }, 200
 
-# ----------------------------
-# Index
-# ----------------------------
 @app.route('/')
 def index():
     return {
@@ -282,9 +223,6 @@ def index():
         'version': Config.VERSION
     }, 200
 
-# ----------------------------
-# Run Flask (for dev only)
-# ----------------------------
 if __name__ == "__main__":
     port = Config.get_port()
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
