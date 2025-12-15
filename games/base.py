@@ -17,12 +17,10 @@ class BaseGame(ABC):
 
     @abstractmethod
     def get_question(self):
-        """ارجاع سؤال جديد وتحديث self.current_answer"""
         pass
 
     @abstractmethod
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الإجابة"""
         pass
 
     def start(self, user_id: str):
@@ -32,7 +30,6 @@ class BaseGame(ABC):
         return self.get_question()
 
     def check(self, answer: str, user_id: str):
-        # تجاهل غير المسجلين
         if not self.db.get_user(user_id):
             return None
 
@@ -51,7 +48,6 @@ class BaseGame(ABC):
         if not is_correct:
             return None
 
-        # فقط أول إجابة صحيحة
         self.score += 1
         self.current_q += 1
 
@@ -67,23 +63,117 @@ class BaseGame(ABC):
         self.db.finish_game(self.user_id, won)
 
         flex = {
-            "type":"bubble",
-            "body":{
-                "type":"box",
-                "layout":"vertical",
-                "backgroundColor":c["bg"],
-                "paddingAll":"20px",
-                "contents":[
-                    {"type":"text","text":"انتهت اللعبه","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
-                    {"type":"separator","margin":"md"},
-                    {"type":"box","layout":"vertical","backgroundColor":c["glass"],"cornerRadius":"16px","paddingAll":"16px","margin":"md",
-                     "contents":[
-                        {"type":"text","text":f"النتيجه {self.score}/{self.total_q}","size":"lg","weight":"bold","color":c["text"],"align":"center"},
-                        {"type":"text","text":f"+{self.score} نقطه","size":"md","color":c["success"],"align":"center","margin":"sm"}
-                     ]},
-                    {"type":"separator","margin":"md"},
-                    {"type":"button","action":{"type":"message","label":"القائمه","text":"بدايه"},"style":"primary","margin":"md"}
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["bg"],
+                "paddingAll": "20px",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "انتهت اللعبة",
+                        "size": "xl",
+                        "weight": "bold",
+                        "color": c["primary"],
+                        "align": "center"
+                    },
+                    {"type": "separator", "margin": "md"},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "margin": "md",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"النتيجة {self.score}/{self.total_q}",
+                                "size": "lg",
+                                "weight": "bold",
+                                "color": c["text"],
+                                "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": f"+{self.score} نقطة",
+                                "size": "md",
+                                "color": c["success"],
+                                "align": "center",
+                                "margin": "sm"
+                            }
+                        ]
+                    },
+                    {"type": "separator", "margin": "md"},
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "البداية",
+                            "text": "بدايه"
+                        },
+                        "style": "primary",
+                        "color": c["primary"],
+                        "margin": "md"
+                    }
                 ]
             }
         }
-        return {"response": FlexMessage(alt_text="انتهت اللعبه", contents=FlexContainer.from_dict(flex)), "game_over": True}
+        
+        return {
+            "response": FlexMessage(
+                alt_text="انتهت اللعبة",
+                contents=FlexContainer.from_dict(flex)
+            ),
+            "game_over": True
+        }
+
+    def build_question_flex(self, question_text: str, hint: str = ""):
+        c = self._c()
+        contents = [
+            {
+                "type": "text",
+                "text": question_text,
+                "size": "xl",
+                "weight": "bold",
+                "color": c["text"],
+                "align": "center",
+                "wrap": True
+            }
+        ]
+        
+        if hint:
+            contents.append({
+                "type": "text",
+                "text": hint,
+                "size": "sm",
+                "color": c["text_tertiary"],
+                "align": "center",
+                "margin": "md"
+            })
+        
+        contents.extend([
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
+                "style": "secondary",
+                "height": "sm",
+                "margin": "md"
+            }
+        ])
+        
+        return FlexMessage(
+            alt_text="سؤال",
+            contents=FlexContainer.from_dict({
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": contents,
+                    "backgroundColor": c["bg"],
+                    "paddingAll": "20px"
+                }
+            })
+        )
