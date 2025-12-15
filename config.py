@@ -6,13 +6,14 @@ load_dotenv()
 
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "5.0"
+    VERSION = "6.0"
     COPYRIGHT = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-
-    DB_PATH = "botmesh.db"
+    DB_PATH = os.getenv("DB_PATH", "botmesh.db")
+    PORT = int(os.getenv("PORT", 5000))
+    WORKERS = int(os.getenv("WORKERS", 4))
 
     THEMES = {
         "light": {
@@ -57,13 +58,15 @@ class Config:
             return ""
         text = text.strip().lower()[:1000]
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
+        replacements = {
+            "أ": "ا", "إ": "ا", "آ": "ا",
+            "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"
+        }
         for old, new in replacements.items():
             text = text.replace(old, new)
         text = re.sub(r"[^\w\sء-ي]", "", text)
         text = re.sub(r"\s+", " ", text)
         return text.strip()
-
 
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
     raise RuntimeError("LINE credentials missing")
