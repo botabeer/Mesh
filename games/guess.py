@@ -2,10 +2,7 @@ import random
 from games.base import BaseGame
 from config import Config
 
-
 class GuessGame(BaseGame):
-    """لعبة التخمين - حزر الكلمة"""
-    
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
         
@@ -32,7 +29,7 @@ class GuessGame(BaseGame):
         q_data = self.questions[idx]
         self.current_answer = q_data["answers"]
         
-        text = f"الفئة: {q_data['category']}\nيبدا بحرف: {q_data['letter']}"
+        text = f"الفئة {q_data['category']}\n\nيبدا بحرف {q_data['letter']}"
         hint = f"السؤال {self.current_q + 1}/{self.total_q}"
         return self.build_question_flex(text, hint)
     
