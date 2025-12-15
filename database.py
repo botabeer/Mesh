@@ -101,8 +101,8 @@ class Database:
     def get_leaderboard(self, limit: int = 10):
         try:
             with self._get_conn() as conn:
-                rows = conn.execute("SELECT name, points FROM users WHERE games>0 ORDER BY points DESC, wins DESC LIMIT ?", (limit,)).fetchall()
-                return [{"name": r["name"], "points": r["points"]} for r in rows]
+                rows = conn.execute("SELECT name, points, wins, games FROM users WHERE games>0 ORDER BY points DESC, wins DESC LIMIT ?", (limit,)).fetchall()
+                return [{"name": r["name"], "points": r["points"], "wins": r["wins"], "games": r["games"]} for r in rows]
         except Exception:
             return []
 
