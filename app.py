@@ -60,8 +60,8 @@ def process_message(user_id: str, text: str, reply_token: str):
         ui = UI(theme=theme)
         cmd = Config.normalize(text)
 
-        # اوامر بدون تسجيل
-        if cmd in ("بدايه", "بداية"):
+        # اوامر عامة بدون تسجيل
+        if cmd in ("بداية", "بدايه"):
             reply_message(reply_token, [ui.main_menu(user)])
             return
         
@@ -70,11 +70,15 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, [UI(theme=new_theme).main_menu(user)])
             return
         
-        if cmd in ("مساعده", "مساعدة"):
+        if cmd in ("مساعدة", "مساعده"):
             reply_message(reply_token, [ui.help_menu()])
             return
 
-        # التحقق من النصوص العشوائية
+        if cmd in ("الصدارة", "الصداره"):
+            reply_message(reply_token, [ui.leaderboard_card(db.get_leaderboard())])
+            return
+
+        # محتوى تفاعلي نصي
         text_response = text_mgr.handle(cmd)
         if text_response:
             reply_message(reply_token, [text_response])
@@ -89,18 +93,18 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, [ui.main_menu(None)])
             return
 
-        # انتظار الاسم
+        # انتظار اسم للتسجيل
         if db.is_waiting_name(user_id):
             name = text.strip()[:50]
-            if len(name) >= 1:
+            if len(name) >= 2:
                 db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
                 reply_message(reply_token, [ui.main_menu(db.get_user(user_id))])
             else:
-                reply_message(reply_token, [TextMessage(text="الاسم قصير جدا")])
+                reply_message(reply_token, [TextMessage(text="الاسم قصير جدا - يجب ان يكون حرفين على الاقل")])
             return
 
-        # اوامر مسجلين
+        # اوامر المسجلين
         if cmd in ("العاب", "الالعاب"):
             reply_message(reply_token, [ui.games_menu()])
             return
@@ -109,17 +113,13 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, [ui.stats_card(user)])
             return
         
-        if cmd in ("الصداره", "الصدارة"):
-            reply_message(reply_token, [ui.leaderboard_card(db.get_leaderboard())])
-            return
-        
         if cmd == "انسحب":
             stopped = game_mgr.stop_game(user_id)
             if stopped:
                 reply_message(reply_token, [ui.game_stopped()])
             return
 
-        # الالعاب
+        # التعامل مع الالعاب
         game_response = game_mgr.handle(user_id, cmd, theme, text)
         if game_response:
             reply_message(reply_token, [game_response])
