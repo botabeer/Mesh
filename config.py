@@ -7,7 +7,7 @@ load_dotenv()
 
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "3.0"
+    VERSION = "3.1"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
@@ -21,45 +21,31 @@ class Config:
             "success": "#34C759",
             "warning": "#FF9500",
             "danger": "#FF3B30",
-
             "bg": "#FFFFFF",
             "bg_secondary": "#F2F2F7",
-
             "glass": "#F2F2F7",
             "card": "#FFFFFF",
-
             "text": "#000000",
             "text_secondary": "#3C3C43",
             "text_tertiary": "#8E8E93",
-
             "border": "#E5E5EA"
         },
-
         "dark": {
             "primary": "#0A84FF",
             "secondary": "#98989D",
             "success": "#30D158",
             "warning": "#FF9F0A",
             "danger": "#FF453A",
-
             "bg": "#000000",
             "bg_secondary": "#1C1C1E",
-
             "glass": "#2C2C2E",
             "card": "#1C1C1E",
-
             "text": "#FFFFFF",
             "text_secondary": "#EBEBF5",
             "text_tertiary": "#98989D",
-
             "border": "#3A3A3C"
         }
     }
-
-    GAMES = [
-        "ذكاء", "خمن", "رياضيات", "ترتيب", "اغنيه",
-        "لون", "ضد", "تكوين", "سلسلة", "اسرع"
-    ]
 
     @classmethod
     def get_theme(cls, name: str = "light"):
