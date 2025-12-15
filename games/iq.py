@@ -41,7 +41,7 @@ class IqGame(BaseGame):
         self.used_riddles.append(riddle)
         self.current_answer = riddle["a"]
         
-        hint = f"لغز ذكاء"
+        hint = "لغز ذكاء"
         return self.build_question_flex(riddle["q"], hint)
     
     def check_answer(self, answer: str) -> bool:
