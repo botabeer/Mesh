@@ -6,7 +6,6 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
-
 class Database:
     def __init__(self):
         self._lock = Lock()
@@ -15,11 +14,7 @@ class Database:
 
     @contextmanager
     def _get_conn(self):
-        conn = sqlite3.connect(
-            Config.DB_PATH,
-            timeout=10,
-            check_same_thread=False
-        )
+        conn = sqlite3.connect(Config.DB_PATH, timeout=10, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -44,40 +39,23 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_points
-                ON users(points DESC, wins DESC)
-            """)
-
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_active
-                ON users(last_active DESC)
-            """)
-
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC, wins DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)")
         logger.info("Database initialized")
 
     def get_user(self, user_id: str):
         try:
             with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT * FROM users WHERE user_id = ?",
-                    (user_id,)
-                ).fetchone()
+                row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
                 return dict(row) if row else None
         except Exception as e:
             logger.error(f"Get user error: {e}")
             return None
 
     def register_user(self, user_id: str, name: str):
-        """التسجيل بقبول حرف واحد على الأقل"""
-        name = name.strip()
-        if len(name) < 1:  # يقبل حرف واحد على الأقل
+        name = name.strip()[:50]
+        if len(name) < 1:
             return False
-            
-        # قص الاسم إلى 50 حرف كحد أقصى
-        name = name[:50]
-        
         with self._lock:
             try:
                 with self._get_conn() as conn:
@@ -85,8 +63,8 @@ class Database:
                         INSERT INTO users (user_id, name)
                         VALUES (?, ?)
                         ON CONFLICT(user_id) DO UPDATE SET
-                            name = excluded.name,
-                            last_active = CURRENT_TIMESTAMP
+                            name=excluded.name,
+                            last_active=CURRENT_TIMESTAMP
                     """, (user_id, name))
                 return True
             except Exception as e:
@@ -96,11 +74,7 @@ class Database:
     def update_activity(self, user_id: str):
         try:
             with self._get_conn() as conn:
-                conn.execute("""
-                    UPDATE users
-                    SET last_active = CURRENT_TIMESTAMP
-                    WHERE user_id = ?
-                """, (user_id,))
+                conn.execute("UPDATE users SET last_active=CURRENT_TIMESTAMP WHERE user_id=?", (user_id,))
         except Exception:
             pass
 
@@ -108,12 +82,7 @@ class Database:
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    conn.execute("""
-                        UPDATE users
-                        SET points = points + ?,
-                            last_active = CURRENT_TIMESTAMP
-                        WHERE user_id = ?
-                    """, (points, user_id))
+                    conn.execute("UPDATE users SET points=points+?, last_active=CURRENT_TIMESTAMP WHERE user_id=?", (points, user_id))
                 return True
             except Exception as e:
                 logger.error(f"Add points error: {e}")
@@ -123,13 +92,7 @@ class Database:
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    conn.execute("""
-                        UPDATE users
-                        SET games = games + 1,
-                            wins = wins + ?,
-                            last_active = CURRENT_TIMESTAMP
-                        WHERE user_id = ?
-                    """, (int(won), user_id))
+                    conn.execute("UPDATE users SET games=games+1, wins=wins+?, last_active=CURRENT_TIMESTAMP WHERE user_id=?", (int(won), user_id))
                 return True
             except Exception as e:
                 logger.error(f"Finish game error: {e}")
@@ -138,24 +101,15 @@ class Database:
     def get_leaderboard(self, limit: int = 10):
         try:
             with self._get_conn() as conn:
-                rows = conn.execute("""
-                    SELECT name, points
-                    FROM users
-                    WHERE games > 0
-                    ORDER BY points DESC, wins DESC
-                    LIMIT ?
-                """, (limit,)).fetchall()
-                return [(r["name"], r["points"]) for r in rows]
+                rows = conn.execute("SELECT name, points FROM users WHERE games>0 ORDER BY points DESC, wins DESC LIMIT ?", (limit,)).fetchall()
+                return [{"name": r["name"], "points": r["points"]} for r in rows]
         except Exception:
             return []
 
     def get_theme(self, user_id: str) -> str:
         try:
             with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT theme FROM users WHERE user_id = ?",
-                    (user_id,)
-                ).fetchone()
+                row = conn.execute("SELECT theme FROM users WHERE user_id=?", (user_id,)).fetchone()
                 return row["theme"] if row else "light"
         except Exception:
             return "light"
@@ -163,14 +117,10 @@ class Database:
     def toggle_theme(self, user_id: str) -> str:
         current = self.get_theme(user_id)
         new = "dark" if current == "light" else "light"
-
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    conn.execute(
-                        "UPDATE users SET theme = ? WHERE user_id = ?",
-                        (new, user_id)
-                    )
+                    conn.execute("UPDATE users SET theme=? WHERE user_id=?", (new, user_id))
                 return new
             except Exception:
                 return current
