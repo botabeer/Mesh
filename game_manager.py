@@ -6,19 +6,20 @@ logger = logging.getLogger(__name__)
 
 
 class GameManager:
-    """مدير الالعاب - Thread-safe"""
+    """مدير الألعاب - Thread-safe + LINE SDK v3 safe"""
 
     def __init__(self, db):
         self.db = db
         self._lock = Lock()
         self._active = {}
         self._games = self._load_games()
-        logger.info(f"Loaded {len(self._games)} games")
+        logger.info(f"GameManager initialized with {len(self._games)} games")
+
+    # ---------------- Load Games ----------------
 
     def _load_games(self):
-        """تحميل الالعاب المتاحة"""
         games = {}
-        
+
         mappings = {
             "ذكاء": ("games.iq", "IqGame"),
             "خمن": ("games.guess", "GuessGame"),
@@ -31,13 +32,19 @@ class GameManager:
                 game_class = getattr(mod, class_name)
                 games[name] = game_class
                 logger.info(f"Loaded game: {name}")
-            except Exception as e:
-                logger.error(f"Failed to load {name}: {e}")
+            except Exception:
+                logger.exception(f"Failed to load game: {name}")
 
         return games
 
+    # ---------------- Public API ----------------
+
     def handle(self, user_id: str, cmd: str, theme: str):
-        """معالجة الامر"""
+        """
+        يعالج الأمر ويرجع:
+        - TextMessage / FlexMessage
+        - أو None
+        """
         with self._lock:
             game = self._active.get(user_id)
 
@@ -49,8 +56,19 @@ class GameManager:
 
         return None
 
+    def stop_game(self, user_id: str) -> bool:
+        """إيقاف لعبة يدوية"""
+        with self._lock:
+            return self._active.pop(user_id, None) is not None
+
+    def count_active(self) -> int:
+        """عدد الألعاب النشطة"""
+        with self._lock:
+            return len(self._active)
+
+    # ---------------- Internal ----------------
+
     def _start_game(self, user_id: str, game_name: str, theme: str):
-        """بدء لعبة جديدة"""
         try:
             GameClass = self._games[game_name]
             game = GameClass(self.db, theme)
@@ -58,16 +76,19 @@ class GameManager:
             with self._lock:
                 self._active[user_id] = game
 
-            result = game.start(user_id)
-            logger.info(f"Started {game_name} for {user_id}")
-            return result
+            logger.info(f"Started game [{game_name}] for {user_id}")
+            response = game.start(user_id)
 
-        except Exception as e:
-            logger.error(f"Start game error: {e}")
-            return TextMessage(text="فشل بدء اللعبه")
+            return self._normalize_response(response)
+
+        except Exception:
+            logger.exception("Start game error")
+            with self._lock:
+                self._active.pop(user_id, None)
+
+            return TextMessage(text="❌ فشل بدء اللعبة")
 
     def _handle_answer(self, user_id: str, answer: str):
-        """معالجة اجابة"""
         with self._lock:
             game = self._active.get(user_id)
 
@@ -77,24 +98,37 @@ class GameManager:
         try:
             result = game.check(answer, user_id)
 
-            if result and result.get("game_over"):
+            if not result:
+                return None
+
+            if result.get("game_over"):
                 with self._lock:
                     self._active.pop(user_id, None)
 
-            return result.get("response") if result else None
+            return self._normalize_response(result.get("response"))
 
-        except Exception as e:
-            logger.error(f"Handle answer error: {e}")
+        except Exception:
+            logger.exception("Handle answer error")
             with self._lock:
                 self._active.pop(user_id, None)
-            return TextMessage(text="حدث خطا في اللعبه")
 
-    def stop_game(self, user_id: str) -> bool:
-        """ايقاف لعبة"""
-        with self._lock:
-            return self._active.pop(user_id, None) is not None
+            return TextMessage(text="⚠️ حدث خطأ أثناء اللعبة")
 
-    def count_active(self) -> int:
-        """عدد الالعاب النشطة"""
-        with self._lock:
-            return len(self._active)
+    # ---------------- Utils ----------------
+
+    def _normalize_response(self, response):
+        """
+        يضمن أن الناتج صالح للإرسال عبر LINE
+        """
+        if response is None:
+            return None
+
+        if isinstance(response, TextMessage):
+            return response
+
+        # لو اللعبة رجعت نص فقط
+        if isinstance(response, str):
+            return TextMessage(text=response)
+
+        logger.warning(f"Invalid game response type: {type(response)}")
+        return TextMessage(text="⚠️ استجابة غير صالحة من اللعبة")
