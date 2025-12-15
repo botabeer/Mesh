@@ -2,7 +2,9 @@ import os
 import re
 from dotenv import load_dotenv
 
-load_dotenv()
+# تحميل .env فقط في التطوير المحلي
+if os.getenv("ENV") != "production":
+    load_dotenv()
 
 
 class Config:
@@ -80,7 +82,7 @@ class Config:
     }
 
     POINT_GAMES = [
-        "ذكاء", "خمن", "ضد", "ترتيب", "رياضيات", 
+        "ذكاء", "خمن", "ضد", "ترتيب", "رياضيات",
         "اغنيه", "لون", "تكوين", "لعبة", "سلسلة", "اسرع"
     ]
 
@@ -95,17 +97,23 @@ class Config:
         "مافيا": {"group_only": True}
     }
 
+    # --------------------------------------------------
+    # Validation
+    # --------------------------------------------------
     @classmethod
     def validate(cls):
         if not cls.LINE_SECRET or not cls.LINE_ACCESS_TOKEN:
-            raise ValueError("LINE credentials missing in environment variables")
+            raise RuntimeError("LINE credentials missing")
         return True
 
+    # --------------------------------------------------
+    # Utils
+    # --------------------------------------------------
     @classmethod
     def get_port(cls) -> int:
         try:
             return int(os.getenv("PORT", cls.DEFAULT_PORT))
-        except ValueError:
+        except (TypeError, ValueError):
             return cls.DEFAULT_PORT
 
     @classmethod
@@ -113,27 +121,38 @@ class Config:
         if not text:
             return ""
         text = text[:1000].strip().lower()
-        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
+        replacements = {
+            "أ": "ا", "إ": "ا", "آ": "ا",
+            "ى": "ي", "ة": "ه",
+            "ؤ": "و", "ئ": "ي"
+        }
         for old, new in replacements.items():
             text = text.replace(old, new)
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
         text = re.sub(r"[^\w\sء-ي]", "", text)
         return text
 
+    # --------------------------------------------------
+    # Theme helpers
+    # --------------------------------------------------
     @classmethod
     def get_theme(cls, name: str = None) -> dict:
-        return cls.THEMES.get(name, cls.THEMES.get(cls.DEFAULT_THEME))
+        return cls.THEMES.get(name, cls.THEMES[cls.DEFAULT_THEME])
 
     @classmethod
     def is_valid_theme(cls, name: str) -> bool:
         return name in cls.THEMES
 
+    # --------------------------------------------------
+    # Command resolver (FIXED)
+    # --------------------------------------------------
     @classmethod
     def resolve_command(cls, text: str) -> str:
-        if not text:
-            return ""
-        text_lower = text.lower().strip()
+        normalized = cls.normalize(text)
         for main_cmd, aliases in cls.COMMAND_ALIASES.items():
-            if text_lower == main_cmd or text_lower in aliases:
+            if normalized == cls.normalize(main_cmd):
                 return main_cmd
-        return text_lower
+            for alias in aliases:
+                if normalized == cls.normalize(alias):
+                    return main_cmd
+        return normalized
