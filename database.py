@@ -70,6 +70,14 @@ class Database:
             return None
 
     def register_user(self, user_id: str, name: str):
+        """التسجيل بقبول حرف واحد على الأقل"""
+        name = name.strip()
+        if len(name) < 1:  # يقبل حرف واحد على الأقل
+            return False
+            
+        # قص الاسم إلى 50 حرف كحد أقصى
+        name = name[:50]
+        
         with self._lock:
             try:
                 with self._get_conn() as conn:
