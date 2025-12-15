@@ -29,12 +29,23 @@ logs/
 .vscode/
 .idea/
 *.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Cache
 .cache/
 .mypy_cache/
 .pytest_cache/
+.ruff_cache/
+
+# Tests
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Documentation
+site/
