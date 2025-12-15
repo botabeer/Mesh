@@ -21,31 +21,38 @@ class Config:
             "success": "#34C759",
             "warning": "#FF9500",
             "danger": "#FF3B30",
+
             "bg": "#FFFFFF",
             "bg_secondary": "#F2F2F7",
-            "card": "rgba(255, 255, 255, 0.8)",
-            "glass": "rgba(242, 242, 247, 0.8)",
+
+            "glass": "#F2F2F7",
+            "card": "#FFFFFF",
+
             "text": "#000000",
             "text_secondary": "#3C3C43",
             "text_tertiary": "#8E8E93",
-            "border": "rgba(0, 0, 0, 0.1)",
-            "shadow": "rgba(0, 0, 0, 0.08)"
+
+            "border": "#E5E5EA"
         },
+
         "dark": {
             "primary": "#0A84FF",
             "secondary": "#98989D",
             "success": "#30D158",
             "warning": "#FF9F0A",
             "danger": "#FF453A",
+
             "bg": "#000000",
             "bg_secondary": "#1C1C1E",
-            "card": "rgba(28, 28, 30, 0.8)",
-            "glass": "rgba(44, 44, 46, 0.8)",
+
+            "glass": "#2C2C2E",
+            "card": "#1C1C1E",
+
             "text": "#FFFFFF",
             "text_secondary": "#EBEBF5",
             "text_tertiary": "#98989D",
-            "border": "rgba(255, 255, 255, 0.1)",
-            "shadow": "rgba(0, 0, 0, 0.3)"
+
+            "border": "#3A3A3C"
         }
     }
 
