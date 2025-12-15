@@ -26,7 +26,9 @@ class GameManager:
             "سلسله": ("games.chain_words", "ChainWordsGame"),
             "تكوين": ("games.letters_words", "LettersWordsGame"),
             "لون": ("games.word_color", "WordColorGame"),
-            "اغنيه": ("games.song", "SongGame")
+            "اغنيه": ("games.song", "SongGame"),
+            "مافيا": ("games.mafia", "MafiaGame"),
+            "توافق": ("games.compatibility", "CompatibilityGame")
         }
 
         for name, (module_path, class_name) in mappings.items():
