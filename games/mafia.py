@@ -1,16 +1,16 @@
 import random
 import logging
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
+from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 class MafiaGame:
     ROLE_INFO = {
-        "mafia": {"title": "المافيا", "desc": "اقتل شخص كل ليلة بارسال اقتل الاسم", "color": "#8B0000"},
-        "detective": {"title": "المحقق", "desc": "افحص شخص كل ليلة بارسال افحص الاسم", "color": "#1E90FF"},
-        "doctor": {"title": "الدكتور", "desc": "احم شخص او نفسك بارسال احمي الاسم او احمي نفسي", "color": "#32CD32"},
-        "citizen": {"title": "مواطن", "desc": "ناقش وصوت في القروب لاكتشاف المافيا", "color": "#808080"}
+        "mafia": {"title": "المافيا", "desc": "اقتل شخص كل ليلة", "color": "#8B0000"},
+        "detective": {"title": "المحقق", "desc": "افحص شخص كل ليلة", "color": "#1E90FF"},
+        "doctor": {"title": "الدكتور", "desc": "احم شخص كل ليلة", "color": "#32CD32"},
+        "citizen": {"title": "مواطن", "desc": "ناقش وصوت لاكتشاف المافيا", "color": "#808080"}
     }
 
     def __init__(self, db, theme: str = "light"):
@@ -54,6 +54,7 @@ class MafiaGame:
             alt_text=title,
             contents=FlexContainer.from_dict({
                 "type": "bubble",
+                "size": "mega",
                 "body": {
                     "type": "box",
                     "layout": "vertical",
@@ -70,7 +71,7 @@ class MafiaGame:
             {"type": "separator", "margin": "lg"},
             {
                 "type": "button",
-                "action": {"type": "message", "label": "انضم للعبة", "text": "انضم مافيا"},
+                "action": {"type": "message", "label": "انضم", "text": "انضم_مافيا"},
                 "style": "primary",
                 "color": c['primary'],
                 "height": "sm",
@@ -78,14 +79,14 @@ class MafiaGame:
             },
             {
                 "type": "button",
-                "action": {"type": "message", "label": "بدء اللعبة", "text": "بدء مافيا"},
+                "action": {"type": "message", "label": "بدء", "text": "بدء_مافيا"},
                 "style": "secondary",
                 "height": "sm",
                 "margin": "sm"
             },
             {
                 "type": "button",
-                "action": {"type": "message", "label": "شرح اللعبة", "text": "شرح مافيا"},
+                "action": {"type": "message", "label": "شرح", "text": "شرح_مافيا"},
                 "style": "secondary",
                 "height": "sm",
                 "margin": "sm"
@@ -93,7 +94,7 @@ class MafiaGame:
         ]
         return self._simple_flex(
             "لعبة المافيا",
-            [f"اللاعبون المسجلون {len(self.players)}", "الحد الادنى 4 لاعبين"],
+            [f"اللاعبون: {len(self.players)}", "الحد الادنى: 4 لاعبين"],
             buttons
         )
 
@@ -111,18 +112,18 @@ class MafiaGame:
             }
         ]
         texts = [
-            "الفكرة المافيا يحاول القتل والمواطنون يكتشفون المافيا",
+            "الفكرة: المافيا تحاول القتل والمواطنون يكتشفون المافيا",
             "",
-            "الادوار",
-            "المافيا - يقتل شخص كل ليلة",
-            "المحقق - يفحص شخص كل ليلة",
-            "الدكتور - يحمي شخص كل ليلة",
-            "المواطنون - يناقشون ويصوتون في النهار",
+            "الادوار:",
+            "- المافيا: يقتل شخص كل ليلة",
+            "- المحقق: يفحص شخص كل ليلة",
+            "- الدكتور: يحمي شخص كل ليلة",
+            "- المواطنون: يناقشون ويصوتون",
             "",
-            "طريقة اللعب",
-            "1 - الليل - الادوار الخاصة تستخدم قدراتها",
-            "2 - النهار - الجميع يناقش ويصوت لاعدام شخص",
-            "3 - الفوز - المواطنون يفوزون باعدام المافيا والمافيا تفوز بمساواة العدد"
+            "الاوامر:",
+            "- اقتل الاسم (للمافيا)",
+            "- افحص الاسم (للمحقق)",
+            "- احمي الاسم او احمي نفسي (للدكتور)"
         ]
         return self._simple_flex("شرح لعبة المافيا", texts, buttons)
 
@@ -132,7 +133,7 @@ class MafiaGame:
             {"type": "separator", "margin": "lg"},
             {
                 "type": "button",
-                "action": {"type": "message", "label": "انهاء الليل", "text": "انهاء الليل"},
+                "action": {"type": "message", "label": "انهاء الليل", "text": "انهاء_الليل"},
                 "style": "primary",
                 "color": c['primary'],
                 "margin": "md"
@@ -140,7 +141,7 @@ class MafiaGame:
         ]
         return self._simple_flex(
             f"الليل - اليوم {self.day}",
-            ["الادوار الخاصة استخدموا قدراتكم الان في الخاص"],
+            ["الادوار الخاصة استخدموا قدراتكم في الخاص"],
             buttons
         )
 
@@ -150,7 +151,7 @@ class MafiaGame:
             {"type": "separator", "margin": "lg"},
             {
                 "type": "button",
-                "action": {"type": "message", "label": "فتح التصويت", "text": "تصويت مافيا"},
+                "action": {"type": "message", "label": "فتح التصويت", "text": "تصويت_مافيا"},
                 "style": "primary",
                 "color": c['primary'],
                 "margin": "md"
@@ -178,7 +179,7 @@ class MafiaGame:
         
         buttons.append({
             "type": "button",
-            "action": {"type": "message", "label": "انهاء التصويت", "text": "انهاء التصويت"},
+            "action": {"type": "message", "label": "انهاء التصويت", "text": "انهاء_التصويت"},
             "style": "primary",
             "color": c['primary'],
             "margin": "md"
@@ -188,9 +189,15 @@ class MafiaGame:
 
     def winner_flex(self, winner_team):
         c = self._c()
-        roles_content = [
-            {"type": "text", "text": f"الفريق الفائز {winner_team}", 
-             "weight": "bold", "size": "lg", "color": c['primary'], "align": "center"},
+        contents = [
+            {
+                "type": "text",
+                "text": f"الفريق الفائز: {winner_team}",
+                "weight": "bold",
+                "size": "xl",
+                "color": c['primary'],
+                "align": "center"
+            },
             {"type": "separator", "margin": "md"}
         ]
         
@@ -198,7 +205,7 @@ class MafiaGame:
             role_name = self.ROLE_INFO[p["role"]]["title"]
             status = "حي" if p["alive"] else "ميت"
             
-            roles_content.append({
+            contents.append({
                 "type": "box",
                 "layout": "horizontal",
                 "backgroundColor": c['glass'],
@@ -212,11 +219,11 @@ class MafiaGame:
                 ]
             })
         
-        roles_content.extend([
+        contents.extend([
             {"type": "separator", "margin": "lg"},
             {
                 "type": "button",
-                "action": {"type": "message", "label": "البداية", "text": "بدايه"},
+                "action": {"type": "message", "label": "البداية", "text": "بداية"},
                 "style": "primary",
                 "color": c['primary'],
                 "margin": "md"
@@ -227,10 +234,11 @@ class MafiaGame:
             alt_text="انتهت اللعبة",
             contents=FlexContainer.from_dict({
                 "type": "bubble",
+                "size": "mega",
                 "body": {
                     "type": "box",
                     "layout": "vertical",
-                    "contents": roles_content,
+                    "contents": contents,
                     "backgroundColor": c['bg'],
                     "paddingAll": "20px"
                 }
@@ -243,7 +251,6 @@ class MafiaGame:
         return {"response": self.registration_flex(), "game_over": False}
 
     def check(self, text: str, user_id: str):
-        text = text.strip()
         cmd = Config.normalize(text)
         
         if cmd == "انضم_مافيا":
@@ -287,7 +294,7 @@ class MafiaGame:
             for uid, p in self.players.items():
                 if p["name"] == target and p["alive"] and uid != user_id:
                     result = "هذا الشخص هو المافيا" if p["role"] == "mafia" else "هذا الشخص بريء"
-                    return {"response": TextMessage(text=f"نتيجة الفحص\n{target} {result}"), "game_over": False}
+                    return {"response": TextMessage(text=f"نتيجة الفحص: {target} - {result}"), "game_over": False}
             return {"response": TextMessage(text="اسم اللاعب غير صحيح او اللاعب ميت"), "game_over": False}
         
         if role == "doctor" and self.phase == "night" and text.startswith("احمي "):
@@ -330,7 +337,7 @@ class MafiaGame:
         
         return {
             "response": [
-                TextMessage(text="تم توزيع الادوار بنجاح\nتحقق من رسائلك الخاصة لمعرفة دورك"),
+                TextMessage(text="تم توزيع الادوار - تحقق من رسائلك الخاصة لمعرفة دورك"),
                 self.night_flex()
             ],
             "game_over": False
@@ -396,7 +403,7 @@ class MafiaGame:
             self.players[executed_id]["alive"] = False
             executed_name = self.players[executed_id]["name"]
             executed_role = self.ROLE_INFO[self.players[executed_id]["role"]]["title"]
-            msg = f"تم اعدام {executed_name}\nكان دوره {executed_role}"
+            msg = f"تم اعدام {executed_name} - كان دوره: {executed_role}"
         
         self.votes.clear()
         self.phase = "night"
