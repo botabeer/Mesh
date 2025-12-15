@@ -66,19 +66,26 @@ def process_message(user_id: str, text: str, reply_token: str):
         db.update_activity(user_id)
 
         user = db.get_user(user_id)
-        theme = db.get_theme(user_id)
+        theme = db.get_theme(user_id) if user else "light"
         ui = UI(theme=theme)
 
         cmd = Config.normalize(text)
 
-        # اوامر بدون تسجيل
-        if cmd == "بدايه":
+        # أوامر بدون تسجيل
+        if cmd in ("بدايه", "بداية"):
             reply_message(reply_token, [ui.main_menu(user)])
             return
 
         if cmd == "تغيير_الثيم":
-            new_theme = db.toggle_theme(user_id)
-            reply_message(reply_token, [UI(theme=new_theme).main_menu(user)])
+            if user:
+                new_theme = db.toggle_theme(user_id)
+                reply_message(reply_token, [UI(theme=new_theme).main_menu(user)])
+            else:
+                reply_message(reply_token, [ui.main_menu(user)])
+            return
+
+        if cmd in ("مساعده", "مساعدة"):
+            reply_message(reply_token, [ui.help_menu()])
             return
 
         # نصوص بدون تسجيل
@@ -87,27 +94,30 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, [text_response])
             return
 
-        # باقي الاوامر تحتاج تسجيل
+        # باقي الأوامر تحتاج تسجيل
         if not user:
             if cmd in ("تسجيل", "تغيير"):
                 db.set_waiting_name(user_id, True)
                 reply_message(reply_token, [ui.ask_name()])
                 return
             
-            # مستخدم غير مسجل
+            # مستخدم غير مسجل - توجيهه للتسجيل
+            reply_message(reply_token, [ui.main_menu(None)])
             return
 
         # تسجيل اسم
         if db.is_waiting_name(user_id):
             name = text.strip()[:50]
-            if len(name) >= 2:
+            if len(name) >= 1:  # يقبل حرف واحد على الأقل
                 db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
                 reply_message(reply_token, [ui.main_menu(db.get_user(user_id))])
+            else:
+                reply_message(reply_token, [TextMessage(text=" الاسم قصير جداً")])
             return
 
-        # اوامر مسجلين فقط
-        if cmd == "العاب":
+        # أوامر مسجلين فقط
+        if cmd in ("العاب", "الالعاب"):
             reply_message(reply_token, [ui.games_menu()])
             return
 
@@ -115,7 +125,7 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, [ui.stats_card(user)])
             return
 
-        if cmd == "الصداره":
+        if cmd in ("الصداره", "الصدارة"):
             reply_message(reply_token, [ui.leaderboard_card(db.get_leaderboard())])
             return
 
