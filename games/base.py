@@ -4,8 +4,8 @@ from config import Config
 
 
 class BaseGame(ABC):
-    """الفئة الاساسية لكل الالعاب"""
-    
+    """الفئة الأساسية لكل الألعاب"""
+
     def __init__(self, db, theme: str = "light"):
         self.db = db
         self.theme = theme
@@ -16,7 +16,7 @@ class BaseGame(ABC):
         self.current_answer = None
 
     def _c(self):
-        """الحصول على الوان الثيم"""
+        """الحصول على ألوان الثيم"""
         return Config.get_theme(self.theme)
 
     @abstractmethod
@@ -26,29 +26,31 @@ class BaseGame(ABC):
 
     @abstractmethod
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الاجابة - يجب تنفيذه في كل لعبة"""
+        """التحقق من الإجابة - يجب تنفيذه في كل لعبة"""
         pass
+
+    # ---------------- Start / Check ----------------
 
     def start(self, user_id: str):
         """بدء اللعبة"""
         self.user_id = user_id
         self.current_q = 0
         self.score = 0
-        return self.get_question()
+        return self._normalize_response(self.get_question())
 
     def check(self, answer: str, user_id: str):
-        """فحص الاجابة وتحديث النتيجة"""
+        """فحص الإجابة وتحديث النتيجة"""
         try:
             is_correct = self.check_answer(answer)
         except Exception:
             return {
-                "response": TextMessage(text="اجابة غير صالحة"),
+                "response": TextMessage(text="⚠️ إجابة غير صالحة"),
                 "game_over": False
             }
 
         if not is_correct:
             return {
-                "response": TextMessage(text="اجابة خاطئة"),
+                "response": TextMessage(text="❌ إجابة خاطئة"),
                 "game_over": False
             }
 
@@ -59,18 +61,22 @@ class BaseGame(ABC):
             return self._game_over()
 
         return {
-            "response": self.get_question(),
+            "response": self._normalize_response(self.get_question()),
             "game_over": False
         }
+
+    # ---------------- Game Over ----------------
 
     def _game_over(self):
         """انتهاء اللعبة"""
         c = self._c()
         won = self.score == self.total_q
 
+        # تحديث قاعدة البيانات
         self.db.add_points(self.user_id, self.score)
         self.db.finish_game(self.user_id, won)
 
+        # تصميم الفلكس آمن
         flex = {
             "type": "bubble",
             "body": {
@@ -81,17 +87,13 @@ class BaseGame(ABC):
                 "contents": [
                     {
                         "type": "text",
-                        "text": "انتهت اللعبه",
+                        "text": "انتهت اللعبة",
                         "size": "xl",
                         "weight": "bold",
                         "color": c["primary"],
                         "align": "center"
                     },
-                    {
-                        "type": "separator",
-                        "margin": "md",
-                        "color": c["border"]
-                    },
+                    {"type": "separator", "margin": "md"},
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -102,7 +104,7 @@ class BaseGame(ABC):
                         "contents": [
                             {
                                 "type": "text",
-                                "text": f"النتيجه: {self.score}/{self.total_q}",
+                                "text": f"النتيجة: {self.score}/{self.total_q}",
                                 "size": "lg",
                                 "weight": "bold",
                                 "color": c["text"],
@@ -118,20 +120,15 @@ class BaseGame(ABC):
                             }
                         ]
                     },
-                    {
-                        "type": "separator",
-                        "margin": "md",
-                        "color": c["border"]
-                    },
+                    {"type": "separator", "margin": "md"},
                     {
                         "type": "button",
                         "action": {
                             "type": "message",
-                            "label": "القائمه",
+                            "label": "القائمة",
                             "text": "بداية"
                         },
                         "style": "primary",
-                        "color": c["primary"],
                         "margin": "md"
                     }
                 ]
@@ -140,16 +137,17 @@ class BaseGame(ABC):
 
         return {
             "response": FlexMessage(
-                alt_text="انتهت اللعبه",
+                alt_text="انتهت اللعبة",
                 contents=FlexContainer.from_dict(flex)
             ),
             "game_over": True
         }
 
+    # ---------------- Question Builder ----------------
+
     def build_question_flex(self, question: str, hint: str = None):
         """بناء واجهة السؤال"""
         c = self._c()
-        
         contents = [
             {
                 "type": "text",
@@ -161,7 +159,7 @@ class BaseGame(ABC):
                 "wrap": True
             }
         ]
-        
+
         if hint:
             contents.append({
                 "type": "text",
@@ -171,7 +169,7 @@ class BaseGame(ABC):
                 "align": "center",
                 "margin": "md"
             })
-        
+
         flex = {
             "type": "bubble",
             "body": {
@@ -182,8 +180,25 @@ class BaseGame(ABC):
                 "contents": contents
             }
         }
-        
+
         return FlexMessage(
             alt_text="سؤال",
             contents=FlexContainer.from_dict(flex)
         )
+
+    # ---------------- Utils ----------------
+
+    def _normalize_response(self, response):
+        """
+        يضمن أن الاستجابة صالحة للإرسال عبر LINE
+        """
+        if response is None:
+            return TextMessage(text="⚠️ استجابة غير صالحة")
+
+        if isinstance(response, (TextMessage, FlexMessage)):
+            return response
+
+        if isinstance(response, str):
+            return TextMessage(text=response)
+
+        return TextMessage(text="⚠️ استجابة غير صالحة من اللعبة")
