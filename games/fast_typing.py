@@ -1,7 +1,6 @@
 import random
 from games.base import BaseGame
 
-
 class FastTypingGame(BaseGame):
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
@@ -12,7 +11,9 @@ class FastTypingGame(BaseGame):
             "العلم نور", "راحة القلب في الذكر", "اللهم اهدنا", "كن محسنا",
             "رب زدني علما", "اتق الله", "خير الامور اوسطها",
             "اللهم اشف مرضانا", "التواضع رفعه", "الصدق منجاه", "الصمت حكمه",
-            "اللهم ارزقني رضاك", "النيه الصالحه بركه", "استغفر الله العظيم"
+            "اللهم ارزقني رضاك", "النيه الصالحه بركه", "استغفر الله العظيم",
+            "الله معنا", "اصبر وصابر", "ربنا لا تؤاخذنا", "يا رب العالمين",
+            "حسبي الله ونعم الوكيل", "لا حول ولا قوة الا بالله", "بسم الله الرحمن الرحيم"
         ]
         random.shuffle(self.phrases)
         self.used = []
@@ -27,7 +28,7 @@ class FastTypingGame(BaseGame):
         self.used.append(phrase)
         self.current_answer = phrase
 
-        hint = f"السؤال {self.current_q + 1}/{self.total_q}\nاكتب بالضبط"
+        hint = f"اكتب بالضبط - لعبة سرعة"
         return self.build_question_flex(phrase, hint)
 
     def check_answer(self, answer: str) -> bool:
