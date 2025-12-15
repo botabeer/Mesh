@@ -12,7 +12,9 @@ class ScrambleGame(BaseGame):
             "تفاحه", "موز", "برتقال", "عنب", "بطيخ",
             "شمس", "قمر", "نجمه", "سماء", "بحر",
             "جبل", "نهر", "اسد", "نمر", "فيل",
-            "زرافه", "حصان", "ورد", "شجره", "زهره"
+            "زرافه", "حصان", "ورد", "شجره", "زهره",
+            "حديقه", "مطبخ", "غرفه", "بيت", "مكتب",
+            "تلفون", "حاسوب", "لابتوب", "شاشه", "لوحه"
         ]
         random.shuffle(self.words)
         self.used = []
@@ -36,8 +38,8 @@ class ScrambleGame(BaseGame):
         self.current_answer = word
 
         scrambled = self._scramble(word)
-        hint = f"السؤال {self.current_q + 1}/{self.total_q}"
-        return self.build_question_flex(f"رتب الحروف\n\n{scrambled}", hint)
+        hint = f"رتب الحروف"
+        return self.build_question_flex(scrambled, hint)
 
     def check_answer(self, answer: str) -> bool:
         return Config.normalize(answer) == Config.normalize(self.current_answer)
