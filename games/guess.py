@@ -55,7 +55,7 @@ class GuessGame(BaseGame):
         self.current_answer = q_data["answers"]
         
         text = f"الفئة: {q_data['category']}\n\nيبدا بحرف: {q_data['letter']}"
-        hint = f"خمن الكلمة"
+        hint = "خمن الكلمة"
         return self.build_question_flex(text, hint)
     
     def check_answer(self, answer: str) -> bool:
