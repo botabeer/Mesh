@@ -3,28 +3,23 @@ import logging
 from threading import Lock
 from datetime import datetime, timedelta
 from contextlib import contextmanager
-from typing import Optional, List, Tuple, Dict
+from typing import Optional, List, Dict
 from config import Config
 
 logger = logging.getLogger(__name__)
 
-
 class Database:
     _lock = Lock()
     _cache_lock = Lock()
-    _leaderboard_cache: Optional[List[Tuple[str, int]]] = None
+    _leaderboard_cache: Optional[List[tuple]] = None
     _leaderboard_cache_time: float = 0
-    CACHE_TTL = 300  # seconds
+    CACHE_TTL = 300
     INACTIVITY_DAYS = 30
 
     @staticmethod
     @contextmanager
     def get_connection():
-        conn = sqlite3.connect(
-            Config.DATABASE_PATH,
-            timeout=10,
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
+        conn = sqlite3.connect(Config.DATABASE_PATH, timeout=10, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.row_factory = sqlite3.Row
         try:
             cursor = conn.cursor()
@@ -41,7 +36,6 @@ class Database:
 
     @staticmethod
     def init():
-        """Initialize database tables and indexes."""
         with Database.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -69,7 +63,7 @@ class Database:
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_score ON users(total_points DESC, wins DESC)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_user ON game_history(user_id, played_at DESC)")
-        logger.info("Database initialized successfully")
+        logger.info("Database initialized")
 
     @staticmethod
     def register_or_update_user(user_id: str, display_name: str) -> bool:
@@ -83,11 +77,10 @@ class Database:
                             display_name = excluded.display_name,
                             last_activity = CURRENT_TIMESTAMP
                     """, (user_id, display_name))
-                logger.info(f"User registered/updated: {user_id}")
                 Database.clear_cache()
                 return True
             except Exception as e:
-                logger.error(f"Register error for {user_id}: {e}", exc_info=True)
+                logger.error(f"Register error: {e}")
                 return False
 
     @staticmethod
@@ -96,7 +89,7 @@ class Database:
             with Database.get_connection() as conn:
                 conn.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE user_id = ?", (user_id,))
         except Exception as e:
-            logger.error(f"Activity update error for {user_id}: {e}")
+            logger.error(f"Activity update error: {e}")
 
     @staticmethod
     def get_user_theme(user_id: str) -> str:
@@ -104,8 +97,7 @@ class Database:
             with Database.get_connection() as conn:
                 row = conn.execute("SELECT theme FROM users WHERE user_id = ?", (user_id,)).fetchone()
                 return row["theme"] if row else Config.DEFAULT_THEME
-        except Exception as e:
-            logger.error(f"Get theme error for {user_id}: {e}")
+        except Exception:
             return Config.DEFAULT_THEME
 
     @staticmethod
@@ -116,10 +108,8 @@ class Database:
             try:
                 with Database.get_connection() as conn:
                     conn.execute("UPDATE users SET theme = ? WHERE user_id = ?", (new_theme, user_id))
-                logger.info(f"Theme toggled for {user_id}: {current} -> {new_theme}")
                 return new_theme
-            except Exception as e:
-                logger.error(f"Toggle theme error for {user_id}: {e}")
+            except Exception:
                 return current
 
     @staticmethod
@@ -140,10 +130,9 @@ class Database:
                         VALUES (?, ?, ?, ?)
                     """, (user_id, game_type, points, int(won)))
                 Database.clear_cache()
-                logger.info(f"Points updated for {user_id}: +{points} ({game_type})")
                 return True
             except Exception as e:
-                logger.error(f"Points update error for {user_id}: {e}", exc_info=True)
+                logger.error(f"Points update error: {e}")
                 return False
 
     @staticmethod
@@ -155,12 +144,11 @@ class Database:
                     FROM users WHERE user_id = ?
                 """, (user_id,)).fetchone()
                 return dict(row) if row else None
-        except Exception as e:
-            logger.error(f"Get stats error for {user_id}: {e}")
+        except Exception:
             return None
 
     @staticmethod
-    def get_leaderboard(limit: int = 20) -> List[Tuple[str, int]]:
+    def get_leaderboard(limit: int = 20) -> List[tuple]:
         import time
         now = time.time()
         with Database._cache_lock:
@@ -183,8 +171,7 @@ class Database:
                 Database._leaderboard_cache_time = now
 
             return result
-        except Exception as e:
-            logger.error(f"Leaderboard error: {e}")
+        except Exception:
             return []
 
     @staticmethod
@@ -197,10 +184,9 @@ class Database:
                 deleted = cur.rowcount or 0
                 if deleted:
                     Database.clear_cache()
-                    logger.info(f"Cleaned up {deleted} inactive users")
+                    logger.info(f"Cleaned {deleted} inactive users")
                 return deleted
-            except Exception as e:
-                logger.error(f"Cleanup error: {e}", exc_info=True)
+            except Exception:
                 return 0
 
     @staticmethod
