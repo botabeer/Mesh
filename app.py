@@ -6,14 +6,22 @@ from flask import Flask, request, jsonify, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
+from linebot.v3.messaging import (
+    Configuration, ApiClient, MessagingApi,
+    ReplyMessageRequest, TextMessage
+)
 
 from config import Config
 from database import Database
 from game_manager import GameManager
+from text_manager import TextManager
 from ui import UI
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -23,19 +31,28 @@ handler = WebhookHandler(Config.LINE_SECRET)
 
 db = Database()
 game_mgr = GameManager(db)
+text_mgr = TextManager()
 
-executor = ThreadPoolExecutor(max_workers=int(os.getenv("WORKERS",4)), thread_name_prefix="worker")
+executor = ThreadPoolExecutor(
+    max_workers=Config.WORKERS,
+    thread_name_prefix="worker"
+)
 
-def reply_message(reply_token:str,messages):
-    if not isinstance(messages,list):
-        messages=[messages]
+def reply_message(reply_token: str, messages):
+    if not isinstance(messages, list):
+        messages = [messages]
     try:
         with ApiClient(line_config) as client:
-            MessagingApi(client).reply_message(ReplyMessageRequest(reply_token=reply_token,messages=messages))
+            MessagingApi(client).reply_message(
+                ReplyMessageRequest(
+                    reply_token=reply_token,
+                    messages=messages
+                )
+            )
     except Exception as e:
         logger.error(f"Reply error: {e}")
 
-def process_message(user_id:str,text:str,reply_token:str):
+def process_message(user_id: str, text: str, reply_token: str):
     try:
         db.update_activity(user_id)
         user = db.get_user(user_id)
@@ -43,90 +60,110 @@ def process_message(user_id:str,text:str,reply_token:str):
         ui = UI(theme=theme)
         cmd = Config.normalize(text)
 
-        # أوامر بدون تسجيل
-        if cmd in ("بدايه","بداية"):
-            reply_message(reply_token,[ui.main_menu(user)])
+        # اوامر بدون تسجيل
+        if cmd in ("بدايه", "بداية"):
+            reply_message(reply_token, [ui.main_menu(user)])
             return
-        if cmd=="تغيير_الثيم" and user:
-            new_theme=db.toggle_theme(user_id)
-            reply_message(reply_token,[UI(theme=new_theme).main_menu(user)])
+        
+        if cmd == "تغيير_الثيم" and user:
+            new_theme = db.toggle_theme(user_id)
+            reply_message(reply_token, [UI(theme=new_theme).main_menu(user)])
             return
-        if cmd in ("مساعده","مساعدة"):
-            reply_message(reply_token,[ui.help_menu()])
+        
+        if cmd in ("مساعده", "مساعدة"):
+            reply_message(reply_token, [ui.help_menu()])
+            return
+
+        # التحقق من النصوص العشوائية
+        text_response = text_mgr.handle(cmd)
+        if text_response:
+            reply_message(reply_token, [text_response])
             return
 
         # غير مسجل
         if not user:
-            if cmd=="تسجيل":
-                db.set_waiting_name(user_id,True)
-                reply_message(reply_token,[ui.ask_name()])
+            if cmd == "تسجيل":
+                db.set_waiting_name(user_id, True)
+                reply_message(reply_token, [ui.ask_name()])
                 return
-            reply_message(reply_token,[ui.main_menu(None)])
+            reply_message(reply_token, [ui.main_menu(None)])
             return
 
+        # انتظار الاسم
         if db.is_waiting_name(user_id):
-            name=text.strip()[:50]
-            if len(name)>=1:
-                db.register_user(user_id,name)
-                db.set_waiting_name(user_id,False)
-                reply_message(reply_token,[ui.main_menu(db.get_user(user_id))])
+            name = text.strip()[:50]
+            if len(name) >= 1:
+                db.register_user(user_id, name)
+                db.set_waiting_name(user_id, False)
+                reply_message(reply_token, [ui.main_menu(db.get_user(user_id))])
             else:
-                reply_message(reply_token,[TextMessage(text="الاسم قصير جداً")])
+                reply_message(reply_token, [TextMessage(text="الاسم قصير جدا")])
             return
 
-        # أوامر مسجلين
-        if cmd in ("العاب","الالعاب"):
-            reply_message(reply_token,[ui.games_menu()])
+        # اوامر مسجلين
+        if cmd in ("العاب", "الالعاب"):
+            reply_message(reply_token, [ui.games_menu()])
             return
-        if cmd=="نقاطي":
-            reply_message(reply_token,[ui.stats_card(user)])
+        
+        if cmd == "نقاطي":
+            reply_message(reply_token, [ui.stats_card(user)])
             return
-        if cmd in ("الصداره","الصدارة"):
-            reply_message(reply_token,[ui.leaderboard_card(db.get_leaderboard())])
+        
+        if cmd in ("الصداره", "الصدارة"):
+            reply_message(reply_token, [ui.leaderboard_card(db.get_leaderboard())])
             return
-        if cmd=="انسحب":
-            stopped=game_mgr.stop_game(user_id)
+        
+        if cmd == "انسحب":
+            stopped = game_mgr.stop_game(user_id)
             if stopped:
-                reply_message(reply_token,[ui.game_stopped()])
+                reply_message(reply_token, [ui.game_stopped()])
             return
 
-        # الألعاب
-        game_response=game_mgr.handle(user_id,cmd,theme,text)
+        # الالعاب
+        game_response = game_mgr.handle(user_id, cmd, theme, text)
         if game_response:
-            reply_message(reply_token,[game_response])
+            reply_message(reply_token, [game_response])
             return
 
     except Exception as e:
         logger.exception(f"Error ({user_id}): {e}")
 
 @handler.add(MessageEvent, message=TextMessageContent)
-def on_message(event:MessageEvent):
-    user_id=event.source.user_id
-    text=event.message.text.strip()
-    reply_token=event.reply_token
-    executor.submit(process_message,user_id,text,reply_token)
+def on_message(event: MessageEvent):
+    user_id = event.source.user_id
+    text = event.message.text.strip()
+    reply_token = event.reply_token
+    executor.submit(process_message, user_id, text, reply_token)
 
-@app.route("/callback",methods=["POST"])
+@app.route("/callback", methods=["POST"])
 def callback():
-    signature=request.headers.get("X-Line-Signature","")
-    body=request.get_data(as_text=True)
+    signature = request.headers.get("X-Line-Signature", "")
+    body = request.get_data(as_text=True)
     try:
-        handler.handle(body,signature)
+        handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
     except Exception as e:
         logger.error(f"Webhook error: {e}")
-    return "OK",200
+    return "OK", 200
 
 @app.route("/health")
 def health():
-    return jsonify({"status":"ok","time":datetime.utcnow().isoformat(),"active_games":game_mgr.count_active()})
+    return jsonify({
+        "status": "ok",
+        "time": datetime.utcnow().isoformat(),
+        "active_games": game_mgr.count_active()
+    })
 
 @app.route("/")
 def index():
-    return jsonify({"name":Config.BOT_NAME,"version":Config.VERSION,"status":"running","copyright":Config.COPYRIGHT})
+    return jsonify({
+        "name": Config.BOT_NAME,
+        "version": Config.VERSION,
+        "status": "running",
+        "copyright": Config.COPYRIGHT
+    })
 
-if __name__=="__main__":
+if __name__ == "__main__":
     logger.info(f"Starting {Config.BOT_NAME} v{Config.VERSION}")
-    port=int(os.getenv("PORT",5000))
-    app.run(host="0.0.0.0",port=port)
+    app.run(host="0.0.0.0", port=Config.PORT)
