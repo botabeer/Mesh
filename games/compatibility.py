@@ -1,5 +1,5 @@
 import re
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
+from linebot.v3.messaging import FlexMessage, FlexContainer
 from config import Config
 
 class CompatibilityGame:
@@ -45,7 +45,7 @@ class CompatibilityGame:
 
     def start(self, user_id: str):
         self.game_active = True
-        return self.get_question()
+        return {"response": self.get_question(), "game_over": False}
 
     def get_question(self):
         c = self._c()
@@ -82,14 +82,6 @@ class CompatibilityGame:
                         "size": "sm",
                         "color": c["text_tertiary"],
                         "margin": "sm"
-                    },
-                    {
-                        "type": "text",
-                        "text": "احرف عربية او انجليزية فقط",
-                        "size": "xs",
-                        "color": c["warning"],
-                        "margin": "sm",
-                        "wrap": True
                     }
                 ]
             },
@@ -124,16 +116,10 @@ class CompatibilityGame:
 
         name1, name2 = self.parse_names(user_answer)
         if not name1 or not name2:
-            return {
-                'response': TextMessage(text="الصيغة غير صحيحة - اكتب: اسم و اسم\nمثال: محمد و سارة"),
-                'game_over': False
-            }
+            return None
 
         if not self.is_valid_text(name1) or not self.is_valid_text(name2):
-            return {
-                'response': TextMessage(text="غير مسموح بادخال رموز او ارقام - اكتب اسماء نصية فقط"),
-                'game_over': False
-            }
+            return None
 
         percentage = self.calculate_compatibility(name1, name2)
         message_text = self.get_compatibility_message(percentage)
