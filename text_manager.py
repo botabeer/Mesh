@@ -24,50 +24,48 @@ class TextManager:
             logger.error(f"Load {path} error: {e}")
             return []
 
-    def _create_quick_reply(self, items):
+    def _create_quick_reply(self):
+        """أزرار النصوص الثابتة - تظهر دائماً"""
         return QuickReply(items=[
-            QuickReplyItem(action=MessageAction(label=label, text=text))
-            for label, text in items
+            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
+            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
+            QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
+            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
+            QuickReplyItem(action=MessageAction(label="شخصيه", text="شخصيه")),
+            QuickReplyItem(action=MessageAction(label="حكمه", text="حكمه")),
+            QuickReplyItem(action=MessageAction(label="موقف", text="موقف")),
+            QuickReplyItem(action=MessageAction(label="البداية", text="بدايه"))
         ])
 
     def handle(self, cmd: str, ui):
-        # ازرار ثابتة
-        quick_items = [
-            ("تحدي", "تحدي"),
-            ("اعتراف", "اعتراف"),
-            ("منشن", "منشن"),
-            ("شخصيه", "شخصيه"),
-            ("سؤال", "سؤال"),
-            ("حكمه", "حكمه"),
-            ("موقف", "موقف")
-        ]
+        quick_reply = self._create_quick_reply()
 
         if cmd == "تحدي" and self.challenges:
             text = random.choice(self.challenges)
-            return TextMessage(text=text, quickReply=self._create_quick_reply(quick_items))
+            return TextMessage(text=text, quickReply=quick_reply)
 
         if cmd == "اعتراف" and self.confessions:
             text = random.choice(self.confessions)
-            return TextMessage(text=text, quickReply=self._create_quick_reply(quick_items))
+            return TextMessage(text=text, quickReply=quick_reply)
 
         if cmd == "منشن" and self.mentions:
             text = random.choice(self.mentions)
-            return TextMessage(text=text, quickReply=self._create_quick_reply(quick_items))
+            return TextMessage(text=text, quickReply=quick_reply)
 
-        if cmd == "شخصيه" and self.personality:
+        if cmd in ("شخصيه", "شخصية") and self.personality:
             text = random.choice(self.personality)
-            return TextMessage(text=text, quickReply=self._create_quick_reply(quick_items))
+            return TextMessage(text=text, quickReply=quick_reply)
 
         if cmd == "سؤال" and self.questions:
             text = random.choice(self.questions)
-            return TextMessage(text=text, quickReply=self._create_quick_reply(quick_items))
+            return TextMessage(text=text, quickReply=quick_reply)
 
-        if cmd == "حكمه" and self.quotes:
+        if cmd in ("حكمه", "حكمة") and self.quotes:
             text = random.choice(self.quotes)
-            return TextMessage(text=text, quickReply=self._create_quick_reply(quick_items))
+            return TextMessage(text=text, quickReply=quick_reply)
 
         if cmd == "موقف" and self.situations:
             text = random.choice(self.situations)
-            return TextMessage(text=text, quickReply=self._create_quick_reply(quick_items))
+            return TextMessage(text=text, quickReply=quick_reply)
 
         return None
