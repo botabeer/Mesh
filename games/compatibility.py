@@ -50,20 +50,71 @@ class CompatibilityGame:
     def get_question(self):
         c = self._c()
         contents = [
-            {"type": "text", "text": "لعبة التوافق", "size": "xxl", "weight": "bold", "color": c["primary"], "align": "center"},
+            {
+                "type": "text",
+                "text": "لعبة التوافق",
+                "size": "xxl",
+                "weight": "bold",
+                "color": c["primary"],
+                "align": "center"
+            },
             {"type": "separator", "margin": "lg", "color": c["border"]},
-            {"type": "text", "text": "ادخل اسمين مفصولين بـ و", "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "wrap": True},
-            {"type": "text", "text": "مثال محمد و سارة", "size": "sm", "color": c["text_tertiary"], "align": "center", "margin": "md"},
-            {"type": "text", "text": "احرف عربية او انجليزية فقط", "size": "xs", "color": c["warning"], "align": "center", "margin": "sm", "wrap": True},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["glass"],
+                "cornerRadius": "12px",
+                "paddingAll": "16px",
+                "margin": "md",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "ادخل اسمين مفصولين بـ و",
+                        "size": "md",
+                        "weight": "bold",
+                        "color": c["text"],
+                        "wrap": True
+                    },
+                    {
+                        "type": "text",
+                        "text": "مثال: محمد و سارة",
+                        "size": "sm",
+                        "color": c["text_tertiary"],
+                        "margin": "sm"
+                    },
+                    {
+                        "type": "text",
+                        "text": "احرف عربية او انجليزية فقط",
+                        "size": "xs",
+                        "color": c["warning"],
+                        "margin": "sm",
+                        "wrap": True
+                    }
+                ]
+            },
             {"type": "separator", "margin": "lg", "color": c["border"]},
-            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بدايه"}, "style": "secondary", "height": "sm", "margin": "md"}
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                "style": "secondary",
+                "height": "sm",
+                "margin": "md"
+            }
         ]
 
         return FlexMessage(
             alt_text="لعبة التوافق",
             contents=FlexContainer.from_dict({
                 "type": "bubble",
-                "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}
+                "size": "mega",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": contents,
+                    "backgroundColor": c["bg"],
+                    "paddingAll": "20px"
+                }
             })
         )
 
@@ -74,7 +125,7 @@ class CompatibilityGame:
         name1, name2 = self.parse_names(user_answer)
         if not name1 or not name2:
             return {
-                'response': TextMessage(text="الصيغة غير صحيحة - اكتب اسم و اسم - مثال محمد و سارة"),
+                'response': TextMessage(text="الصيغة غير صحيحة - اكتب: اسم و اسم\nمثال: محمد و سارة"),
                 'game_over': False
             }
 
@@ -92,19 +143,48 @@ class CompatibilityGame:
 
         flex_content = {
             "type": "bubble",
+            "size": "mega",
             "body": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "نتيجة التوافق", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
-                    {"type": "separator", "margin": "md", "color": c["border"]},
-                    {"type": "text", "text": f"{name1} و {name2}", "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "margin": "md"},
-                    {"type": "text", "text": f"{percentage}%", "size": "xxl", "weight": "bold", "color": bar_color, "align": "center", "margin": "md"},
                     {
-                        "type": "box", "layout": "vertical", "backgroundColor": c["glass"],
-                        "cornerRadius": "10px", "height": "20px", "margin": "md",
+                        "type": "text",
+                        "text": "نتيجة التوافق",
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": c["primary"],
+                        "align": "center"
+                    },
+                    {"type": "separator", "margin": "lg", "color": c["border"]},
+                    {
+                        "type": "text",
+                        "text": f"{name1} و {name2}",
+                        "size": "lg",
+                        "weight": "bold",
+                        "color": c["text"],
+                        "align": "center",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"{percentage}%",
+                        "size": "xxl",
+                        "weight": "bold",
+                        "color": bar_color,
+                        "align": "center",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "10px",
+                        "height": "20px",
+                        "margin": "md",
                         "contents": [{
-                            "type": "box", "layout": "vertical",
+                            "type": "box",
+                            "layout": "vertical",
                             "backgroundColor": bar_color,
                             "cornerRadius": "10px",
                             "width": f"{percentage}%",
@@ -112,18 +192,42 @@ class CompatibilityGame:
                             "contents": []
                         }]
                     },
-                    {"type": "text", "text": message_text, "size": "md", "color": c["text"], "align": "center", "wrap": True, "margin": "md"},
-                    {"type": "separator", "margin": "md", "color": c["border"]},
                     {
-                        "type": "box", "layout": "horizontal", "spacing": "md", "margin": "md",
+                        "type": "text",
+                        "text": message_text,
+                        "size": "md",
+                        "color": c["text_secondary"],
+                        "align": "center",
+                        "wrap": True,
+                        "margin": "md"
+                    },
+                    {"type": "separator", "margin": "lg", "color": c["border"]},
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "margin": "md",
                         "contents": [
-                            {"type": "button", "action": {"type": "message", "label": "اعادة", "text": "توافق"}, "style": "primary", "color": c["primary"], "height": "sm"},
-                            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بدايه"}, "style": "secondary", "height": "sm"}
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "اعادة", "text": "توافق"},
+                                "style": "primary",
+                                "color": c["primary"],
+                                "height": "sm",
+                                "flex": 1
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            }
                         ]
                     }
                 ],
                 "paddingAll": "20px",
-                "spacing": "sm",
+                "spacing": "md",
                 "backgroundColor": c["bg"]
             }
         }
