@@ -4,10 +4,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "4.0"
+    VERSION = "5.0"
     COPYRIGHT = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -56,21 +55,13 @@ class Config:
     def normalize(cls, text: str) -> str:
         if not text:
             return ""
-
         text = text.strip().lower()[:1000]
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-
-        replacements = {
-            "أ": "ا", "إ": "ا", "آ": "ا",
-            "ى": "ي", "ة": "ه",
-            "ؤ": "و", "ئ": "ي"
-        }
+        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
         for old, new in replacements.items():
             text = text.replace(old, new)
-
         text = re.sub(r"[^\w\sء-ي]", "", text)
         text = re.sub(r"\s+", " ", text)
-
         return text.strip()
 
 
