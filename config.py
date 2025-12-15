@@ -7,7 +7,8 @@ load_dotenv()
 
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "3.1"
+    VERSION = "4.0"
+    COPYRIGHT = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
@@ -74,4 +75,4 @@ class Config:
 
 
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
-    raise RuntimeError("LINE credentials are missing")
+    raise RuntimeError("LINE credentials missing")
