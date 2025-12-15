@@ -4,7 +4,6 @@ from linebot.v3.messaging import TextMessage, QuickReply, QuickReplyItem, Messag
 
 logger = logging.getLogger(__name__)
 
-
 class TextManager:
     def __init__(self):
         self.challenges = self._load_file("games/challenges.txt")
@@ -25,19 +24,18 @@ class TextManager:
             return []
 
     def _create_quick_reply(self):
-        """أزرار النصوص الثابتة - تظهر دائماً"""
         return QuickReply(items=[
             QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
             QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
             QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
             QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
-            QuickReplyItem(action=MessageAction(label="شخصيه", text="شخصيه")),
-            QuickReplyItem(action=MessageAction(label="حكمه", text="حكمه")),
+            QuickReplyItem(action=MessageAction(label="شخصية", text="شخصيه")),
+            QuickReplyItem(action=MessageAction(label="حكمة", text="حكمه")),
             QuickReplyItem(action=MessageAction(label="موقف", text="موقف")),
             QuickReplyItem(action=MessageAction(label="البداية", text="بدايه"))
         ])
 
-    def handle(self, cmd: str, ui):
+    def handle(self, cmd: str):
         quick_reply = self._create_quick_reply()
 
         if cmd == "تحدي" and self.challenges:
