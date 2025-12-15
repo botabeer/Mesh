@@ -2,7 +2,6 @@ import random
 from games.base import BaseGame
 from config import Config
 
-
 class OppositeGame(BaseGame):
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
@@ -39,7 +38,11 @@ class OppositeGame(BaseGame):
             "امام": ["خلف"],
             "داخل": ["خارج"],
             "صباح": ["مساء"],
-            "كثير": ["قليل"]
+            "كثير": ["قليل"],
+            "اول": ["اخر", "اخير"],
+            "سماء": ["ارض"],
+            "ذكر": ["انثى"],
+            "ليل": ["نهار"]
         }
         
         self.questions = list(self.opposites.keys())
@@ -49,8 +52,8 @@ class OppositeGame(BaseGame):
         word = self.questions[self.current_q % len(self.questions)]
         self.current_answer = self.opposites[word]
         
-        hint = f"السؤال {self.current_q + 1}/{self.total_q}"
-        return self.build_question_flex(f"ما عكس\n\n{word}", hint)
+        hint = f"ما عكس الكلمة"
+        return self.build_question_flex(word, hint)
 
     def check_answer(self, answer: str) -> bool:
         normalized = Config.normalize(answer)
