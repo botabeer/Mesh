@@ -1,7 +1,6 @@
 import random
 from games.base import BaseGame
 
-
 class MathGame(BaseGame):
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
@@ -9,9 +8,9 @@ class MathGame(BaseGame):
         self.levels = {
             1: {"min": 1, "max": 20, "ops": ["+", "-"]},
             2: {"min": 10, "max": 50, "ops": ["+", "-"]},
-            3: {"min": 20, "max": 100, "ops": ["+", "-", "×"]},
-            4: {"min": 50, "max": 200, "ops": ["+", "-", "×"]},
-            5: {"min": 100, "max": 500, "ops": ["+", "-", "×"]}
+            3: {"min": 20, "max": 100, "ops": ["+", "-", "*"]},
+            4: {"min": 50, "max": 200, "ops": ["+", "-", "*"]},
+            5: {"min": 100, "max": 500, "ops": ["+", "-", "*"]}
         }
     
     def get_question(self):
@@ -23,20 +22,20 @@ class MathGame(BaseGame):
             a = random.randint(cfg["min"], cfg["max"])
             b = random.randint(cfg["min"], cfg["max"])
             self.current_answer = str(a + b)
-            question = f"{a} + {b} = ؟"
+            question = f"{a} + {b} = ?"
         
         elif op == "-":
             a = random.randint(cfg["min"] + 10, cfg["max"])
             b = random.randint(cfg["min"], a - 1)
             self.current_answer = str(a - b)
-            question = f"{a} - {b} = ؟"
+            question = f"{a} - {b} = ?"
         
         else:
             max_factor = min(20, cfg["max"] // 10)
             a = random.randint(2, max_factor)
             b = random.randint(2, max_factor)
             self.current_answer = str(a * b)
-            question = f"{a} × {b} = ؟"
+            question = f"{a} × {b} = ?"
         
         hint = f"المستوى {level}"
         return self.build_question_flex(question, hint)
