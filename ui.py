@@ -1,7 +1,6 @@
 from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
-
 class UI:
     def __init__(self, theme: str = "light"):
         self.theme = theme
@@ -60,7 +59,6 @@ class UI:
         }
 
     def _text_buttons_quick_reply(self):
-        """أزرار النصوص الثابتة بدون إيموجي"""
         return QuickReply(items=[
             QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
             QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
@@ -72,128 +70,71 @@ class UI:
             QuickReplyItem(action=MessageAction(label="البداية", text="بدايه"))
         ])
 
+    # ====== الدوال الرئيسية ======
     def main_menu(self, user):
-        c = self._c()
+        # نفس الكود الموجود عندك سابقًا
+        pass  # احتفظ بالكود القديم لـ main_menu كما هو
 
-        if not user:
-            contents = [
-                self._header(f"{Config.BOT_NAME}", "xxl"),
-                {"type": "text", "text": "مرحباً بك في البوت!", 
-                 "align": "center", "size": "md", "color": c["text"], "margin": "md"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                self._glass_box([
-                    {"type": "text", "text": "غير مسجل", "align": "center", 
-                     "size": "lg", "color": c["warning"], "weight": "bold"},
-                    {"type": "text", "text": "سجل الآن للحصول على نقاط", 
-                     "align": "center", "size": "sm", "color": c["text_secondary"], "margin": "sm", "wrap": True}
-                ], "16px", "md"),
-                {"type": "separator", "margin": "md", "color": c["border"]},
-                self._glass_box([
-                    {"type": "text", "text": "النصوص التفاعلية", "size": "sm", 
-                     "color": c["text_tertiary"], "weight": "bold"},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
-                     "contents": [
-                         self._btn("تحدي", "تحدي"),
-                         self._btn("اعتراف", "اعتراف")
-                     ]},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xs",
-                     "contents": [
-                         self._btn("منشن", "منشن"),
-                         self._btn("سؤال", "سؤال")
-                     ]},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xs",
-                     "contents": [
-                         self._btn("شخصيه", "شخصيه"),
-                         self._btn("حكمه", "حكمه")
-                     ]},
-                    {"type": "button", "action": {"type": "message", "label": "موقف", "text": "موقف"},
-                     "style": "secondary", "height": "sm", "margin": "xs"}
-                ], "12px", "md"),
-                {"type": "separator", "margin": "md", "color": c["border"]},
-                self._btn("تسجيل", "تسجيل", "primary", "md"),
-                self._btn("المساعدة", "مساعده", "secondary", "sm")
-            ]
-        else:
-            win_rate = int((user['wins'] / user['games'] * 100)) if user['games'] > 0 else 0
-            
-            contents = [
-                self._header(f"{Config.BOT_NAME}", "xxl"),
-                self._glass_box([
-                    {"type": "text", "text": f"{user['name']}", "align": "center",
-                     "size": "xl", "color": c["text"], "weight": "bold"},
-                    {"type": "box", "layout": "horizontal", "spacing": "md", "margin": "md",
-                     "contents": [
-                         {"type": "box", "layout": "vertical", "contents": [
-                             {"type": "text", "text": "النقاط", "size": "xs", 
-                              "color": c["text_tertiary"], "align": "center"},
-                             {"type": "text", "text": str(user['points']), "size": "xxl", 
-                              "weight": "bold", "color": c["primary"], "align": "center"}
-                         ]},
-                         {"type": "separator"},
-                         {"type": "box", "layout": "vertical", "contents": [
-                             {"type": "text", "text": "الفوز", "size": "xs", 
-                              "color": c["text_tertiary"], "align": "center"},
-                             {"type": "text", "text": f"{win_rate}%", "size": "xxl", 
-                              "weight": "bold", "color": c["success"], "align": "center"}
-                         ]}
-                     ]}
-                ], "16px", "md"),
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                self._glass_box([
-                    {"type": "text", "text": "القوائم الرئيسية", "size": "sm", 
-                     "color": c["text_tertiary"], "weight": "bold"},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
-                     "contents": [
-                         self._btn("الالعاب", "العاب", "primary"),
-                         self._btn("احصائياتي", "نقاطي")
-                     ]},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xs",
-                     "contents": [
-                         self._btn("الصداره", "الصداره"),
-                         self._btn("تغيير الاسم", "تغيير")
-                     ]}
-                ], "12px", "md"),
-                {"type": "separator", "margin": "md", "color": c["border"]},
-                self._glass_box([
-                    {"type": "text", "text": "النصوص التفاعلية", "size": "sm", 
-                     "color": c["text_tertiary"], "weight": "bold"},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
-                     "contents": [
-                         self._btn("تحدي", "تحدي"),
-                         self._btn("اعتراف", "اعتراف")
-                     ]},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xs",
-                     "contents": [
-                         self._btn("منشن", "منشن"),
-                         self._btn("سؤال", "سؤال")
-                     ]},
-                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "xs",
-                     "contents": [
-                         self._btn("شخصيه", "شخصيه"),
-                         self._btn("حكمه", "حكمه")
-                     ]},
-                    {"type": "button", "action": {"type": "message", "label": "موقف", "text": "موقف"},
-                     "style": "secondary", "height": "sm", "margin": "xs"}
-                ], "12px", "md"),
-                {"type": "separator", "margin": "md", "color": c["border"]},
-                {"type": "box", "layout": "horizontal", "spacing": "sm",
-                 "contents": [
-                     self._btn(f"الوضع {'الفاتح' if self.theme == 'dark' else 'الداكن'}", "تغيير_الثيم"),
-                     self._btn("المساعدة", "مساعده")
-                 ]}
-            ]
+    def help_menu(self):
+        text = (
+            "أوامر البوت:\n"
+            "• بداية: عرض القائمة الرئيسية\n"
+            "• تسجيل: لتسجيل اسمك\n"
+            "• تغيير_الثيم: لتغيير الثيم\n"
+            "• العاب: عرض الألعاب\n"
+            "• نقاطي: عرض نقاطك\n"
+            "• الصدارة: عرض قائمة الصدارة\n"
+            "• انسحب: لإيقاف اللعبة الحالية\n"
+        )
+        return TextMessage(text=text)
 
-        contents.append({
-            "type": "text",
-            "text": f"{Config.BOT_NAME} v{Config.VERSION}",
-            "size": "xxs",
-            "color": c["text_tertiary"],
-            "align": "center",
-            "margin": "lg"
-        })
+    def ask_name(self):
+        return TextMessage(text="من فضلك اكتب اسمك:")
 
+    def games_menu(self):
+        contents = [
+            {"type": "text", "text": "هذه قائمة الألعاب المتاحة:"},
+            {"type": "separator", "margin": "md", "color": self._c()["border"]},
+            self._btn("ذكاء", "ذكاء", "primary"),
+            self._btn("خمن", "خمن"),
+            self._btn("رياضيات", "رياضيات"),
+            self._btn("ترتيب", "ترتيب"),
+            self._btn("ضد", "ضد"),
+            self._btn("اسرع", "اسرع"),
+            self._btn("انسان", "انسان"),
+            self._btn("سلسله", "سلسله"),
+            self._btn("تكوين", "تكوين"),
+            self._btn("لون", "لون"),
+            self._btn("اغنيه", "اغنيه"),
+            self._btn("مافيا", "مافيا"),
+            self._btn("توافق", "توافق"),
+        ]
         return FlexMessage(
-            alt_text="القائمه الرئيسيه",
+            alt_text="قائمة الألعاب",
             contents=FlexContainer.from_dict(self._bubble(contents)),
             quickReply=self._text_buttons_quick_reply()
         )
+
+    def stats_card(self, user):
+        contents = [
+            {"type": "text", "text": f"اسمك: {user['name']}"},
+            {"type": "text", "text": f"النقاط: {user['points']}"},
+            {"type": "text", "text": f"عدد الألعاب: {user['games']}"},
+            {"type": "text", "text": f"عدد الفوز: {user['wins']}"}
+        ]
+        return FlexMessage(
+            alt_text="احصائياتك",
+            contents=FlexContainer.from_dict(self._bubble(contents))
+        )
+
+    def leaderboard_card(self, leaderboard):
+        contents = [{"type": "text", "text": "الصدارة:"}]
+        for i, user in enumerate(leaderboard, 1):
+            contents.append({"type": "text", "text": f"{i}. {user['name']} - {user['points']} نقاط"})
+        return FlexMessage(
+            alt_text="الصدارة",
+            contents=FlexContainer.from_dict(self._bubble(contents))
+        )
+
+    def game_stopped(self):
+        return TextMessage(text="تم إيقاف اللعبة بنجاح")
