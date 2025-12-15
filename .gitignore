@@ -19,7 +19,6 @@ env/
 *.db
 *.sqlite
 *.sqlite3
-data/
 
 # Logs
 *.log
@@ -45,6 +44,3 @@ desktop.ini
 # Tests
 .coverage
 htmlcov/
-
-# Documentation
-site/
