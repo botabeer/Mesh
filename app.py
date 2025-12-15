@@ -8,7 +8,7 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, TextMessage
+    ReplyMessageRequest
 )
 
 from config import Config
@@ -60,69 +60,60 @@ def process_message(user_id: str, text: str, reply_token: str):
         ui = UI(theme=theme)
         cmd = Config.normalize(text)
 
-        # اوامر عامة بدون تسجيل
         if cmd in ("بداية", "بدايه"):
-            reply_message(reply_token, [ui.main_menu(user)])
+            reply_message(reply_token, ui.main_menu(user))
             return
         
         if cmd == "تغيير_الثيم" and user:
             new_theme = db.toggle_theme(user_id)
-            reply_message(reply_token, [UI(theme=new_theme).main_menu(user)])
+            reply_message(reply_token, UI(theme=new_theme).main_menu(user))
             return
         
         if cmd in ("مساعدة", "مساعده"):
-            reply_message(reply_token, [ui.help_menu()])
+            reply_message(reply_token, ui.help_menu())
             return
 
         if cmd in ("الصدارة", "الصداره"):
-            reply_message(reply_token, [ui.leaderboard_card(db.get_leaderboard())])
+            reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
             return
 
-        # محتوى تفاعلي نصي
-        text_response = text_mgr.handle(cmd)
+        text_response = text_mgr.handle(cmd, theme)
         if text_response:
-            reply_message(reply_token, [text_response])
+            reply_message(reply_token, text_response)
             return
 
-        # غير مسجل
         if not user:
             if cmd == "تسجيل":
                 db.set_waiting_name(user_id, True)
-                reply_message(reply_token, [ui.ask_name()])
+                reply_message(reply_token, ui.ask_name())
                 return
-            reply_message(reply_token, [ui.main_menu(None)])
             return
 
-        # انتظار اسم للتسجيل
         if db.is_waiting_name(user_id):
             name = text.strip()[:50]
             if len(name) >= 2:
                 db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
-                reply_message(reply_token, [ui.main_menu(db.get_user(user_id))])
-            else:
-                reply_message(reply_token, [TextMessage(text="الاسم قصير جدا - يجب ان يكون حرفين على الاقل")])
+                reply_message(reply_token, ui.main_menu(db.get_user(user_id)))
             return
 
-        # اوامر المسجلين
         if cmd in ("العاب", "الالعاب"):
-            reply_message(reply_token, [ui.games_menu()])
+            reply_message(reply_token, ui.games_menu())
             return
         
         if cmd == "نقاطي":
-            reply_message(reply_token, [ui.stats_card(user)])
+            reply_message(reply_token, ui.stats_card(user))
             return
         
         if cmd == "انسحب":
             stopped = game_mgr.stop_game(user_id)
             if stopped:
-                reply_message(reply_token, [ui.game_stopped()])
+                reply_message(reply_token, ui.game_stopped())
             return
 
-        # التعامل مع الالعاب
         game_response = game_mgr.handle(user_id, cmd, theme, text)
         if game_response:
-            reply_message(reply_token, [game_response])
+            reply_message(reply_token, game_response)
             return
 
     except Exception as e:
