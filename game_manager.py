@@ -1,6 +1,5 @@
 import logging
 from threading import Lock
-from linebot.v3.messaging import TextMessage
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +19,14 @@ class GameManager:
             "ذكاء": ("games.iq", "IqGame"),
             "خمن": ("games.guess", "GuessGame"),
             "رياضيات": ("games.math", "MathGame"),
+            "ترتيب": ("games.scramble", "ScrambleGame"),
+            "ضد": ("games.opposite", "OppositeGame"),
+            "اسرع": ("games.fast_typing", "FastTypingGame"),
+            "انسان": ("games.human_animal_plant", "HumanAnimalPlantGame"),
+            "سلسله": ("games.chain_words", "ChainWordsGame"),
+            "تكوين": ("games.letters_words", "LettersWordsGame"),
+            "لون": ("games.word_color", "WordColorGame"),
+            "اغنيه": ("games.song", "SongGame")
         }
 
         for name, (module_path, class_name) in mappings.items():
@@ -27,18 +34,18 @@ class GameManager:
                 mod = __import__(module_path, fromlist=[class_name])
                 game_class = getattr(mod, class_name)
                 games[name] = game_class
-                logger.info(f"Loaded game: {name}")
-            except Exception:
-                logger.exception(f"Failed to load game: {name}")
+                logger.info(f"Loaded: {name}")
+            except Exception as e:
+                logger.error(f"Failed to load {name}: {e}")
 
         return games
 
-    def handle(self, user_id: str, cmd: str, theme: str):
+    def handle(self, user_id: str, cmd: str, theme: str, text: str):
         with self._lock:
             game = self._active.get(user_id)
 
         if game:
-            return self._handle_answer(user_id, cmd)
+            return self._handle_answer(user_id, text)
 
         if cmd in self._games:
             return self._start_game(user_id, cmd, theme)
@@ -61,19 +68,18 @@ class GameManager:
             with self._lock:
                 self._active[user_id] = game
 
-            logger.info(f"Started game [{game_name}] for {user_id}")
+            logger.info(f"Started {game_name} for {user_id}")
             result = game.start(user_id)
 
             if isinstance(result, dict) and "response" in result:
                 return result["response"]
             return result
 
-        except Exception:
-            logger.exception("Start game error")
+        except Exception as e:
+            logger.exception(f"Start game error: {e}")
             with self._lock:
                 self._active.pop(user_id, None)
-
-            return TextMessage(text="فشل بدء اللعبه")
+            return None
 
     def _handle_answer(self, user_id: str, answer: str):
         with self._lock:
@@ -94,9 +100,8 @@ class GameManager:
 
             return result.get("response")
 
-        except Exception:
-            logger.exception("Handle answer error")
+        except Exception as e:
+            logger.exception(f"Handle answer error: {e}")
             with self._lock:
                 self._active.pop(user_id, None)
-
-            return TextMessage(text="حدث خطا اثناء اللعبه")
+            return None
