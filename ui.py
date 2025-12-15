@@ -1,4 +1,4 @@
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
+from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
 class UI:
@@ -14,9 +14,6 @@ class UI:
             QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
             QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
             QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
-            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
-            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
-            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
             QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة"))
         ])
 
@@ -93,55 +90,79 @@ class UI:
         )
 
     def help_menu(self):
-        help_text = """📱 الاوامر المتاحة:
-
-🎮 القوائم الرئيسية:
-• بداية - العودة للقائمة الرئيسية
-• تسجيل - تسجيل حساب جديد
-• العاب - عرض قائمة الالعاب
-• نقاطي - عرض احصائياتك
-• الصدارة - عرض لوحة الصدارة
-• تغيير_الثيم - التبديل بين الفاتح والداكن
-• انسحب - الانسحاب من اللعبة الحالية
-
-🎯 الالعاب المتاحة:
-
-الالعاب الذهنية 🧠:
-• ذكاء - ألغاز ذكاء وتفكير
-• خمن - تخمين كلمات من فئات
-• رياضيات - عمليات حسابية
-• ترتيب - ترتيب الحروف
-• ضد - معرفة الكلمات المضادة
-• اسرع - كتابة سريعة
-• سلسلة - سلسلة الكلمات
-• انسان_حيوان - إنسان حيوان نبات
-• كون_كلمات - تكوين كلمات
-• اغاني - تخمين المغني
-• الوان - لعبة الألوان
-
-الالعاب الجماعية 👥:
-• مافيا - لعبة المافيا (4+ لاعبين)
-• توافق - حاسبة التوافق
-
-🎭 محتوى تفاعلي:
-• تحدي - تحدي عشوائي
-• اعتراف - اعتراف عشوائي
-• منشن - منشن عشوائي
-• سؤال - سؤال عشوائي
-• شخصية - سؤال شخصية
-• حكمة - حكمة عشوائية
-• موقف - موقف عشوائي
-
-💡 ملاحظة: كل لعبة من 5 جولات"""
-
-        return TextMessage(text=help_text, quickReply=self._quick_reply())
+        c = self._c()
+        
+        sections = [
+            {
+                "title": "الاوامر الرئيسية",
+                "items": ["بداية", "تسجيل", "العاب", "نقاطي", "الصدارة", "تغيير الثيم", "انسحب"]
+            },
+            {
+                "title": "العاب ذهنية",
+                "items": ["ذكاء", "خمن", "رياضيات", "ترتيب", "ضد", "اسرع"]
+            },
+            {
+                "title": "العاب كلمات",
+                "items": ["سلسلة", "انسان حيوان", "كون كلمات", "اغاني", "الوان"]
+            },
+            {
+                "title": "العاب جماعية",
+                "items": ["مافيا", "توافق"]
+            },
+            {
+                "title": "محتوى تفاعلي",
+                "items": ["تحدي", "اعتراف", "منشن", "سؤال", "شخصية", "حكمة", "موقف"]
+            }
+        ]
+        
+        contents = [
+            {
+                "type": "text",
+                "text": "المساعدة",
+                "size": "xxl",
+                "weight": "bold",
+                "color": c["primary"],
+                "align": "center"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]}
+        ]
+        
+        for section in sections:
+            contents.append({
+                "type": "text",
+                "text": section["title"],
+                "size": "md",
+                "weight": "bold",
+                "color": c["text_secondary"],
+                "margin": "md"
+            })
+            
+            contents.append({
+                "type": "text",
+                "text": " - " + "\n - ".join(section["items"]),
+                "size": "sm",
+                "color": c["text"],
+                "wrap": True,
+                "margin": "sm"
+            })
+        
+        contents.extend([
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            self._btn("البداية", "بداية")
+        ])
+        
+        return FlexMessage(
+            alt_text="المساعدة",
+            contents=FlexContainer.from_dict(self._bubble(contents)),
+            quickReply=self._quick_reply()
+        )
 
     def games_menu(self):
         c = self._c()
         contents = [
             {
                 "type": "text",
-                "text": "🎮 اختر اللعبة",
+                "text": "اختر اللعبة",
                 "size": "xxl",
                 "weight": "bold",
                 "color": c["primary"],
@@ -149,64 +170,49 @@ class UI:
             },
             {"type": "separator", "margin": "lg", "color": c["border"]},
             
-            # ألعاب ذهنية كلاسيكية
             {
                 "type": "text",
-                "text": "🧠 العاب ذهنية كلاسيكية",
+                "text": "العاب ذهنية",
                 "size": "md",
                 "weight": "bold",
                 "color": c["text_secondary"],
                 "margin": "md"
             },
-            self._btn("🧩 ذكاء", "ذكاء", "primary"),
-            self._btn("🎯 خمن", "خمن", "primary"),
-            self._btn("🔢 رياضيات", "رياضيات", "primary"),
-            self._btn("🔄 ترتيب", "ترتيب", "primary"),
-            self._btn("⚖️ ضد", "ضد", "primary"),
-            self._btn("⚡ اسرع", "اسرع", "primary"),
+            self._btn("ذكاء", "ذكاء", "primary"),
+            self._btn("خمن", "خمن", "primary"),
+            self._btn("رياضيات", "رياضيات", "primary"),
+            self._btn("ترتيب", "ترتيب", "primary"),
+            self._btn("ضد", "ضد", "primary"),
+            self._btn("اسرع", "اسرع", "primary"),
             
             {"type": "separator", "margin": "lg", "color": c["border"]},
             
-            # ألعاب كلمات جديدة
             {
                 "type": "text",
-                "text": "📝 العاب كلمات",
+                "text": "العاب كلمات",
                 "size": "md",
                 "weight": "bold",
                 "color": c["text_secondary"],
                 "margin": "md"
             },
-            self._btn("🔗 سلسلة", "سلسله"),
-            self._btn("🌍 انسان حيوان", "انسان_حيوان"),
-            self._btn("🔤 كون كلمات", "كون_كلمات"),
+            self._btn("سلسلة", "سلسله"),
+            self._btn("انسان حيوان", "انسان_حيوان"),
+            self._btn("كون كلمات", "كون_كلمات"),
+            self._btn("اغاني", "اغاني"),
+            self._btn("الوان", "الوان"),
             
             {"type": "separator", "margin": "lg", "color": c["border"]},
             
-            # ألعاب مسلية
             {
                 "type": "text",
-                "text": "🎵 العاب مسلية",
+                "text": "العاب جماعية",
                 "size": "md",
                 "weight": "bold",
                 "color": c["text_secondary"],
                 "margin": "md"
             },
-            self._btn("🎤 اغاني", "اغاني"),
-            self._btn("🎨 الوان", "الوان"),
-            
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            
-            # ألعاب جماعية
-            {
-                "type": "text",
-                "text": "👥 العاب جماعية",
-                "size": "md",
-                "weight": "bold",
-                "color": c["text_secondary"],
-                "margin": "md"
-            },
-            self._btn("🕵️ مافيا", "مافيا"),
-            self._btn("💕 توافق", "توافق")
+            self._btn("مافيا", "مافيا"),
+            self._btn("توافق", "توافق")
         ]
 
         return FlexMessage(
@@ -222,7 +228,7 @@ class UI:
         contents = [
             {
                 "type": "text",
-                "text": "📊 احصائياتك",
+                "text": "احصائياتك",
                 "size": "xxl",
                 "weight": "bold",
                 "color": c["primary"],
@@ -242,7 +248,7 @@ class UI:
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
-                            {"type": "text", "text": "👤 الاسم", "flex": 1, "color": c["text_secondary"], "size": "sm"},
+                            {"type": "text", "text": "الاسم", "flex": 1, "color": c["text_secondary"], "size": "sm"},
                             {"type": "text", "text": user['name'], "flex": 2, "color": c["text"], "weight": "bold", "align": "end"}
                         ]
                     },
@@ -251,7 +257,7 @@ class UI:
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
-                            {"type": "text", "text": "⭐ النقاط", "flex": 1, "color": c["text_secondary"], "size": "sm"},
+                            {"type": "text", "text": "النقاط", "flex": 1, "color": c["text_secondary"], "size": "sm"},
                             {"type": "text", "text": str(user['points']), "flex": 2, "color": c["success"], "weight": "bold", "size": "lg", "align": "end"}
                         ]
                     },
@@ -260,7 +266,7 @@ class UI:
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
-                            {"type": "text", "text": "🎮 عدد الالعاب", "flex": 1, "color": c["text_secondary"], "size": "sm"},
+                            {"type": "text", "text": "عدد الالعاب", "flex": 1, "color": c["text_secondary"], "size": "sm"},
                             {"type": "text", "text": str(user['games']), "flex": 2, "color": c["text"], "align": "end"}
                         ]
                     },
@@ -269,7 +275,7 @@ class UI:
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
-                            {"type": "text", "text": "🏆 عدد الفوز", "flex": 1, "color": c["text_secondary"], "size": "sm"},
+                            {"type": "text", "text": "عدد الفوز", "flex": 1, "color": c["text_secondary"], "size": "sm"},
                             {"type": "text", "text": str(user['wins']), "flex": 2, "color": c["primary"], "align": "end"}
                         ]
                     },
@@ -278,7 +284,7 @@ class UI:
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
-                            {"type": "text", "text": "📈 نسبة الفوز", "flex": 1, "color": c["text_secondary"], "size": "sm"},
+                            {"type": "text", "text": "نسبة الفوز", "flex": 1, "color": c["text_secondary"], "size": "sm"},
                             {"type": "text", "text": f"{win_rate}%", "flex": 2, "color": c["warning"], "align": "end"}
                         ]
                     }
@@ -299,7 +305,7 @@ class UI:
         contents = [
             {
                 "type": "text",
-                "text": "🏆 لوحة الصدارة",
+                "text": "لوحة الصدارة",
                 "size": "xxl",
                 "weight": "bold",
                 "color": c["primary"],
@@ -317,11 +323,8 @@ class UI:
                 "margin": "md"
             })
         else:
-            medals = ["🥇", "🥈", "🥉"]
-            
             for i, player in enumerate(leaderboard, 1):
                 rank_color = c["primary"] if i == 1 else c["success"] if i == 2 else c["warning"] if i == 3 else c["text_secondary"]
-                rank_display = medals[i-1] if i <= 3 else str(i)
                 
                 contents.append({
                     "type": "box",
@@ -333,7 +336,7 @@ class UI:
                     "contents": [
                         {
                             "type": "text",
-                            "text": rank_display,
+                            "text": str(i),
                             "flex": 0,
                             "color": rank_color,
                             "weight": "bold",
@@ -350,7 +353,7 @@ class UI:
                         },
                         {
                             "type": "text",
-                            "text": f"⭐ {player['points']}",
+                            "text": str(player['points']),
                             "flex": 1,
                             "color": c["success"],
                             "weight": "bold",
@@ -371,12 +374,51 @@ class UI:
         )
 
     def ask_name(self):
-        return TextMessage(
-            text="📝 ارسل اسمك للتسجيل:",
-            quickReply=QuickReply(items=[
-                QuickReplyItem(action=MessageAction(label="البداية", text="بداية"))
-            ])
+        c = self._c()
+        contents = [
+            {
+                "type": "text",
+                "text": "التسجيل",
+                "size": "xxl",
+                "weight": "bold",
+                "color": c["primary"],
+                "align": "center"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "text",
+                "text": "ارسل اسمك للتسجيل",
+                "size": "md",
+                "color": c["text"],
+                "align": "center",
+                "margin": "md"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            self._btn("البداية", "بداية")
+        ]
+        
+        return FlexMessage(
+            alt_text="التسجيل",
+            contents=FlexContainer.from_dict(self._bubble(contents))
         )
 
     def game_stopped(self):
-        return TextMessage(text="⏹️ تم ايقاف اللعبة بنجاح", quickReply=self._quick_reply())
+        c = self._c()
+        contents = [
+            {
+                "type": "text",
+                "text": "تم ايقاف اللعبة",
+                "size": "xl",
+                "weight": "bold",
+                "color": c["primary"],
+                "align": "center"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            self._btn("البداية", "بداية", "primary")
+        ]
+        
+        return FlexMessage(
+            alt_text="تم ايقاف اللعبة",
+            contents=FlexContainer.from_dict(self._bubble(contents)),
+            quickReply=self._quick_reply()
+        )
