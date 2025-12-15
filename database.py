@@ -8,24 +8,31 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+
 class Database:
     _lock = Lock()
     _cache_lock = Lock()
+
     _leaderboard_cache: Optional[List[tuple]] = None
-    _leaderboard_cache_time: float = 0
+    _leaderboard_cache_time: float = 0.0
+
     CACHE_TTL = 300
     INACTIVITY_DAYS = 30
 
+    # --------------------------------------------------
+    # Connection
+    # --------------------------------------------------
     @staticmethod
     @contextmanager
     def get_connection():
-        conn = sqlite3.connect(Config.DATABASE_PATH, timeout=10, detect_types=sqlite3.PARSE_DECLTYPES)
+        conn = sqlite3.connect(
+            Config.DATABASE_PATH,
+            timeout=10,
+            detect_types=sqlite3.PARSE_DECLTYPES,
+            check_same_thread=False
+        )
         conn.row_factory = sqlite3.Row
         try:
-            cursor = conn.cursor()
-            cursor.execute("PRAGMA foreign_keys = ON")
-            cursor.execute("PRAGMA journal_mode = WAL")
-            cursor.execute("PRAGMA synchronous = NORMAL")
             yield conn
             conn.commit()
         except Exception:
@@ -34,10 +41,18 @@ class Database:
         finally:
             conn.close()
 
+    # --------------------------------------------------
+    # Init (run once)
+    # --------------------------------------------------
     @staticmethod
     def init():
         with Database.get_connection() as conn:
             cursor = conn.cursor()
+
+            cursor.execute("PRAGMA foreign_keys = ON")
+            cursor.execute("PRAGMA journal_mode = WAL")
+            cursor.execute("PRAGMA synchronous = NORMAL")
+
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     user_id TEXT PRIMARY KEY,
@@ -50,6 +65,7 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS game_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,13 +74,27 @@ class Database:
                     points INTEGER DEFAULT 0,
                     won INTEGER DEFAULT 0,
                     played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                    FOREIGN KEY (user_id)
+                        REFERENCES users(user_id)
+                        ON DELETE CASCADE
                 )
             """)
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_score ON users(total_points DESC, wins DESC)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_user ON game_history(user_id, played_at DESC)")
+
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_users_score
+                ON users(total_points DESC, wins DESC)
+            """)
+
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_history_user
+                ON game_history(user_id, played_at DESC)
+            """)
+
         logger.info("Database initialized")
 
+    # --------------------------------------------------
+    # User management
+    # --------------------------------------------------
     @staticmethod
     def register_or_update_user(user_id: str, display_name: str) -> bool:
         with Database._lock:
@@ -77,6 +107,7 @@ class Database:
                             display_name = excluded.display_name,
                             last_activity = CURRENT_TIMESTAMP
                     """, (user_id, display_name))
+
                 Database.clear_cache()
                 return True
             except Exception as e:
@@ -87,7 +118,10 @@ class Database:
     def update_last_activity(user_id: str) -> None:
         try:
             with Database.get_connection() as conn:
-                conn.execute("UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE user_id = ?", (user_id,))
+                conn.execute(
+                    "UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE user_id = ?",
+                    (user_id,)
+                )
         except Exception as e:
             logger.error(f"Activity update error: {e}")
 
@@ -95,7 +129,10 @@ class Database:
     def get_user_theme(user_id: str) -> str:
         try:
             with Database.get_connection() as conn:
-                row = conn.execute("SELECT theme FROM users WHERE user_id = ?", (user_id,)).fetchone()
+                row = conn.execute(
+                    "SELECT theme FROM users WHERE user_id = ?",
+                    (user_id,)
+                ).fetchone()
                 return row["theme"] if row else Config.DEFAULT_THEME
         except Exception:
             return Config.DEFAULT_THEME
@@ -104,14 +141,21 @@ class Database:
     def toggle_user_theme(user_id: str) -> str:
         current = Database.get_user_theme(user_id)
         new_theme = "dark" if current == "light" else "light"
+
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
-                    conn.execute("UPDATE users SET theme = ? WHERE user_id = ?", (new_theme, user_id))
+                    conn.execute(
+                        "UPDATE users SET theme = ? WHERE user_id = ?",
+                        (new_theme, user_id)
+                    )
                 return new_theme
             except Exception:
                 return current
 
+    # --------------------------------------------------
+    # Stats
+    # --------------------------------------------------
     @staticmethod
     def update_user_points(user_id: str, points: int, won: bool, game_type: str) -> bool:
         with Database._lock:
@@ -125,10 +169,12 @@ class Database:
                             last_activity = CURRENT_TIMESTAMP
                         WHERE user_id = ?
                     """, (points, int(won), user_id))
+
                     conn.execute("""
                         INSERT INTO game_history (user_id, game_type, points, won)
                         VALUES (?, ?, ?, ?)
                     """, (user_id, game_type, points, int(won)))
+
                 Database.clear_cache()
                 return True
             except Exception as e:
@@ -147,12 +193,19 @@ class Database:
         except Exception:
             return None
 
+    # --------------------------------------------------
+    # Leaderboard (cached)
+    # --------------------------------------------------
     @staticmethod
     def get_leaderboard(limit: int = 20) -> List[tuple]:
         import time
         now = time.time()
+
         with Database._cache_lock:
-            if Database._leaderboard_cache and now - Database._leaderboard_cache_time < Database.CACHE_TTL:
+            if (
+                Database._leaderboard_cache is not None
+                and now - Database._leaderboard_cache_time < Database.CACHE_TTL
+            ):
                 return Database._leaderboard_cache[:limit]
 
         try:
@@ -164,6 +217,7 @@ class Database:
                     ORDER BY total_points DESC, wins DESC
                     LIMIT ?
                 """, (limit,)).fetchall()
+
                 result = [(r["display_name"], r["total_points"]) for r in rows]
 
             with Database._cache_lock:
@@ -174,23 +228,35 @@ class Database:
         except Exception:
             return []
 
+    # --------------------------------------------------
+    # Cleanup
+    # --------------------------------------------------
     @staticmethod
     def cleanup_inactive_users() -> int:
         cutoff = datetime.utcnow() - timedelta(days=Database.INACTIVITY_DAYS)
+
         with Database._lock:
             try:
                 with Database.get_connection() as conn:
-                    cur = conn.execute("DELETE FROM users WHERE last_activity < ?", (cutoff,))
+                    cur = conn.execute(
+                        "DELETE FROM users WHERE last_activity < ?",
+                        (cutoff,)
+                    )
+
                 deleted = cur.rowcount or 0
                 if deleted:
                     Database.clear_cache()
                     logger.info(f"Cleaned {deleted} inactive users")
+
                 return deleted
             except Exception:
                 return 0
 
+    # --------------------------------------------------
+    # Cache
+    # --------------------------------------------------
     @staticmethod
     def clear_cache():
         with Database._cache_lock:
             Database._leaderboard_cache = None
-            Database._leaderboard_cache_time = 0
+            Database._leaderboard_cache_time = 0.0
