@@ -4,6 +4,8 @@ from config import Config
 
 
 class BaseGame(ABC):
+    """الفئة الاساسية لكل الالعاب"""
+    
     def __init__(self, db, theme: str = "light"):
         self.db = db
         self.theme = theme
@@ -11,36 +13,42 @@ class BaseGame(ABC):
         self.total_q = 5
         self.score = 0
         self.user_id = None
+        self.current_answer = None
 
     def _c(self):
+        """الحصول على الوان الثيم"""
         return Config.get_theme(self.theme)
 
     @abstractmethod
     def get_question(self):
+        """الحصول على سؤال - يجب تنفيذه في كل لعبة"""
         pass
 
     @abstractmethod
     def check_answer(self, answer: str) -> bool:
+        """التحقق من الاجابة - يجب تنفيذه في كل لعبة"""
         pass
 
     def start(self, user_id: str):
+        """بدء اللعبة"""
         self.user_id = user_id
         self.current_q = 0
         self.score = 0
         return self.get_question()
 
     def check(self, answer: str, user_id: str):
+        """فحص الاجابة وتحديث النتيجة"""
         try:
             is_correct = self.check_answer(answer)
         except Exception:
             return {
-                "response": TextMessage(text="إجابة غير صالحة"),
+                "response": TextMessage(text="اجابة غير صالحة"),
                 "game_over": False
             }
 
         if not is_correct:
             return {
-                "response": TextMessage(text="❌ إجابة خاطئة"),
+                "response": TextMessage(text="اجابة خاطئة"),
                 "game_over": False
             }
 
@@ -56,10 +64,12 @@ class BaseGame(ABC):
         }
 
     def _game_over(self):
+        """انتهاء اللعبة"""
         c = self._c()
         won = self.score == self.total_q
 
-        self.db.add_points(self.user_id, self.score, won)
+        self.db.add_points(self.user_id, self.score)
+        self.db.finish_game(self.user_id, won)
 
         flex = {
             "type": "bubble",
@@ -69,22 +79,111 @@ class BaseGame(ABC):
                 "backgroundColor": c["bg"],
                 "paddingAll": "20px",
                 "contents": [
-                    {"type": "text", "text": "انتهت اللعبة", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
-                    {"type": "separator", "margin": "md", "color": c["border"]},
-                    {"type": "box", "layout": "vertical", "backgroundColor": c["glass"], "cornerRadius": "16px", "paddingAll": "16px", "margin": "md", "contents": [
-                        {"type": "text", "text": f"النتيجة: {self.score}/{self.total_q}", "size": "lg", "weight": "bold", "color": c["text"], "align": "center"},
-                        {"type": "text", "text": f"+{self.score} نقطة", "size": "md", "color": c["success"], "align": "center", "margin": "sm"}
-                    ]},
-                    {"type": "separator", "margin": "md", "color": c["border"]},
-                    {"type": "button", "action": {"type": "message", "label": "القائمة", "text": "بداية"}, "style": "primary", "color": c["primary"]}
+                    {
+                        "type": "text",
+                        "text": "انتهت اللعبه",
+                        "size": "xl",
+                        "weight": "bold",
+                        "color": c["primary"],
+                        "align": "center"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "md",
+                        "color": c["border"]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "16px",
+                        "paddingAll": "16px",
+                        "margin": "md",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"النتيجه: {self.score}/{self.total_q}",
+                                "size": "lg",
+                                "weight": "bold",
+                                "color": c["text"],
+                                "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": f"+{self.score} نقطة",
+                                "size": "md",
+                                "color": c["success"],
+                                "align": "center",
+                                "margin": "sm"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "md",
+                        "color": c["border"]
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "القائمه",
+                            "text": "بداية"
+                        },
+                        "style": "primary",
+                        "color": c["primary"],
+                        "margin": "md"
+                    }
                 ]
             }
         }
 
         return {
             "response": FlexMessage(
-                alt_text="انتهت اللعبة",
+                alt_text="انتهت اللعبه",
                 contents=FlexContainer.from_dict(flex)
             ),
             "game_over": True
         }
+
+    def build_question_flex(self, question: str, hint: str = None):
+        """بناء واجهة السؤال"""
+        c = self._c()
+        
+        contents = [
+            {
+                "type": "text",
+                "text": question,
+                "size": "lg",
+                "weight": "bold",
+                "color": c["text"],
+                "align": "center",
+                "wrap": True
+            }
+        ]
+        
+        if hint:
+            contents.append({
+                "type": "text",
+                "text": hint,
+                "size": "sm",
+                "color": c["text_tertiary"],
+                "align": "center",
+                "margin": "md"
+            })
+        
+        flex = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["bg"],
+                "paddingAll": "20px",
+                "contents": contents
+            }
+        }
+        
+        return FlexMessage(
+            alt_text="سؤال",
+            contents=FlexContainer.from_dict(flex)
+        )
