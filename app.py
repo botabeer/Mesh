@@ -2,7 +2,6 @@ import os
 import logging
 from threading import Thread
 from queue import Queue, Empty
-import atexit
 from datetime import datetime
 
 from flask import Flask, request, abort
@@ -23,26 +22,26 @@ from ui_builder import UIBuilder
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler('bot.log'),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Validate environment variables
 for var in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET']:
     if not os.getenv(var):
-        raise ValueError(f"Missing environment variable: {var}")
+        raise ValueError(f"Missing: {var}")
 
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
+# Initialize components
 Database.init()
 game_engine = GameEngine(configuration, Database)
 ui_builder = UIBuilder()
 
+# Task queue for background processing
 task_queue = Queue()
 
 def background_worker():
@@ -56,12 +55,13 @@ def background_worker():
         except Empty:
             continue
         except Exception as e:
-            logger.error(f"Background task error: {e}", exc_info=True)
+            logger.error(f"Task error: {e}")
 
-for _ in range(4):
-    t = Thread(target=background_worker, daemon=True)
-    t.start()
+# Start worker threads
+for _ in range(2):
+    Thread(target=background_worker, daemon=True).start()
 
+# Scheduler for cleanup
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     func=Database.cleanup_inactive_users,
@@ -71,7 +71,6 @@ scheduler.add_job(
     replace_existing=True
 )
 scheduler.start()
-atexit.register(lambda: scheduler.shutdown())
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -84,7 +83,7 @@ def callback():
         logger.error("Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"Callback error: {e}", exc_info=True)
+        logger.error(f"Callback error: {e}")
         abort(500)
     
     return 'OK', 200
@@ -110,24 +109,13 @@ def process_event(event):
         
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            
-            if isinstance(response, list):
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=response
-                    )
-                )
-            else:
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[response]
-                    )
-                )
+            messages = response if isinstance(response, list) else [response]
+            line_bot_api.reply_message(
+                ReplyMessageRequest(reply_token=event.reply_token, messages=messages)
+            )
         
     except Exception as e:
-        logger.error(f"Message processing error: {e}", exc_info=True)
+        logger.error(f"Process error: {e}")
 
 def process_command(text, user_id):
     text_normalized = text.lower().strip()
@@ -136,6 +124,7 @@ def process_command(text, user_id):
     is_registered = user_data is not None
     display_name = user_data['display_name'] if user_data else "مستخدم"
     
+    # Handle name registration
     if game_engine.is_waiting_for_name(user_id):
         name = text.strip()[:50]
         if len(name) >= 2:
@@ -144,29 +133,26 @@ def process_command(text, user_id):
             return safe_flex(ui_builder.welcome_card(name, True), "تم التسجيل")
         return TextMessage(text="الاسم يجب ان يكون حرفين على الاقل")
     
+    # Theme toggle
     if text_normalized == "تغيير_الثيم":
         new_theme = Database.toggle_user_theme(user_id)
         ui_builder.theme = new_theme
         theme_ar = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
         return safe_flex(ui_builder.welcome_card(display_name, is_registered), f"تم التغيير الى {theme_ar}")
     
+    # System commands
     resolved_command = Config.resolve_command(text_normalized)
     system_response = handle_system_commands(resolved_command, user_id, user_data, is_registered, display_name)
     if system_response:
         return system_response
     
+    # Registration
     registration_response = handle_registration(text_normalized, user_id, is_registered, display_name)
     if registration_response:
         return registration_response
     
-    user_theme = Database.get_user_theme(user_id)
-    return game_engine.process_message(
-        text=text,
-        user_id=user_id,
-        display_name=display_name,
-        is_registered=is_registered,
-        theme=user_theme
-    )
+    # Game processing
+    return game_engine.process_message(text, user_id, display_name, is_registered, user_theme)
 
 def handle_system_commands(command, user_id, user_data, is_registered, display_name):
     if command == "بداية":
@@ -198,33 +184,25 @@ def handle_registration(text_normalized, user_id, is_registered, display_name):
 
 def safe_flex(card_dict, alt_text):
     try:
-        return FlexMessage(
-            alt_text=alt_text,
-            contents=FlexContainer.from_dict(card_dict)
-        )
+        return FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(card_dict))
     except Exception as e:
-        logger.error(f"FlexMessage build error: {e}", exc_info=True)
+        logger.error(f"FlexMessage error: {e}")
         return TextMessage(text="حدث خطأ في عرض البطاقة")
 
 @app.route('/health', methods=['GET'])
 def health_check():
     return {
         'status': 'healthy',
-        'service': 'bot-mesh',
         'timestamp': datetime.now().isoformat(),
         'active_games': game_engine.get_active_games_count()
     }, 200
 
 @app.route('/')
 def index():
-    return {
-        'status': 'running',
-        'service': 'bot-mesh',
-        'version': Config.VERSION
-    }, 200
+    return {'status': 'running', 'version': Config.VERSION}, 200
 
 if __name__ == "__main__":
     port = Config.get_port()
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
-    logger.info(f"Starting Bot Mesh v{Config.VERSION} on port {port}")
+    logger.info(f"Starting Bot v{Config.VERSION} on port {port}")
     app.run(host='0.0.0.0', port=port, debug=debug)
