@@ -1,283 +1,274 @@
 import os
+import time
 import logging
+from threading import Thread, Lock
+from queue import Queue, Empty
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict, deque
 
 from flask import Flask, request, abort, jsonify
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from linebot.v3 import WebhookHandler
+from linebot.v3.exceptions import InvalidSignatureError
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
     PushMessageRequest, TextMessage, FlexMessage, FlexContainer
 )
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3 import WebhookHandler
-from apscheduler.schedulers.background import BackgroundScheduler
 
 from config import Config
 from database import Database
 from game_engine import GameEngine
 from ui_builder import UIBuilder
 
-# ------------------------------------------------------------------
+# --------------------------------------------------
 # Logging
-# ------------------------------------------------------------------
+# --------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# ------------------------------------------------------------------
-# Flask app
-# ------------------------------------------------------------------
+# --------------------------------------------------
+# App
+# --------------------------------------------------
 app = Flask(__name__)
 
-# ------------------------------------------------------------------
-# Validate environment
-# ------------------------------------------------------------------
-for var in ("LINE_CHANNEL_ACCESS_TOKEN", "LINE_CHANNEL_SECRET"):
-    if not os.getenv(var):
-        raise RuntimeError(f"Missing env var: {var}")
+# --------------------------------------------------
+# Validate ENV
+# --------------------------------------------------
+Config.validate()
 
-configuration = Configuration(
-    access_token=os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-)
-handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
+configuration = Configuration(access_token=Config.LINE_ACCESS_TOKEN)
+handler = WebhookHandler(Config.LINE_SECRET)
 
-# ------------------------------------------------------------------
-# Initialize core services
-# ------------------------------------------------------------------
+# --------------------------------------------------
+# Init core services
+# --------------------------------------------------
 Database.init()
-game_engine = GameEngine(configuration, Database)
 ui_builder = UIBuilder()
+game_engine = GameEngine(configuration, Database)
 
-# ------------------------------------------------------------------
-# Background executor (بديل Queue + Threads)
-# ------------------------------------------------------------------
-executor = ThreadPoolExecutor(max_workers=4)
+# --------------------------------------------------
+# Queue + Workers
+# --------------------------------------------------
+task_queue = Queue(maxsize=1000)
 
-# ------------------------------------------------------------------
-# Scheduler (cleanup job)
-# ------------------------------------------------------------------
+def worker():
+    while True:
+        try:
+            job = task_queue.get(timeout=1)
+            job()
+            task_queue.task_done()
+        except Empty:
+            continue
+        except Exception as e:
+            logger.exception(f"Worker crash: {e}")
+
+for _ in range(4):
+    Thread(target=worker, daemon=True).start()
+
+# --------------------------------------------------
+# Rate Limit
+# --------------------------------------------------
+_rate_lock = Lock()
+_requests = defaultdict(lambda: deque())
+
+def is_rate_limited(user_id: str) -> bool:
+    now = time.time()
+    with _rate_lock:
+        q = _requests[user_id]
+        while q and now - q[0] > Config.RATE_LIMIT_WINDOW:
+            q.popleft()
+        if len(q) >= Config.RATE_LIMIT_MESSAGES:
+            return True
+        q.append(now)
+        return False
+
+# --------------------------------------------------
+# Scheduler
+# --------------------------------------------------
 scheduler = BackgroundScheduler()
 scheduler.add_job(
-    func=Database.cleanup_inactive_users,
+    Database.cleanup_inactive_users,
     trigger="interval",
     hours=24,
-    id="cleanup",
-    replace_existing=True
+    id="cleanup"
 )
 scheduler.start()
 
-# ------------------------------------------------------------------
-# Webhook endpoint
-# ------------------------------------------------------------------
+# --------------------------------------------------
+# Webhook
+# --------------------------------------------------
 @app.route("/callback", methods=["POST"])
 def callback():
-    """LINE Webhook - رد فوري"""
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
 
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.warning("Invalid LINE signature")
         abort(400)
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        logger.exception(f"Webhook error: {e}")
 
     return jsonify({"status": "ok"}), 200
 
-
-# ------------------------------------------------------------------
-# LINE message handler (لا منطق ثقيل هنا)
-# ------------------------------------------------------------------
+# --------------------------------------------------
+# Message Handler (FAST)
+# --------------------------------------------------
 @handler.add(MessageEvent, message=TextMessageContent)
-def handle_message(event):
-    executor.submit(process_event_async, event)
+def on_message(event: MessageEvent):
+    user_id = event.source.user_id
 
+    if is_rate_limited(user_id):
+        logger.warning(f"Rate limit: {user_id}")
+        return
 
-# ------------------------------------------------------------------
-# Async processing
-# ------------------------------------------------------------------
-def process_event_async(event: MessageEvent):
     try:
-        text = event.message.text.strip()
+        task_queue.put_nowait(lambda: process_event(event))
+    except Exception:
+        logger.error("Queue full – dropped message")
+
+# --------------------------------------------------
+# Message Processing (ASYNC)
+# --------------------------------------------------
+def process_event(event: MessageEvent):
+    try:
         user_id = event.source.user_id
+        text = event.message.text.strip()
 
         Database.update_last_activity(user_id)
 
-        user_theme = Database.get_user_theme(user_id)
-        ui_builder.theme = user_theme
+        user_data = Database.get_user_stats(user_id)
+        is_registered = user_data is not None
+        display_name = user_data["display_name"] if user_data else "مستخدم"
 
-        response = process_command(text, user_id, user_theme)
+        theme = Database.get_user_theme(user_id)
+        ui_builder.theme = theme
 
-        if response is None:
-            response = TextMessage(text="اكتب 'بداية' لعرض القائمة")
+        response = handle_command(
+            text=text,
+            user_id=user_id,
+            user_data=user_data,
+            is_registered=is_registered,
+            display_name=display_name,
+            theme=theme
+        )
 
-        send_message(user_id, response)
+        if response:
+            push(user_id, response)
 
     except Exception as e:
-        logger.error(f"Process error: {e}")
+        logger.exception(f"Process error: {e}")
 
+# --------------------------------------------------
+# Command Router
+# --------------------------------------------------
+def handle_command(text, user_id, user_data, is_registered, display_name, theme):
+    normalized = Config.normalize(text)
+    cmd = Config.resolve_command(normalized)
 
-# ------------------------------------------------------------------
-# Send message (push only)
-# ------------------------------------------------------------------
-def send_message(user_id: str, messages):
-    try:
-        with ApiClient(configuration) as api_client:
-            api = MessagingApi(api_client)
-
-            if not isinstance(messages, list):
-                messages = [messages]
-
-            api.push_message(
-                PushMessageRequest(
-                    to=user_id,
-                    messages=messages
-                )
-            )
-    except Exception as e:
-        logger.error(f"Send error: {e}")
-
-
-# ------------------------------------------------------------------
-# Command processing
-# ------------------------------------------------------------------
-def process_command(text, user_id, user_theme):
-    text_normalized = text.lower().strip()
-
-    user_data = Database.get_user_stats(user_id)
-    is_registered = user_data is not None
-    display_name = user_data["display_name"] if user_data else "مستخدم"
-
-    # Waiting for name
+    # ---- Name input
     if game_engine.is_waiting_for_name(user_id):
         name = text[:50]
         if len(name) >= 2:
             Database.register_or_update_user(user_id, name)
             game_engine.set_waiting_for_name(user_id, False)
-            return safe_flex(
-                ui_builder.welcome_card(name, True),
-                "تم التسجيل"
-            )
+            return flex(ui_builder.welcome_card(name, True), "تم التسجيل")
         return TextMessage(text="الاسم يجب أن يكون حرفين على الأقل")
 
-    # Theme toggle
-    if text_normalized == "تغيير_الثيم":
+    # ---- Theme
+    if cmd == "تغيير_الثيم":
         new_theme = Database.toggle_user_theme(user_id)
         ui_builder.theme = new_theme
-        theme_ar = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
-        return safe_flex(
+        return flex(
             ui_builder.welcome_card(display_name, is_registered),
-            f"تم التغيير إلى {theme_ar}"
+            "تم تغيير الثيم"
         )
 
-    # System commands
-    resolved = Config.resolve_command(text_normalized)
-    sys_resp = handle_system_commands(
-        resolved, user_id, user_data, is_registered, display_name
-    )
-    if sys_resp:
-        return sys_resp
-
-    # Registration
-    reg_resp = handle_registration(
-        text_normalized, user_id, is_registered, display_name
-    )
-    if reg_resp:
-        return reg_resp
-
-    # Games
-    return game_engine.process_message(
-        text, user_id, display_name, is_registered, user_theme
-    )
-
-
-# ------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------
-def handle_system_commands(cmd, user_id, user_data, is_registered, display_name):
+    # ---- System
     if cmd == "بداية":
-        return safe_flex(
-            ui_builder.welcome_card(display_name, is_registered),
-            "القائمة"
-        )
+        return flex(ui_builder.welcome_card(display_name, is_registered), "القائمة")
+
     if cmd == "مساعدة":
-        return safe_flex(ui_builder.help_card(), "المساعدة")
+        return flex(ui_builder.help_card(), "المساعدة")
+
     if cmd == "العاب":
-        return safe_flex(ui_builder.games_menu_card(), "الألعاب")
+        return flex(ui_builder.games_menu_card(), "الألعاب")
+
     if cmd == "نقاطي":
         if not is_registered:
-            return TextMessage(text="يجب التسجيل أولاً\nاكتب: تسجيل")
-        return safe_flex(
-            ui_builder.stats_card(display_name, user_data),
-            "إحصائياتك"
-        )
+            return TextMessage(text="سجّل أولاً")
+        return flex(ui_builder.stats_card(display_name, user_data), "إحصائياتك")
+
     if cmd == "الصدارة":
-        leaders = Database.get_leaderboard(20)
-        return safe_flex(
-            ui_builder.leaderboard_card(leaders),
-            "الصدارة"
-        )
+        leaders = Database.get_leaderboard()
+        return flex(ui_builder.leaderboard_card(leaders), "الصدارة")
+
     if cmd == "ايقاف":
         stopped = game_engine.stop_game(user_id)
-        return TextMessage(
-            text="تم إيقاف اللعبة" if stopped else "لا توجد لعبة نشطة"
-        )
-    return None
+        return TextMessage(text="تم إيقاف اللعبة" if stopped else "لا توجد لعبة")
 
-
-def handle_registration(text, user_id, is_registered, display_name):
-    if text in ("تسجيل", "تغيير"):
+    # ---- Registration
+    if cmd in ["تسجيل", "تغيير"]:
         if game_engine.is_game_active(user_id):
             return TextMessage(text="أوقف اللعبة أولاً")
         game_engine.set_waiting_for_name(user_id, True)
-        msg = (
-            f"أنت مسجل باسم: {display_name}\n\nادخل الاسم الجديد:"
-            if is_registered else
-            "ادخل اسمك:"
-        )
-        return TextMessage(text=msg)
-    return None
+        return TextMessage(text="اكتب اسمك:")
 
+    # ---- Games (Sandboxed)
+    if game_engine.handle(user_id, cmd, theme):
+        return None
 
-def safe_flex(card, alt):
+    return TextMessage(text="اكتب (بداية) لعرض القائمة")
+
+# --------------------------------------------------
+# Push helper
+# --------------------------------------------------
+def push(user_id: str, message):
+    try:
+        with ApiClient(configuration) as api_client:
+            api = MessagingApi(api_client)
+            if not isinstance(message, list):
+                message = [message]
+            api.push_message(PushMessageRequest(
+                to=user_id,
+                messages=message
+            ))
+    except Exception as e:
+        logger.exception(f"Push error: {e}")
+
+def flex(card, alt):
     try:
         return FlexMessage(
             alt_text=alt,
             contents=FlexContainer.from_dict(card)
         )
-    except Exception as e:
-        logger.error(f"Flex error: {e}")
+    except Exception:
         return TextMessage(text="حدث خطأ")
 
-
-# ------------------------------------------------------------------
-# Health & index
-# ------------------------------------------------------------------
+# --------------------------------------------------
+# Health
+# --------------------------------------------------
 @app.route("/health")
 def health():
     return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "active_games": game_engine.get_active_games_count()
-    }, 200
-
+        "status": "ok",
+        "queue": task_queue.qsize(),
+        "active_games": game_engine.get_active_games_count(),
+        "time": datetime.utcnow().isoformat()
+    }
 
 @app.route("/")
 def index():
-    return {
-        "status": "running",
-        "version": Config.VERSION
-    }, 200
+    return {"name": Config.BOT_NAME, "version": Config.VERSION}
 
-
-# ------------------------------------------------------------------
-# Local run (ignored by Gunicorn)
-# ------------------------------------------------------------------
+# --------------------------------------------------
+# Run
+# --------------------------------------------------
 if __name__ == "__main__":
-    port = Config.get_port()
-    logger.info(f"Starting Bot v{Config.VERSION} on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=False)
+    logger.info(f"Starting {Config.BOT_NAME} v{Config.VERSION}")
+    app.run(host="0.0.0.0", port=Config.get_port())
