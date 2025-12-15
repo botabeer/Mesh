@@ -20,72 +20,78 @@ class GameManager:
             "ترتيب": ("games.scramble", "ScrambleGame"),
             "ضد": ("games.opposite", "OppositeGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
-            "انسان": ("games.human_animal_plant", "HumanAnimalPlantGame"),
-            "سلسله": ("games.chain_words", "ChainWordsGame"),
-            "تكوين": ("games.letters_words", "LettersWordsGame"),
-            "لون": ("games.word_color", "WordColorGame"),
-            "اغنيه": ("games.song", "SongGame"),
+            "انسان": ("games.remaining", "HumanAnimalPlantGame"),
+            "سلسله": ("games.remaining", "ChainWordsGame"),
+            "تكوين": ("games.remaining", "LettersWordsGame"),
+            "لون": ("games.remaining", "WordColorGame"),
+            "اغنيه": ("games.remaining", "SongGame"),
             "مافيا": ("games.mafia", "MafiaGame"),
             "توافق": ("games.compatibility", "CompatibilityGame")
         }
-        for name,(mod_path,class_name) in mappings.items():
+        
+        for name, (mod_path, class_name) in mappings.items():
             try:
-                mod=__import__(mod_path, fromlist=[class_name])
-                games[name] = getattr(mod,class_name)
-                logger.info(f"Loaded: {name}")
+                mod = __import__(mod_path, fromlist=[class_name])
+                games[name] = getattr(mod, class_name)
+                logger.info(f"Loaded {name}")
             except Exception as e:
                 logger.error(f"Failed to load {name}: {e}")
+        
         return games
 
-    def handle(self,user_id:str,cmd:str,theme:str,text:str):
+    def handle(self, user_id: str, cmd: str, theme: str, text: str):
         with self._lock:
             game = self._active.get(user_id)
 
         if game:
-            return self._handle_answer(user_id,text)
+            return self._handle_answer(user_id, text)
 
         if cmd in self._games:
-            return self._start_game(user_id,cmd,theme)
+            return self._start_game(user_id, cmd, theme)
 
         return None
 
-    def stop_game(self,user_id:str)->bool:
+    def stop_game(self, user_id: str) -> bool:
         with self._lock:
-            return self._active.pop(user_id,None) is not None
+            return self._active.pop(user_id, None) is not None
 
-    def count_active(self)->int:
+    def count_active(self) -> int:
         with self._lock:
             return len(self._active)
 
-    def _start_game(self,user_id:str,game_name:str,theme:str):
+    def _start_game(self, user_id: str, game_name: str, theme: str):
         try:
-            GameClass=self._games[game_name]
-            game=GameClass(self.db,theme)
+            GameClass = self._games[game_name]
+            game = GameClass(self.db, theme)
             with self._lock:
-                self._active[user_id]=game
+                self._active[user_id] = game
             logger.info(f"Started {game_name} for {user_id}")
             return game.start(user_id)
         except Exception as e:
             logger.exception(f"Start game error: {e}")
             with self._lock:
-                self._active.pop(user_id,None)
+                self._active.pop(user_id, None)
             return None
 
-    def _handle_answer(self,user_id:str,answer:str):
+    def _handle_answer(self, user_id: str, answer: str):
         with self._lock:
             game = self._active.get(user_id)
+        
         if not game:
             return None
+        
         try:
-            result = game.check(answer,user_id)
+            result = game.check(answer, user_id)
             if not result:
                 return None
+            
             if result.get("game_over"):
                 with self._lock:
-                    self._active.pop(user_id,None)
+                    self._active.pop(user_id, None)
+            
             return result.get("response")
         except Exception as e:
             logger.exception(f"Handle answer error: {e}")
             with self._lock:
-                self._active.pop(user_id,None)
+                self._active.pop(user_id, None)
             return None
