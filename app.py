@@ -16,6 +16,7 @@ from linebot.v3.messaging import (
 from config import Config
 from database import Database
 from game_manager import GameManager
+from text_manager import TextManager
 from ui import UI
 
 logging.basicConfig(
@@ -28,36 +29,19 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
-    raise RuntimeError("LINE credentials are missing")
+    raise RuntimeError("LINE credentials missing")
 
 line_config = Configuration(access_token=Config.LINE_TOKEN)
 handler = WebhookHandler(Config.LINE_SECRET)
 
 db = Database()
 game_mgr = GameManager(db)
+text_mgr = TextManager()
 
 executor = ThreadPoolExecutor(
     max_workers=int(os.getenv("WORKERS", 4)),
-    thread_name_prefix="bot-worker"
+    thread_name_prefix="worker"
 )
-
-
-def push_message(user_id: str, messages):
-    if not isinstance(messages, list):
-        messages = [messages]
-
-    try:
-        with ApiClient(line_config) as client:
-            api = MessagingApi(client)
-            for msg in messages:
-                api.push_message(
-                    push_message_request={
-                        "to": user_id,
-                        "messages": [msg]
-                    }
-                )
-    except Exception as e:
-        logger.error(f"Push failed for {user_id}: {e}")
 
 
 def reply_message(reply_token: str, messages):
@@ -74,7 +58,7 @@ def reply_message(reply_token: str, messages):
                 )
             )
     except Exception as e:
-        logger.error(f"Reply failed: {e}")
+        logger.error(f"Reply error: {e}")
 
 
 def process_message(user_id: str, text: str, reply_token: str):
@@ -87,6 +71,7 @@ def process_message(user_id: str, text: str, reply_token: str):
 
         cmd = Config.normalize(text)
 
+        # اوامر بدون تسجيل
         if cmd == "بدايه":
             reply_message(reply_token, [ui.main_menu(user)])
             return
@@ -96,14 +81,37 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, [UI(theme=new_theme).main_menu(user)])
             return
 
+        # نصوص بدون تسجيل
+        text_response = text_mgr.handle(cmd, ui)
+        if text_response:
+            reply_message(reply_token, [text_response])
+            return
+
+        # باقي الاوامر تحتاج تسجيل
+        if not user:
+            if cmd in ("تسجيل", "تغيير"):
+                db.set_waiting_name(user_id, True)
+                reply_message(reply_token, [ui.ask_name()])
+                return
+            
+            # مستخدم غير مسجل
+            return
+
+        # تسجيل اسم
+        if db.is_waiting_name(user_id):
+            name = text.strip()[:50]
+            if len(name) >= 2:
+                db.register_user(user_id, name)
+                db.set_waiting_name(user_id, False)
+                reply_message(reply_token, [ui.main_menu(db.get_user(user_id))])
+            return
+
+        # اوامر مسجلين فقط
         if cmd == "العاب":
             reply_message(reply_token, [ui.games_menu()])
             return
 
         if cmd == "نقاطي":
-            if not user:
-                reply_message(reply_token, [TextMessage(text="سجل اولا")])
-                return
             reply_message(reply_token, [ui.stats_card(user)])
             return
 
@@ -111,40 +119,25 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, [ui.leaderboard_card(db.get_leaderboard())])
             return
 
-        if cmd in ("تسجيل", "تغيير"):
+        if cmd == "تغيير":
             db.set_waiting_name(user_id, True)
-            reply_message(reply_token, [TextMessage(text="اكتب اسمك:")])
+            reply_message(reply_token, [ui.ask_name()])
             return
 
-        if cmd == "ايقاف":
+        if cmd == "انسحب":
             stopped = game_mgr.stop_game(user_id)
-            reply_message(
-                reply_token,
-                [TextMessage(text="تم ايقاف اللعبه" if stopped else "لا توجد لعبه نشطه")]
-            )
+            if stopped:
+                reply_message(reply_token, [ui.game_stopped()])
             return
 
-        if db.is_waiting_name(user_id):
-            name = text.strip()[:50]
-            if len(name) < 2:
-                reply_message(reply_token, [TextMessage(text="الاسم قصير جدا")])
-                return
-
-            db.register_user(user_id, name)
-            db.set_waiting_name(user_id, False)
-            reply_message(reply_token, [ui.main_menu(db.get_user(user_id))])
-            return
-
-        game_response = game_mgr.handle(user_id, cmd, theme)
+        # الالعاب
+        game_response = game_mgr.handle(user_id, cmd, theme, text)
         if game_response:
             reply_message(reply_token, [game_response])
             return
 
-        reply_message(reply_token, [TextMessage(text="اكتب: بدايه")])
-
     except Exception as e:
-        logger.exception(f"Processing error ({user_id}): {e}")
-        reply_message(reply_token, [TextMessage(text="حدث خطا غير متوقع")])
+        logger.exception(f"Error ({user_id}): {e}")
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -183,13 +176,14 @@ def health():
 @app.route("/")
 def index():
     return jsonify({
-        "name": "Bot Mesh",
-        "version": "3.1",
-        "status": "running"
+        "name": Config.BOT_NAME,
+        "version": Config.VERSION,
+        "status": "running",
+        "copyright": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
     })
 
 
 if __name__ == "__main__":
-    logger.info("Starting Bot Mesh v3.1")
+    logger.info(f"Starting {Config.BOT_NAME} v{Config.VERSION}")
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
