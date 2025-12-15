@@ -6,16 +6,12 @@ logger = logging.getLogger(__name__)
 
 
 class GameManager:
-    """مدير الألعاب - Thread-safe + LINE SDK v3 safe"""
-
     def __init__(self, db):
         self.db = db
         self._lock = Lock()
         self._active = {}
         self._games = self._load_games()
         logger.info(f"GameManager initialized with {len(self._games)} games")
-
-    # ---------------- Load Games ----------------
 
     def _load_games(self):
         games = {}
@@ -37,14 +33,7 @@ class GameManager:
 
         return games
 
-    # ---------------- Public API ----------------
-
     def handle(self, user_id: str, cmd: str, theme: str):
-        """
-        يعالج الأمر ويرجع:
-        - TextMessage / FlexMessage
-        - أو None
-        """
         with self._lock:
             game = self._active.get(user_id)
 
@@ -57,16 +46,12 @@ class GameManager:
         return None
 
     def stop_game(self, user_id: str) -> bool:
-        """إيقاف لعبة يدوية"""
         with self._lock:
             return self._active.pop(user_id, None) is not None
 
     def count_active(self) -> int:
-        """عدد الألعاب النشطة"""
         with self._lock:
             return len(self._active)
-
-    # ---------------- Internal ----------------
 
     def _start_game(self, user_id: str, game_name: str, theme: str):
         try:
@@ -77,16 +62,18 @@ class GameManager:
                 self._active[user_id] = game
 
             logger.info(f"Started game [{game_name}] for {user_id}")
-            response = game.start(user_id)
+            result = game.start(user_id)
 
-            return self._normalize_response(response)
+            if isinstance(result, dict) and "response" in result:
+                return result["response"]
+            return result
 
         except Exception:
             logger.exception("Start game error")
             with self._lock:
                 self._active.pop(user_id, None)
 
-            return TextMessage(text="❌ فشل بدء اللعبة")
+            return TextMessage(text="فشل بدء اللعبه")
 
     def _handle_answer(self, user_id: str, answer: str):
         with self._lock:
@@ -105,30 +92,11 @@ class GameManager:
                 with self._lock:
                     self._active.pop(user_id, None)
 
-            return self._normalize_response(result.get("response"))
+            return result.get("response")
 
         except Exception:
             logger.exception("Handle answer error")
             with self._lock:
                 self._active.pop(user_id, None)
 
-            return TextMessage(text="⚠️ حدث خطأ أثناء اللعبة")
-
-    # ---------------- Utils ----------------
-
-    def _normalize_response(self, response):
-        """
-        يضمن أن الناتج صالح للإرسال عبر LINE
-        """
-        if response is None:
-            return None
-
-        if isinstance(response, TextMessage):
-            return response
-
-        # لو اللعبة رجعت نص فقط
-        if isinstance(response, str):
-            return TextMessage(text=response)
-
-        logger.warning(f"Invalid game response type: {type(response)}")
-        return TextMessage(text="⚠️ استجابة غير صالحة من اللعبة")
+            return TextMessage(text="حدث خطا اثناء اللعبه")
