@@ -45,7 +45,6 @@ desktop.ini
 # Tests
 .coverage
 htmlcov/
-.pytest_cache/
 
 # Documentation
 site/
