@@ -3,6 +3,8 @@ from config import Config
 
 
 class UI:
+    """واجهة المستخدم"""
+    
     def __init__(self, theme: str = "light"):
         self.theme = theme
 
@@ -60,6 +62,7 @@ class UI:
         }
 
     def main_menu(self, user):
+        """القائمة الرئيسية"""
         c = self._c()
 
         if not user:
@@ -85,7 +88,7 @@ class UI:
                     {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
                      "contents": [self._btn("الالعاب", "العاب"), self._btn("نقاطي", "نقاطي")]},
                     {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
-                     "contents": [self._btn("الصدارة", "الصدارة"), self._btn("تغيير الاسم", "تغيير")]}
+                     "contents": [self._btn("الصداره", "الصداره"), self._btn("تغيير الاسم", "تغيير")]}
                 ], "12px"),
                 {"type": "separator", "margin": "md", "color": c["border"]},
                 self._btn(f"الوضع {'الفاتح' if self.theme == 'dark' else 'الداكن'}", "تغيير_الثيم")
@@ -101,6 +104,120 @@ class UI:
         })
 
         return FlexMessage(
-            alt_text="القائمة الرئيسية",
+            alt_text="القائمه الرئيسيه",
+            contents=FlexContainer.from_dict(self._bubble(contents))
+        )
+
+    def games_menu(self):
+        """قائمة الالعاب"""
+        c = self._c()
+        
+        games = [
+            ("ذكاء", "الغاز ذكاء"),
+            ("خمن", "حزر الكلمه"),
+            ("رياضيات", "عمليات حسابيه")
+        ]
+        
+        buttons = []
+        for cmd, desc in games:
+            buttons.append({
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["glass"],
+                "cornerRadius": "12px",
+                "paddingAll": "12px",
+                "margin": "sm",
+                "action": {"type": "message", "label": cmd, "text": cmd},
+                "contents": [
+                    {"type": "text", "text": cmd, "weight": "bold", "color": c["primary"], "size": "md"},
+                    {"type": "text", "text": desc, "color": c["text_secondary"], "size": "xs", "margin": "xs"}
+                ]
+            })
+        
+        contents = [
+            self._header("الالعاب"),
+            {"type": "separator", "margin": "md", "color": c["border"]}
+        ] + buttons + [
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            self._btn("رجوع", "بداية")
+        ]
+        
+        return FlexMessage(
+            alt_text="قائمه الالعاب",
+            contents=FlexContainer.from_dict(self._bubble(contents))
+        )
+
+    def stats_card(self, user):
+        """بطاقة الاحصائيات"""
+        c = self._c()
+        
+        contents = [
+            self._header("احصائياتي"),
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            self._glass_box([
+                {"type": "text", "text": user['name'], "weight": "bold", "size": "lg", "color": c["text"], "align": "center"},
+                {"type": "box", "layout": "horizontal", "margin": "md", "contents": [
+                    {"type": "box", "layout": "vertical", "contents": [
+                        {"type": "text", "text": "النقاط", "size": "xs", "color": c["text_tertiary"], "align": "center"},
+                        {"type": "text", "text": str(user['points']), "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"}
+                    ]},
+                    {"type": "separator", "color": c["border"]},
+                    {"type": "box", "layout": "vertical", "contents": [
+                        {"type": "text", "text": "الالعاب", "size": "xs", "color": c["text_tertiary"], "align": "center"},
+                        {"type": "text", "text": str(user['games']), "size": "xl", "weight": "bold", "color": c["text"], "align": "center"}
+                    ]},
+                    {"type": "separator", "color": c["border"]},
+                    {"type": "box", "layout": "vertical", "contents": [
+                        {"type": "text", "text": "الفوز", "size": "xs", "color": c["text_tertiary"], "align": "center"},
+                        {"type": "text", "text": str(user['wins']), "size": "xl", "weight": "bold", "color": c["success"], "align": "center"}
+                    ]}
+                ]}
+            ]),
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            self._btn("رجوع", "بداية")
+        ]
+        
+        return FlexMessage(
+            alt_text="احصائياتي",
+            contents=FlexContainer.from_dict(self._bubble(contents))
+        )
+
+    def leaderboard_card(self, leaders):
+        """لوحة الصداره"""
+        c = self._c()
+        
+        if not leaders:
+            contents = [
+                self._header("الصداره"),
+                {"type": "separator", "margin": "md", "color": c["border"]},
+                {"type": "text", "text": "لا يوجد لاعبون بعد", "align": "center", "color": c["text_secondary"], "margin": "md"},
+                {"type": "separator", "margin": "md", "color": c["border"]},
+                self._btn("رجوع", "بداية")
+            ]
+        else:
+            rank_items = []
+            for i, (name, points) in enumerate(leaders[:10], 1):
+                emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                rank_items.append({
+                    "type": "box",
+                    "layout": "horizontal",
+                    "margin": "sm",
+                    "contents": [
+                        {"type": "text", "text": emoji, "size": "sm", "flex": 1, "color": c["text"]},
+                        {"type": "text", "text": name, "size": "sm", "flex": 4, "color": c["text"]},
+                        {"type": "text", "text": str(points), "size": "sm", "flex": 2, "align": "end", "color": c["primary"], "weight": "bold"}
+                    ]
+                })
+            
+            contents = [
+                self._header("الصداره"),
+                {"type": "separator", "margin": "md", "color": c["border"]},
+                self._glass_box(rank_items, "12px"),
+                {"type": "separator", "margin": "md", "color": c["border"]},
+                self._btn("رجوع", "بداية")
+            ]
+        
+        return FlexMessage(
+            alt_text="لوحه الصداره",
             contents=FlexContainer.from_dict(self._bubble(contents))
         )
