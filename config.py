@@ -6,8 +6,8 @@ load_dotenv()
 
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "6.0"
-    COPYRIGHT = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
+    VERSION = "7.0"
+    COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
@@ -24,7 +24,7 @@ class Config:
             "danger": "#FF3B30",
             "bg": "#FFFFFF",
             "bg_secondary": "#F2F2F7",
-            "glass": "#F2F2F7",
+            "glass": "#F2F2F780",
             "card": "#FFFFFF",
             "text": "#000000",
             "text_secondary": "#3C3C43",
@@ -39,7 +39,7 @@ class Config:
             "danger": "#FF453A",
             "bg": "#000000",
             "bg_secondary": "#1C1C1E",
-            "glass": "#2C2C2E",
+            "glass": "#2C2C2E80",
             "card": "#1C1C1E",
             "text": "#FFFFFF",
             "text_secondary": "#EBEBF5",
