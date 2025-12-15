@@ -1,12 +1,9 @@
-from linebot.v3.messaging import FlexMessage, FlexContainer
+from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage
 from config import Config
 
 
 class UI:
     def __init__(self, theme: str = "light"):
-        self.theme = theme
-
-    def set_theme(self, theme: str):
         self.theme = theme
 
     def _c(self):
@@ -15,11 +12,7 @@ class UI:
     def _btn(self, label: str, action: str, style: str = "secondary"):
         return {
             "type": "button",
-            "action": {
-                "type": "message",
-                "label": label,
-                "text": action
-            },
+            "action": {"type": "message", "label": label, "text": action},
             "style": style,
             "height": "sm"
         }
@@ -35,12 +28,12 @@ class UI:
             "contents": contents
         }
 
-    def _header(self, text: str, size: str = "xl"):
+    def _header(self, text: str):
         c = self._c()
         return {
             "type": "text",
             "text": text,
-            "size": size,
+            "size": "xl",
             "weight": "bold",
             "color": c["primary"],
             "align": "center"
@@ -73,6 +66,14 @@ class UI:
                      "color": c["warning"], "margin": "sm"}
                 ]),
                 {"type": "separator", "margin": "lg"},
+                self._glass_box([
+                    {"type": "text", "text": "النصوص", "size": "sm", "color": c["text_tertiary"]},
+                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
+                     "contents": [self._btn("تحدي", "تحدي"), self._btn("اعتراف", "اعتراف")]},
+                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
+                     "contents": [self._btn("منشن", "منشن"), self._btn("سؤال", "سؤال")]}
+                ], "12px"),
+                {"type": "separator", "margin": "md"},
                 self._btn("تسجيل", "تسجيل", "primary")
             ]
         else:
@@ -81,26 +82,27 @@ class UI:
                 self._glass_box([
                     {"type": "text", "text": f"مرحبا {user['name']}", "align": "center",
                      "size": "lg", "color": c["text"], "weight": "bold"},
-                    {"type": "text", "text": f"النقاط: {user['points']}", "align": "center",
+                    {"type": "text", "text": f"النقاط {user['points']}", "align": "center",
                      "size": "md", "color": c["primary"], "margin": "sm"}
                 ]),
                 {"type": "separator", "margin": "lg"},
                 self._glass_box([
                     {"type": "text", "text": "القوائم", "size": "sm", "color": c["text_tertiary"]},
-                    {
-                        "type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
-                        "contents": [self._btn("الالعاب", "العاب"), self._btn("نقاطي", "نقاطي")]
-                    },
-                    {
-                        "type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
-                        "contents": [self._btn("الصداره", "الصداره"), self._btn("تغيير الاسم", "تغيير")]
-                    }
+                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
+                     "contents": [self._btn("الالعاب", "العاب"), self._btn("نقاطي", "نقاطي")]},
+                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
+                     "contents": [self._btn("الصداره", "الصداره"), self._btn("تغيير الاسم", "تغيير")]}
                 ], "12px"),
                 {"type": "separator", "margin": "md"},
-                self._btn(
-                    f"الوضع {'الفاتح' if self.theme == 'dark' else 'الداكن'}",
-                    "تغيير_الثيم"
-                )
+                self._glass_box([
+                    {"type": "text", "text": "النصوص", "size": "sm", "color": c["text_tertiary"]},
+                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
+                     "contents": [self._btn("تحدي", "تحدي"), self._btn("اعتراف", "اعتراف")]},
+                    {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
+                     "contents": [self._btn("منشن", "منشن"), self._btn("سؤال", "سؤال")]}
+                ], "12px"),
+                {"type": "separator", "margin": "md"},
+                self._btn(f"الوضع {'الفاتح' if self.theme == 'dark' else 'الداكن'}", "تغيير_الثيم")
             ]
 
         contents.append({
@@ -123,7 +125,15 @@ class UI:
         games = [
             ("ذكاء", "الغاز ذكاء"),
             ("خمن", "خمن الكلمه"),
-            ("رياضيات", "عمليات حسابيه")
+            ("رياضيات", "عمليات حسابيه"),
+            ("ترتيب", "رتب الحروف"),
+            ("ضد", "عكس الكلمه"),
+            ("اسرع", "اكتب بسرعه"),
+            ("انسان", "انسان حيوان نبات"),
+            ("سلسله", "سلسلة الكلمات"),
+            ("تكوين", "كون كلمات"),
+            ("لون", "لون الكلمه"),
+            ("اغنيه", "من المغني")
         ]
 
         cards = []
@@ -158,22 +168,29 @@ class UI:
     def stats_card(self, user):
         c = self._c()
 
+        win_rate = int((user['wins'] / user['games'] * 100)) if user['games'] > 0 else 0
+
         contents = [
             self._header("احصائياتي"),
             {"type": "separator", "margin": "md"},
             self._glass_box([
                 {"type": "text", "text": user['name'], "weight": "bold",
                  "size": "lg", "color": c["text"], "align": "center"},
-                {
-                    "type": "box", "layout": "horizontal", "margin": "md",
-                    "contents": [
-                        self._stat("النقاط", user['points'], c["primary"]),
-                        {"type": "separator"},
-                        self._stat("الالعاب", user['games'], c["text"]),
-                        {"type": "separator"},
-                        self._stat("الفوز", user['wins'], c["success"])
-                    ]
-                }
+                {"type": "box", "layout": "horizontal", "margin": "md",
+                 "contents": [
+                     self._stat("النقاط", user['points'], c["primary"]),
+                     {"type": "separator"},
+                     self._stat("الالعاب", user['games'], c["text"]),
+                     {"type": "separator"},
+                     self._stat("الفوز", user['wins'], c["success"])
+                 ]},
+                {"type": "box", "layout": "vertical", "margin": "md",
+                 "contents": [
+                     {"type": "text", "text": "نسبة الفوز", "size": "xs",
+                      "color": c["text_tertiary"], "align": "center"},
+                     {"type": "text", "text": f"{win_rate}%", "size": "xl", "weight": "bold",
+                      "color": c["primary"], "align": "center"}
+                 ]}
             ]),
             {"type": "separator", "margin": "md"},
             self._btn("رجوع", "بدايه")
@@ -235,3 +252,9 @@ class UI:
             alt_text="لوحه الصداره",
             contents=FlexContainer.from_dict(self._bubble(contents))
         )
+
+    def ask_name(self):
+        return TextMessage(text="اكتب اسمك")
+
+    def game_stopped(self):
+        return TextMessage(text="تم الانسحاب من اللعبه")
