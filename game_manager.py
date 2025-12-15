@@ -20,11 +20,6 @@ class GameManager:
             "ترتيب": ("games.scramble", "ScrambleGame"),
             "ضد": ("games.opposite", "OppositeGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
-            "انسان": ("games.remaining", "HumanAnimalPlantGame"),
-            "سلسله": ("games.remaining", "ChainWordsGame"),
-            "تكوين": ("games.remaining", "LettersWordsGame"),
-            "لون": ("games.remaining", "WordColorGame"),
-            "اغنيه": ("games.remaining", "SongGame"),
             "مافيا": ("games.mafia", "MafiaGame"),
             "توافق": ("games.compatibility", "CompatibilityGame")
         }
