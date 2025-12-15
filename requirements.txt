@@ -1,14 +1,5 @@
 Flask
 line-bot-sdk
-APScheduler
 python-dotenv
 gunicorn
-pytz
 Werkzeug
-Jinja2
-itsdangerous
-MarkupSafe
-click
-blinker
-tzlocal
-six
