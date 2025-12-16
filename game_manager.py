@@ -6,15 +6,17 @@ logger = logging.getLogger(__name__)
 
 
 class GameManager:
+    """مدير الألعاب المحسّن"""
+    
     def __init__(self, db):
         self.db = db
         self._lock = Lock()
         self._active = {}
         self._games = self._load_games()
-        logger.info(f"GameManager initialized with {len(self._games)} games")
+        logger.info(f"GameManager: {len(self._games)} games loaded")
 
     def _load_games(self):
-        """Load all available games"""
+        """تحميل جميع الألعاب"""
         games = {}
 
         game_mappings = {
@@ -29,21 +31,22 @@ class GameManager:
             "كون كلمات": ("games.letters_words", "LettersWordsGame"),
             "اغاني": ("games.song", "SongGame"),
             "الوان": ("games.word_color", "WordColorGame"),
-            "مافيا": ("games.mafia", "MafiaGame"),
             "توافق": ("games.compatibility", "CompatibilityGame"),
+            "مافيا": ("games.mafia", "MafiaGame"),
         }
 
         for game_name, (module_path, class_name) in game_mappings.items():
             try:
                 module = __import__(module_path, fromlist=[class_name])
                 game_class = getattr(module, class_name)
+                
                 test_instance = game_class(self.db, "light")
                 
                 if not hasattr(test_instance, 'start'):
                     raise AttributeError(f"{class_name} missing start() method")
                 
                 games[game_name] = game_class
-                logger.info(f"Loaded: {game_name} -> {class_name}")
+                logger.info(f"Loaded: {game_name}")
             except ImportError as e:
                 logger.error(f"Import failed [{game_name}]: {e}")
             except AttributeError as e:
@@ -54,9 +57,12 @@ class GameManager:
         return games
 
     def handle(self, user_id: str, cmd: str, theme: str, raw_text: str):
-        """Handle game commands"""
+        """معالجة أوامر اللعبة"""
         user = self.db.get_user(user_id)
         if not user:
+            normalized_cmd = Config.normalize(cmd)
+            if normalized_cmd in ["توافق", "مافيا"]:
+                return self._start_game(user_id, normalized_cmd, theme)
             return None
 
         with self._lock:
@@ -73,7 +79,7 @@ class GameManager:
         return None
 
     def stop_game(self, user_id: str) -> bool:
-        """Stop current game"""
+        """إيقاف اللعبة الحالية"""
         with self._lock:
             game = self._active.pop(user_id, None)
 
@@ -92,14 +98,16 @@ class GameManager:
             except Exception as e:
                 logger.error(f"Error in game on_stop: {e}")
 
-        logger.info(f"Game stopped for {user_id}")
+        logger.info(f"Game stopped: {user_id}")
         return True
 
     def count_active(self) -> int:
+        """عدد الألعاب النشطة"""
         with self._lock:
             return len(self._active)
 
     def get_active_games(self):
+        """الألعاب النشطة"""
         with self._lock:
             return {
                 uid: type(game).__name__
@@ -107,6 +115,7 @@ class GameManager:
             }
 
     def _start_game(self, user_id: str, game_name: str, theme: str):
+        """بدء لعبة جديدة"""
         try:
             GameClass = self._games[game_name]
             game = GameClass(self.db, theme)
@@ -120,10 +129,9 @@ class GameManager:
             with self._lock:
                 self._active[user_id] = game
             
-            logger.info(f"Started '{game_name}' for {user_id}")
+            logger.info(f"Started: {game_name} for {user_id}")
             response = game.start(user_id)
             
-            # Ensure response is valid
             if not response:
                 with self._lock:
                     self._active.pop(user_id, None)
@@ -138,6 +146,7 @@ class GameManager:
             return None
 
     def _handle_answer(self, user_id: str, raw_answer: str):
+        """معالجة الإجابة"""
         with self._lock:
             game = self._active.get(user_id)
         
@@ -158,7 +167,7 @@ class GameManager:
                 won = result.get("won", False)
                 self.db.finish_game(user_id, won)
                 self.db.clear_game_progress(user_id)
-                logger.info(f"Game finished for {user_id}, won={won}")
+                logger.info(f"Game finished: {user_id}, won={won}")
             
             return result.get("response")
             
