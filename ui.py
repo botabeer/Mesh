@@ -12,30 +12,26 @@ class UI:
     def __init__(self, theme: str = "light"):
         self.theme = theme
 
+    # ===============================
+    # Theme
+    # ===============================
     def _c(self):
         return Config.get_theme(self.theme)
 
     # ===============================
-    # Quick Reply ثابت
+    # Global Quick Reply
     # ===============================
     def _global_quick_reply(self):
         return QuickReply(items=[
             QuickReplyItem(action=MessageAction(label="القائمة", text="بداية")),
             QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
-            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
-            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
-            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
-            QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
-            QuickReplyItem(action=MessageAction(label="موقف", text="موقف")),
-            QuickReplyItem(action=MessageAction(label="حكمة", text="حكمة")),
-            QuickReplyItem(action=MessageAction(label="شخصية", text="شخصية")),
             QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
             QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
             QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
         ])
 
     # ===============================
-    # Helpers
+    # UI Helpers
     # ===============================
     def _glass_box(self, contents):
         c = self._c()
@@ -46,17 +42,17 @@ class UI:
             "backgroundColor": c["glass"],
             "cornerRadius": "16px",
             "paddingAll": "16px",
-            "margin": "md",
             "spacing": "sm",
+            "margin": "md",
             "borderWidth": "1px",
             "borderColor": c["glass_border"]
         }
 
-    def _button(self, label, action, style="secondary", color=None):
+    def _button(self, label, text, style="secondary", color=None):
         c = self._c()
         btn = {
             "type": "button",
-            "action": {"type": "message", "label": label, "text": action},
+            "action": {"type": "message", "label": label, "text": text},
             "style": style,
             "height": "sm",
             "margin": "xs"
@@ -94,26 +90,26 @@ class UI:
         hero = {
             "type": "box",
             "layout": "vertical",
+            "paddingAll": "20px",
+            "backgroundColor": c["glass"],
             "contents": [
                 {
                     "type": "text",
                     "text": Config.BOT_NAME,
                     "size": "xxl",
                     "weight": "bold",
-                    "color": c["primary"],
-                    "align": "center"
+                    "align": "center",
+                    "color": c["primary"]
                 },
                 {
                     "type": "text",
                     "text": "منصة الالعاب التفاعلية",
                     "size": "xs",
-                    "color": c["text_tertiary"],
                     "align": "center",
+                    "color": c["text_tertiary"],
                     "margin": "xs"
                 }
-            ],
-            "paddingAll": "20px",
-            "backgroundColor": c["glass"]
+            ]
         }
 
         contents = []
@@ -129,7 +125,6 @@ class UI:
                             "text": f"مرحبا {user['name']}",
                             "size": "lg",
                             "weight": "bold",
-                            "color": c["text"],
                             "flex": 3
                         },
                         {
@@ -137,8 +132,8 @@ class UI:
                             "text": f"{user['points']} نقطة",
                             "size": "md",
                             "weight": "bold",
-                            "color": c["success"],
                             "align": "end",
+                            "color": c["success"],
                             "flex": 2
                         }
                     ]
@@ -165,24 +160,6 @@ class UI:
             },
             {
                 "type": "text",
-                "text": "محتوى تفاعلي",
-                "size": "md",
-                "weight": "bold",
-                "color": c["text_secondary"],
-                "margin": "md"
-            },
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "contents": [
-                    self._button("تحدي", "تحدي"),
-                    self._button("سؤال", "سؤال"),
-                    self._button("اعتراف", "اعتراف")
-                ]
-            },
-            {
-                "type": "text",
                 "text": "الملف الشخصي",
                 "size": "md",
                 "weight": "bold",
@@ -203,8 +180,8 @@ class UI:
                 "type": "text",
                 "text": f"{Config.BOT_NAME} v{Config.VERSION}",
                 "size": "xxs",
-                "color": c["text_tertiary"],
-                "align": "center"
+                "align": "center",
+                "color": c["text_tertiary"]
             }
         ])
 
@@ -217,8 +194,30 @@ class UI:
     # ===============================
     # Games Menu
     # ===============================
-    def games_menu(self):
+    def games_menu(self, games: list):
         c = self._c()
+
+        rows = []
+        row = []
+
+        for i, game in enumerate(games, 1):
+            row.append(self._button(game, game, "primary"))
+            if i % 3 == 0:
+                rows.append({
+                    "type": "box",
+                    "layout": "horizontal",
+                    "spacing": "sm",
+                    "contents": row
+                })
+                row = []
+
+        if row:
+            rows.append({
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": row
+            })
 
         contents = [
             {
@@ -226,33 +225,11 @@ class UI:
                 "text": "الالعاب المتاحة",
                 "size": "xxl",
                 "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
+                "align": "center",
+                "color": c["primary"]
             },
             {"type": "separator", "margin": "lg", "color": c["border"]},
-            self._glass_box([
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "contents": [
-                        self._button("ذكاء", "ذكاء", "primary"),
-                        self._button("خمن", "خمن", "primary"),
-                        self._button("رياضيات", "رياضيات", "primary")
-                    ]
-                },
-                {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "sm",
-                    "margin": "xs",
-                    "contents": [
-                        self._button("ترتيب", "ترتيب"),
-                        self._button("ضد", "ضد"),
-                        self._button("اسرع", "اسرع")
-                    ]
-                }
-            ]),
+            self._glass_box(rows),
             self._button("العودة", "بداية")
         ]
 
@@ -268,11 +245,11 @@ class UI:
     def help_menu(self):
         c = self._c()
 
-        sections = [
-            ("الاوامر الرئيسية", "بداية - تسجيل - العاب - نقاطي - الصدارة - انسحب"),
-            ("العاب ذهنية", "ذكاء - خمن - رياضيات - ترتيب - ضد - اسرع"),
-            ("العاب كلمات", "سلسلة - انسان حيوان - اغاني"),
-            ("اوامر اللعبة", "لمح - جاوب - انسحب"),
+        items = [
+            "بداية - تسجيل - العاب - نقاطي - الصدارة",
+            "انسحب لإيقاف اللعبة الحالية",
+            "كل لعبة تتكون من 5 اسئلة",
+            "يتم حفظ التقدم تلقائيا"
         ]
 
         contents = [
@@ -281,24 +258,16 @@ class UI:
                 "text": "المساعدة",
                 "size": "xxl",
                 "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
+                "align": "center",
+                "color": c["primary"]
             },
             {"type": "separator", "margin": "lg", "color": c["border"]}
         ]
 
-        for title, items in sections:
+        for item in items:
             contents.append({
                 "type": "text",
-                "text": title,
-                "size": "md",
-                "weight": "bold",
-                "color": c["text_secondary"],
-                "margin": "md"
-            })
-            contents.append({
-                "type": "text",
-                "text": items,
+                "text": item,
                 "size": "sm",
                 "wrap": True
             })
@@ -323,8 +292,8 @@ class UI:
                 "text": "التسجيل",
                 "size": "xxl",
                 "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
+                "align": "center",
+                "color": c["primary"]
             },
             {"type": "separator", "margin": "lg", "color": c["border"]},
             self._glass_box([
@@ -355,8 +324,8 @@ class UI:
                 "text": "تم ايقاف اللعبة",
                 "size": "xl",
                 "weight": "bold",
-                "color": c["warning"],
-                "align": "center"
+                "align": "center",
+                "color": c["warning"]
             },
             self._button("العودة", "بداية", "primary")
         ]
