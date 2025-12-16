@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
     # App Info
     BOT_NAME = "Bot Mesh"
-    VERSION = "10.1"
+    VERSION = "10.2"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     # LINE Credentials
@@ -26,56 +26,22 @@ class Config:
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 2
 
-    # الأوامر المحجوزة (لا تقبل كأسماء)
+    # Reserved Commands
     RESERVED_COMMANDS = {
-        "بدايه", "بداية",
-        "العاب",
-        "نقاطي",
-        "الصداره", "الصدارة",
-        "ثيم",
-        "مساعده", "مساعدة",
-        "تسجيل",
-        "انسحب",
-        "ايقاف",
-        "تغيير الاسم", "تغيير اسمي",
-        # أسماء الألعاب
-        "ذكاء",
-        "خمن",
-        "رياضيات",
-        "ترتيب",
-        "ضد",
-        "اسرع",
-        "سلسله", "سلسلة",
-        "انسان حيوان",
-        "كون كلمات",
-        "اغاني",
-        "الوان",
-        "مافيا",
-        "توافق",
-        "صواب خطا",
-        # محتوى تفاعلي
-        "تحدي",
-        "سؤال", "سوال",
-        "اعتراف",
-        "منشن",
-        "موقف",
-        "حكمه", "حكمة",
-        "شخصيه", "شخصية"
+        "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
+        "ثيم", "مساعده", "مساعدة", "تسجيل", "انسحب", "ايقاف",
+        "تغيير الاسم", "تغيير اسمي", "ذكاء", "خمن", "رياضيات",
+        "ترتيب", "ضد", "اسرع", "سلسله", "سلسلة", "تحدي", "سؤال",
+        "سوال", "اعتراف", "منشن", "موقف", "حكمه", "حكمة", "شخصيه", "شخصية"
     }
 
-    # أوامر رئيسية (تجاهلها داخل اللعبة)
+    # Main Commands (ignore in game)
     MAIN_COMMANDS = {
-        "بدايه", "بداية",
-        "العاب",
-        "نقاطي",
-        "الصداره", "الصدارة",
-        "ثيم",
-        "مساعده", "مساعدة",
-        "تسجيل",
-        "تغيير الاسم", "تغيير اسمي"
+        "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
+        "ثيم", "مساعده", "مساعدة", "تسجيل", "تغيير الاسم", "تغيير اسمي"
     }
 
-    # Themes
+    # Themes with all required colors
     THEMES = {
         "light": {
             "primary": "#007AFF",
@@ -83,6 +49,7 @@ class Config:
             "success": "#34C759",
             "warning": "#FF9500",
             "danger": "#FF3B30",
+            "error": "#FF3B30",  # Added
             "info": "#5AC8FA",
             "bg": "#F2F2F7",
             "bg_secondary": "#FFFFFF",
@@ -99,6 +66,7 @@ class Config:
             "success": "#30D158",
             "warning": "#FF9F0A",
             "danger": "#FF453A",
+            "error": "#FF453A",  # Added
             "info": "#64D2FF",
             "bg": "#000000",
             "bg_secondary": "#1C1C1E",
@@ -117,17 +85,17 @@ class Config:
 
     @classmethod
     def normalize(cls, text: str) -> str:
-        """تطبيع موحّد للنصوص العربية"""
+        """Unified Arabic text normalization"""
         if not text:
             return ""
 
         text = text.strip().lower()
         text = text[:1000]
 
-        # إزالة التشكيل
+        # Remove diacritics
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
 
-        # توحيد الحروف
+        # Unify letters
         replacements = {
             "أ": "ا", "إ": "ا", "آ": "ا",
             "ى": "ي", "ة": "ه",
@@ -136,10 +104,10 @@ class Config:
         for old, new in replacements.items():
             text = text.replace(old, new)
 
-        # تنظيف الرموز
+        # Clean symbols
         text = re.sub(r"[^\w\sء-ي]", "", text)
 
-        # تنظيف المسافات
+        # Clean whitespace
         text = re.sub(r"\s+", " ", text).strip()
 
         return text
