@@ -17,7 +17,6 @@ from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
 
-# إعداد Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -25,19 +24,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Flask App
 app = Flask(__name__)
 
-# LINE Configuration
 line_config = Configuration(access_token=Config.LINE_TOKEN)
 handler = WebhookHandler(Config.LINE_SECRET)
 
-# Core Components
 db = Database()
 game_mgr = GameManager(db)
 text_mgr = TextManager()
 
-# Thread Pool للمعالجة
 executor = ThreadPoolExecutor(
     max_workers=Config.WORKERS,
     thread_name_prefix="worker"
@@ -45,7 +40,7 @@ executor = ThreadPoolExecutor(
 
 
 def reply_message(reply_token: str, messages):
-    """إرسال رسالة رد"""
+    """ارسال رسالة رد"""
     if not messages:
         return
 
@@ -75,15 +70,12 @@ def process_message(user_id: str, text: str, reply_token: str):
             logger.warning("Empty command")
             return
 
-        # تحديث نشاط المستخدم
         db.update_activity(user_id)
         user = db.get_user(user_id)
         theme = db.get_theme(user_id) if user else "light"
         ui = UI(theme=theme)
 
-        # ========================================
-        # أولوية 1: الأوامر العامة (تعمل دائماً)
-        # ========================================
+        # اولوية 1: الاوامر العامة
         if cmd in ("بدايه", "بداية"):
             logger.info("Main menu requested")
             reply_message(reply_token, ui.main_menu(user))
@@ -94,11 +86,7 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, ui.help_menu())
             return
 
-        # ========================================
-        # أولوية 2: حالات الانتظار
-        # ========================================
-        
-        # انتظار إدخال الاسم (تسجيل جديد)
+        # اولوية 2: حالات الانتظار
         if db.is_waiting_name(user_id):
             logger.info("User waiting for name input")
             
@@ -123,7 +111,6 @@ def process_message(user_id: str, text: str, reply_token: str):
                 reply_message(reply_token, ui.ask_name_invalid())
             return
 
-        # انتظار تغيير الاسم
         if db.is_changing_name(user_id):
             logger.info("User changing name")
             
@@ -147,11 +134,29 @@ def process_message(user_id: str, text: str, reply_token: str):
                 reply_message(reply_token, ui.ask_new_name_invalid())
             return
 
-        # ========================================
-        # أولوية 3: المستخدمون غير المسجلين
-        # ========================================
+        # اولوية 3: المستخدمون غير المسجلين
         if not user:
             logger.info("Unregistered user")
+            
+            # السماح بالالعاب بدون تسجيل
+            normalized_cmd = Config.normalize(cmd)
+            if normalized_cmd in ["توافق", "مافيا", "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمه", "حكمة", "شخصيه", "شخصية"]:
+                # محاولة تشغيل اللعبة او المحتوى
+                game_response = game_mgr.handle(
+                    user_id=user_id,
+                    cmd=normalized_cmd,
+                    theme="light",
+                    raw_text=text
+                )
+                if game_response:
+                    reply_message(reply_token, game_response)
+                    return
+                
+                text_response = text_mgr.handle(normalized_cmd, "light")
+                if text_response:
+                    reply_message(reply_token, text_response)
+                    return
+            
             if cmd == "تسجيل":
                 db.set_waiting_name(user_id, True)
                 reply_message(reply_token, ui.ask_name())
@@ -159,11 +164,7 @@ def process_message(user_id: str, text: str, reply_token: str):
                 reply_message(reply_token, ui.registration_required())
             return
 
-        # ========================================
-        # أولوية 4: أوامر المستخدم المسجل
-        # ========================================
-        
-        # تبديل السمة
+        # اولوية 4: اوامر المستخدم المسجل
         if cmd == "ثيم":
             logger.info("Theme toggle")
             new_theme = db.toggle_theme(user_id)
@@ -171,41 +172,28 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, UI(theme=new_theme).main_menu(user))
             return
 
-        # الإحصائيات
         if cmd == "نقاطي":
             logger.info("Stats requested")
             reply_message(reply_token, ui.stats_card(user))
             return
 
-        # الصدارة
         if cmd in ("الصداره", "الصدارة"):
             logger.info("Leaderboard requested")
             reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
             return
 
-        # قائمة الألعاب
         if cmd == "العاب":
             logger.info("Games menu requested")
             reply_message(reply_token, ui.games_menu())
             return
 
-        # تغيير الاسم
         if cmd in ("تغيير الاسم", "تغيير اسمي"):
             logger.info("Change name requested")
             db.set_changing_name(user_id, True)
             reply_message(reply_token, ui.ask_new_name())
             return
 
-        # الانسحاب من اللعبة
-        if cmd == "انسحب":
-            logger.info("Game quit requested")
-            if game_mgr.stop_game(user_id):
-                reply_message(reply_token, ui.game_stopped())
-            else:
-                logger.info("No active game to quit")
-            return
-
-        # إيقاف اللعبة
+        # ايقاف اللعبة الحالية (يحفظ التقدم)
         if cmd in ("ايقاف", "ايقاف اللعبة"):
             logger.info("Game stop requested")
             if game_mgr.stop_game(user_id):
@@ -214,18 +202,20 @@ def process_message(user_id: str, text: str, reply_token: str):
                 logger.info("No active game to stop")
             return
 
-        # ========================================
-        # أولوية 5: المحتوى النصي التفاعلي
-        # ========================================
+        # انسحب - يتم تجاهله في القروبات
+        if cmd == "انسحب":
+            logger.info("Withdraw command - ignored in groups")
+            # لا نفعل شيء، فقط نتجاهله لتجنب الازعاج في القروبات
+            return
+
+        # اولوية 5: المحتوى النصي التفاعلي
         text_response = text_mgr.handle(cmd, theme)
         if text_response:
             logger.info("Static text response")
             reply_message(reply_token, text_response)
             return
 
-        # ========================================
-        # أولوية 6: الألعاب
-        # ========================================
+        # اولوية 6: الالعاب
         game_response = game_mgr.handle(
             user_id=user_id,
             cmd=cmd,
@@ -250,7 +240,6 @@ def process_message(user_id: str, text: str, reply_token: str):
             pass
 
 
-# Webhook Handler
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event: MessageEvent):
     """معالجة الرسائل الواردة"""
@@ -262,7 +251,6 @@ def on_message(event: MessageEvent):
     executor.submit(process_message, user_id, text, reply_token)
 
 
-# Routes
 @app.route("/callback", methods=["POST"])
 def callback():
     """LINE Webhook Callback"""
@@ -315,13 +303,11 @@ def index():
     })
 
 
-# Entry Point
 if __name__ == "__main__":
     logger.info(f"Starting {Config.BOT_NAME} v{Config.VERSION}")
     logger.info(f"Environment: {Config.ENV}")
     logger.info(f"Available games: {list(game_mgr._games.keys())}")
     
-    # Scheduler للتنظيف الدوري
     from apscheduler.schedulers.background import BackgroundScheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(
