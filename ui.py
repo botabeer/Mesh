@@ -3,13 +3,12 @@ from config import Config
 
 
 class UI:
-    """واجهة المستخدم الأنيقة"""
+    """واجهة مستخدم محسّنة - أبيض وأسود ورمادي"""
     
     def __init__(self, theme: str = "light"):
         self.theme = theme
 
     def _c(self):
-        """الحصول على ألوان السمة"""
         return Config.get_theme(self.theme)
 
     def _quick_reply(self):
@@ -28,494 +27,249 @@ class UI:
             QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة"))
         ])
 
-    def _create_bubble(self, contents):
-        """إنشاء فقاعة رسالة"""
-        c = self._c()
-        return {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": contents,
-                "paddingAll": "24px",
-                "spacing": "md",
-                "backgroundColor": c["bg"]
-            }
-        }
-
-    def _create_button(self, label, text, style="secondary", color=None):
-        """إنشاء زر"""
-        btn = {
-            "type": "button",
-            "action": {"type": "message", "label": label, "text": text},
-            "style": style,
-            "height": "sm"
-        }
-        if color:
-            btn["color"] = color
-        return btn
-
-    def _create_header(self, title, subtitle=None):
-        """إنشاء عنوان أنيق"""
-        c = self._c()
-        items = [
-            {
-                "type": "text",
-                "text": title,
-                "size": "xxl",
-                "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
-            }
-        ]
-        if subtitle:
-            items.append({
-                "type": "text",
-                "text": subtitle,
-                "size": "sm",
-                "color": c["text_tertiary"],
-                "align": "center",
-                "margin": "xs"
-            })
-        return items
-
-    def _create_separator(self):
-        """إنشاء فاصل"""
-        return {"type": "separator", "margin": "lg", "color": self._c()["border"]}
-
     def main_menu(self, user=None):
-        """القائمة الرئيسية"""
+        """القائمة الرئيسية المحسّنة"""
         c = self._c()
         theme_name = "فاتح" if self.theme == "light" else "داكن"
 
-        contents = self._create_header(Config.BOT_NAME, f"الإصدار {Config.VERSION}")
-        contents.append(self._create_separator())
+        contents = [
+            {"type": "text", "text": Config.BOT_NAME, "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "text", "text": f"v{Config.VERSION}", "size": "xs", "color": c["text_tertiary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]}
+        ]
 
-        # معلومات المستخدم
         if user:
             contents.append({
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    {
-                        "type": "text",
-                        "text": f"مرحبا {user['name']}",
-                        "size": "lg",
-                        "weight": "bold",
-                        "color": c["text"],
-                        "flex": 3
-                    },
-                    {
-                        "type": "text",
-                        "text": f"{user['points']}",
-                        "size": "lg",
-                        "weight": "bold",
-                        "color": c["success"],
-                        "align": "end",
-                        "flex": 2
-                    }
+                    {"type": "text", "text": user['name'], "size": "sm", "weight": "bold", "color": c["text"], "flex": 3},
+                    {"type": "text", "text": str(user['points']), "size": "sm", "weight": "bold", "color": c["primary"], "align": "end", "flex": 1}
                 ],
                 "margin": "lg",
-                "paddingAll": "16px",
-                "cornerRadius": "12px",
+                "paddingAll": "12px",
+                "cornerRadius": "8px",
                 "backgroundColor": c["glass"],
                 "borderWidth": "1px",
                 "borderColor": c["border"]
             })
 
-        # الألعاب
-        contents.append({
-            "type": "text",
-            "text": "الألعاب",
-            "size": "md",
-            "weight": "bold",
-            "color": c["text_secondary"],
-            "margin": "xl"
-        })
-        contents.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": [
-                self._create_button("ابدأ اللعب", "العاب", "primary", c["primary"]),
-                self._create_button("انسحب", "انسحب")
-            ]
-        })
+        # الأزرار الرئيسية
+        contents.extend([
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": "العاب", "text": "العاب"}, "style": "primary", "color": c["primary"], "margin": "md", "height": "sm"},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "نقاطي" if user else "تسجيل", "text": "نقاطي" if user else "تسجيل"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"}, "style": "secondary", "height": "sm", "flex": 1}
+            ]},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
+                {"type": "button", "action": {"type": "message", "label": f"وضع {theme_name}", "text": "ثيم"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"}, "style": "secondary", "height": "sm", "flex": 1}
+            ]}
+        ])
 
-        # الملف الشخصي
-        contents.append({
-            "type": "text",
-            "text": "ملفي",
-            "size": "md",
-            "weight": "bold",
-            "color": c["text_secondary"],
-            "margin": "xl"
-        })
-        contents.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": [
-                self._create_button(
-                    "نقاطي" if user else "تسجيل",
-                    "نقاطي" if user else "تسجيل",
-                    "primary" if not user else "secondary",
-                    c["primary"] if not user else None
-                ),
-                self._create_button("الصدارة", "الصدارة")
-            ]
-        })
-
-        # الإعدادات (للمستخدمين المسجلين فقط)
         if user:
-            contents.append({
-                "type": "text",
-                "text": "الإعدادات",
-                "size": "md",
-                "weight": "bold",
-                "color": c["text_secondary"],
-                "margin": "xl"
-            })
-            contents.append({
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "contents": [
-                    self._create_button(f"الوضع {theme_name}", "ثيم"),
-                    self._create_button("تغيير الاسم", "تغيير الاسم")
-                ]
-            })
-
-        return FlexMessage(
-            alt_text="القائمة الرئيسية",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
-
-    def games_menu(self):
-        """قائمة الألعاب"""
-        c = self._c()
-        contents = self._create_header("الألعاب المتاحة")
-        contents.append(self._create_separator())
-
-        # ألعاب ذهنية
-        contents.append({
-            "type": "text",
-            "text": "ألعاب ذهنية",
-            "size": "md",
-            "weight": "bold",
-            "color": c["text_secondary"],
-            "margin": "lg"
-        })
-        contents.extend([
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "contents": [
-                    self._create_button("ذكاء", "ذكاء", "primary", c["primary"]),
-                    self._create_button("خمن", "خمن", "primary", c["secondary"]),
-                    self._create_button("رياضيات", "رياضيات", "primary", c["success"])
-                ]
-            },
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "sm",
-                "contents": [
-                    self._create_button("ترتيب", "ترتيب"),
-                    self._create_button("ضد", "ضد"),
-                    self._create_button("اسرع", "اسرع")
-                ]
-            }
-        ])
-
-        # ألعاب كلمات
-        contents.append({
-            "type": "text",
-            "text": "ألعاب كلمات",
-            "size": "md",
-            "weight": "bold",
-            "color": c["text_secondary"],
-            "margin": "lg"
-        })
-        contents.extend([
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "contents": [
-                    self._create_button("سلسلة", "سلسله"),
-                    self._create_button("انسان حيوان", "انسان حيوان")
-                ]
-            },
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "sm",
-                "contents": [
-                    self._create_button("كون كلمات", "كون كلمات"),
-                    self._create_button("اغاني", "اغاني")
-                ]
-            }
-        ])
-
-        # ألعاب أخرى
-        contents.append({
-            "type": "text",
-            "text": "ألعاب أخرى",
-            "size": "md",
-            "weight": "bold",
-            "color": c["text_secondary"],
-            "margin": "lg"
-        })
-        contents.append({
-            "type": "box",
-            "layout": "horizontal",
-            "spacing": "sm",
-            "contents": [
-                self._create_button("الوان", "الوان"),
-                self._create_button("مافيا", "مافيا"),
-                self._create_button("توافق", "توافق")
-            ]
-        })
-
-        # زر العودة
-        contents.append(self._create_separator())
-        contents.append(self._create_button("العودة", "بداية", "primary", c["primary"]))
-
-        return FlexMessage(
-            alt_text="الألعاب",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
-
-    def help_menu(self):
-        """قائمة المساعدة"""
-        c = self._c()
-        contents = self._create_header("المساعدة", "دليل الاستخدام")
-        contents.append(self._create_separator())
-
-        sections = [
-            ("الأوامر الرئيسية", "بداية - تسجيل - العاب - نقاطي - الصدارة"),
-            ("ألعاب ذهنية", "ذكاء - خمن - رياضيات - ترتيب - ضد - اسرع"),
-            ("ألعاب كلمات", "سلسله - انسان حيوان - كون كلمات - اغاني"),
-            ("ألعاب أخرى", "الوان - مافيا - توافق"),
-            ("محتوى تفاعلي", "تحدي - سؤال - اعتراف - منشن - موقف - حكمة - شخصية"),
-            ("التحكم", "انسحب - ايقاف - ثيم - تغيير الاسم")
-        ]
-
-        for title, items in sections:
             contents.extend([
-                {
-                    "type": "text",
-                    "text": title,
-                    "size": "sm",
-                    "weight": "bold",
-                    "color": c["text_secondary"],
-                    "margin": "lg"
-                },
-                {
-                    "type": "text",
-                    "text": items,
-                    "size": "xs",
-                    "color": c["text"],
-                    "wrap": True,
-                    "margin": "xs"
-                }
+                {"type": "separator", "margin": "lg", "color": c["border"]},
+                {"type": "button", "action": {"type": "message", "label": "تغيير الاسم", "text": "تغيير الاسم"}, "style": "secondary", "height": "sm", "margin": "sm"}
             ])
 
-        contents.append(self._create_separator())
-        contents.append(self._create_button("العودة", "بداية", "primary", c["primary"]))
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="البداية", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
-        return FlexMessage(
-            alt_text="المساعدة",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+    def games_menu(self):
+        """قائمة الألعاب المنظمة"""
+        c = self._c()
+        
+        contents = [
+            {"type": "text", "text": "الألعاب المتاحة", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "text", "text": "ألعاب ذهنية", "size": "sm", "weight": "bold", "color": c["text"], "margin": "lg"},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "ذكاء", "text": "ذكاء"}, "style": "primary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "خمن", "text": "خمن"}, "style": "primary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "رياضيات", "text": "رياضيات"}, "style": "primary", "height": "sm", "flex": 1}
+            ]},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "ترتيب", "text": "ترتيب"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "ضد", "text": "ضد"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "اسرع", "text": "اسرع"}, "style": "secondary", "height": "sm", "flex": 1}
+            ]},
+            {"type": "text", "text": "ألعاب كلمات", "size": "sm", "weight": "bold", "color": c["text"], "margin": "lg"},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "سلسلة", "text": "سلسله"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "انسان حيوان", "text": "انسان حيوان"}, "style": "secondary", "height": "sm", "flex": 2}
+            ]},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "كون كلمات", "text": "كون كلمات"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "اغاني", "text": "اغاني"}, "style": "secondary", "height": "sm", "flex": 1}
+            ]},
+            {"type": "text", "text": "ألعاب اخرى", "size": "sm", "weight": "bold", "color": c["text"], "margin": "lg"},
+            {"type": "box", "layout": "horizontal", "spacing": "sm", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "الوان", "text": "الوان"}, "style": "secondary", "height": "sm", "flex": 1},
+                {"type": "button", "action": {"type": "message", "label": "توافق", "text": "توافق"}, "style": "secondary", "height": "sm", "flex": 1}
+            ]},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "height": "sm", "margin": "sm"}
+        ]
+
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="الألعاب", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
+
+    def help_menu(self):
+        """دليل الاستخدام المبسط"""
+        c = self._c()
+        
+        sections = [
+            ("الأوامر الأساسية", "بداية - العاب - نقاطي - الصدارة - تسجيل - انسحب - ثيم"),
+            ("ألعاب ذهنية", "ذكاء - خمن - رياضيات - ترتيب - ضد - اسرع"),
+            ("ألعاب كلمات", "سلسله - انسان حيوان - كون كلمات - اغاني"),
+            ("محتوى تفاعلي", "تحدي - سؤال - اعتراف - منشن - موقف - حكمة - شخصية")
+        ]
+        
+        contents = [
+            {"type": "text", "text": "المساعدة", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]}
+        ]
+        
+        for title, items in sections:
+            contents.extend([
+                {"type": "text", "text": title, "size": "sm", "weight": "bold", "color": c["text"], "margin": "lg"},
+                {"type": "text", "text": items, "size": "xs", "color": c["text_secondary"], "wrap": True, "margin": "xs"}
+            ])
+        
+        contents.extend([
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "height": "sm", "margin": "sm"}
+        ])
+
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="المساعدة", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def stats_card(self, user):
         """بطاقة الإحصائيات"""
         c = self._c()
         win_rate = round((user['wins'] / user['games'] * 100)) if user['games'] > 0 else 0
 
-        contents = self._create_header("إحصائياتي")
-        contents.append(self._create_separator())
-
         stats = [
-            ("الاسم", user['name'], c["text"]),
-            ("النقاط", str(user['points']), c["success"]),
-            ("الألعاب", str(user['games']), c["text"]),
-            ("الفوز", str(user['wins']), c["info"]),
-            ("نسبة الفوز", f"{win_rate}%", c["primary"])
+            ("الاسم", user['name']),
+            ("النقاط", str(user['points'])),
+            ("الألعاب", str(user['games'])),
+            ("الفوز", str(user['wins'])),
+            ("نسبة الفوز", f"{win_rate}%")
         ]
 
-        for i, (label, value, color) in enumerate(stats):
+        contents = [
+            {"type": "text", "text": "إحصائياتي", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]}
+        ]
+
+        for label, value in stats:
             contents.append({
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    {
-                        "type": "text",
-                        "text": label,
-                        "size": "sm",
-                        "color": c["text_secondary"],
-                        "flex": 2
-                    },
-                    {
-                        "type": "text",
-                        "text": value,
-                        "size": "sm",
-                        "weight": "bold",
-                        "color": color,
-                        "align": "end",
-                        "flex": 3
-                    }
+                    {"type": "text", "text": label, "size": "sm", "color": c["text_secondary"], "flex": 2},
+                    {"type": "text", "text": value, "size": "sm", "weight": "bold", "color": c["text"], "align": "end", "flex": 3}
                 ],
-                "margin": "lg" if i == 0 else "md",
-                "paddingAll": "12px",
+                "margin": "md",
+                "paddingAll": "10px",
                 "cornerRadius": "8px",
                 "backgroundColor": c["glass"]
             })
 
-        contents.append(self._create_separator())
-        contents.append(self._create_button("العودة", "بداية", "primary", c["primary"]))
+        contents.extend([
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "height": "sm", "margin": "sm"}
+        ])
 
-        return FlexMessage(
-            alt_text="إحصائياتي",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="إحصائياتي", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def leaderboard_card(self, top_users):
-        """بطاقة الصدارة"""
+        """لوحة الصدارة"""
         c = self._c()
-        contents = self._create_header("لوحة الصدارة", "أفضل اللاعبين")
-        contents.append(self._create_separator())
+        
+        contents = [
+            {"type": "text", "text": "لوحة الصدارة", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]}
+        ]
 
         for i, u in enumerate(top_users, 1):
-            rank_color = c["primary"] if i == 1 else c["secondary"] if i == 2 else c["success"] if i == 3 else c["text"]
             contents.append({
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    {
-                        "type": "text",
-                        "text": str(i),
-                        "size": "lg",
-                        "weight": "bold",
-                        "color": rank_color,
-                        "flex": 1,
-                        "align": "center"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": u['name'],
-                                "size": "sm",
-                                "weight": "bold",
-                                "color": c["text"]
-                            },
-                            {
-                                "type": "text",
-                                "text": f"{u['wins']} فوز من {u['games']} لعبة",
-                                "size": "xs",
-                                "color": c["text_tertiary"]
-                            }
-                        ],
-                        "flex": 4
-                    },
-                    {
-                        "type": "text",
-                        "text": str(u['points']),
-                        "size": "md",
-                        "weight": "bold",
-                        "color": c["success"],
-                        "flex": 2,
-                        "align": "end"
-                    }
+                    {"type": "text", "text": str(i), "size": "sm", "weight": "bold", "color": c["text"], "flex": 1, "align": "center"},
+                    {"type": "box", "layout": "vertical", "contents": [
+                        {"type": "text", "text": u['name'], "size": "sm", "weight": "bold", "color": c["text"]},
+                        {"type": "text", "text": f"{u['wins']} فوز", "size": "xs", "color": c["text_tertiary"]}
+                    ], "flex": 4},
+                    {"type": "text", "text": str(u['points']), "size": "sm", "weight": "bold", "color": c["primary"], "flex": 2, "align": "end"}
                 ],
-                "margin": "lg" if i == 1 else "md",
-                "paddingAll": "12px",
+                "margin": "md",
+                "paddingAll": "10px",
                 "cornerRadius": "8px",
                 "backgroundColor": c["glass"]
             })
 
-        contents.append(self._create_separator())
-        contents.append(self._create_button("العودة", "بداية", "primary", c["primary"]))
+        contents.extend([
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "height": "sm", "margin": "sm"}
+        ])
 
-        return FlexMessage(
-            alt_text="الصدارة",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="الصدارة", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def ask_name(self):
-        """طلب إدخال الاسم"""
         c = self._c()
-        contents = self._create_header("التسجيل", "أدخل اسمك للبدء")
-        return FlexMessage(
-            alt_text="تسجيل الاسم",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        contents = [
+            {"type": "text", "text": "التسجيل", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "text", "text": "أدخل اسمك للبدء", "size": "sm", "color": c["text"], "align": "center", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="تسجيل", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def ask_name_invalid(self):
-        """اسم غير صالح"""
         c = self._c()
-        contents = self._create_header("اسم غير صالح", "يرجى إدخال اسم صحيح")
-        return FlexMessage(
-            alt_text="اسم غير صالح",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        contents = [
+            {"type": "text", "text": "اسم غير صحيح", "size": "lg", "weight": "bold", "color": c["danger"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "text", "text": "الاسم يجب أن يكون 2-50 حرف", "size": "sm", "color": c["text"], "align": "center", "margin": "lg", "wrap": True}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="خطأ", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def ask_new_name(self):
-        """طلب اسم جديد"""
         c = self._c()
-        contents = self._create_header("تغيير الاسم", "أدخل اسمك الجديد")
-        return FlexMessage(
-            alt_text="تغيير الاسم",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        contents = [
+            {"type": "text", "text": "تغيير الاسم", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "text", "text": "أدخل اسمك الجديد", "size": "sm", "color": c["text"], "align": "center", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="تغيير الاسم", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def ask_new_name_invalid(self):
-        """اسم جديد غير صالح"""
-        c = self._c()
-        contents = self._create_header("اسم غير صالح", "يرجى إدخال اسم صحيح")
-        return FlexMessage(
-            alt_text="اسم غير صالح",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        return self.ask_name_invalid()
 
     def game_stopped(self):
-        """رسالة إيقاف اللعبة"""
         c = self._c()
-        contents = self._create_header("تم إيقاف اللعبة")
-        contents.append(self._create_separator())
-        contents.append(self._create_button("العودة", "بداية", "primary", c["primary"]))
-        return FlexMessage(
-            alt_text="تم إيقاف اللعبة",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        contents = [
+            {"type": "text", "text": "تم إيقاف اللعبة", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "height": "sm", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="إيقاف", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def registration_required(self):
-        """رسالة التسجيل مطلوب"""
         c = self._c()
-        contents = self._create_header("التسجيل مطلوب")
-        contents.append(self._create_separator())
-        contents.append(self._create_button("تسجيل", "تسجيل", "primary", c["primary"]))
-        return FlexMessage(
-            alt_text="التسجيل مطلوب",
-            contents=FlexContainer.from_dict(self._create_bubble(contents)),
-            quickReply=self._quick_reply()
-        )
+        contents = [
+            {"type": "text", "text": "التسجيل مطلوب", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "primary", "color": c["primary"], "height": "sm", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "20px", "backgroundColor": c["bg"]}}
+        return FlexMessage(alt_text="تسجيل مطلوب", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
