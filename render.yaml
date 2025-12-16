@@ -1,1 +1,17 @@
-services:%0A%20%20-%20type%3A%20web%0A%20%20%20%20name%3A%20bot-mesh%0A%20%20%20%20env%3A%20python%0A%20%20%20%20buildCommand%3A%20pip%20install%20-r%20requirements.txt%0A%20%20%20%20startCommand%3A%20gunicorn%20app%3Aapp%20-c%20gunicorn_config.py%0A%20%20%20%20envVars%3A%0A%20%20%20%20%20%20-%20key%3A%20PORT%0A%20%20%20%20%20%20%20%20value%3A%208080%0A%20%20%20%20%20%20-%20key%3A%20ENV%0A%20%20%20%20%20%20%20%20value%3A%20production%0A%20%20%20%20%20%20-%20key%3A%20LINE_CHANNEL_SECRET%0A%20%20%20%20%20%20%20%20sync%3A%20false%0A%20%20%20%20%20%20-%20key%3A%20LINE_CHANNEL_ACCESS_TOKEN%0A%20%20%20%20%20%20%20%20sync%3A%20false%0A%20%20%20%20healthCheckPath%3A%20/health%0A%20%20%20%20autoDeploy:%20true
+services:
+  - type: web
+    name: bot-mesh
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app -c gunicorn_config.py
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: ENV
+        value: production
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
