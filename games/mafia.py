@@ -5,6 +5,7 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+
 class MafiaGame:
     ROLE_INFO = {
         "mafia": {"title": "المافيا", "desc": "اقتل شخص كل ليلة", "color": "#8B0000"},
@@ -22,29 +23,23 @@ class MafiaGame:
         self.votes = {}
         self.night_actions = {}
         self.game_active = False
+        self.game_name = "مافيا"
+        self.user_id = None
 
     def _c(self):
         return Config.get_theme(self.theme)
 
-    def _simple_flex(self, title, texts, buttons=None):
+    def _create_bubble(self, title, texts, buttons=None):
         c = self._c()
         contents = [{
-            "type": "text",
-            "text": title,
-            "weight": "bold",
-            "size": "xl",
-            "color": c['primary'],
-            "align": "center"
+            "type": "text", "text": title, "weight": "bold",
+            "size": "xl", "color": c['primary'], "align": "center"
         }]
         
         for t in texts:
             contents.append({
-                "type": "text",
-                "text": t,
-                "size": "sm",
-                "color": c['text'],
-                "wrap": True,
-                "margin": "md"
+                "type": "text", "text": t, "size": "sm",
+                "color": c['text'], "wrap": True, "margin": "md"
             })
         
         if buttons:
@@ -69,23 +64,12 @@ class MafiaGame:
         c = self._c()
         buttons = [
             {"type": "separator", "margin": "lg"},
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "انضم", "text": "انضم_مافيا"},
-                "style": "primary",
-                "color": c['primary'],
-                "height": "sm",
-                "margin": "md"
-            },
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "بدء", "text": "بدء_مافيا"},
-                "style": "secondary",
-                "height": "sm",
-                "margin": "sm"
-            }
+            {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم_مافيا"},
+             "style": "primary", "color": c['primary'], "height": "sm", "margin": "md"},
+            {"type": "button", "action": {"type": "message", "label": "بدء", "text": "بدء_مافيا"},
+             "style": "secondary", "height": "sm", "margin": "sm"}
         ]
-        return self._simple_flex(
+        return self._create_bubble(
             "لعبة المافيا",
             [f"اللاعبون: {len(self.players)}", "الحد الادنى: 4 لاعبين"],
             buttons
@@ -94,7 +78,8 @@ class MafiaGame:
     def start(self, user_id: str):
         self.phase = "registration"
         self.game_active = True
-        return {"response": self.registration_flex(), "game_over": False}
+        self.user_id = user_id
+        return self.registration_flex()
 
     def check(self, text: str, user_id: str):
         cmd = Config.normalize(text)
@@ -133,39 +118,26 @@ class MafiaGame:
         self.day = 1
         
         c = self._c()
-        contents = [
-            {
-                "type": "text",
-                "text": "بدأت اللعبة",
-                "size": "xl",
-                "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
-            },
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "البداية", "text": "بداية"},
-                "style": "primary",
-                "color": c["primary"],
-                "margin": "md"
+        bubble = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "بدأت اللعبة", "size": "xl",
+                     "weight": "bold", "color": c["primary"], "align": "center"},
+                    {"type": "separator", "margin": "lg", "color": c["border"]},
+                    {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                     "style": "primary", "color": c["primary"], "margin": "md"}
+                ],
+                "backgroundColor": c["bg"],
+                "paddingAll": "20px"
             }
-        ]
+        }
         
         return {
-            "response": FlexMessage(
-                alt_text="بدأت اللعبة",
-                contents=FlexContainer.from_dict({
-                    "type": "bubble",
-                    "size": "mega",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": contents,
-                        "backgroundColor": c["bg"],
-                        "paddingAll": "20px"
-                    }
-                })
-            ),
-            "game_over": True
+            "response": FlexMessage(alt_text="بدأت اللعبة", contents=FlexContainer.from_dict(bubble)),
+            "game_over": True,
+            "won": True
         }
