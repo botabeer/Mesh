@@ -70,7 +70,7 @@ class CompatibilityGame:
                         "contents": [
                             {"type": "text", "text": "ادخل اسمين مفصولين بـ و",
                              "size": "md", "weight": "bold", "color": c["text"], "wrap": True},
-                            {"type": "text", "text": "مثال: محمد و سارة",
+                            {"type": "text", "text": "مثال: ميش و عبير",
                              "size": "sm", "color": c["text_tertiary"], "margin": "sm"}
                         ]
                     },
