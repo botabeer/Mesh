@@ -10,15 +10,16 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    """إدارة قاعدة البيانات"""
+    """إدارة قاعدة البيانات المحسّنة"""
     
     def __init__(self):
         self._lock = Lock()
         self._waiting_names = {}
         self._changing_names = {}
         self._game_progress = {}
+        self._unregistered = set()  # المستخدمون الذين اختاروا عدم التسجيل
         self._init_db()
-        logger.info("Database initialized successfully")
+        logger.info("Database initialized")
 
     @contextmanager
     def _get_conn(self):
@@ -57,53 +58,40 @@ class Database:
                 )
             """)
             
-            # Indexes للأداء
             conn.execute("CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC, wins DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_theme ON users(theme)")
 
     def get_user(self, user_id: str) -> Optional[Dict]:
         """الحصول على بيانات المستخدم"""
         try:
             with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT * FROM users WHERE user_id=?", 
-                    (user_id,)
-                ).fetchone()
+                row = conn.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
                 return dict(row) if row else None
-        except Exception as e:
-            logger.error(f"Get user error [{user_id}]: {e}")
+        except:
             return None
 
     def register_user(self, user_id: str, name: str) -> bool:
         """تسجيل مستخدم جديد"""
         name = name.strip()
-        
         if not Config.validate_name(name):
-            logger.warning(f"Invalid name: {name}")
             return False
         
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    existing = conn.execute(
-                        "SELECT user_id FROM users WHERE user_id=?", 
-                        (user_id,)
-                    ).fetchone()
+                    existing = conn.execute("SELECT user_id FROM users WHERE user_id=?", (user_id,)).fetchone()
                     
                     if existing:
                         conn.execute(
                             "UPDATE users SET name=?, last_active=CURRENT_TIMESTAMP WHERE user_id=?",
                             (name, user_id)
                         )
-                        logger.info(f"User updated: {user_id} -> {name}")
                     else:
-                        conn.execute(
-                            "INSERT INTO users (user_id, name) VALUES (?, ?)",
-                            (user_id, name)
-                        )
-                        logger.info(f"User created: {user_id} -> {name}")
+                        conn.execute("INSERT INTO users (user_id, name) VALUES (?, ?)", (user_id, name))
                     
+                    # إزالة من قائمة غير المسجلين
+                    self._unregistered.discard(user_id)
+                    logger.info(f"User registered: {user_id} -> {name}")
                     return True
             except Exception as e:
                 logger.error(f"Register error: {e}")
@@ -112,7 +100,6 @@ class Database:
     def change_name(self, user_id: str, new_name: str) -> bool:
         """تغيير اسم المستخدم"""
         new_name = new_name.strip()
-        
         if not Config.validate_name(new_name):
             return False
         
@@ -125,20 +112,16 @@ class Database:
                     )
                     logger.info(f"Name changed: {user_id} -> {new_name}")
                     return True
-            except Exception as e:
-                logger.error(f"Change name error: {e}")
+            except:
                 return False
 
     def update_activity(self, user_id: str):
         """تحديث وقت النشاط"""
         try:
             with self._get_conn() as conn:
-                conn.execute(
-                    "UPDATE users SET last_active=CURRENT_TIMESTAMP WHERE user_id=?",
-                    (user_id,)
-                )
-        except Exception as e:
-            logger.debug(f"Update activity error: {e}")
+                conn.execute("UPDATE users SET last_active=CURRENT_TIMESTAMP WHERE user_id=?", (user_id,))
+        except:
+            pass
 
     def add_points(self, user_id: str, points: int) -> bool:
         """إضافة نقاط للمستخدم"""
@@ -152,12 +135,8 @@ class Database:
                         "UPDATE users SET points=points+?, last_active=CURRENT_TIMESTAMP WHERE user_id=?",
                         (points, user_id)
                     )
-                    success = cur.rowcount > 0
-                    if success:
-                        logger.info(f"Points added: {user_id} +{points}")
-                    return success
-            except Exception as e:
-                logger.error(f"Add points error: {e}")
+                    return cur.rowcount > 0
+            except:
                 return False
 
     def finish_game(self, user_id: str, won: bool) -> bool:
@@ -169,12 +148,8 @@ class Database:
                         "UPDATE users SET games=games+1, wins=wins+?, last_active=CURRENT_TIMESTAMP WHERE user_id=?",
                         (1 if won else 0, user_id)
                     )
-                    success = cur.rowcount > 0
-                    if success:
-                        logger.info(f"Game finished: {user_id} won={won}")
-                    return success
-            except Exception as e:
-                logger.error(f"Finish game error: {e}")
+                    return cur.rowcount > 0
+            except:
                 return False
 
     def get_leaderboard(self, limit: int = 10) -> List[Dict]:
@@ -186,20 +161,16 @@ class Database:
                     (limit,)
                 ).fetchall()
                 return [dict(r) for r in rows]
-        except Exception as e:
-            logger.error(f"Leaderboard error: {e}")
+        except:
             return []
 
     def get_theme(self, user_id: str) -> str:
         """الحصول على سمة المستخدم"""
         try:
             with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT theme FROM users WHERE user_id=?", 
-                    (user_id,)
-                ).fetchone()
+                row = conn.execute("SELECT theme FROM users WHERE user_id=?", (user_id,)).fetchone()
                 return row["theme"] if row else "light"
-        except Exception:
+        except:
             return "light"
 
     def toggle_theme(self, user_id: str) -> str:
@@ -210,14 +181,9 @@ class Database:
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    conn.execute(
-                        "UPDATE users SET theme=? WHERE user_id=?",
-                        (new_theme, user_id)
-                    )
-                    logger.info(f"Theme toggled: {user_id} -> {new_theme}")
-                return new_theme
-            except Exception as e:
-                logger.error(f"Toggle theme error: {e}")
+                    conn.execute("UPDATE users SET theme=? WHERE user_id=?", (new_theme, user_id))
+                    return new_theme
+            except:
                 return current
 
     # إدارة حالات الانتظار
@@ -239,6 +205,20 @@ class Database:
         else:
             self._changing_names.pop(user_id, None)
 
+    # إدارة المستخدمين المتجاهلين (انسحب)
+    def is_ignored(self, user_id: str) -> bool:
+        """التحقق إذا كان المستخدم في وضع التجاهل"""
+        return user_id in self._unregistered
+
+    def set_ignored(self, user_id: str, ignored: bool):
+        """تعيين حالة التجاهل"""
+        if ignored:
+            self._unregistered.add(user_id)
+            logger.info(f"User ignored: {user_id}")
+        else:
+            self._unregistered.discard(user_id)
+            logger.info(f"User unignored: {user_id}")
+
     # إدارة تقدم اللعبة
     def save_game_progress(self, user_id: str, progress: dict):
         with self._lock:
@@ -255,16 +235,7 @@ class Database:
         """تنظيف الذاكرة من البيانات القديمة"""
         now = time.time()
         with self._lock:
-            self._waiting_names = {
-                k: v for k, v in self._waiting_names.items() 
-                if now - v < timeout
-            }
-            self._changing_names = {
-                k: v for k, v in self._changing_names.items() 
-                if now - v < timeout
-            }
-            self._game_progress = {
-                k: v for k, v in self._game_progress.items() 
-                if now - v.get("saved_at", now) < timeout
-            }
+            self._waiting_names = {k: v for k, v in self._waiting_names.items() if now - v < timeout}
+            self._changing_names = {k: v for k, v in self._changing_names.items() if now - v < timeout}
+            self._game_progress = {k: v for k, v in self._game_progress.items() if now - v.get("saved_at", now) < timeout}
         logger.info("Memory cleanup completed")
