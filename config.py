@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
     # App Info
     BOT_NAME = "Bot Mesh"
-    VERSION = "10.2"
+    VERSION = "10.3"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     # LINE Credentials
@@ -31,17 +31,19 @@ class Config:
         "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
         "ثيم", "مساعده", "مساعدة", "تسجيل", "انسحب", "ايقاف",
         "تغيير الاسم", "تغيير اسمي", "ذكاء", "خمن", "رياضيات",
-        "ترتيب", "ضد", "اسرع", "سلسله", "سلسلة", "تحدي", "سؤال",
-        "سوال", "اعتراف", "منشن", "موقف", "حكمه", "حكمة", "شخصيه", "شخصية"
+        "ترتيب", "ضد", "اسرع", "سلسله", "سلسلة", "توافق",
+        "انسان حيوان", "كون كلمات", "اغاني", "الوان", "مافيا",
+        "تحدي", "سؤال", "سوال", "اعتراف", "منشن", "موقف", 
+        "حكمه", "حكمة", "شخصيه", "شخصية"
     }
 
-    # Main Commands (ignore in game)
+    # Main Commands
     MAIN_COMMANDS = {
         "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
         "ثيم", "مساعده", "مساعدة", "تسجيل", "تغيير الاسم", "تغيير اسمي"
     }
 
-    # Themes with all required colors
+    # Themes
     THEMES = {
         "light": {
             "primary": "#007AFF",
@@ -49,7 +51,7 @@ class Config:
             "success": "#34C759",
             "warning": "#FF9500",
             "danger": "#FF3B30",
-            "error": "#FF3B30",  # Added
+            "error": "#FF3B30",
             "info": "#5AC8FA",
             "bg": "#F2F2F7",
             "bg_secondary": "#FFFFFF",
@@ -66,7 +68,7 @@ class Config:
             "success": "#30D158",
             "warning": "#FF9F0A",
             "danger": "#FF453A",
-            "error": "#FF453A",  # Added
+            "error": "#FF453A",
             "info": "#64D2FF",
             "bg": "#000000",
             "bg_secondary": "#1C1C1E",
@@ -85,17 +87,10 @@ class Config:
 
     @classmethod
     def normalize(cls, text: str) -> str:
-        """Unified Arabic text normalization"""
         if not text:
             return ""
-
-        text = text.strip().lower()
-        text = text[:1000]
-
-        # Remove diacritics
+        text = text.strip().lower()[:1000]
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-
-        # Unify letters
         replacements = {
             "أ": "ا", "إ": "ا", "آ": "ا",
             "ى": "ي", "ة": "ه",
@@ -103,16 +98,10 @@ class Config:
         }
         for old, new in replacements.items():
             text = text.replace(old, new)
-
-        # Clean symbols
         text = re.sub(r"[^\w\sء-ي]", "", text)
-
-        # Clean whitespace
         text = re.sub(r"\s+", " ", text).strip()
-
         return text
 
 
-# Startup Validation
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
     raise RuntimeError("LINE credentials missing")
