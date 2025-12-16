@@ -6,27 +6,29 @@ load_dotenv()
 
 
 class Config:
-    # App Info
+    """إعدادات التطبيق الرئيسية"""
+    
+    # معلومات التطبيق
     BOT_NAME = "Bot Mesh"
-    VERSION = "10.3"
+    VERSION = "11.0"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
-    # LINE Credentials
+    # بيانات LINE API
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
-    # Server / DB
+    # إعدادات الخادم
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
     PORT = int(os.getenv("PORT", 5000))
     WORKERS = int(os.getenv("WORKERS", 4))
     ENV = os.getenv("ENV", "production")
 
-    # Game Settings
+    # إعدادات الألعاب
     QUESTIONS_PER_GAME = 5
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 2
 
-    # Reserved Commands
+    # الأوامر المحجوزة
     RESERVED_COMMANDS = {
         "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
         "ثيم", "مساعده", "مساعدة", "تسجيل", "انسحب", "ايقاف",
@@ -37,60 +39,67 @@ class Config:
         "حكمه", "حكمة", "شخصيه", "شخصية"
     }
 
-    # Main Commands
+    # الأوامر الرئيسية
     MAIN_COMMANDS = {
         "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
         "ثيم", "مساعده", "مساعدة", "تسجيل", "تغيير الاسم", "تغيير اسمي"
     }
 
-    # Themes
+    # السمات (Themes)
     THEMES = {
         "light": {
-            "primary": "#007AFF",
-            "secondary": "#5856D6",
-            "success": "#34C759",
-            "warning": "#FF9500",
-            "danger": "#FF3B30",
-            "error": "#FF3B30",
-            "info": "#5AC8FA",
-            "bg": "#F2F2F7",
+            "primary": "#2196F3",
+            "secondary": "#5C6BC0",
+            "success": "#4CAF50",
+            "warning": "#FF9800",
+            "danger": "#F44336",
+            "error": "#F44336",
+            "info": "#00BCD4",
+            "bg": "#FAFAFA",
             "bg_secondary": "#FFFFFF",
             "card": "#FFFFFF",
-            "text": "#000000",
-            "text_secondary": "#3C3C43",
-            "text_tertiary": "#8E8E93",
-            "border": "#E5E5EA",
-            "glass": "#F8F8F8"
+            "text": "#212121",
+            "text_secondary": "#616161",
+            "text_tertiary": "#9E9E9E",
+            "border": "#E0E0E0",
+            "glass": "#F5F5F5"
         },
         "dark": {
-            "primary": "#0A84FF",
-            "secondary": "#5E5CE6",
-            "success": "#30D158",
-            "warning": "#FF9F0A",
-            "danger": "#FF453A",
-            "error": "#FF453A",
-            "info": "#64D2FF",
-            "bg": "#000000",
-            "bg_secondary": "#1C1C1E",
-            "card": "#1C1C1E",
+            "primary": "#42A5F5",
+            "secondary": "#7E57C2",
+            "success": "#66BB6A",
+            "warning": "#FFA726",
+            "danger": "#EF5350",
+            "error": "#EF5350",
+            "info": "#26C6DA",
+            "bg": "#121212",
+            "bg_secondary": "#1E1E1E",
+            "card": "#1E1E1E",
             "text": "#FFFFFF",
-            "text_secondary": "#EBEBF5",
-            "text_tertiary": "#98989D",
-            "border": "#3A3A3C",
-            "glass": "#2C2C2E"
+            "text_secondary": "#E0E0E0",
+            "text_tertiary": "#9E9E9E",
+            "border": "#2C2C2C",
+            "glass": "#242424"
         }
     }
 
     @classmethod
-    def get_theme(cls, name: str = "light"):
+    def get_theme(cls, name: str = "light") -> dict:
+        """الحصول على ألوان السمة"""
         return cls.THEMES.get(name, cls.THEMES["light"])
 
     @classmethod
     def normalize(cls, text: str) -> str:
+        """تطبيع النص العربي"""
         if not text:
             return ""
+        
         text = text.strip().lower()[:1000]
+        
+        # إزالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
+        
+        # توحيد الحروف المتشابهة
         replacements = {
             "أ": "ا", "إ": "ا", "آ": "ا",
             "ى": "ي", "ة": "ه",
@@ -98,10 +107,25 @@ class Config:
         }
         for old, new in replacements.items():
             text = text.replace(old, new)
+        
+        # إزالة الرموز الخاصة
         text = re.sub(r"[^\w\sء-ي]", "", text)
+        
+        # إزالة المسافات الزائدة
         text = re.sub(r"\s+", " ", text).strip()
+        
         return text
 
+    @classmethod
+    def validate_name(cls, name: str) -> bool:
+        """التحقق من صحة الاسم"""
+        if not name or len(name) < cls.MIN_NAME_LENGTH or len(name) > cls.MAX_NAME_LENGTH:
+            return False
+        
+        # السماح بالعربية والإنجليزية والمسافات فقط
+        return bool(re.match(r'^[\u0600-\u06FFa-zA-Z\s]{2,50}$', name.strip()))
 
+
+# التحقق من وجود بيانات الاعتماد
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
-    raise RuntimeError("LINE credentials missing")
+    raise RuntimeError("LINE credentials missing. Please set LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN")
