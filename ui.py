@@ -53,6 +53,7 @@ class UI:
         ]
 
         if user:
+            # عرض معلومات المستخدم
             contents.append({
                 "type": "box",
                 "layout": "horizontal",
@@ -175,7 +176,36 @@ class UI:
                         "height": "sm"
                     }
                 ]
-            },
+            }
+        ])
+
+        # زر تغيير الثيم (فقط للمستخدمين المسجلين)
+        if user:
+            theme_icon = "🌙" if self.theme == "light" else "☀️"
+            theme_label = "الوضع الليلي" if self.theme == "light" else "الوضع النهاري"
+            
+            contents.extend([
+                {
+                    "type": "text",
+                    "text": "الإعدادات",
+                    "size": "md",
+                    "weight": "bold",
+                    "color": c["text_secondary"],
+                    "margin": "lg"
+                },
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "message",
+                        "label": f"{theme_icon} {theme_label}",
+                        "text": "ثيم"
+                    },
+                    "style": "secondary",
+                    "height": "sm"
+                }
+            ])
+
+        contents.extend([
             {
                 "type": "separator",
                 "margin": "lg",
@@ -310,7 +340,7 @@ class UI:
                     },
                     {
                         "type": "button",
-                        "action": {"type": "message", "label": "انسان حيوان", "text": "انسان_حيوان"},
+                        "action": {"type": "message", "label": "انسان حيوان", "text": "انسان حيوان"},
                         "style": "secondary",
                         "height": "sm"
                     }
@@ -324,7 +354,7 @@ class UI:
                 "contents": [
                     {
                         "type": "button",
-                        "action": {"type": "message", "label": "كون كلمات", "text": "كون_كلمات"},
+                        "action": {"type": "message", "label": "كون كلمات", "text": "كون كلمات"},
                         "style": "secondary",
                         "height": "sm"
                     },
@@ -407,7 +437,7 @@ class UI:
         c = self._c()
         
         sections = [
-            ("الاوامر الرئيسية", "بداية - تسجيل - العاب - نقاطي - الصدارة - انسحب"),
+            ("الاوامر الرئيسية", "بداية - تسجيل - العاب - نقاطي - الصدارة - انسحب - ثيم"),
             ("العاب ذهنية", "ذكاء - خمن - رياضيات - ترتيب - ضد - اسرع"),
             ("العاب كلمات", "سلسله - انسان حيوان - كون كلمات - اغاني"),
             ("العاب اخرى", "الوان - مافيا - توافق"),
