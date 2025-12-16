@@ -69,7 +69,24 @@ class UI:
         ])
 
         bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":contents,"paddingAll":"lg","backgroundColor":c["bg"],"spacing":"none"}}
-        return FlexMessage(alt_text="البداية",contents=FlexContainer.from_dict(bubble),quickReply=self._qr())
+        
+        quick_reply = QuickReply(items=[
+            QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
+            QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
+            QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
+            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
+            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
+            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
+            QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
+            QuickReplyItem(action=MessageAction(label="موقف", text="موقف")),
+            QuickReplyItem(action=MessageAction(label="حكمة", text="حكمة")),
+            QuickReplyItem(action=MessageAction(label="شخصية", text="شخصية")),
+            QuickReplyItem(action=MessageAction(label="توافق", text="توافق")),
+            QuickReplyItem(action=MessageAction(label="مافيا", text="مافيا")),
+            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة"))
+        ])
+        
+        return FlexMessage(alt_text="البداية",contents=FlexContainer.from_dict(bubble),quickReply=quick_reply)
 
     def help_menu(self):
         c = self._c()
@@ -80,6 +97,8 @@ class UI:
             {"type":"text","text":"بداية - العاب - نقاطي - الصدارة - ثيم - مساعدة","size":"sm","color":c["text_secondary"],"wrap":True,"margin":"sm"},
             {"type":"text","text":"التسجيل","size":"md","weight":"bold","color":c["text"],"margin":"lg"},
             {"type":"text","text":"تسجيل: للعب وحساب النقاط\nانسحب: تجاهل كامل (لن يرد البوت)","size":"sm","color":c["text_secondary"],"wrap":True,"margin":"sm"},
+            {"type":"text","text":"الألعاب","size":"md","weight":"bold","color":c["text"],"margin":"lg"},
+            {"type":"text","text":"ذكاء - خمن - رياضيات - ترتيب - ضد - اسرع - سلسله - انسان حيوان - تكوين - اغاني - الوان - توافق - مافيا","size":"sm","color":c["text_secondary"],"wrap":True,"margin":"sm"},
             {"type":"text","text":"المحتوى التفاعلي","size":"md","weight":"bold","color":c["text"],"margin":"lg"},
             {"type":"text","text":"تحدي - سؤال - اعتراف - منشن - موقف - حكمة - شخصية","size":"sm","color":c["text_secondary"],"wrap":True,"margin":"sm"},
             {"type":"text","text":"ملاحظات","size":"md","weight":"bold","color":c["text"],"margin":"lg"},
@@ -88,17 +107,36 @@ class UI:
             {"type":"button","action":{"type":"message","label":"البداية","text":"بداية"},"style":"secondary","height":"sm","margin":"md"}
         ]
         bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":contents,"paddingAll":"lg","backgroundColor":c["bg"],"spacing":"none"}}
-        return FlexMessage(alt_text="المساعدة",contents=FlexContainer.from_dict(bubble),quickReply=self._qr())
+        
+        quick_reply = QuickReply(items=[
+            QuickReplyItem(action=MessageAction(label="بداية", text="بداية")),
+            QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
+            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
+            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
+            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
+            QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
+            QuickReplyItem(action=MessageAction(label="موقف", text="موقف")),
+            QuickReplyItem(action=MessageAction(label="حكمة", text="حكمة")),
+            QuickReplyItem(action=MessageAction(label="شخصية", text="شخصية")),
+            QuickReplyItem(action=MessageAction(label="توافق", text="توافق")),
+            QuickReplyItem(action=MessageAction(label="مافيا", text="مافيا"))
+        ])
+        
+        return FlexMessage(alt_text="المساعدة",contents=FlexContainer.from_dict(bubble),quickReply=quick_reply)
 
     ### ==================== ألعاب ====================
 
     def games_menu(self, user=None):
         c = self._c()
-        games_list = ["ذكاء","خمن","رياضيات","ترتيب","ضد","اسرع","تكوين","انسان حيوان","اغاني","الوان"]
-        contents = [{"type":"text","text":"الألعاب المتاحة","size":"xl","weight":"bold","color":c["primary"],"align":"center"}]
+        games_list = ["ذكاء","خمن","رياضيات","ترتيب","ضد","اسرع","سلسله","انسان حيوان","تكوين","اغاني","الوان","توافق","مافيا"]
+        
+        contents = [
+            {"type":"text","text":"الألعاب المتاحة","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
+            {"type":"separator","margin":"md","color":c["border"]}
+        ]
 
         for i in range(0,len(games_list),2):
-            row = {"type":"box","layout":"horizontal","spacing":"sm","contents":[]}
+            row = {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[]}
             for j in range(2):
                 if i+j < len(games_list):
                     row["contents"].append({
@@ -111,11 +149,45 @@ class UI:
                     })
             contents.append(row)
 
-        contents.append({"type":"separator","margin":"lg","color":c["border"]})
-        contents.append({"type":"button","action":{"type":"message","label":"البداية","text":"بداية"},"style":"secondary","height":"sm","margin":"md"})
+        contents.extend([
+            {"type":"separator","margin":"lg","color":c["border"]},
+            {"type":"text","text":"محتوى تفاعلي","size":"md","weight":"bold","color":c["text"],"align":"center","margin":"md"},
+            {"type":"box","layout":"horizontal","spacing":"sm","margin":"sm","contents":[
+                {"type":"button","action":{"type":"message","label":"تحدي","text":"تحدي"},"style":"secondary","height":"sm","flex":1},
+                {"type":"button","action":{"type":"message","label":"سؤال","text":"سؤال"},"style":"secondary","height":"sm","flex":1},
+                {"type":"button","action":{"type":"message","label":"اعتراف","text":"اعتراف"},"style":"secondary","height":"sm","flex":1}
+            ]},
+            {"type":"box","layout":"horizontal","spacing":"sm","margin":"xs","contents":[
+                {"type":"button","action":{"type":"message","label":"منشن","text":"منشن"},"style":"secondary","height":"sm","flex":1},
+                {"type":"button","action":{"type":"message","label":"موقف","text":"موقف"},"style":"secondary","height":"sm","flex":1},
+                {"type":"button","action":{"type":"message","label":"حكمة","text":"حكمة"},"style":"secondary","height":"sm","flex":1}
+            ]},
+            {"type":"box","layout":"horizontal","spacing":"sm","margin":"xs","contents":[
+                {"type":"button","action":{"type":"message","label":"شخصية","text":"شخصية"},"style":"secondary","height":"sm","flex":1}
+            ]},
+            {"type":"separator","margin":"lg","color":c["border"]},
+            {"type":"button","action":{"type":"message","label":"البداية","text":"بداية"},"style":"secondary","height":"sm","margin":"md"}
+        ])
 
         bubble = {"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":contents,"paddingAll":"lg","backgroundColor":c["bg"],"spacing":"none"}}
-        return FlexMessage(alt_text="الالعاب",contents=FlexContainer.from_dict(bubble),quickReply=self._qr())
+        
+        quick_reply = QuickReply(items=[
+            QuickReplyItem(action=MessageAction(label="ذكاء", text="ذكاء")),
+            QuickReplyItem(action=MessageAction(label="خمن", text="خمن")),
+            QuickReplyItem(action=MessageAction(label="رياضيات", text="رياضيات")),
+            QuickReplyItem(action=MessageAction(label="ترتيب", text="ترتيب")),
+            QuickReplyItem(action=MessageAction(label="ضد", text="ضد")),
+            QuickReplyItem(action=MessageAction(label="اسرع", text="اسرع")),
+            QuickReplyItem(action=MessageAction(label="سلسله", text="سلسله")),
+            QuickReplyItem(action=MessageAction(label="انسان حيوان", text="انسان حيوان")),
+            QuickReplyItem(action=MessageAction(label="تكوين", text="تكوين")),
+            QuickReplyItem(action=MessageAction(label="اغاني", text="اغاني")),
+            QuickReplyItem(action=MessageAction(label="الوان", text="الوان")),
+            QuickReplyItem(action=MessageAction(label="توافق", text="توافق")),
+            QuickReplyItem(action=MessageAction(label="مافيا", text="مافيا"))
+        ])
+        
+        return FlexMessage(alt_text="الالعاب",contents=FlexContainer.from_dict(bubble),quickReply=quick_reply)
 
     ### ==================== نقاطي وإحصائياتي ====================
 
