@@ -7,22 +7,17 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
-
 class Database:
     def __init__(self):
         self._lock = Lock()
         self._waiting_names = {}
-        self._changing_names = {}  # جديد
+        self._changing_names = {}
         self._game_progress = {}
         self._init_db()
 
     @contextmanager
     def _get_conn(self):
-        conn = sqlite3.connect(
-            Config.DB_PATH,
-            timeout=10,
-            check_same_thread=False
-        )
+        conn = sqlite3.connect(Config.DB_PATH, timeout=10, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -48,26 +43,15 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC, wins DESC)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)"
-            )
-
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC, wins DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)")
         logger.info("Database initialized")
 
     def get_user(self, user_id: str):
         try:
             with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT * FROM users WHERE user_id=?",
-                    (user_id,)
-                ).fetchone()
-                
-                if row:
-                    return dict(row)
-                return None
+                row = conn.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
+                return dict(row) if row else None
         except Exception as e:
             logger.error(f"Get user error: {e}")
             return None
@@ -76,61 +60,30 @@ class Database:
         name = name.strip()[:50]
         if len(name) < 2:
             return False
-
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    existing = conn.execute(
-                        "SELECT user_id FROM users WHERE user_id=?",
-                        (user_id,)
-                    ).fetchone()
-                    
+                    existing = conn.execute("SELECT user_id FROM users WHERE user_id=?", (user_id,)).fetchone()
                     if existing:
                         logger.info(f"User exists, updating: {name}")
-                        conn.execute("""
-                            UPDATE users 
-                            SET name=?, last_active=CURRENT_TIMESTAMP
-                            WHERE user_id=?
-                        """, (name, user_id))
+                        conn.execute("UPDATE users SET name=?, last_active=CURRENT_TIMESTAMP WHERE user_id=?", (name, user_id))
                     else:
                         logger.info(f"Creating user: {name}")
-                        conn.execute("""
-                            INSERT INTO users (user_id, name)
-                            VALUES (?, ?)
-                        """, (user_id, name))
-                    
-                    conn.commit()
-                    
-                    verify = conn.execute(
-                        "SELECT name FROM users WHERE user_id=?",
-                        (user_id,)
-                    ).fetchone()
-                    
-                    if verify:
-                        logger.info(f"Registration verified: {verify['name']}")
-                        return True
-                    return False
-                        
+                        conn.execute("INSERT INTO users (user_id, name) VALUES (?, ?)", (user_id, name))
+                    verify = conn.execute("SELECT name FROM users WHERE user_id=?", (user_id,)).fetchone()
+                    return bool(verify)
             except Exception as e:
                 logger.error(f"Register error: {e}")
                 return False
 
     def change_name(self, user_id: str, new_name: str) -> bool:
-        """تغيير الاسم"""
         new_name = new_name.strip()[:50]
         if len(new_name) < 2:
             return False
-
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    conn.execute("""
-                        UPDATE users 
-                        SET name=?, last_active=CURRENT_TIMESTAMP
-                        WHERE user_id=?
-                    """, (new_name, user_id))
-                    
-                    conn.commit()
+                    conn.execute("UPDATE users SET name=?, last_active=CURRENT_TIMESTAMP WHERE user_id=?", (new_name, user_id))
                     logger.info(f"Name changed to: {new_name}")
                     return True
             except Exception as e:
@@ -140,24 +93,17 @@ class Database:
     def update_activity(self, user_id: str):
         try:
             with self._get_conn() as conn:
-                conn.execute(
-                    "UPDATE users SET last_active=CURRENT_TIMESTAMP WHERE user_id=?",
-                    (user_id,)
-                )
+                conn.execute("UPDATE users SET last_active=CURRENT_TIMESTAMP WHERE user_id=?", (user_id,))
         except Exception as e:
             logger.debug(f"Update activity error: {e}")
 
     def add_points(self, user_id: str, points: int) -> bool:
         if points <= 0:
             return False
-
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    cur = conn.execute(
-                        "UPDATE users SET points=points+?, last_active=CURRENT_TIMESTAMP WHERE user_id=?",
-                        (points, user_id)
-                    )
+                    cur = conn.execute("UPDATE users SET points=points+?, last_active=CURRENT_TIMESTAMP WHERE user_id=?", (points, user_id))
                     success = cur.rowcount > 0
                     if success:
                         logger.info(f"Added {points} points to {user_id}")
@@ -170,13 +116,7 @@ class Database:
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    cur = conn.execute("""
-                        UPDATE users
-                        SET games = games + 1,
-                            wins = wins + ?,
-                            last_active = CURRENT_TIMESTAMP
-                        WHERE user_id=?
-                    """, (1 if won else 0, user_id))
+                    cur = conn.execute("UPDATE users SET games=games+1, wins=wins+?, last_active=CURRENT_TIMESTAMP WHERE user_id=?", (1 if won else 0, user_id))
                     success = cur.rowcount > 0
                     if success:
                         logger.info(f"Game finished: {user_id}, won={won}")
@@ -188,25 +128,8 @@ class Database:
     def get_leaderboard(self, limit: int = 10):
         try:
             with self._get_conn() as conn:
-                rows = conn.execute("""
-                    SELECT name, points, wins, games
-                    FROM users
-                    WHERE games > 0
-                    ORDER BY points DESC, wins DESC
-                    LIMIT ?
-                """, (limit,)).fetchall()
-
-                leaders = [
-                    {
-                        "name": r["name"],
-                        "points": r["points"],
-                        "wins": r["wins"],
-                        "games": r["games"]
-                    } for r in rows
-                ]
-                
-                logger.info(f"Leaderboard: {len(leaders)} users")
-                return leaders
+                rows = conn.execute("SELECT name, points, wins, games FROM users WHERE games>0 ORDER BY points DESC, wins DESC LIMIT ?", (limit,)).fetchall()
+                return [{"name": r["name"], "points": r["points"], "wins": r["wins"], "games": r["games"]} for r in rows]
         except Exception as e:
             logger.error(f"Leaderboard error: {e}")
             return []
@@ -214,10 +137,7 @@ class Database:
     def get_theme(self, user_id: str) -> str:
         try:
             with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT theme FROM users WHERE user_id=?",
-                    (user_id,)
-                ).fetchone()
+                row = conn.execute("SELECT theme FROM users WHERE user_id=?", (user_id,)).fetchone()
                 return row["theme"] if row else "light"
         except Exception:
             return "light"
@@ -225,14 +145,10 @@ class Database:
     def toggle_theme(self, user_id: str) -> str:
         current = self.get_theme(user_id)
         new = "dark" if current == "light" else "light"
-
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    conn.execute(
-                        "UPDATE users SET theme=? WHERE user_id=?",
-                        (new, user_id)
-                    )
+                    conn.execute("UPDATE users SET theme=? WHERE user_id=?", (new, user_id))
                     logger.info(f"Theme changed to {new}")
                 return new
             except Exception as e:
@@ -251,11 +167,9 @@ class Database:
             logger.info(f"User no longer waiting: {user_id}")
 
     def is_changing_name(self, user_id: str) -> bool:
-        """تحقق من حالة تغيير الاسم"""
         return user_id in self._changing_names
 
     def set_changing_name(self, user_id: str, changing: bool):
-        """تعيين حالة تغيير الاسم"""
         if changing:
             self._changing_names[user_id] = time.time()
             logger.info(f"User changing name: {user_id}")
@@ -265,10 +179,7 @@ class Database:
 
     def save_game_progress(self, user_id: str, progress: dict):
         with self._lock:
-            self._game_progress[user_id] = {
-                **progress,
-                "saved_at": time.time()
-            }
+            self._game_progress[user_id] = {**progress, "saved_at": time.time()}
             logger.info(f"Game progress saved: {user_id}")
 
     def get_game_progress(self, user_id: str):
@@ -281,36 +192,7 @@ class Database:
 
     def cleanup_memory(self, timeout: int = 1800):
         now = time.time()
-
         with self._lock:
-            before_names = len(self._waiting_names)
-            self._waiting_names = {
-                k: v for k, v in self._waiting_names.items()
-                if now - v < timeout
-            }
-            after_names = len(self._waiting_names)
-            
-            before_changing = len(self._changing_names)
-            self._changing_names = {
-                k: v for k, v in self._changing_names.items()
-                if now - v < timeout
-            }
-            after_changing = len(self._changing_names)
-            
-            before_progress = len(self._game_progress)
-            self._game_progress = {
-                k: v for k, v in self._game_progress.items()
-                if now - v.get("saved_at", now) < timeout
-            }
-            after_progress = len(self._game_progress)
-            
-            if any([
-                before_names != after_names,
-                before_changing != after_changing,
-                before_progress != after_progress
-            ]):
-                logger.info(
-                    f"Cleanup: names {before_names}->{after_names}, "
-                    f"changing {before_changing}->{after_changing}, "
-                    f"progress {before_progress}->{after_progress}"
-                )
+            self._waiting_names = {k: v for k, v in self._waiting_names.items() if now - v < timeout}
+            self._changing_names = {k: v for k, v in self._changing_names.items() if now - v < timeout}
+            self._game_progress = {k: v for k, v in self._game_progress.items() if now - v.get("saved_at", now) < timeout}
