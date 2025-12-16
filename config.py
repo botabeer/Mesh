@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
     # App Info
     BOT_NAME = "Bot Mesh"
-    VERSION = "9.2"  # ✅ زيادة الإصدار
+    VERSION = "10.0"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     # LINE Credentials
@@ -26,40 +26,40 @@ class Config:
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 2
 
-    # ✅ قائمة الأوامر المُطبَّعة
-    MAIN_COMMANDS = {
-        "بدايه",      # بداية → بدايه
+    # الأوامر المحجوزة (لا تقبل كأسماء)
+    RESERVED_COMMANDS = {
+        "بدايه", "بداية",
         "العاب",
         "نقاطي",
-        "الصداره",    # الصدارة → الصداره
-        "تغيير الثيم",
+        "الصداره", "الصدارة",
         "ثيم",
-        "مساعده"      # مساعدة → مساعده
-    }
-
-    GAME_COMMANDS = {
-        "لمح",
-        "تلميح",
-        "جاوب",
-        "الاجابه",
-        "انسحب"
-    }
-
-    # ✅ أسماء الألعاب المُطبَّعة (بعد normalize)
-    GAME_NAMES = {
+        "مساعده", "مساعدة",
+        "تسجيل",
+        "انسحب",
+        "ايقاف",
+        "تغيير الاسم", "تغيير اسمي",
+        # أسماء الألعاب
         "ذكاء",
         "خمن",
         "رياضيات",
         "ترتيب",
         "ضد",
         "اسرع",
-        "سلسله",
+        "سلسله", "سلسلة",
         "انسان حيوان",
         "كون كلمات",
         "اغاني",
         "الوان",
         "مافيا",
-        "توافق"
+        "توافق",
+        # محتوى تفاعلي
+        "تحدي",
+        "سؤال", "سوال",
+        "اعتراف",
+        "منشن",
+        "موقف",
+        "حكمه", "حكمة",
+        "شخصيه", "شخصية"
     }
 
     # Themes
@@ -104,20 +104,10 @@ class Config:
 
     @classmethod
     def normalize(cls, text: str) -> str:
-        """
-        ✅ تطبيع موحّد ومحسّن للنصوص العربية
-        
-        القواعد:
-        1. إزالة المسافات الزائدة
-        2. تحويل للأحرف الصغيرة
-        3. إزالة التشكيل
-        4. توحيد الحروف المتشابهة
-        5. الحفاظ على المسافات بين الكلمات
-        """
+        """تطبيع موحّد للنصوص العربية"""
         if not text:
             return ""
 
-        # تنظيف أولي
         text = text.strip().lower()
         text = text[:1000]
 
@@ -133,10 +123,10 @@ class Config:
         for old, new in replacements.items():
             text = text.replace(old, new)
 
-        # تنظيف الرموز (الحفاظ على المسافات والأحرف فقط)
+        # تنظيف الرموز
         text = re.sub(r"[^\w\sء-ي]", "", text)
 
-        # تنظيف المسافات (تحويل المسافات المتعددة لمسافة واحدة)
+        # تنظيف المسافات
         text = re.sub(r"\s+", " ", text).strip()
 
         return text
@@ -144,4 +134,4 @@ class Config:
 
 # Startup Validation
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
-    raise RuntimeError("❌ LINE credentials missing in environment")
+    raise RuntimeError("LINE credentials missing")
