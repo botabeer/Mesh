@@ -6,11 +6,11 @@ load_dotenv()
 
 
 class Config:
-    """إعدادات التطبيق الرئيسية"""
+    """إعدادات التطبيق المحسّنة"""
     
     # معلومات التطبيق
     BOT_NAME = "Bot Mesh"
-    VERSION = "11.0"
+    VERSION = "12.0"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     # بيانات LINE API
@@ -34,52 +34,46 @@ class Config:
         "ثيم", "مساعده", "مساعدة", "تسجيل", "انسحب", "ايقاف",
         "تغيير الاسم", "تغيير اسمي", "ذكاء", "خمن", "رياضيات",
         "ترتيب", "ضد", "اسرع", "سلسله", "سلسلة", "توافق",
-        "انسان حيوان", "كون كلمات", "اغاني", "الوان", "مافيا",
+        "انسان حيوان", "كون كلمات", "اغاني", "الوان",
         "تحدي", "سؤال", "سوال", "اعتراف", "منشن", "موقف", 
         "حكمه", "حكمة", "شخصيه", "شخصية"
     }
 
-    # الأوامر الرئيسية
-    MAIN_COMMANDS = {
-        "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
-        "ثيم", "مساعده", "مساعدة", "تسجيل", "تغيير الاسم", "تغيير اسمي"
-    }
-
-    # السمات (Themes)
+    # السمات المحسّنة (أبيض، أسود، رمادي)
     THEMES = {
         "light": {
-            "primary": "#2196F3",
-            "secondary": "#5C6BC0",
-            "success": "#4CAF50",
-            "warning": "#FF9800",
-            "danger": "#F44336",
-            "error": "#F44336",
-            "info": "#00BCD4",
-            "bg": "#FAFAFA",
-            "bg_secondary": "#FFFFFF",
+            "primary": "#374151",      # رمادي داكن
+            "secondary": "#6B7280",    # رمادي متوسط
+            "success": "#4B5563",      # رمادي للنجاح
+            "warning": "#9CA3AF",      # رمادي فاتح
+            "danger": "#1F2937",       # رمادي داكن جداً
+            "error": "#1F2937",
+            "info": "#6B7280",
+            "bg": "#FFFFFF",           # أبيض
+            "bg_secondary": "#F9FAFB",
             "card": "#FFFFFF",
-            "text": "#212121",
-            "text_secondary": "#616161",
-            "text_tertiary": "#9E9E9E",
-            "border": "#E0E0E0",
-            "glass": "#F5F5F5"
+            "text": "#111827",         # أسود تقريباً
+            "text_secondary": "#374151",
+            "text_tertiary": "#9CA3AF",
+            "border": "#E5E7EB",
+            "glass": "#F9FAFB"
         },
         "dark": {
-            "primary": "#42A5F5",
-            "secondary": "#7E57C2",
-            "success": "#66BB6A",
-            "warning": "#FFA726",
-            "danger": "#EF5350",
-            "error": "#EF5350",
-            "info": "#26C6DA",
-            "bg": "#121212",
-            "bg_secondary": "#1E1E1E",
-            "card": "#1E1E1E",
-            "text": "#FFFFFF",
-            "text_secondary": "#E0E0E0",
-            "text_tertiary": "#9E9E9E",
-            "border": "#2C2C2C",
-            "glass": "#242424"
+            "primary": "#D1D5DB",      # رمادي فاتح
+            "secondary": "#9CA3AF",    # رمادي متوسط
+            "success": "#D1D5DB",
+            "warning": "#6B7280",
+            "danger": "#E5E7EB",
+            "error": "#E5E7EB",
+            "info": "#9CA3AF",
+            "bg": "#111827",           # أسود تقريباً
+            "bg_secondary": "#1F2937",
+            "card": "#1F2937",
+            "text": "#F9FAFB",         # أبيض تقريباً
+            "text_secondary": "#D1D5DB",
+            "text_tertiary": "#6B7280",
+            "border": "#374151",
+            "glass": "#1F2937"
         }
     }
 
@@ -122,10 +116,9 @@ class Config:
         if not name or len(name) < cls.MIN_NAME_LENGTH or len(name) > cls.MAX_NAME_LENGTH:
             return False
         
-        # السماح بالعربية والإنجليزية والمسافات فقط
         return bool(re.match(r'^[\u0600-\u06FFa-zA-Z\s]{2,50}$', name.strip()))
 
 
 # التحقق من وجود بيانات الاعتماد
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
-    raise RuntimeError("LINE credentials missing. Please set LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN")
+    raise RuntimeError("LINE credentials missing")
