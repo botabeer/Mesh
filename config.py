@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
     # App Info
     BOT_NAME = "Bot Mesh"
-    VERSION = "9.1"  # زيادة الإصدار
+    VERSION = "9.2"  # ✅ زيادة الإصدار
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     # LINE Credentials
@@ -26,33 +26,36 @@ class Config:
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 2
 
-    # Command Groups - الأوامر بصيغ متعددة
+    # ✅ قائمة الأوامر المُطبَّعة
     MAIN_COMMANDS = {
-        "بداية", "بدايه",
-        "العاب", "الالعاب",
+        "بدايه",      # بداية → بدايه
+        "العاب",
         "نقاطي",
-        "الصدارة", "الصداره",
-        "تغيير_الثيم", "تغيير الثيم",
-        "مساعدة", "مساعده"
+        "الصداره",    # الصدارة → الصداره
+        "تغيير الثيم",
+        "ثيم",
+        "مساعده"      # مساعدة → مساعده
     }
 
     GAME_COMMANDS = {
-        "لمح", "تلميح",
-        "جاوب", "الاجابة", "الاجابه",
+        "لمح",
+        "تلميح",
+        "جاوب",
+        "الاجابه",
         "انسحب"
     }
 
-    # أسماء الألعاب بصيغ متعددة
+    # ✅ أسماء الألعاب المُطبَّعة (بعد normalize)
     GAME_NAMES = {
         "ذكاء",
         "خمن",
-        "رياضيات", "رياضيات",
+        "رياضيات",
         "ترتيب",
         "ضد",
         "اسرع",
-        "سلسله", "سلسلة",
-        "انسان_حيوان", "انسان حيوان",
-        "كون_كلمات", "كون كلمات",
+        "سلسله",
+        "انسان حيوان",
+        "كون كلمات",
         "اغاني",
         "الوان",
         "مافيا",
@@ -101,10 +104,20 @@ class Config:
 
     @classmethod
     def normalize(cls, text: str) -> str:
-        """تطبيع النص العربي بشكل محسّن"""
+        """
+        ✅ تطبيع موحّد ومحسّن للنصوص العربية
+        
+        القواعد:
+        1. إزالة المسافات الزائدة
+        2. تحويل للأحرف الصغيرة
+        3. إزالة التشكيل
+        4. توحيد الحروف المتشابهة
+        5. الحفاظ على المسافات بين الكلمات
+        """
         if not text:
             return ""
 
+        # تنظيف أولي
         text = text.strip().lower()
         text = text[:1000]
 
@@ -120,21 +133,15 @@ class Config:
         for old, new in replacements.items():
             text = text.replace(old, new)
 
-        # تحويل underscore إلى مسافة
-        text = text.replace("_", " ")
-
-        # إزالة الرموز والأرقام
+        # تنظيف الرموز (الحفاظ على المسافات والأحرف فقط)
         text = re.sub(r"[^\w\sء-ي]", "", text)
 
-        # تنظيف المسافات
+        # تنظيف المسافات (تحويل المسافات المتعددة لمسافة واحدة)
         text = re.sub(r"\s+", " ", text).strip()
-        
-        # إزالة المسافات للأوامر (للمقارنة)
-        # نترك المسافات للألعاب مثل "انسان حيوان"
-        
+
         return text
 
 
 # Startup Validation
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
-    raise RuntimeError("LINE credentials missing")
+    raise RuntimeError("❌ LINE credentials missing in environment")
