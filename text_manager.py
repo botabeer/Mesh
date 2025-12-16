@@ -1,6 +1,7 @@
 import random
 import logging
-from linebot.v3.messaging import TextMessage, QuickReply, QuickReplyItem, MessageAction
+from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -29,29 +30,73 @@ class TextManager:
             QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
             QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
             QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
-            QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
-            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
-            QuickReplyItem(action=MessageAction(label="شخصية", text="شخصية")),
-            QuickReplyItem(action=MessageAction(label="حكمة", text="حكمة")),
-            QuickReplyItem(action=MessageAction(label="موقف", text="موقف"))
+            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال"))
         ])
 
-    def handle(self, cmd: str):
-        qr = self._quick_reply()
+    def _create_flex_message(self, title: str, content: str, theme: str = "light"):
+        c = Config.get_theme(theme)
+        
+        contents = [
+            {
+                "type": "text",
+                "text": title,
+                "size": "lg",
+                "weight": "bold",
+                "color": c["primary"],
+                "align": "center"
+            },
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {
+                "type": "text",
+                "text": content,
+                "size": "md",
+                "color": c["text"],
+                "wrap": True,
+                "margin": "md"
+            },
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                "style": "secondary",
+                "height": "sm",
+                "margin": "md"
+            }
+        ]
+        
+        flex = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["bg"],
+                "paddingAll": "20px",
+                "spacing": "md",
+                "contents": contents
+            }
+        }
+        
+        return FlexMessage(
+            alt_text=title,
+            contents=FlexContainer.from_dict(flex),
+            quickReply=self._quick_reply()
+        )
 
+    def handle(self, cmd: str, theme: str = "light"):
         if cmd == "تحدي" and self.challenges:
-            return TextMessage(text=random.choice(self.challenges), quickReply=qr)
+            return self._create_flex_message("تحدي", random.choice(self.challenges), theme)
         if cmd == "اعتراف" and self.confessions:
-            return TextMessage(text=random.choice(self.confessions), quickReply=qr)
+            return self._create_flex_message("اعتراف", random.choice(self.confessions), theme)
         if cmd == "منشن" and self.mentions:
-            return TextMessage(text=random.choice(self.mentions), quickReply=qr)
+            return self._create_flex_message("منشن", random.choice(self.mentions), theme)
         if cmd in ("شخصيه", "شخصية") and self.personality:
-            return TextMessage(text=random.choice(self.personality), quickReply=qr)
+            return self._create_flex_message("سؤال شخصية", random.choice(self.personality), theme)
         if cmd == "سؤال" and self.questions:
-            return TextMessage(text=random.choice(self.questions), quickReply=qr)
+            return self._create_flex_message("سؤال", random.choice(self.questions), theme)
         if cmd in ("حكمه", "حكمة") and self.quotes:
-            return TextMessage(text=random.choice(self.quotes), quickReply=qr)
+            return self._create_flex_message("حكمة", random.choice(self.quotes), theme)
         if cmd == "موقف" and self.situations:
-            return TextMessage(text=random.choice(self.situations), quickReply=qr)
+            return self._create_flex_message("موقف", random.choice(self.situations), theme)
 
         return None
