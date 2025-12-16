@@ -29,7 +29,7 @@ class TextManager:
             return []
 
     def _quick_reply(self):
-        """الأزرار الثابتة"""
+        """الازرار الثابتة"""
         return QuickReply(items=[
             QuickReplyItem(action=MessageAction(label="البداية", text="بداية")),
             QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
@@ -40,15 +40,27 @@ class TextManager:
         ])
 
     def _create_text_card(self, title: str, content: str, theme: str = "light"):
-        """إنشاء بطاقة نصية بسيطة"""
+        """انشاء بطاقة نصية بسيطة"""
         c = Config.get_theme(theme)
 
         contents = [
-            {"type": "text", "text": title, "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
-            {"type": "separator", "margin": "md", "color": c["border"]},
-            {"type": "text", "text": content, "size": "sm", "color": c["text"], "wrap": True, "margin": "lg"},
+            {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": title, "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"}
+                ],
+                "paddingAll": "16px", "backgroundColor": c["card"], "cornerRadius": "12px"
+            },
             {"type": "separator", "margin": "lg", "color": c["border"]},
-            {"type": "button", "action": {"type": "message", "label": title, "text": title}, "style": "secondary", "height": "sm", "margin": "sm"}
+            {
+                "type": "box", "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": content, "size": "sm", "color": c["text"], "wrap": True}
+                ],
+                "paddingAll": "16px", "backgroundColor": c["glass"], "cornerRadius": "10px", "margin": "lg"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "button", "action": {"type": "message", "label": f"مرة اخرى", "text": title}, "style": "secondary", "height": "sm", "margin": "md"}
         ]
 
         bubble = {
@@ -59,7 +71,8 @@ class TextManager:
                 "layout": "vertical",
                 "contents": contents,
                 "paddingAll": "20px",
-                "backgroundColor": c["bg"]
+                "backgroundColor": c["bg"],
+                "spacing": "none"
             }
         }
 
@@ -70,7 +83,7 @@ class TextManager:
         )
 
     def handle(self, cmd: str, theme: str = "light"):
-        """معالجة الأوامر النصية"""
+        """معالجة الاوامر النصية"""
         cmd = cmd.strip().lower()
         
         mapping = {
