@@ -11,13 +11,10 @@ logger = logging.getLogger(__name__)
 class Database:
     def __init__(self):
         self._lock = Lock()
-        self._waiting_names = {}      # user_id -> timestamp
-        self._game_progress = {}      # user_id -> progress dict
+        self._waiting_names = {}
+        self._game_progress = {}
         self._init_db()
 
-    # ===============================
-    # Connection
-    # ===============================
     @contextmanager
     def _get_conn(self):
         conn = sqlite3.connect(
@@ -35,9 +32,6 @@ class Database:
         finally:
             conn.close()
 
-    # ===============================
-    # Init
-    # ===============================
     def _init_db(self):
         with self._lock, self._get_conn() as conn:
             conn.execute("""
@@ -61,9 +55,6 @@ class Database:
 
         logger.info("Database initialized")
 
-    # ===============================
-    # Users
-    # ===============================
     def get_user(self, user_id: str):
         try:
             with self._get_conn() as conn:
@@ -106,9 +97,6 @@ class Database:
         except Exception:
             pass
 
-    # ===============================
-    # Points & Games
-    # ===============================
     def add_points(self, user_id: str, points: int) -> bool:
         if points <= 0:
             return False
@@ -141,9 +129,6 @@ class Database:
                 logger.error(f"Finish game error: {e}")
                 return False
 
-    # ===============================
-    # Leaderboard
-    # ===============================
     def get_leaderboard(self, limit: int = 10):
         try:
             with self._get_conn() as conn:
@@ -166,9 +151,6 @@ class Database:
         except Exception:
             return []
 
-    # ===============================
-    # Theme
-    # ===============================
     def get_theme(self, user_id: str) -> str:
         try:
             with self._get_conn() as conn:
@@ -195,9 +177,6 @@ class Database:
             except Exception:
                 return current
 
-    # ===============================
-    # Registration Flow
-    # ===============================
     def is_waiting_name(self, user_id: str) -> bool:
         return user_id in self._waiting_names
 
@@ -207,9 +186,6 @@ class Database:
         else:
             self._waiting_names.pop(user_id, None)
 
-    # ===============================
-    # Game Progress (In-Memory)
-    # ===============================
     def save_game_progress(self, user_id: str, progress: dict):
         with self._lock:
             self._game_progress[user_id] = {
@@ -225,7 +201,6 @@ class Database:
             self._game_progress.pop(user_id, None)
 
     def cleanup_memory(self, timeout: int = 1800):
-        """تنظيف البيانات المعلقة (30 دقيقة افتراضيًا)"""
         now = time.time()
 
         with self._lock:
