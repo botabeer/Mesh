@@ -6,7 +6,7 @@ load_dotenv()
 
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "8.0"
+    VERSION = "9.0"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -18,33 +18,39 @@ class Config:
     THEMES = {
         "light": {
             "primary": "#007AFF",
-            "secondary": "#8E8E93",
+            "secondary": "#5856D6",
             "success": "#34C759",
             "warning": "#FF9500",
             "danger": "#FF3B30",
-            "bg": "#FFFFFF",
-            "bg_secondary": "#F2F2F7",
-            "glass": "#F2F2F780",
+            "info": "#5AC8FA",
+            "bg": "#F2F2F7",
+            "bg_secondary": "#FFFFFF",
+            "glass": "rgba(255, 255, 255, 0.7)",
+            "glass_border": "rgba(0, 0, 0, 0.1)",
             "card": "#FFFFFF",
             "text": "#000000",
             "text_secondary": "#3C3C43",
             "text_tertiary": "#8E8E93",
-            "border": "#E5E5EA"
+            "border": "#E5E5EA",
+            "shadow": "rgba(0, 0, 0, 0.1)"
         },
         "dark": {
             "primary": "#0A84FF",
-            "secondary": "#98989D",
+            "secondary": "#5E5CE6",
             "success": "#30D158",
             "warning": "#FF9F0A",
             "danger": "#FF453A",
+            "info": "#64D2FF",
             "bg": "#000000",
             "bg_secondary": "#1C1C1E",
-            "glass": "#2C2C2E80",
+            "glass": "rgba(28, 28, 30, 0.7)",
+            "glass_border": "rgba(255, 255, 255, 0.1)",
             "card": "#1C1C1E",
             "text": "#FFFFFF",
             "text_secondary": "#EBEBF5",
             "text_tertiary": "#98989D",
-            "border": "#3A3A3C"
+            "border": "#3A3A3C",
+            "shadow": "rgba(0, 0, 0, 0.3)"
         }
     }
 
