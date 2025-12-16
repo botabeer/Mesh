@@ -6,11 +6,11 @@ load_dotenv()
 
 
 class Config:
-    """اعدادات التطبيق المحسّنة"""
+    """إعدادات التطبيق المحسّنة"""
     
     BOT_NAME = "Bot Mesh"
-    VERSION = "14.0"
-    COPYRIGHT = "تم انشاء هذا البوت بواسطة عبير الدوسري @ 2025"
+    VERSION = "15.0"
+    COPYRIGHT = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
     AUTHOR = "عبير الدوسري"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -27,7 +27,7 @@ class Config:
 
     RESERVED_COMMANDS = {
         "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
-        "ثيم", "مساعده", "مساعدة", "تسجيل", "ايقاف",
+        "ثيم", "مساعده", "مساعدة", "تسجيل", "ايقاف", "انسحب",
         "تغيير الاسم", "تغيير اسمي", "ذكاء", "خمن", "رياضيات",
         "ترتيب", "ضد", "اسرع", "سلسله", "سلسلة", "توافق",
         "انسان حيوان", "كون كلمات", "اغاني", "الوان",
@@ -37,44 +37,42 @@ class Config:
 
     THEMES = {
         "light": {
-            "primary": "#2563EB",
-            "secondary": "#64748B",
-            "success": "#10B981",
-            "warning": "#F59E0B",
-            "danger": "#EF4444",
-            "error": "#DC2626",
-            "info": "#3B82F6",
+            "primary": "#000000",
+            "secondary": "#6B7280",
+            "success": "#4B5563",
+            "warning": "#6B7280",
+            "danger": "#374151",
+            "info": "#6B7280",
             "bg": "#FFFFFF",
-            "bg_secondary": "#F8FAFC",
+            "bg_secondary": "#F9FAFB",
             "card": "#FFFFFF",
-            "text": "#0F172A",
-            "text_secondary": "#475569",
-            "text_tertiary": "#94A3B8",
-            "border": "#E2E8F0",
-            "glass": "#F1F5F9"
+            "text": "#111827",
+            "text_secondary": "#4B5563",
+            "text_tertiary": "#9CA3AF",
+            "border": "#E5E7EB",
+            "glass": "#F3F4F6"
         },
         "dark": {
-            "primary": "#60A5FA",
-            "secondary": "#94A3B8",
-            "success": "#34D399",
-            "warning": "#FBBF24",
-            "danger": "#F87171",
-            "error": "#EF4444",
-            "info": "#60A5FA",
-            "bg": "#0F172A",
-            "bg_secondary": "#1E293B",
-            "card": "#1E293B",
-            "text": "#F1F5F9",
-            "text_secondary": "#CBD5E1",
-            "text_tertiary": "#94A3B8",
-            "border": "#334155",
-            "glass": "#1E293B"
+            "primary": "#FFFFFF",
+            "secondary": "#9CA3AF",
+            "success": "#D1D5DB",
+            "warning": "#9CA3AF",
+            "danger": "#6B7280",
+            "info": "#9CA3AF",
+            "bg": "#000000",
+            "bg_secondary": "#1F2937",
+            "card": "#1F2937",
+            "text": "#F9FAFB",
+            "text_secondary": "#D1D5DB",
+            "text_tertiary": "#9CA3AF",
+            "border": "#374151",
+            "glass": "#1F2937"
         }
     }
 
     @classmethod
     def get_theme(cls, name: str = "light") -> dict:
-        """الحصول على الوان السمة"""
+        """الحصول على ألوان السمة"""
         return cls.THEMES.get(name, cls.THEMES["light"])
 
     @classmethod
@@ -84,7 +82,6 @@ class Config:
             return ""
         
         text = text.strip().lower()[:1000]
-        
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
         
         replacements = {
@@ -105,7 +102,6 @@ class Config:
         """التحقق من صحة الاسم"""
         if not name or len(name) < cls.MIN_NAME_LENGTH or len(name) > cls.MAX_NAME_LENGTH:
             return False
-        
         return bool(re.match(r'^[\u0600-\u06FFa-zA-Z\s]{1,50}$', name.strip()))
 
 
