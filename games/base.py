@@ -4,7 +4,7 @@ from config import Config
 
 
 class BaseGame(ABC):
-    """القاعدة الموحدة لجميع الألعاب"""
+    """القاعدة الموحدة لجميع الالعاب"""
     
     QUESTIONS_PER_GAME = 5
 
@@ -21,16 +21,16 @@ class BaseGame(ABC):
         self.supports_reveal = True
 
     def _c(self):
-        """الحصول على ألوان السمة"""
+        """الحصول على الوان السمة"""
         return Config.get_theme(self.theme)
 
     def _quick_reply(self):
-        """الأزرار الثابتة"""
+        """الازرار الثابتة"""
         return QuickReply(items=[
             QuickReplyItem(action=MessageAction(label="البداية", text="بداية")),
             QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
             QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
-            QuickReplyItem(action=MessageAction(label="انسحب", text="انسحب"))
+            QuickReplyItem(action=MessageAction(label="ايقاف", text="ايقاف"))
         ])
 
     @abstractmethod
@@ -56,7 +56,7 @@ class BaseGame(ABC):
         self.current_q = progress.get("current_q", 0)
 
     def on_stop(self, user_id: str):
-        """عند إيقاف اللعبة"""
+        """عند ايقاف اللعبة"""
         self.db.save_game_progress(user_id, {
             "game": self.game_name,
             "score": self.score,
@@ -64,7 +64,7 @@ class BaseGame(ABC):
         })
 
     def check(self, answer: str, user_id: str):
-        """المنطق الأساسي للتحقق"""
+        """المنطق الاساسي للتحقق"""
         if user_id != self.user_id:
             return None
 
@@ -73,25 +73,25 @@ class BaseGame(ABC):
 
         cmd = Config.normalize(answer)
 
-        # تجاهل الأوامر الرئيسية
+        # تجاهل الاوامر الرئيسية
         if cmd in {"بدايه", "بداية", "مساعده", "مساعدة", "العاب"}:
             return None
 
-        # الانسحاب
-        if cmd == "انسحب":
+        # ايقاف
+        if cmd in ("ايقاف", "ايقاف اللعبة"):
             return {"response": self._pause_message(), "game_over": True}
 
-        # اللمح (إن كان مدعوماً)
+        # اللمح (ان كان مدعوماً)
         if self.supports_hint and cmd == "لمح":
             hint = self._get_hint()
             if hint:
                 return {"response": self._hint_message(hint), "game_over": False}
 
-        # الجواب (إن كان مدعوماً)
+        # الجواب (ان كان مدعوماً)
         if self.supports_reveal and cmd == "جاوب":
             return {"response": self._reveal_message(), "game_over": False, "skip": True}
 
-        # التحقق من الإجابة
+        # التحقق من الاجابة
         try:
             correct = self.check_answer(answer)
         except Exception:
@@ -100,7 +100,7 @@ class BaseGame(ABC):
         if not correct:
             return None
 
-        # إجابة صحيحة
+        # اجابة صحيحة
         self.score += 1
         self.db.add_points(user_id, 1)
         self.current_q += 1
@@ -143,13 +143,14 @@ class BaseGame(ABC):
                     {"type": "text", "text": hint, "size": "sm", "color": c["text"], "wrap": True, "margin": "md", "align": "center"}
                 ],
                 "paddingAll": "16px",
-                "backgroundColor": c["bg"]
+                "backgroundColor": c["bg"],
+                "spacing": "none"
             }
         }
         return FlexMessage(alt_text="تلميح", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def _reveal_message(self):
-        """رسالة الكشف عن الإجابة"""
+        """رسالة الكشف عن الاجابة"""
         c = self._c()
         if isinstance(self.current_answer, list):
             ans = " او ".join(self.current_answer)
@@ -168,21 +169,22 @@ class BaseGame(ABC):
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "الإجابة", "size": "md", "weight": "bold", "color": c["danger"], "align": "center"},
+                    {"type": "text", "text": "الاجابة", "size": "md", "weight": "bold", "color": c["danger"], "align": "center"},
                     {"type": "separator", "margin": "md", "color": c["border"]},
                     {"type": "text", "text": ans, "size": "sm", "color": c["text"], "wrap": True, "margin": "md", "align": "center"}
                 ],
                 "paddingAll": "16px",
-                "backgroundColor": c["bg"]
+                "backgroundColor": c["bg"],
+                "spacing": "none"
             }
         }
         
-        msg = FlexMessage(alt_text="الإجابة", contents=FlexContainer.from_dict(bubble))
+        msg = FlexMessage(alt_text="الاجابة", contents=FlexContainer.from_dict(bubble))
         next_q = self.get_question()
         return [msg, next_q]
 
     def _pause_message(self):
-        """رسالة الإيقاف"""
+        """رسالة الايقاف"""
         c = self._c()
         bubble = {
             "type": "bubble",
@@ -194,13 +196,14 @@ class BaseGame(ABC):
                     {"type": "text", "text": "تم حفظ تقدمك", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
                     {"type": "separator", "margin": "md", "color": c["border"]},
                     {"type": "text", "text": f"النقاط {self.score}", "size": "sm", "color": c["text"], "align": "center", "margin": "md"},
-                    {"type": "text", "text": f"الأسئلة {self.current_q}/{self.total_q}", "size": "xs", "color": c["text_secondary"], "align": "center"}
+                    {"type": "text", "text": f"الاسئلة {self.current_q}/{self.total_q}", "size": "xs", "color": c["text_secondary"], "align": "center"}
                 ],
                 "paddingAll": "16px",
-                "backgroundColor": c["bg"]
+                "backgroundColor": c["bg"],
+                "spacing": "none"
             }
         }
-        return FlexMessage(alt_text="تم الإيقاف", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
+        return FlexMessage(alt_text="تم الايقاف", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
     def _game_over_message(self):
         """رسالة نهاية اللعبة"""
@@ -222,7 +225,8 @@ class BaseGame(ABC):
                     {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "margin": "sm"}
                 ],
                 "paddingAll": "20px",
-                "backgroundColor": c["bg"]
+                "backgroundColor": c["bg"],
+                "spacing": "none"
             }
         }
         return FlexMessage(alt_text="النتيجة", contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
@@ -243,7 +247,7 @@ class BaseGame(ABC):
         
         contents.append({"type": "separator", "margin": "lg", "color": c["border"]})
         
-        # أزرار اللمح والجواب
+        # ازرار اللمح والجواب
         if self.supports_hint and self.supports_reveal:
             contents.append({
                 "type": "box",
@@ -264,7 +268,8 @@ class BaseGame(ABC):
                 "layout": "vertical",
                 "contents": contents,
                 "paddingAll": "20px",
-                "backgroundColor": c["bg"]
+                "backgroundColor": c["bg"],
+                "spacing": "none"
             }
         }
         
