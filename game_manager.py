@@ -19,16 +19,22 @@ class GameManager:
     def _load_games(self):
         games = {}
 
+        # تعريف الألعاب مع جميع الأسماء المحتملة
         mappings = {
             "ذكاء": ("games.iq", "IqGame"),
+            "ذكاء": ("games.iq", "IqGame"),
             "خمن": ("games.guess", "GuessGame"),
+            "رياضيات": ("games.math", "MathGame"),
             "رياضيات": ("games.math", "MathGame"),
             "ترتيب": ("games.scramble", "ScrambleGame"),
             "ضد": ("games.opposite", "OppositeGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
+            "سلسلة": ("games.chain_words", "ChainWordsGame"),
             "انسان_حيوان": ("games.human_animal", "HumanAnimalGame"),
+            "انسان حيوان": ("games.human_animal", "HumanAnimalGame"),
             "كون_كلمات": ("games.letters_words", "LettersWordsGame"),
+            "كون كلمات": ("games.letters_words", "LettersWordsGame"),
             "اغاني": ("games.song", "SongGame"),
             "الوان": ("games.word_color", "WordColorGame"),
             "مافيا": ("games.mafia", "MafiaGame"),
@@ -60,9 +66,15 @@ class GameManager:
         if game:
             return self._handle_answer(user_id, raw_text)
 
-        # بدء لعبة جديدة
+        # بدء لعبة جديدة - تحقق من الأوامر المطابقة
+        logger.info(f"Checking game command: '{cmd}'")
+        logger.info(f"Available games: {list(self._games.keys())}")
+        
         if cmd in self._games:
+            logger.info(f"Starting game: {cmd}")
             return self._start_game(user_id, cmd, theme)
+        else:
+            logger.warning(f"Game '{cmd}' not found in available games")
 
         return None
 
@@ -75,7 +87,7 @@ class GameManager:
 
         # حفظ التقدم
         self.db.save_game_progress(user_id, {
-            "game": game.game_name,
+            "game": getattr(game, 'game_name', 'unknown'),
             "score": getattr(game, "score", 0),
             "current_q": getattr(game, "current_q", 0),
         })
@@ -84,8 +96,8 @@ class GameManager:
         if hasattr(game, "on_stop"):
             try:
                 game.on_stop(user_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Error in game on_stop: {e}")
 
         logger.info(f"Game stopped for user {user_id}")
         return True
@@ -108,6 +120,9 @@ class GameManager:
         try:
             GameClass = self._games[game_name]
             game = GameClass(self.db, theme)
+            
+            # إضافة اسم اللعبة
+            game.game_name = game_name
 
             # استكمال التقدم إن وجد
             progress = self.db.get_game_progress(user_id)
@@ -118,11 +133,11 @@ class GameManager:
             with self._lock:
                 self._active[user_id] = game
 
-            logger.info(f"Started game '{game_name}' for {user_id}")
+            logger.info(f"✓ Started game '{game_name}' for {user_id}")
             return game.start(user_id)
 
         except Exception as e:
-            logger.exception(f"Error starting game {game_name}: {e}")
+            logger.exception(f"✗ Error starting game {game_name}: {e}")
             with self._lock:
                 self._active.pop(user_id, None)
             return None
@@ -150,7 +165,7 @@ class GameManager:
                 self.db.finish_game(user_id, won)
                 self.db.clear_game_progress(user_id)
 
-                logger.info(f"Game finished for {user_id}")
+                logger.info(f"Game finished for {user_id}, won={won}")
 
             return result.get("response")
 
