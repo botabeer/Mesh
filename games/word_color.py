@@ -2,9 +2,11 @@ import random
 from games.base import BaseGame
 from config import Config
 
+
 class WordColorGame(BaseGame):
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
+        self.game_name = "الوان"
         
         self.colors = [
             "احمر", "ازرق", "اخضر", "اصفر", 
@@ -22,7 +24,6 @@ class WordColorGame(BaseGame):
         self.current_answer = color
         
         hint = f"السؤال {self.current_q + 1}/{self.total_q} - اجب باسم اللون وليس الكلمة"
-        
         question = f"ما لون هذه الكلمة\n\nالكلمة: {word}\n\nتخيل انها مكتوبة بلون {color}"
         
         return self.build_question_flex(question, hint)
@@ -30,5 +31,4 @@ class WordColorGame(BaseGame):
     def check_answer(self, answer: str) -> bool:
         normalized = Config.normalize(answer)
         correct = Config.normalize(self.current_answer)
-        
         return normalized == correct
