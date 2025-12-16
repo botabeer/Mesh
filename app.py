@@ -113,11 +113,12 @@ def process_message(user_id: str, text: str, reply_token: str):
             return
 
         # ===============================
-        # Theme
+        # Theme - تغيير الثيم
         # ===============================
-        if cmd in ("تغيير الثيم", "تغيير_الثيم") and user:
+        if cmd in ("تغيير الثيم", "تغيير_الثيم", "ثيم") and user:
             logger.info("Theme toggle command")
             new_theme = db.toggle_theme(user_id)
+            user = db.get_user(user_id)  # إعادة تحميل بيانات المستخدم
             reply_message(
                 reply_token,
                 UI(theme=new_theme).main_menu(user)
