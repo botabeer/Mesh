@@ -10,8 +10,9 @@ class Config:
     
     # معلومات التطبيق
     BOT_NAME = "Bot Mesh"
-    VERSION = "12.0"
-    COPYRIGHT = "Created by Abeer Aldosari 2025"
+    VERSION = "13.0"
+    COPYRIGHT = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
+    AUTHOR = "عبير الدوسري"
 
     # بيانات LINE API
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
@@ -26,7 +27,7 @@ class Config:
     # إعدادات الألعاب
     QUESTIONS_PER_GAME = 5
     MAX_NAME_LENGTH = 50
-    MIN_NAME_LENGTH = 2
+    MIN_NAME_LENGTH = 1
 
     # الأوامر المحجوزة
     RESERVED_COMMANDS = {
@@ -36,44 +37,44 @@ class Config:
         "ترتيب", "ضد", "اسرع", "سلسله", "سلسلة", "توافق",
         "انسان حيوان", "كون كلمات", "اغاني", "الوان",
         "تحدي", "سؤال", "سوال", "اعتراف", "منشن", "موقف", 
-        "حكمه", "حكمة", "شخصيه", "شخصية"
+        "حكمه", "حكمة", "شخصيه", "شخصية", "مافيا"
     }
 
-    # السمات المحسّنة (أبيض، أسود، رمادي)
+    # السمات المحسّنة
     THEMES = {
         "light": {
-            "primary": "#374151",      # رمادي داكن
-            "secondary": "#6B7280",    # رمادي متوسط
-            "success": "#4B5563",      # رمادي للنجاح
-            "warning": "#9CA3AF",      # رمادي فاتح
-            "danger": "#1F2937",       # رمادي داكن جداً
-            "error": "#1F2937",
-            "info": "#6B7280",
-            "bg": "#FFFFFF",           # أبيض
-            "bg_secondary": "#F9FAFB",
+            "primary": "#2C3E50",
+            "secondary": "#5D6D7E",
+            "success": "#27AE60",
+            "warning": "#F39C12",
+            "danger": "#E74C3C",
+            "error": "#C0392B",
+            "info": "#3498DB",
+            "bg": "#FFFFFF",
+            "bg_secondary": "#F8F9FA",
             "card": "#FFFFFF",
-            "text": "#111827",         # أسود تقريباً
-            "text_secondary": "#374151",
-            "text_tertiary": "#9CA3AF",
-            "border": "#E5E7EB",
-            "glass": "#F9FAFB"
+            "text": "#1A1A1A",
+            "text_secondary": "#4A4A4A",
+            "text_tertiary": "#7A7A7A",
+            "border": "#E0E0E0",
+            "glass": "#F5F7FA"
         },
         "dark": {
-            "primary": "#D1D5DB",      # رمادي فاتح
-            "secondary": "#9CA3AF",    # رمادي متوسط
-            "success": "#D1D5DB",
-            "warning": "#6B7280",
-            "danger": "#E5E7EB",
-            "error": "#E5E7EB",
-            "info": "#9CA3AF",
-            "bg": "#111827",           # أسود تقريباً
-            "bg_secondary": "#1F2937",
-            "card": "#1F2937",
-            "text": "#F9FAFB",         # أبيض تقريباً
-            "text_secondary": "#D1D5DB",
-            "text_tertiary": "#6B7280",
-            "border": "#374151",
-            "glass": "#1F2937"
+            "primary": "#ECF0F1",
+            "secondary": "#BDC3C7",
+            "success": "#2ECC71",
+            "warning": "#F1C40F",
+            "danger": "#E74C3C",
+            "error": "#C0392B",
+            "info": "#3498DB",
+            "bg": "#1A1A1A",
+            "bg_secondary": "#2C2C2C",
+            "card": "#2C2C2C",
+            "text": "#F5F5F5",
+            "text_secondary": "#D5D5D5",
+            "text_tertiary": "#A5A5A5",
+            "border": "#3A3A3A",
+            "glass": "#252525"
         }
     }
 
@@ -116,7 +117,7 @@ class Config:
         if not name or len(name) < cls.MIN_NAME_LENGTH or len(name) > cls.MAX_NAME_LENGTH:
             return False
         
-        return bool(re.match(r'^[\u0600-\u06FFa-zA-Z\s]{2,50}$', name.strip()))
+        return bool(re.match(r'^[\u0600-\u06FFa-zA-Z\s]{1,50}$', name.strip()))
 
 
 # التحقق من وجود بيانات الاعتماد
