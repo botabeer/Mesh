@@ -1,38 +1,31 @@
 import os
 import multiprocessing
 
+# ==== الإعدادات الأساسية ====
 PORT = int(os.getenv("PORT", 8080))
 ENV = os.getenv("ENV", "production")
 
 bind = f"0.0.0.0:{PORT}"
-backlog = 2048
+workers = 1 if ENV == "development" else min(multiprocessing.cpu_count() * 2 + 1, 8)
+threads = 2 if ENV == "development" else 4
 
-cpu_count = multiprocessing.cpu_count()
-if ENV == "development":
-    workers = 1
-    threads = 2
-else:
-    workers = min(cpu_count * 2 + 1, 8)
-    threads = 4
+# ==== وقت الاستجابة والتحكم بالطلبات ====
+timeout = 60               # المهلة لكل طلب
+graceful_timeout = 30      # مهلة الإغلاق
+keepalive = 5              # الاحتفاظ بالاتصال
 
-worker_class = "gthread"
-worker_connections = 1000
+max_requests = 2000        # إعادة تشغيل العامل بعد عدد معين من الطلبات
+max_requests_jitter = 100  # عشوائية لتجنب الإغلاق المتزامن للعمال
 
-max_requests = 2000
-max_requests_jitter = 100
-
-timeout = 60
-graceful_timeout = 30
-keepalive = 5
-
+# ==== السجلات ====
 loglevel = "info"
-accesslog = "-"
+accesslog = "-"            # السجل يظهر على stdout
 errorlog = "-"
-access_log_format = '%(h)s "%(r)s" %(s)s %(b)s %(M)sms'
 
-preload_app = True
-reload = ENV == "development"
-worker_tmp_dir = "/dev/shm"
+# ==== خيارات إضافية ====
+preload_app = True         # تحميل التطبيق قبل إنشاء العمال
+reload = ENV == "development"  # إعادة التحميل التلقائي في التطوير
+worker_class = "gthread"   # استخدام خيوط Gthread للطلبات المتعددة
 
 proc_name = "bot-mesh"
 daemon = False
