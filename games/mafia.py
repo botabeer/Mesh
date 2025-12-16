@@ -29,8 +29,12 @@ class MafiaGame:
     
     def _quick_reply(self):
         return QuickReply(items=[
-            QuickReplyItem(action=MessageAction(label="البداية", text="بداية")),
-            QuickReplyItem(action=MessageAction(label="العاب", text="العاب"))
+            QuickReplyItem(action=MessageAction(label="القائمة", text="بداية")),
+            QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
+            QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
+            QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
+            QuickReplyItem(action=MessageAction(label="ايقاف", text="ايقاف")),
+            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة"))
         ])
 
     def _create_bubble(self, title, texts, buttons=None):
