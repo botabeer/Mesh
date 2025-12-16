@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
     # App Info
     BOT_NAME = "Bot Mesh"
-    VERSION = "9.0"
+    VERSION = "9.1"  # زيادة الإصدار
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     # LINE Credentials
@@ -26,13 +26,13 @@ class Config:
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 2
 
-    # Command Groups
+    # Command Groups - الأوامر بصيغ متعددة
     MAIN_COMMANDS = {
         "بداية", "بدايه",
-        "العاب",
+        "العاب", "الالعاب",
         "نقاطي",
         "الصدارة", "الصداره",
-        "تغيير_الثيم",
+        "تغيير_الثيم", "تغيير الثيم",
         "مساعدة", "مساعده"
     }
 
@@ -40,6 +40,23 @@ class Config:
         "لمح", "تلميح",
         "جاوب", "الاجابة", "الاجابه",
         "انسحب"
+    }
+
+    # أسماء الألعاب بصيغ متعددة
+    GAME_NAMES = {
+        "ذكاء",
+        "خمن",
+        "رياضيات", "رياضيات",
+        "ترتيب",
+        "ضد",
+        "اسرع",
+        "سلسله", "سلسلة",
+        "انسان_حيوان", "انسان حيوان",
+        "كون_كلمات", "كون كلمات",
+        "اغاني",
+        "الوان",
+        "مافيا",
+        "توافق"
     }
 
     # Themes
@@ -57,7 +74,8 @@ class Config:
             "text": "#000000",
             "text_secondary": "#3C3C43",
             "text_tertiary": "#8E8E93",
-            "border": "#E5E5EA"
+            "border": "#E5E5EA",
+            "glass": "#F8F8F8"
         },
         "dark": {
             "primary": "#0A84FF",
@@ -72,7 +90,8 @@ class Config:
             "text": "#FFFFFF",
             "text_secondary": "#EBEBF5",
             "text_tertiary": "#98989D",
-            "border": "#3A3A3C"
+            "border": "#3A3A3C",
+            "glass": "#2C2C2E"
         }
     }
 
@@ -82,13 +101,14 @@ class Config:
 
     @classmethod
     def normalize(cls, text: str) -> str:
+        """تطبيع النص العربي بشكل محسّن"""
         if not text:
             return ""
 
         text = text.strip().lower()
         text = text[:1000]
 
-        # ازالة التشكيل
+        # إزالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
 
         # توحيد الحروف
@@ -100,13 +120,19 @@ class Config:
         for old, new in replacements.items():
             text = text.replace(old, new)
 
-        # ازالة الرموز
+        # تحويل underscore إلى مسافة
+        text = text.replace("_", " ")
+
+        # إزالة الرموز والأرقام
         text = re.sub(r"[^\w\sء-ي]", "", text)
 
-        # مسافات
-        text = re.sub(r"\s+", " ", text)
-
-        return text.strip()
+        # تنظيف المسافات
+        text = re.sub(r"\s+", " ", text).strip()
+        
+        # إزالة المسافات للأوامر (للمقارنة)
+        # نترك المسافات للألعاب مثل "انسان حيوان"
+        
+        return text
 
 
 # Startup Validation
