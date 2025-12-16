@@ -6,37 +6,27 @@ load_dotenv()
 
 
 class Config:
-    # ===============================
     # App Info
-    # ===============================
     BOT_NAME = "Bot Mesh"
     VERSION = "9.0"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
-    # ===============================
     # LINE Credentials
-    # ===============================
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
-    # ===============================
     # Server / DB
-    # ===============================
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
     PORT = int(os.getenv("PORT", 5000))
     WORKERS = int(os.getenv("WORKERS", 4))
     ENV = os.getenv("ENV", "production")
 
-    # ===============================
     # Game Settings
-    # ===============================
     QUESTIONS_PER_GAME = 5
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 2
 
-    # ===============================
     # Command Groups
-    # ===============================
     MAIN_COMMANDS = {
         "بداية", "بدايه",
         "العاب",
@@ -52,9 +42,7 @@ class Config:
         "انسحب"
     }
 
-    # ===============================
     # Themes
-    # ===============================
     THEMES = {
         "light": {
             "primary": "#007AFF",
@@ -65,14 +53,11 @@ class Config:
             "info": "#5AC8FA",
             "bg": "#F2F2F7",
             "bg_secondary": "#FFFFFF",
-            "glass": "rgba(255, 255, 255, 0.7)",
-            "glass_border": "rgba(0, 0, 0, 0.1)",
             "card": "#FFFFFF",
             "text": "#000000",
             "text_secondary": "#3C3C43",
             "text_tertiary": "#8E8E93",
-            "border": "#E5E5EA",
-            "shadow": "rgba(0, 0, 0, 0.1)"
+            "border": "#E5E5EA"
         },
         "dark": {
             "primary": "#0A84FF",
@@ -83,20 +68,14 @@ class Config:
             "info": "#64D2FF",
             "bg": "#000000",
             "bg_secondary": "#1C1C1E",
-            "glass": "rgba(28, 28, 30, 0.7)",
-            "glass_border": "rgba(255, 255, 255, 0.1)",
             "card": "#1C1C1E",
             "text": "#FFFFFF",
             "text_secondary": "#EBEBF5",
             "text_tertiary": "#98989D",
-            "border": "#3A3A3C",
-            "shadow": "rgba(0, 0, 0, 0.3)"
+            "border": "#3A3A3C"
         }
     }
 
-    # ===============================
-    # Helpers
-    # ===============================
     @classmethod
     def get_theme(cls, name: str = "light"):
         return cls.THEMES.get(name, cls.THEMES["light"])
@@ -109,7 +88,7 @@ class Config:
         text = text.strip().lower()
         text = text[:1000]
 
-        # إزالة التشكيل
+        # ازالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
 
         # توحيد الحروف
@@ -121,7 +100,7 @@ class Config:
         for old, new in replacements.items():
             text = text.replace(old, new)
 
-        # إزالة الرموز
+        # ازالة الرموز
         text = re.sub(r"[^\w\sء-ي]", "", text)
 
         # مسافات
@@ -130,8 +109,6 @@ class Config:
         return text.strip()
 
 
-# ===============================
 # Startup Validation
-# ===============================
 if not Config.LINE_SECRET or not Config.LINE_TOKEN:
     raise RuntimeError("LINE credentials missing")
