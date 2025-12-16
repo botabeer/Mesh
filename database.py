@@ -12,6 +12,7 @@ class Database:
     def __init__(self):
         self._lock = Lock()
         self._waiting_names = {}
+        self._changing_names = {}  # جديد
         self._game_progress = {}
         self._init_db()
 
@@ -54,10 +55,9 @@ class Database:
                 "CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)"
             )
 
-        logger.info("✓ Database initialized")
+        logger.info("Database initialized")
 
     def get_user(self, user_id: str):
-        """الحصول على بيانات المستخدم"""
         try:
             with self._get_conn() as conn:
                 row = conn.execute(
@@ -66,41 +66,34 @@ class Database:
                 ).fetchone()
                 
                 if row:
-                    user = dict(row)
-                    logger.debug(f"✓ User found: {user['name']}")
-                    return user
-                else:
-                    logger.debug(f"✗ User not found: {user_id}")
-                    return None
+                    return dict(row)
+                return None
         except Exception as e:
             logger.error(f"Get user error: {e}")
             return None
 
     def register_user(self, user_id: str, name: str) -> bool:
-        """تسجيل مستخدم جديد"""
         name = name.strip()[:50]
         if len(name) < 2:
-            logger.warning(f"Name too short: {len(name)} chars")
             return False
 
         with self._lock:
             try:
                 with self._get_conn() as conn:
-                    # التحقق إذا المستخدم موجود
                     existing = conn.execute(
                         "SELECT user_id FROM users WHERE user_id=?",
                         (user_id,)
                     ).fetchone()
                     
                     if existing:
-                        logger.info(f"User already exists, updating name: {name}")
+                        logger.info(f"User exists, updating: {name}")
                         conn.execute("""
                             UPDATE users 
                             SET name=?, last_active=CURRENT_TIMESTAMP
                             WHERE user_id=?
                         """, (name, user_id))
                     else:
-                        logger.info(f"Creating new user: {name}")
+                        logger.info(f"Creating user: {name}")
                         conn.execute("""
                             INSERT INTO users (user_id, name)
                             VALUES (?, ?)
@@ -108,25 +101,43 @@ class Database:
                     
                     conn.commit()
                     
-                    # التحقق من النجاح
                     verify = conn.execute(
                         "SELECT name FROM users WHERE user_id=?",
                         (user_id,)
                     ).fetchone()
                     
                     if verify:
-                        logger.info(f"✓ Registration verified: {verify['name']}")
+                        logger.info(f"Registration verified: {verify['name']}")
                         return True
-                    else:
-                        logger.error("✗ Registration verification failed")
-                        return False
+                    return False
                         
             except Exception as e:
-                logger.error(f"✗ Register error: {e}")
+                logger.error(f"Register error: {e}")
+                return False
+
+    def change_name(self, user_id: str, new_name: str) -> bool:
+        """تغيير الاسم"""
+        new_name = new_name.strip()[:50]
+        if len(new_name) < 2:
+            return False
+
+        with self._lock:
+            try:
+                with self._get_conn() as conn:
+                    conn.execute("""
+                        UPDATE users 
+                        SET name=?, last_active=CURRENT_TIMESTAMP
+                        WHERE user_id=?
+                    """, (new_name, user_id))
+                    
+                    conn.commit()
+                    logger.info(f"Name changed to: {new_name}")
+                    return True
+            except Exception as e:
+                logger.error(f"Change name error: {e}")
                 return False
 
     def update_activity(self, user_id: str):
-        """تحديث آخر نشاط"""
         try:
             with self._get_conn() as conn:
                 conn.execute(
@@ -137,7 +148,6 @@ class Database:
             logger.debug(f"Update activity error: {e}")
 
     def add_points(self, user_id: str, points: int) -> bool:
-        """إضافة نقاط للمستخدم"""
         if points <= 0:
             return False
 
@@ -150,14 +160,13 @@ class Database:
                     )
                     success = cur.rowcount > 0
                     if success:
-                        logger.info(f"✓ Added {points} points to {user_id}")
+                        logger.info(f"Added {points} points to {user_id}")
                     return success
             except Exception as e:
                 logger.error(f"Add points error: {e}")
                 return False
 
     def finish_game(self, user_id: str, won: bool) -> bool:
-        """إنهاء لعبة وتحديث الإحصائيات"""
         with self._lock:
             try:
                 with self._get_conn() as conn:
@@ -170,14 +179,13 @@ class Database:
                     """, (1 if won else 0, user_id))
                     success = cur.rowcount > 0
                     if success:
-                        logger.info(f"✓ Game finished for {user_id}, won={won}")
+                        logger.info(f"Game finished: {user_id}, won={won}")
                     return success
             except Exception as e:
                 logger.error(f"Finish game error: {e}")
                 return False
 
     def get_leaderboard(self, limit: int = 10):
-        """الحصول على لوحة الصدارة"""
         try:
             with self._get_conn() as conn:
                 rows = conn.execute("""
@@ -197,14 +205,13 @@ class Database:
                     } for r in rows
                 ]
                 
-                logger.info(f"✓ Leaderboard: {len(leaders)} users")
+                logger.info(f"Leaderboard: {len(leaders)} users")
                 return leaders
         except Exception as e:
             logger.error(f"Leaderboard error: {e}")
             return []
 
     def get_theme(self, user_id: str) -> str:
-        """الحصول على ثيم المستخدم"""
         try:
             with self._get_conn() as conn:
                 row = conn.execute(
@@ -216,7 +223,6 @@ class Database:
             return "light"
 
     def toggle_theme(self, user_id: str) -> str:
-        """تبديل الثيم"""
         current = self.get_theme(user_id)
         new = "dark" if current == "light" else "light"
 
@@ -227,57 +233,56 @@ class Database:
                         "UPDATE users SET theme=? WHERE user_id=?",
                         (new, user_id)
                     )
-                    logger.info(f"✓ Theme changed to {new} for {user_id}")
+                    logger.info(f"Theme changed to {new}")
                 return new
             except Exception as e:
                 logger.error(f"Toggle theme error: {e}")
                 return current
 
     def is_waiting_name(self, user_id: str) -> bool:
-        """التحقق من حالة انتظار الاسم"""
-        is_waiting = user_id in self._waiting_names
-        if is_waiting:
-            logger.debug(f"✓ User {user_id} is waiting for name")
-        return is_waiting
+        return user_id in self._waiting_names
 
     def set_waiting_name(self, user_id: str, waiting: bool):
-        """تعيين حالة انتظار الاسم"""
         if waiting:
             self._waiting_names[user_id] = time.time()
-            logger.info(f"✓ User {user_id} set to waiting for name")
+            logger.info(f"User waiting for name: {user_id}")
         else:
             self._waiting_names.pop(user_id, None)
-            logger.info(f"✓ User {user_id} removed from waiting list")
+            logger.info(f"User no longer waiting: {user_id}")
+
+    def is_changing_name(self, user_id: str) -> bool:
+        """تحقق من حالة تغيير الاسم"""
+        return user_id in self._changing_names
+
+    def set_changing_name(self, user_id: str, changing: bool):
+        """تعيين حالة تغيير الاسم"""
+        if changing:
+            self._changing_names[user_id] = time.time()
+            logger.info(f"User changing name: {user_id}")
+        else:
+            self._changing_names.pop(user_id, None)
+            logger.info(f"User finished changing name: {user_id}")
 
     def save_game_progress(self, user_id: str, progress: dict):
-        """حفظ تقدم اللعبة"""
         with self._lock:
             self._game_progress[user_id] = {
                 **progress,
                 "saved_at": time.time()
             }
-            logger.info(f"✓ Game progress saved for {user_id}")
+            logger.info(f"Game progress saved: {user_id}")
 
     def get_game_progress(self, user_id: str):
-        """الحصول على تقدم اللعبة"""
-        progress = self._game_progress.get(user_id)
-        if progress:
-            logger.debug(f"✓ Game progress found for {user_id}")
-        return progress
+        return self._game_progress.get(user_id)
 
     def clear_game_progress(self, user_id: str):
-        """مسح تقدم اللعبة"""
         with self._lock:
-            removed = self._game_progress.pop(user_id, None)
-            if removed:
-                logger.info(f"✓ Game progress cleared for {user_id}")
+            self._game_progress.pop(user_id, None)
+            logger.info(f"Game progress cleared: {user_id}")
 
     def cleanup_memory(self, timeout: int = 1800):
-        """تنظيف الذاكرة من البيانات القديمة"""
         now = time.time()
 
         with self._lock:
-            # تنظيف قائمة انتظار الأسماء
             before_names = len(self._waiting_names)
             self._waiting_names = {
                 k: v for k, v in self._waiting_names.items()
@@ -285,7 +290,13 @@ class Database:
             }
             after_names = len(self._waiting_names)
             
-            # تنظيف تقدم الألعاب
+            before_changing = len(self._changing_names)
+            self._changing_names = {
+                k: v for k, v in self._changing_names.items()
+                if now - v < timeout
+            }
+            after_changing = len(self._changing_names)
+            
             before_progress = len(self._game_progress)
             self._game_progress = {
                 k: v for k, v in self._game_progress.items()
@@ -293,8 +304,13 @@ class Database:
             }
             after_progress = len(self._game_progress)
             
-            if before_names != after_names or before_progress != after_progress:
+            if any([
+                before_names != after_names,
+                before_changing != after_changing,
+                before_progress != after_progress
+            ]):
                 logger.info(
-                    f"✓ Cleanup: waiting_names {before_names}→{after_names}, "
-                    f"game_progress {before_progress}→{after_progress}"
+                    f"Cleanup: names {before_names}->{after_names}, "
+                    f"changing {before_changing}->{after_changing}, "
+                    f"progress {before_progress}->{after_progress}"
                 )
