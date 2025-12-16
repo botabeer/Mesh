@@ -29,14 +29,13 @@ class TextManager:
             return []
 
     def _quick_reply(self):
-        """الازرار الثابتة"""
         return QuickReply(items=[
-            QuickReplyItem(action=MessageAction(label="البداية", text="بداية")),
-            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة")),
+            QuickReplyItem(action=MessageAction(label="القائمة", text="بداية")),
             QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
-            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
-            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
-            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف"))
+            QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
+            QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
+            QuickReplyItem(action=MessageAction(label="ايقاف", text="ايقاف")),
+            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة"))
         ])
 
     def _create_text_card(self, title: str, content: str, theme: str = "light"):
