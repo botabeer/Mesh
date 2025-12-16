@@ -2,11 +2,13 @@ import re
 from linebot.v3.messaging import FlexMessage, FlexContainer
 from config import Config
 
+
 class CompatibilityGame:
     def __init__(self, db, theme: str = "light"):
         self.db = db
         self.theme = theme
         self.game_active = False
+        self.game_name = "توافق"
 
     def _c(self):
         return Config.get_theme(self.theme)
@@ -45,7 +47,8 @@ class CompatibilityGame:
 
     def start(self, user_id: str):
         self.game_active = True
-        return {"response": self.get_question(), "game_over": False}
+        self.user_id = user_id
+        return self.get_question()
 
     def get_question(self):
         c = self._c()
@@ -95,23 +98,26 @@ class CompatibilityGame:
             }
         ]
 
+        bubble = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "backgroundColor": c["bg"],
+                "paddingAll": "20px",
+                "spacing": "md"
+            }
+        }
+
         return FlexMessage(
             alt_text="لعبة التوافق",
-            contents=FlexContainer.from_dict({
-                "type": "bubble",
-                "size": "mega",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": contents,
-                    "backgroundColor": c["bg"],
-                    "paddingAll": "20px"
-                }
-            })
+            contents=FlexContainer.from_dict(bubble)
         )
 
     def check(self, user_answer: str, user_id: str):
-        if not self.game_active:
+        if not self.game_active or user_id != self.user_id:
             return None
 
         name1, name2 = self.parse_names(user_answer)
@@ -219,7 +225,12 @@ class CompatibilityGame:
         }
 
         self.game_active = False
+        
         return {
-            'response': FlexMessage(alt_text="نتيجة التوافق", contents=FlexContainer.from_dict(flex_content)),
-            'game_over': True
+            'response': FlexMessage(
+                alt_text="نتيجة التوافق",
+                contents=FlexContainer.from_dict(flex_content)
+            ),
+            'game_over': True,
+            'won': True
         }
