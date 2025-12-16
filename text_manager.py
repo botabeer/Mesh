@@ -1,13 +1,13 @@
 import random
 import logging
-from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
+from linebot.v3.messaging import TextMessage
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 
 class TextManager:
-    """مدير المحتوى النصي التفاعلي"""
+    """مدير المحتوى النصي - يرسل نص عادي بدون Flex"""
     
     def __init__(self):
         self.challenges = self._load_file("games/challenges.txt")
@@ -28,79 +28,27 @@ class TextManager:
             logger.error(f"Load {path} error: {e}")
             return []
 
-    def _quick_reply(self):
-        return QuickReply(items=[
-            QuickReplyItem(action=MessageAction(label="القائمة", text="بداية")),
-            QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
-            QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
-            QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
-            QuickReplyItem(action=MessageAction(label="ايقاف", text="ايقاف")),
-            QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة"))
-        ])
-
-    def _create_text_card(self, title: str, content: str, theme: str = "light"):
-        """انشاء بطاقة نصية بسيطة"""
-        c = Config.get_theme(theme)
-
-        contents = [
-            {
-                "type": "box", "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": title, "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"}
-                ],
-                "paddingAll": "16px", "backgroundColor": c["card"], "cornerRadius": "12px"
-            },
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {
-                "type": "box", "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": content, "size": "sm", "color": c["text"], "wrap": True}
-                ],
-                "paddingAll": "16px", "backgroundColor": c["glass"], "cornerRadius": "10px", "margin": "lg"
-            },
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {"type": "button", "action": {"type": "message", "label": f"مرة اخرى", "text": title}, "style": "secondary", "height": "sm", "margin": "md"}
-        ]
-
-        bubble = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": contents,
-                "paddingAll": "20px",
-                "backgroundColor": c["bg"],
-                "spacing": "none"
-            }
-        }
-
-        return FlexMessage(
-            alt_text=title,
-            contents=FlexContainer.from_dict(bubble),
-            quickReply=self._quick_reply()
-        )
-
     def handle(self, cmd: str, theme: str = "light"):
-        """معالجة الاوامر النصية"""
+        """معالجة الاوامر النصية - يرجع TextMessage"""
         cmd = cmd.strip().lower()
         
         mapping = {
-            "تحدي": (self.challenges, "تحدي"),
-            "اعتراف": (self.confessions, "اعتراف"),
-            "منشن": (self.mentions, "منشن"),
-            "شخصيه": (self.personality, "شخصية"),
-            "شخصية": (self.personality, "شخصية"),
-            "سؤال": (self.questions, "سؤال"),
-            "سوال": (self.questions, "سؤال"),
-            "حكمه": (self.quotes, "حكمة"),
-            "حكمة": (self.quotes, "حكمة"),
-            "موقف": (self.situations, "موقف")
+            "تحدي": (self.challenges, ""),
+            "اعتراف": (self.confessions, ""),
+            "منشن": (self.mentions, ""),
+            "شخصيه": (self.personality, ""),
+            "شخصية": (self.personality, ""),
+            "سؤال": (self.questions, ""),
+            "سوال": (self.questions, ""),
+            "حكمه": (self.quotes, ""),
+            "حكمة": (self.quotes, ""),
+            "موقف": (self.situations, "")
         }
         
         if cmd in mapping:
-            data, title = mapping[cmd]
+            data, _ = mapping[cmd]
             if data:
-                return self._create_text_card(title, random.choice(data), theme)
+                content = random.choice(data)
+                return TextMessage(text=content)
 
         return None
