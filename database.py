@@ -10,6 +10,7 @@ class Database:
     def __init__(self):
         self._lock = Lock()
         self._waiting_names = {}
+        self._game_progress = {}
         self._init_db()
 
     @contextmanager
@@ -54,7 +55,7 @@ class Database:
 
     def register_user(self, user_id: str, name: str):
         name = name.strip()[:50]
-        if len(name) < 1:
+        if len(name) < 2:
             return False
         with self._lock:
             try:
@@ -133,3 +134,14 @@ class Database:
             self._waiting_names[user_id] = True
         else:
             self._waiting_names.pop(user_id, None)
+
+    def save_game_progress(self, user_id: str, progress: dict):
+        with self._lock:
+            self._game_progress[user_id] = progress
+
+    def get_game_progress(self, user_id: str):
+        return self._game_progress.get(user_id)
+
+    def clear_game_progress(self, user_id: str):
+        with self._lock:
+            self._game_progress.pop(user_id, None)
