@@ -6,7 +6,7 @@ load_dotenv()
 
 class Config:
     BOT_NAME = "Bot Mesh"
-    VERSION = "7.0"
+    VERSION = "8.0"
     COPYRIGHT = "Created by Abeer Aldosari 2025"
 
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
