@@ -134,8 +134,33 @@ def process_message(user_id: str, text: str, reply_token: str):
             return
 
         # ===============================
-        # Registration
+        # Registration - التحقق من حالة انتظار الاسم أولاً!
         # ===============================
+        if db.is_waiting_name(user_id):
+            logger.info("User is waiting to submit name")
+            name = text.strip()[:Config.MAX_NAME_LENGTH]
+            if len(name) >= Config.MIN_NAME_LENGTH:
+                logger.info(f"Registering user with name: {name}")
+                success = db.register_user(user_id, name)
+                db.set_waiting_name(user_id, False)
+                
+                if success:
+                    logger.info("✓ Registration successful")
+                    # إعادة تحميل بيانات المستخدم
+                    user = db.get_user(user_id)
+                    reply_message(
+                        reply_token,
+                        ui.main_menu(user)
+                    )
+                else:
+                    logger.error("✗ Registration failed")
+                    reply_message(reply_token, ui.ask_name())
+            else:
+                logger.warning(f"Name too short: {len(name)} chars")
+                reply_message(reply_token, ui.ask_name())
+            return
+
+        # التحقق من المستخدم غير المسجل
         if not user:
             logger.info(f"Unregistered user: {user_id}")
             if cmd == "تسجيل":
@@ -145,24 +170,12 @@ def process_message(user_id: str, text: str, reply_token: str):
                 return
             else:
                 # إرسال رسالة للتسجيل
-                logger.info("Sending registration prompt")
-                reply_message(reply_token, ui.main_menu(None))
+                logger.info("Sending registration prompt - user must register first")
+                # إرسال رسالة واضحة للتسجيل
+                from linebot.v3.messaging import TextMessage
+                msg = TextMessage(text="⚠️ يجب التسجيل أولاً!\nأرسل كلمة: تسجيل")
+                reply_message(reply_token, msg)
                 return
-
-        if db.is_waiting_name(user_id):
-            logger.info("User is waiting to submit name")
-            name = text.strip()[:Config.MAX_NAME_LENGTH]
-            if len(name) >= Config.MIN_NAME_LENGTH:
-                logger.info(f"Registering user with name: {name}")
-                db.register_user(user_id, name)
-                db.set_waiting_name(user_id, False)
-                reply_message(
-                    reply_token,
-                    ui.main_menu(db.get_user(user_id))
-                )
-            else:
-                logger.warning(f"Name too short: {len(name)} chars")
-            return
 
         # ===============================
         # User Commands
@@ -272,9 +285,26 @@ def index():
 # ===============================
 if __name__ == "__main__":
     logger.info(f"Starting {Config.BOT_NAME} v{Config.VERSION}")
-    logger.info(f"Available games: {game_mgr._games.keys()}")
-    app.run(
-        host="0.0.0.0",
-        port=Config.PORT,
-        threaded=True
+    logger.info(f"Available games: {list(game_mgr._games.keys())}")
+    
+    # تنظيف الذاكرة كل 30 دقيقة
+    from apscheduler.schedulers.background import BackgroundScheduler
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        func=db.cleanup_memory,
+        trigger="interval",
+        minutes=30,
+        id="cleanup_memory"
     )
+    scheduler.start()
+    logger.info("✓ Memory cleanup scheduler started")
+    
+    try:
+        app.run(
+            host="0.0.0.0",
+            port=Config.PORT,
+            threaded=True
+        )
+    except (KeyboardInterrupt, SystemExit):
+        scheduler.shutdown()
+        logger.info("✓ Scheduler shutdown")
