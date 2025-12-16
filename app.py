@@ -17,9 +17,7 @@ from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
 
-# ===============================
 # Logging
-# ===============================
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -27,20 +25,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ===============================
 # Flask
-# ===============================
 app = Flask(__name__)
 
-# ===============================
 # LINE
-# ===============================
 line_config = Configuration(access_token=Config.LINE_TOKEN)
 handler = WebhookHandler(Config.LINE_SECRET)
 
-# ===============================
 # Core
-# ===============================
 db = Database()
 game_mgr = GameManager(db)
 text_mgr = TextManager()
@@ -50,9 +42,7 @@ executor = ThreadPoolExecutor(
     thread_name_prefix="worker"
 )
 
-# ===============================
 # Helpers
-# ===============================
 def reply_message(reply_token: str, messages):
     if not messages:
         return
@@ -68,139 +58,173 @@ def reply_message(reply_token: str, messages):
                     messages=messages
                 )
             )
-        logger.info("✓ Message sent successfully")
+        logger.info("Message sent successfully")
     except Exception as e:
-        logger.error(f"✗ Reply error: {e}")
+        logger.error(f"Reply error: {e}")
 
-# ===============================
 # Message Processor
-# ===============================
 def process_message(user_id: str, text: str, reply_token: str):
     try:
-        logger.info(f"Processing message from {user_id}: {text}")
+        logger.info(f"Processing: {user_id} -> {text}")
         
         cmd = Config.normalize(text)
         if not cmd:
-            logger.warning("Empty command after normalization")
+            logger.warning("Empty command")
             return
 
-        logger.info(f"Normalized command: '{cmd}'")
+        logger.info(f"Normalized: '{cmd}'")
         
         db.update_activity(user_id)
         user = db.get_user(user_id)
         theme = db.get_theme(user_id) if user else "light"
         ui = UI(theme=theme)
 
-        # ===============================
-        # Global Commands
-        # ===============================
-        if cmd in ("بداية", "بدايه"):
-            logger.info("Main menu command")
+        # ========================================
+        # PRIORITY 1: Global Commands (Always Work)
+        # ========================================
+        if cmd in ("بدايه", "بداية"):
+            logger.info("Main menu")
             reply_message(reply_token, ui.main_menu(user))
             return
 
-        if cmd in ("مساعدة", "مساعده"):
-            logger.info("Help menu command")
+        if cmd in ("مساعده", "مساعدة"):
+            logger.info("Help menu")
             reply_message(reply_token, ui.help_menu())
             return
 
-        if cmd in ("الصدارة", "الصداره"):
-            logger.info("Leaderboard command")
-            reply_message(
-                reply_token,
-                ui.leaderboard_card(db.get_leaderboard())
-            )
-            return
-
-        # ===============================
-        # Theme - تغيير الثيم
-        # ===============================
-        if cmd in ("تغيير الثيم", "تغيير_الثيم", "ثيم") and user:
-            logger.info("Theme toggle command")
-            new_theme = db.toggle_theme(user_id)
-            user = db.get_user(user_id)  # إعادة تحميل بيانات المستخدم
-            reply_message(
-                reply_token,
-                UI(theme=new_theme).main_menu(user)
-            )
-            return
-
-        # ===============================
-        # Static Texts
-        # ===============================
-        text_response = text_mgr.handle(cmd, theme)
-        if text_response:
-            logger.info("Static text response")
-            reply_message(reply_token, text_response)
-            return
-
-        # ===============================
-        # Registration - التحقق من حالة انتظار الاسم أولاً!
-        # ===============================
+        # ========================================
+        # PRIORITY 2: Registration State
+        # ========================================
         if db.is_waiting_name(user_id):
-            logger.info("User is waiting to submit name")
+            logger.info("User waiting for name")
+            
+            # تجاهل الأوامر المحجوزة
+            if cmd in Config.RESERVED_COMMANDS:
+                logger.warning(f"Reserved command ignored: {cmd}")
+                reply_message(reply_token, ui.ask_name_invalid())
+                return
+            
+            # قبول الاسم
             name = text.strip()[:Config.MAX_NAME_LENGTH]
             if len(name) >= Config.MIN_NAME_LENGTH:
-                logger.info(f"Registering user with name: {name}")
+                logger.info(f"Registering: {name}")
                 success = db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
                 
                 if success:
-                    logger.info("✓ Registration successful")
-                    # إعادة تحميل بيانات المستخدم
                     user = db.get_user(user_id)
-                    reply_message(
-                        reply_token,
-                        ui.main_menu(user)
-                    )
+                    reply_message(reply_token, ui.main_menu(user))
                 else:
-                    logger.error("✗ Registration failed")
                     reply_message(reply_token, ui.ask_name())
             else:
-                logger.warning(f"Name too short: {len(name)} chars")
+                logger.warning(f"Name too short: {len(name)}")
                 reply_message(reply_token, ui.ask_name())
             return
 
-        # التحقق من المستخدم غير المسجل
+        # تغيير الاسم (حالة انتظار)
+        if db.is_changing_name(user_id):
+            logger.info("User changing name")
+            
+            if cmd in Config.RESERVED_COMMANDS:
+                logger.warning(f"Reserved command ignored: {cmd}")
+                reply_message(reply_token, ui.ask_new_name_invalid())
+                return
+            
+            name = text.strip()[:Config.MAX_NAME_LENGTH]
+            if len(name) >= Config.MIN_NAME_LENGTH:
+                logger.info(f"Changing name to: {name}")
+                success = db.change_name(user_id, name)
+                db.set_changing_name(user_id, False)
+                
+                if success:
+                    user = db.get_user(user_id)
+                    reply_message(reply_token, ui.main_menu(user))
+                else:
+                    reply_message(reply_token, ui.ask_new_name())
+            else:
+                reply_message(reply_token, ui.ask_new_name())
+            return
+
+        # ========================================
+        # PRIORITY 3: Unregistered Users
+        # ========================================
         if not user:
-            logger.info(f"Unregistered user: {user_id}")
+            logger.info("Unregistered user")
             if cmd == "تسجيل":
-                logger.info("Registration command")
                 db.set_waiting_name(user_id, True)
                 reply_message(reply_token, ui.ask_name())
-                return
             else:
-                # إرسال رسالة للتسجيل
-                logger.info("Sending registration prompt - user must register first")
-                # إرسال رسالة واضحة للتسجيل
-                from linebot.v3.messaging import TextMessage
-                msg = TextMessage(text="⚠️ يجب التسجيل أولاً!\nأرسل كلمة: تسجيل")
-                reply_message(reply_token, msg)
-                return
-
-        # ===============================
-        # User Commands
-        # ===============================
-        if cmd in ("العاب", "الالعاب"):
-            logger.info("Games menu command")
-            reply_message(reply_token, ui.games_menu())
+                reply_message(reply_token, ui.registration_required())
             return
 
+        # ========================================
+        # PRIORITY 4: User Commands (Registered)
+        # ========================================
+        
+        # Theme
+        if cmd == "ثيم":
+            logger.info("Theme toggle")
+            new_theme = db.toggle_theme(user_id)
+            user = db.get_user(user_id)
+            reply_message(reply_token, UI(theme=new_theme).main_menu(user))
+            return
+
+        # Stats
         if cmd == "نقاطي":
-            logger.info("Stats command")
+            logger.info("Stats")
             reply_message(reply_token, ui.stats_card(user))
             return
 
-        if cmd == "انسحب":
-            logger.info("Quit game command")
-            if game_mgr.stop_game(user_id):
-                reply_message(reply_token, ui.game_stopped())
+        # Leaderboard
+        if cmd in ("الصداره", "الصدارة"):
+            logger.info("Leaderboard")
+            reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
             return
 
-        # ===============================
-        # Games
-        # ===============================
-        logger.info(f"Checking if '{cmd}' is a game command")
+        # Games Menu
+        if cmd == "العاب":
+            logger.info("Games menu")
+            reply_message(reply_token, ui.games_menu())
+            return
+
+        # Change Name
+        if cmd in ("تغيير الاسم", "تغيير اسمي"):
+            logger.info("Change name request")
+            db.set_changing_name(user_id, True)
+            reply_message(reply_token, ui.ask_new_name())
+            return
+
+        # Quit Game
+        if cmd == "انسحب":
+            logger.info("Quit game")
+            if game_mgr.stop_game(user_id):
+                reply_message(reply_token, ui.game_stopped())
+            else:
+                # لا توجد لعبة نشطة - تجاهل
+                logger.info("No active game to quit")
+            return
+
+        # Stop Game (إيقاف)
+        if cmd in ("ايقاف", "ايقاف اللعبة"):
+            logger.info("Stop game")
+            if game_mgr.stop_game(user_id):
+                reply_message(reply_token, ui.game_stopped())
+            else:
+                logger.info("No active game to stop")
+            return
+
+        # ========================================
+        # PRIORITY 5: Static Text
+        # ========================================
+        text_response = text_mgr.handle(cmd, theme)
+        if text_response:
+            logger.info("Static text")
+            reply_message(reply_token, text_response)
+            return
+
+        # ========================================
+        # PRIORITY 6: Games
+        # ========================================
         game_response = game_mgr.handle(
             user_id=user_id,
             cmd=cmd,
@@ -209,63 +233,53 @@ def process_message(user_id: str, text: str, reply_token: str):
         )
 
         if game_response:
-            logger.info("Game response generated")
+            logger.info("Game response")
             reply_message(reply_token, game_response)
         else:
-            logger.warning(f"No handler found for command: '{cmd}'")
-            # إرسال القائمة الرئيسية كـ fallback
+            # Fallback: تجاهل الرسالة بصمت أو عرض القائمة
+            logger.info("Unknown command - showing main menu")
             reply_message(reply_token, ui.main_menu(user))
 
     except Exception as e:
-        logger.exception(f"✗ Processing error ({user_id}): {e}")
-        # إرسال رسالة خطأ للمستخدم
+        logger.exception(f"Processing error: {e}")
         try:
             ui = UI()
             reply_message(reply_token, ui.main_menu(db.get_user(user_id)))
         except:
             pass
 
-# ===============================
 # Webhook Handler
-# ===============================
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event: MessageEvent):
     user_id = event.source.user_id
     text = event.message.text
     reply_token = event.reply_token
 
-    logger.info(f"Received message from {user_id}: {text}")
-
-    # تنفيذ غير متزامن
+    logger.info(f"Received: {user_id} -> {text}")
     executor.submit(process_message, user_id, text, reply_token)
 
-# ===============================
 # Routes
-# ===============================
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
 
-    logger.info(f"Webhook received: {len(body)} bytes")
+    logger.info(f"Webhook: {len(body)} bytes")
 
     try:
         handler.handle(body, signature)
-        logger.info("✓ Webhook handled successfully")
+        logger.info("Webhook handled")
     except InvalidSignatureError:
-        logger.error("✗ Invalid signature")
+        logger.error("Invalid signature")
         abort(400)
     except Exception as e:
-        logger.error(f"✗ Webhook error: {e}")
+        logger.error(f"Webhook error: {e}")
 
-    # رد فوري لتفادي timeout
     return "OK", 200
 
 @app.route("/health")
 def health():
     active_games = game_mgr.count_active()
-    logger.info(f"Health check: {active_games} active games")
-    
     return jsonify({
         "status": "ok",
         "time": datetime.utcnow().isoformat(),
@@ -277,28 +291,24 @@ def index():
     return jsonify({
         "name": Config.BOT_NAME,
         "version": Config.VERSION,
-        "status": "running",
-        "copyright": Config.COPYRIGHT
+        "status": "running"
     })
 
-# ===============================
 # Entry
-# ===============================
 if __name__ == "__main__":
     logger.info(f"Starting {Config.BOT_NAME} v{Config.VERSION}")
-    logger.info(f"Available games: {list(game_mgr._games.keys())}")
+    logger.info(f"Games: {list(game_mgr._games.keys())}")
     
-    # تنظيف الذاكرة كل 30 دقيقة
     from apscheduler.schedulers.background import BackgroundScheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         func=db.cleanup_memory,
         trigger="interval",
         minutes=30,
-        id="cleanup_memory"
+        id="cleanup"
     )
     scheduler.start()
-    logger.info("✓ Memory cleanup scheduler started")
+    logger.info("Scheduler started")
     
     try:
         app.run(
@@ -308,4 +318,4 @@ if __name__ == "__main__":
         )
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
-        logger.info("✓ Scheduler shutdown")
+        logger.info("Shutdown complete")
