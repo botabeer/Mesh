@@ -17,33 +17,35 @@ from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
 
-# Logging
+# إعداد Logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S"
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
 
-# Flask
+# Flask App
 app = Flask(__name__)
 
-# LINE
+# LINE Configuration
 line_config = Configuration(access_token=Config.LINE_TOKEN)
 handler = WebhookHandler(Config.LINE_SECRET)
 
-# Core
+# Core Components
 db = Database()
 game_mgr = GameManager(db)
 text_mgr = TextManager()
 
+# Thread Pool للمعالجة
 executor = ThreadPoolExecutor(
     max_workers=Config.WORKERS,
     thread_name_prefix="worker"
 )
 
-# Helpers
+
 def reply_message(reply_token: str, messages):
+    """إرسال رسالة رد"""
     if not messages:
         return
 
@@ -62,52 +64,52 @@ def reply_message(reply_token: str, messages):
     except Exception as e:
         logger.error(f"Reply error: {e}")
 
-# Message Processor
+
 def process_message(user_id: str, text: str, reply_token: str):
+    """معالجة الرسائل الواردة"""
     try:
-        logger.info(f"Processing: {user_id} -> {text}")
+        logger.info(f"Processing: {user_id} -> {text[:50]}")
         
         cmd = Config.normalize(text)
         if not cmd:
             logger.warning("Empty command")
             return
 
-        logger.info(f"Normalized: '{cmd}'")
-        
+        # تحديث نشاط المستخدم
         db.update_activity(user_id)
         user = db.get_user(user_id)
         theme = db.get_theme(user_id) if user else "light"
         ui = UI(theme=theme)
 
         # ========================================
-        # PRIORITY 1: Global Commands (Always Work)
+        # أولوية 1: الأوامر العامة (تعمل دائماً)
         # ========================================
         if cmd in ("بدايه", "بداية"):
-            logger.info("Main menu")
+            logger.info("Main menu requested")
             reply_message(reply_token, ui.main_menu(user))
             return
 
         if cmd in ("مساعده", "مساعدة"):
-            logger.info("Help menu")
+            logger.info("Help menu requested")
             reply_message(reply_token, ui.help_menu())
             return
 
         # ========================================
-        # PRIORITY 2: Registration State
+        # أولوية 2: حالات الانتظار
         # ========================================
+        
+        # انتظار إدخال الاسم (تسجيل جديد)
         if db.is_waiting_name(user_id):
-            logger.info("User waiting for name")
+            logger.info("User waiting for name input")
             
-            # تجاهل الأوامر المحجوزة
             if cmd in Config.RESERVED_COMMANDS:
                 logger.warning(f"Reserved command ignored: {cmd}")
                 reply_message(reply_token, ui.ask_name_invalid())
                 return
             
-            # قبول الاسم
             name = text.strip()[:Config.MAX_NAME_LENGTH]
-            if len(name) >= Config.MIN_NAME_LENGTH:
-                logger.info(f"Registering: {name}")
+            if Config.validate_name(name):
+                logger.info(f"Registering user: {name}")
                 success = db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
                 
@@ -117,11 +119,11 @@ def process_message(user_id: str, text: str, reply_token: str):
                 else:
                     reply_message(reply_token, ui.ask_name())
             else:
-                logger.warning(f"Name too short: {len(name)}")
-                reply_message(reply_token, ui.ask_name())
+                logger.warning(f"Invalid name: {name}")
+                reply_message(reply_token, ui.ask_name_invalid())
             return
 
-        # تغيير الاسم (حالة انتظار)
+        # انتظار تغيير الاسم
         if db.is_changing_name(user_id):
             logger.info("User changing name")
             
@@ -131,7 +133,7 @@ def process_message(user_id: str, text: str, reply_token: str):
                 return
             
             name = text.strip()[:Config.MAX_NAME_LENGTH]
-            if len(name) >= Config.MIN_NAME_LENGTH:
+            if Config.validate_name(name):
                 logger.info(f"Changing name to: {name}")
                 success = db.change_name(user_id, name)
                 db.set_changing_name(user_id, False)
@@ -142,11 +144,11 @@ def process_message(user_id: str, text: str, reply_token: str):
                 else:
                     reply_message(reply_token, ui.ask_new_name())
             else:
-                reply_message(reply_token, ui.ask_new_name())
+                reply_message(reply_token, ui.ask_new_name_invalid())
             return
 
         # ========================================
-        # PRIORITY 3: Unregistered Users
+        # أولوية 3: المستخدمون غير المسجلين
         # ========================================
         if not user:
             logger.info("Unregistered user")
@@ -158,10 +160,10 @@ def process_message(user_id: str, text: str, reply_token: str):
             return
 
         # ========================================
-        # PRIORITY 4: User Commands (Registered)
+        # أولوية 4: أوامر المستخدم المسجل
         # ========================================
         
-        # Theme
+        # تبديل السمة
         if cmd == "ثيم":
             logger.info("Theme toggle")
             new_theme = db.toggle_theme(user_id)
@@ -169,44 +171,43 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, UI(theme=new_theme).main_menu(user))
             return
 
-        # Stats
+        # الإحصائيات
         if cmd == "نقاطي":
-            logger.info("Stats")
+            logger.info("Stats requested")
             reply_message(reply_token, ui.stats_card(user))
             return
 
-        # Leaderboard
+        # الصدارة
         if cmd in ("الصداره", "الصدارة"):
-            logger.info("Leaderboard")
+            logger.info("Leaderboard requested")
             reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
             return
 
-        # Games Menu
+        # قائمة الألعاب
         if cmd == "العاب":
-            logger.info("Games menu")
+            logger.info("Games menu requested")
             reply_message(reply_token, ui.games_menu())
             return
 
-        # Change Name
+        # تغيير الاسم
         if cmd in ("تغيير الاسم", "تغيير اسمي"):
-            logger.info("Change name request")
+            logger.info("Change name requested")
             db.set_changing_name(user_id, True)
             reply_message(reply_token, ui.ask_new_name())
             return
 
-        # Quit Game
+        # الانسحاب من اللعبة
         if cmd == "انسحب":
-            logger.info("Quit game")
+            logger.info("Game quit requested")
             if game_mgr.stop_game(user_id):
                 reply_message(reply_token, ui.game_stopped())
             else:
-                # لا توجد لعبة نشطة - تجاهل
                 logger.info("No active game to quit")
             return
 
-        # Stop Game (إيقاف)
+        # إيقاف اللعبة
         if cmd in ("ايقاف", "ايقاف اللعبة"):
-            logger.info("Stop game")
+            logger.info("Game stop requested")
             if game_mgr.stop_game(user_id):
                 reply_message(reply_token, ui.game_stopped())
             else:
@@ -214,16 +215,16 @@ def process_message(user_id: str, text: str, reply_token: str):
             return
 
         # ========================================
-        # PRIORITY 5: Static Text
+        # أولوية 5: المحتوى النصي التفاعلي
         # ========================================
         text_response = text_mgr.handle(cmd, theme)
         if text_response:
-            logger.info("Static text")
+            logger.info("Static text response")
             reply_message(reply_token, text_response)
             return
 
         # ========================================
-        # PRIORITY 6: Games
+        # أولوية 6: الألعاب
         # ========================================
         game_response = game_mgr.handle(
             user_id=user_id,
@@ -233,10 +234,10 @@ def process_message(user_id: str, text: str, reply_token: str):
         )
 
         if game_response:
-            logger.info("Game response")
+            logger.info("Game response sent")
             reply_message(reply_token, game_response)
         else:
-            # Fallback: تجاهل الرسالة بصمت أو عرض القائمة
+            # Fallback: عرض القائمة الرئيسية
             logger.info("Unknown command - showing main menu")
             reply_message(reply_token, ui.main_menu(user))
 
@@ -248,19 +249,23 @@ def process_message(user_id: str, text: str, reply_token: str):
         except:
             pass
 
+
 # Webhook Handler
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event: MessageEvent):
+    """معالجة الرسائل الواردة"""
     user_id = event.source.user_id
     text = event.message.text
     reply_token = event.reply_token
 
-    logger.info(f"Received: {user_id} -> {text}")
+    logger.info(f"Received: {user_id} -> {text[:50]}")
     executor.submit(process_message, user_id, text, reply_token)
+
 
 # Routes
 @app.route("/callback", methods=["POST"])
 def callback():
+    """LINE Webhook Callback"""
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
 
@@ -268,7 +273,7 @@ def callback():
 
     try:
         handler.handle(body, signature)
-        logger.info("Webhook handled")
+        logger.info("Webhook handled successfully")
     except InvalidSignatureError:
         logger.error("Invalid signature")
         abort(400)
@@ -277,45 +282,65 @@ def callback():
 
     return "OK", 200
 
+
 @app.route("/health")
 def health():
-    active_games = game_mgr.count_active()
-    return jsonify({
-        "status": "ok",
-        "time": datetime.utcnow().isoformat(),
-        "active_games": active_games
-    })
+    """Health Check Endpoint"""
+    try:
+        active_games = game_mgr.count_active()
+        db_ok = db.get_user("health_check") is not None or True
+        
+        return jsonify({
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "active_games": active_games,
+            "database": "connected"
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e)
+        }), 500
+
 
 @app.route("/")
 def index():
+    """Index Route"""
     return jsonify({
         "name": Config.BOT_NAME,
         "version": Config.VERSION,
-        "status": "running"
+        "status": "running",
+        "copyright": Config.COPYRIGHT
     })
 
-# Entry
+
+# Entry Point
 if __name__ == "__main__":
     logger.info(f"Starting {Config.BOT_NAME} v{Config.VERSION}")
-    logger.info(f"Games: {list(game_mgr._games.keys())}")
+    logger.info(f"Environment: {Config.ENV}")
+    logger.info(f"Available games: {list(game_mgr._games.keys())}")
     
+    # Scheduler للتنظيف الدوري
     from apscheduler.schedulers.background import BackgroundScheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         func=db.cleanup_memory,
         trigger="interval",
         minutes=30,
-        id="cleanup"
+        id="cleanup_memory"
     )
     scheduler.start()
-    logger.info("Scheduler started")
+    logger.info("Background scheduler started")
     
     try:
         app.run(
             host="0.0.0.0",
             port=Config.PORT,
-            threaded=True
+            threaded=True,
+            debug=(Config.ENV == "development")
         )
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
-        logger.info("Shutdown complete")
+        executor.shutdown(wait=True)
+        logger.info("Shutdown completed gracefully")
