@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from linebot.v3.messaging import FlexMessage, FlexContainer, TextMessage, QuickReply, QuickReplyItem, MessageAction
+from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
 class BaseGame(ABC):
@@ -40,11 +40,16 @@ class BaseGame(ABC):
             return None
 
         cmd = Config.normalize(answer)
-        if cmd in ("بداية", "بدايه", "العاب", "نقاطي", "الصدارة", "الصداره", "تغيير_الثيم"):
+        
+        if cmd in ("بداية", "بدايه", "العاب", "نقاطي", "الصدارة", "الصداره", "تغيير_الثيم", "مساعدة", "مساعده"):
             return None
 
         if cmd == "انسحب":
-            return {"response": TextMessage(text="تم الانسحاب من اللعبة"), "game_over": True}
+            self.db.save_game_progress(user_id, {
+                "score": self.score,
+                "current_q": self.current_q
+            })
+            return {"response": self._create_pause_message(), "game_over": True}
 
         try:
             is_correct = self.check_answer(answer)
@@ -62,11 +67,78 @@ class BaseGame(ABC):
 
         return {"response": self.get_question(), "game_over": False}
 
+    def _create_pause_message(self):
+        c = self._c()
+        contents = [
+            {
+                "type": "text",
+                "text": "تم حفظ تقدمك",
+                "size": "xl",
+                "weight": "bold",
+                "color": c["primary"],
+                "align": "center"
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["glass"],
+                "cornerRadius": "12px",
+                "paddingAll": "16px",
+                "margin": "md",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"النقاط المكتسبة: {self.score}",
+                        "size": "md",
+                        "color": c["success"],
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"الاسئلة المجابة: {self.current_q}/{self.total_q}",
+                        "size": "sm",
+                        "color": c["text_secondary"],
+                        "align": "center",
+                        "margin": "sm"
+                    }
+                ]
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "button",
+                "action": {"type": "message", "label": "البداية", "text": "بداية"},
+                "style": "primary",
+                "color": c["primary"],
+                "height": "sm",
+                "margin": "md"
+            }
+        ]
+
+        flex = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["bg"],
+                "paddingAll": "20px",
+                "spacing": "md",
+                "contents": contents
+            }
+        }
+
+        return FlexMessage(
+            alt_text="تم حفظ تقدمك",
+            contents=FlexContainer.from_dict(flex)
+        )
+
     def _game_over(self):
         c = self._c()
         won = self.score == self.total_q
         self.db.add_points(self.user_id, self.score)
         self.db.finish_game(self.user_id, won)
+        self.db.clear_game_progress(self.user_id)
 
         result_text = "فوز كامل" if won else f"النتيجة {self.score} من {self.total_q}"
         result_color = c["success"] if won else c["warning"]
@@ -100,7 +172,7 @@ class BaseGame(ABC):
                     },
                     {
                         "type": "text",
-                        "text": f"النقاط المكتسبة +{self.score}",
+                        "text": f"النقاط المكتسبة: {self.score}",
                         "size": "md",
                         "color": c["text_secondary"],
                         "align": "center",
