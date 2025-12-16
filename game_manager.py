@@ -9,18 +9,18 @@ class GameManager:
     def __init__(self, db):
         self.db = db
         self._lock = Lock()
-        self._active = {}     # user_id -> game instance
+        self._active = {}
         self._games = self._load_games()
-        logger.info(f"GameManager initialized with {len(self._games)} games")
+        logger.info(f"✅ GameManager initialized with {len(self._games)} games")
+        logger.info(f"✅ Loaded games: {list(self._games.keys())}")
 
-    # ===============================
-    # Load Games
-    # ===============================
     def _load_games(self):
+        """تحميل جميع الألعاب بشكل صحيح"""
         games = {}
 
-        # تعريف الألعاب مع جميع الأسماء المحتملة
-        mappings = {
+        # ✅ قائمة الألعاب الكاملة مع التطبيع الصحيح
+        game_mappings = {
+            # الاسم المُطبَّع: (المسار، اسم الكلاس)
             "ذكاء": ("games.iq", "IqGame"),
             "خمن": ("games.guess", "GuessGame"),
             "رياضيات": ("games.math", "MathGame"),
@@ -36,20 +36,31 @@ class GameManager:
             "توافق": ("games.compatibility", "CompatibilityGame"),
         }
 
-        for name, (module_path, class_name) in mappings.items():
+        for game_name, (module_path, class_name) in game_mappings.items():
             try:
-                mod = __import__(module_path, fromlist=[class_name])
-                games[name] = getattr(mod, class_name)
-                logger.info(f"✓ Loaded game: {name}")
+                # ✅ استيراد ديناميكي آمن
+                module = __import__(module_path, fromlist=[class_name])
+                game_class = getattr(module, class_name)
+                
+                # ✅ التحقق من أن الكلاس يعمل
+                test_instance = game_class(self.db, "light")
+                if not hasattr(test_instance, 'start'):
+                    raise AttributeError(f"{class_name} missing start() method")
+                
+                games[game_name] = game_class
+                logger.info(f"✅ Loaded: {game_name} → {class_name}")
+                
+            except ImportError as e:
+                logger.error(f"❌ Import failed [{game_name}]: {e}")
+            except AttributeError as e:
+                logger.error(f"❌ Class error [{game_name}]: {e}")
             except Exception as e:
-                logger.error(f"✗ Failed to load {name}: {e}")
+                logger.error(f"❌ Unknown error [{game_name}]: {e}")
 
         return games
 
-    # ===============================
-    # Public API
-    # ===============================
     def handle(self, user_id: str, cmd: str, theme: str, raw_text: str):
+        """معالجة الأوامر"""
         user = self.db.get_user(user_id)
         if not user:
             return None
@@ -57,23 +68,26 @@ class GameManager:
         with self._lock:
             game = self._active.get(user_id)
 
-        # اللاعب داخل لعبة
+        # ✅ لاعب داخل لعبة
         if game:
             return self._handle_answer(user_id, raw_text)
 
-        # بدء لعبة جديدة - تحقق من الأوامر المطابقة
-        logger.info(f"Checking game command: '{cmd}'")
-        logger.info(f"Available games: {list(self._games.keys())}")
+        # ✅ بدء لعبة جديدة
+        # تطبيع الأمر للمقارنة
+        normalized_cmd = Config.normalize(cmd)
         
-        if cmd in self._games:
-            logger.info(f"Starting game: {cmd}")
-            return self._start_game(user_id, cmd, theme)
+        logger.info(f"🔍 Searching for game: '{normalized_cmd}'")
+        logger.info(f"📋 Available games: {list(self._games.keys())}")
+        
+        if normalized_cmd in self._games:
+            logger.info(f"✅ Starting game: {normalized_cmd}")
+            return self._start_game(user_id, normalized_cmd, theme)
         else:
-            logger.warning(f"Game '{cmd}' not found in available games")
-
-        return None
+            logger.warning(f"❌ Game '{normalized_cmd}' not found")
+            return None
 
     def stop_game(self, user_id: str) -> bool:
+        """إيقاف اللعبة"""
         with self._lock:
             game = self._active.pop(user_id, None)
 
@@ -87,39 +101,38 @@ class GameManager:
             "current_q": getattr(game, "current_q", 0),
         })
 
-        # إبلاغ اللعبة أنها أُوقفت
         if hasattr(game, "on_stop"):
             try:
                 game.on_stop(user_id)
             except Exception as e:
                 logger.error(f"Error in game on_stop: {e}")
 
-        logger.info(f"Game stopped for user {user_id}")
+        logger.info(f"✅ Game stopped for {user_id}")
         return True
 
     def count_active(self) -> int:
+        """عدد الألعاب النشطة"""
         with self._lock:
             return len(self._active)
 
     def get_active_games(self):
+        """الألعاب النشطة"""
         with self._lock:
             return {
                 uid: type(game).__name__
                 for uid, game in self._active.items()
             }
 
-    # ===============================
-    # Internal
-    # ===============================
     def _start_game(self, user_id: str, game_name: str, theme: str):
+        """بدء لعبة جديدة"""
         try:
             GameClass = self._games[game_name]
             game = GameClass(self.db, theme)
             
-            # إضافة اسم اللعبة
+            # ✅ إضافة اسم اللعبة
             game.game_name = game_name
 
-            # استكمال التقدم إن وجد
+            # استكمال التقدم
             progress = self.db.get_game_progress(user_id)
             if progress and progress.get("game") == game_name:
                 if hasattr(game, "restore"):
@@ -128,16 +141,20 @@ class GameManager:
             with self._lock:
                 self._active[user_id] = game
 
-            logger.info(f"✓ Started game '{game_name}' for {user_id}")
-            return game.start(user_id)
+            logger.info(f"✅ Started '{game_name}' for {user_id}")
+            
+            # ✅ استدعاء start() والحصول على الرسالة
+            response = game.start(user_id)
+            return response
 
         except Exception as e:
-            logger.exception(f"✗ Error starting game {game_name}: {e}")
+            logger.exception(f"❌ Error starting {game_name}: {e}")
             with self._lock:
                 self._active.pop(user_id, None)
             return None
 
     def _handle_answer(self, user_id: str, raw_answer: str):
+        """معالجة إجابة اللاعب"""
         with self._lock:
             game = self._active.get(user_id)
 
@@ -151,7 +168,7 @@ class GameManager:
             if not result:
                 return None
 
-            # نهاية اللعبة
+            # ✅ نهاية اللعبة
             if result.get("game_over"):
                 with self._lock:
                     self._active.pop(user_id, None)
@@ -160,12 +177,12 @@ class GameManager:
                 self.db.finish_game(user_id, won)
                 self.db.clear_game_progress(user_id)
 
-                logger.info(f"Game finished for {user_id}, won={won}")
+                logger.info(f"✅ Game finished for {user_id}, won={won}")
 
             return result.get("response")
 
         except Exception as e:
-            logger.exception(f"Error handling answer for {user_id}: {e}")
+            logger.exception(f"❌ Error handling answer for {user_id}: {e}")
             with self._lock:
                 self._active.pop(user_id, None)
             return None
