@@ -2,15 +2,16 @@ import random
 from games.base import BaseGame
 from config import Config
 
+
 class HumanAnimalGame(BaseGame):
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
+        self.game_name = "انسان حيوان"
         
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
         random.shuffle(self.letters)
         
         self.categories = ["انسان", "حيوان", "نبات", "جماد", "بلاد"]
-        
         self.current_category = None
         self.current_letter = None
 
@@ -20,7 +21,7 @@ class HumanAnimalGame(BaseGame):
         self.current_answer = self.current_letter
         
         hint = f"السؤال {self.current_q + 1}/{self.total_q}"
-        question = f"الفئة: {self.current_category}\n\nالحرف: {self.current_letter}\n\naكتب كلمة من فئة {self.current_category} تبدأ بحرف {self.current_letter}"
+        question = f"الفئة: {self.current_category}\n\nالحرف: {self.current_letter}\n\nاكتب كلمة من فئة {self.current_category} تبدأ بحرف {self.current_letter}"
         
         return self.build_question_flex(question, hint)
 
