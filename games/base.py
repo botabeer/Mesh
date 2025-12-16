@@ -1,26 +1,45 @@
 from abc import ABC, abstractmethod
-from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
+from linebot.v3.messaging import (
+    FlexMessage,
+    FlexContainer,
+    QuickReply,
+    QuickReplyItem,
+    MessageAction
+)
 from config import Config
 
+
 class BaseGame(ABC):
+    QUESTIONS_PER_GAME = 5
+
     def __init__(self, db, theme="light"):
         self.db = db
         self.theme = theme
+        self.total_q = self.QUESTIONS_PER_GAME
         self.current_q = 0
-        self.total_q = 5
         self.score = 0
         self.user_id = None
         self.current_answer = None
 
+    # ===============================
+    # Helpers
+    # ===============================
     def _c(self):
         return Config.get_theme(self.theme)
 
     def _quick_reply(self):
         return QuickReply(items=[
-            QuickReplyItem(action=MessageAction(label="انسحب", text="انسحب")),
-            QuickReplyItem(action=MessageAction(label="البداية", text="بداية"))
+            QuickReplyItem(
+                action=MessageAction(label="انسحب", text="انسحب")
+            ),
+            QuickReplyItem(
+                action=MessageAction(label="البداية", text="بداية")
+            )
         ])
 
+    # ===============================
+    # Abstract
+    # ===============================
     @abstractmethod
     def get_question(self):
         pass
@@ -29,93 +48,82 @@ class BaseGame(ABC):
     def check_answer(self, answer: str) -> bool:
         pass
 
+    # ===============================
+    # Lifecycle
+    # ===============================
     def start(self, user_id: str):
         self.user_id = user_id
         self.current_q = 0
         self.score = 0
         return self.get_question()
 
+    def restore(self, progress: dict):
+        self.score = progress.get("score", 0)
+        self.current_q = progress.get("current_q", 0)
+
+    def on_stop(self, user_id: str):
+        self.db.save_game_progress(user_id, {
+            "game": self.game_name,
+            "score": self.score,
+            "current_q": self.current_q
+        })
+
+    # ===============================
+    # Core Logic
+    # ===============================
     def check(self, answer: str, user_id: str):
+        # أمان إضافي
+        if user_id != self.user_id:
+            return None
+
         if not self.db.get_user(user_id):
             return None
 
         cmd = Config.normalize(answer)
-        
-        if cmd in ("بداية", "بدايه", "العاب", "نقاطي", "الصدارة", "الصداره", "تغيير_الثيم", "مساعدة", "مساعده"):
+
+        # تجاهل الأوامر العامة
+        if cmd in Config.MAIN_COMMANDS:
             return None
 
+        # انسحاب
         if cmd == "انسحب":
-            self.db.save_game_progress(user_id, {
-                "score": self.score,
-                "current_q": self.current_q
-            })
-            return {"response": self._create_pause_message(), "game_over": True}
+            return {
+                "response": self._pause_message(),
+                "game_over": True
+            }
 
+        # تحقق من الإجابة
         try:
-            is_correct = self.check_answer(answer)
+            correct = self.check_answer(answer)
         except Exception:
             return None
 
-        if not is_correct:
+        if not correct:
             return None
 
         self.score += 1
         self.current_q += 1
 
+        # نهاية اللعبة
         if self.current_q >= self.total_q:
-            return self._game_over()
-
-        return {"response": self.get_question(), "game_over": False}
-
-    def _create_pause_message(self):
-        c = self._c()
-        contents = [
-            {
-                "type": "text",
-                "text": "تم حفظ تقدمك",
-                "size": "xl",
-                "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
-            },
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": c["glass"],
-                "cornerRadius": "12px",
-                "paddingAll": "16px",
-                "margin": "md",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": f"النقاط المكتسبة: {self.score}",
-                        "size": "md",
-                        "color": c["success"],
-                        "align": "center"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"الاسئلة المجابة: {self.current_q}/{self.total_q}",
-                        "size": "sm",
-                        "color": c["text_secondary"],
-                        "align": "center",
-                        "margin": "sm"
-                    }
-                ]
-            },
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {
-                "type": "button",
-                "action": {"type": "message", "label": "البداية", "text": "بداية"},
-                "style": "primary",
-                "color": c["primary"],
-                "height": "sm",
-                "margin": "md"
+            return {
+                "response": self._game_over_message(),
+                "game_over": True,
+                "won": self.score == self.total_q
             }
-        ]
 
-        flex = {
+        return {
+            "response": self.get_question(),
+            "game_over": False
+        }
+
+    # ===============================
+    # UI
+    # ===============================
+    def _pause_message(self):
+        c = self._c()
+
+        bubble = {
             "type": "bubble",
             "size": "mega",
             "body": {
@@ -124,89 +132,47 @@ class BaseGame(ABC):
                 "backgroundColor": c["bg"],
                 "paddingAll": "20px",
                 "spacing": "md",
-                "contents": contents
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "تم حفظ تقدمك",
+                        "size": "xl",
+                        "weight": "bold",
+                        "align": "center",
+                        "color": c["primary"]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": c["border"]
+                    },
+                    {
+                        "type": "text",
+                        "text": f"النقاط: {self.score}",
+                        "align": "center",
+                        "color": c["success"]
+                    },
+                    {
+                        "type": "text",
+                        "text": f"الأسئلة: {self.current_q}/{self.total_q}",
+                        "align": "center",
+                        "size": "sm",
+                        "color": c["text_secondary"]
+                    }
+                ]
             }
         }
 
         return FlexMessage(
-            alt_text="تم حفظ تقدمك",
-            contents=FlexContainer.from_dict(flex)
+            alt_text="تم حفظ التقدم",
+            contents=FlexContainer.from_dict(bubble)
         )
 
-    def _game_over(self):
+    def _game_over_message(self):
         c = self._c()
         won = self.score == self.total_q
-        self.db.add_points(self.user_id, self.score)
-        self.db.finish_game(self.user_id, won)
-        self.db.clear_game_progress(self.user_id)
 
-        result_text = "فوز كامل" if won else f"النتيجة {self.score} من {self.total_q}"
-        result_color = c["success"] if won else c["warning"]
-
-        contents = [
-            {
-                "type": "text",
-                "text": "انتهت اللعبة",
-                "size": "xxl",
-                "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
-            },
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": c["glass"],
-                "cornerRadius": "16px",
-                "paddingAll": "16px",
-                "margin": "md",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": result_text,
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": result_color,
-                        "align": "center"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"النقاط المكتسبة: {self.score}",
-                        "size": "md",
-                        "color": c["text_secondary"],
-                        "align": "center",
-                        "margin": "md"
-                    }
-                ]
-            },
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "md",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "العاب", "text": "العاب"},
-                        "style": "primary",
-                        "color": c["primary"],
-                        "height": "sm",
-                        "flex": 1
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "البداية", "text": "بداية"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "flex": 1
-                    }
-                ]
-            }
-        ]
-
-        flex = {
+        bubble = {
             "type": "bubble",
             "size": "mega",
             "body": {
@@ -215,53 +181,78 @@ class BaseGame(ABC):
                 "backgroundColor": c["bg"],
                 "paddingAll": "20px",
                 "spacing": "md",
-                "contents": contents
-            }
-        }
-
-        return {
-            "response": FlexMessage(
-                alt_text="انتهت اللعبة",
-                contents=FlexContainer.from_dict(flex)
-            ),
-            "game_over": True
-        }
-
-    def build_question_flex(self, question_text: str, hint: str = ""):
-        c = self._c()
-        
-        contents = [
-            {
-                "type": "box",
-                "layout": "horizontal",
                 "contents": [
                     {
                         "type": "text",
-                        "text": f"السؤال {self.current_q + 1}",
-                        "size": "sm",
-                        "color": c["text_secondary"],
-                        "flex": 1
+                        "text": "انتهت اللعبة",
+                        "size": "xxl",
+                        "weight": "bold",
+                        "align": "center",
+                        "color": c["primary"]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": c["border"]
                     },
                     {
                         "type": "text",
-                        "text": f"النقاط {self.score}",
-                        "size": "sm",
-                        "color": c["success"],
-                        "align": "end",
-                        "flex": 1
+                        "text": "فوز كامل" if won else f"النتيجة {self.score}/{self.total_q}",
+                        "size": "xl",
+                        "align": "center",
+                        "color": c["success"] if won else c["warning"]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg",
+                        "color": c["border"]
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "العاب",
+                            "text": "العاب"
+                        },
+                        "style": "primary",
+                        "color": c["primary"]
                     }
                 ]
+            }
+        }
+
+        return FlexMessage(
+            alt_text="انتهت اللعبة",
+            contents=FlexContainer.from_dict(bubble)
+        )
+
+    # ===============================
+    # Question Builder
+    # ===============================
+    def build_question_flex(self, question_text: str, hint: str = ""):
+        c = self._c()
+
+        contents = [
+            {
+                "type": "text",
+                "text": f"السؤال {self.current_q + 1}",
+                "size": "sm",
+                "color": c["text_secondary"],
+                "align": "center"
             },
-            {"type": "separator", "margin": "md", "color": c["border"]},
+            {
+                "type": "separator",
+                "margin": "md",
+                "color": c["border"]
+            },
             {
                 "type": "text",
                 "text": question_text,
                 "size": "xl",
                 "weight": "bold",
-                "color": c["text"],
-                "align": "center",
                 "wrap": True,
-                "margin": "lg"
+                "align": "center",
+                "color": c["text"]
             }
         ]
 
@@ -270,24 +261,21 @@ class BaseGame(ABC):
                 "type": "text",
                 "text": hint,
                 "size": "sm",
-                "color": c["text_tertiary"],
                 "align": "center",
+                "color": c["text_tertiary"],
                 "margin": "md"
             })
 
-        contents.extend([
-            {"type": "separator", "margin": "lg", "color": c["border"]},
-            {
-                "type": "text",
-                "text": "ارسل الاجابة في الدردشة",
-                "size": "xs",
-                "color": c["text_secondary"],
-                "align": "center",
-                "margin": "md"
-            }
-        ])
+        contents.append({
+            "type": "text",
+            "text": "اكتب الإجابة في الدردشة",
+            "size": "xs",
+            "align": "center",
+            "color": c["text_secondary"],
+            "margin": "lg"
+        })
 
-        flex = {
+        bubble = {
             "type": "bubble",
             "size": "mega",
             "body": {
@@ -302,6 +290,6 @@ class BaseGame(ABC):
 
         return FlexMessage(
             alt_text="سؤال اللعبة",
-            contents=FlexContainer.from_dict(flex),
+            contents=FlexContainer.from_dict(bubble),
             quickReply=self._quick_reply()
         )
