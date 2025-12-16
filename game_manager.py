@@ -22,18 +22,13 @@ class GameManager:
         # تعريف الألعاب مع جميع الأسماء المحتملة
         mappings = {
             "ذكاء": ("games.iq", "IqGame"),
-            "ذكاء": ("games.iq", "IqGame"),
             "خمن": ("games.guess", "GuessGame"),
-            "رياضيات": ("games.math", "MathGame"),
             "رياضيات": ("games.math", "MathGame"),
             "ترتيب": ("games.scramble", "ScrambleGame"),
             "ضد": ("games.opposite", "OppositeGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
-            "سلسلة": ("games.chain_words", "ChainWordsGame"),
-            "انسان_حيوان": ("games.human_animal", "HumanAnimalGame"),
             "انسان حيوان": ("games.human_animal", "HumanAnimalGame"),
-            "كون_كلمات": ("games.letters_words", "LettersWordsGame"),
             "كون كلمات": ("games.letters_words", "LettersWordsGame"),
             "اغاني": ("games.song", "SongGame"),
             "الوان": ("games.word_color", "WordColorGame"),
