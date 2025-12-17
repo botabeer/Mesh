@@ -43,11 +43,18 @@ class MafiaGame:
 
     def _quick_reply(self):
         return QuickReply(items=[
-            QuickReplyItem(action=MessageAction(label="القائمة", text="بداية")),
             QuickReplyItem(action=MessageAction(label="العاب", text="العاب")),
             QuickReplyItem(action=MessageAction(label="نقاطي", text="نقاطي")),
             QuickReplyItem(action=MessageAction(label="الصدارة", text="الصدارة")),
-            QuickReplyItem(action=MessageAction(label="ايقاف", text="ايقاف")),
+            QuickReplyItem(action=MessageAction(label="تحدي", text="تحدي")),
+            QuickReplyItem(action=MessageAction(label="سؤال", text="سؤال")),
+            QuickReplyItem(action=MessageAction(label="اعتراف", text="اعتراف")),
+            QuickReplyItem(action=MessageAction(label="منشن", text="منشن")),
+            QuickReplyItem(action=MessageAction(label="موقف", text="موقف")),
+            QuickReplyItem(action=MessageAction(label="حكمة", text="حكمة")),
+            QuickReplyItem(action=MessageAction(label="شخصية", text="شخصية")),
+            QuickReplyItem(action=MessageAction(label="توافق", text="توافق")),
+            QuickReplyItem(action=MessageAction(label="مافيا", text="مافيا")),
             QuickReplyItem(action=MessageAction(label="مساعدة", text="مساعدة"))
         ])
 
