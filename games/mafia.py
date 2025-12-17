@@ -30,6 +30,7 @@ class MafiaGame:
     def _c(self):
         """الحصول على ألوان الثيم"""
         return Config.get_theme(self.theme)
+    
     def _quick_reply(self):
         items = [
             "العاب", "نقاطي", "الصدارة", "تحدي", "سؤال", "اعتراف",
@@ -39,16 +40,49 @@ class MafiaGame:
 
     def _create_bubble(self, title, texts, buttons=None):
         c = self._c()
-        contents = [{"type": "text", "text": title, "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"}]
+        contents = [
+            {
+                "type": "text", 
+                "text": title, 
+                "weight": "bold", 
+                "size": "xl", 
+                "color": c["primary"], 
+                "align": "center"
+            }
+        ]
+        
         for t in texts:
-            contents.append({"type": "text", "text": t, "size": "sm", "color": c["text"], "wrap": True, "margin": "md"})
+            contents.append({
+                "type": "text", 
+                "text": t, 
+                "size": "sm", 
+                "color": c["text"], 
+                "wrap": True, 
+                "margin": "md"
+            })
+        
         if buttons:
-            contents.append({"type": "separator", "margin": "lg", "color": c["border"]})
+            # استخدام box بدلاً من separator
+            contents.append({
+                "type": "box",
+                "layout": "vertical",
+                "contents": [],
+                "height": "1px",
+                "backgroundColor": c["border"],
+                "margin": "lg"
+            })
             contents.extend(buttons)
+        
         bubble = {
             "type": "bubble",
             "size": "mega",
-            "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}
+            "body": {
+                "type": "box", 
+                "layout": "vertical", 
+                "contents": contents, 
+                "backgroundColor": c["bg"], 
+                "paddingAll": "20px"
+            }
         }
         return FlexMessage(alt_text=title, contents=FlexContainer.from_dict(bubble), quickReply=self._quick_reply())
 
@@ -58,11 +92,21 @@ class MafiaGame:
             f"اللاعبون المسجلون: {len(self.players)}",
             f"الحد الأدنى: {self.MIN_PLAYERS} لاعبين",
             f"الحد الأقصى: {self.MAX_PLAYERS} لاعبين",
-            "أرسل 'انضم مافيا' للانضمام"
+            "يجب إضافة البوت كصديق ليصلك دورك بالخاص"
         ]
         buttons = [
-            {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم مافيا"}, "style": "primary", "margin": "md"},
-            {"type": "button", "action": {"type": "message", "label": "بدء اللعبة", "text": "بدء مافيا"}, "style": "secondary", "margin": "sm"}
+            {
+                "type": "button", 
+                "action": {"type": "message", "label": "انضم", "text": "انضم مافيا"}, 
+                "style": "primary", 
+                "margin": "md"
+            },
+            {
+                "type": "button", 
+                "action": {"type": "message", "label": "بدء اللعبة", "text": "بدء مافيا"}, 
+                "style": "secondary", 
+                "margin": "sm"
+            }
         ]
         return self._create_bubble("تسجيل المافيا", texts, buttons)
 
