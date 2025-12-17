@@ -1,14 +1,13 @@
 import random
 import logging
 from datetime import datetime
-from games.base import BaseGame  # تصحيح المسار
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
 logger = logging.getLogger(__name__)
 
-class MafiaGame(BaseGame):
-    """لعبة المافيا مبنية على BaseGame"""
+class MafiaGame:
+    """لعبة المافيا - لعبة مستقلة متعددة اللاعبين"""
 
     MIN_PLAYERS = 4
     MAX_PLAYERS = 12
@@ -16,7 +15,8 @@ class MafiaGame(BaseGame):
     ROLES = ["mafia", "detective", "doctor", "citizen"]
 
     def __init__(self, db, theme="light"):
-        super().__init__(db, theme)
+        self.db = db
+        self.theme = theme
         self.game_name = "مافيا"
         self.players = {}  # user_id -> {"name":str, "role":str, "alive":bool}
         self.phase = "registration"  # registration, day, night
@@ -27,7 +27,9 @@ class MafiaGame(BaseGame):
         self.dead_players = []
         self.game_active = False
 
-    # ================= Flex Helpers =================
+    def _c(self):
+        """الحصول على ألوان الثيم"""
+        return Config.get_theme(self.theme)
     def _quick_reply(self):
         items = [
             "العاب", "نقاطي", "الصدارة", "تحدي", "سؤال", "اعتراف",
