@@ -37,36 +37,50 @@ class Config:
 
     THEMES = {
         "light": {
-            "primary": "#000000",
-            "secondary": "#6B7280",
-            "success": "#4B5563",
-            "warning": "#6B7280",
-            "danger": "#374151",
-            "info": "#6B7280",
-            "bg": "#FFFFFF",
-            "bg_secondary": "#F9FAFB",
-            "card": "#FFFFFF",
-            "text": "#111827",
-            "text_secondary": "#4B5563",
-            "text_tertiary": "#9CA3AF",
-            "border": "#E5E7EB",
-            "glass": "#F3F4F6"
+            # iOS Light Theme - ألوان نظيفة ومريحة
+            "primary": "#007AFF",           # أزرق iOS
+            "secondary": "#8E8E93",         # رمادي ثانوي
+            "success": "#34C759",           # أخضر iOS
+            "warning": "#FF9500",           # برتقالي iOS
+            "danger": "#FF3B30",            # أحمر iOS
+            "info": "#5AC8FA",              # أزرق فاتح
+            
+            # خلفيات
+            "bg": "#FFFFFF",                # أبيض نقي
+            "bg_secondary": "#F2F2F7",      # رمادي فاتح جداً
+            "card": "#FFFFFF",              # أبيض للكروت
+            "glass": "#F9F9F9",             # زجاجي فاتح
+            
+            # نصوص
+            "text": "#000000",              # أسود للنصوص الرئيسية
+            "text_secondary": "#3C3C43",    # رمادي داكن للثانوي
+            "text_tertiary": "#8E8E93",     # رمادي فاتح للتفاصيل
+            
+            # حدود
+            "border": "#E5E5EA",            # حدود رمادية فاتحة
         },
         "dark": {
-            "primary": "#FFFFFF",
-            "secondary": "#9CA3AF",
-            "success": "#D1D5DB",
-            "warning": "#9CA3AF",
-            "danger": "#6B7280",
-            "info": "#9CA3AF",
-            "bg": "#000000",
-            "bg_secondary": "#1F2937",
-            "card": "#1F2937",
-            "text": "#F9FAFB",
-            "text_secondary": "#D1D5DB",
-            "text_tertiary": "#9CA3AF",
-            "border": "#374151",
-            "glass": "#1F2937"
+            # iOS Dark Theme - ألوان داكنة أنيقة
+            "primary": "#0A84FF",           # أزرق iOS الداكن
+            "secondary": "#98989D",         # رمادي ثانوي
+            "success": "#32D74B",           # أخضر iOS الداكن
+            "warning": "#FF9F0A",           # برتقالي iOS الداكن
+            "danger": "#FF453A",            # أحمر iOS الداكن
+            "info": "#64D2FF",              # أزرق فاتح
+            
+            # خلفيات
+            "bg": "#000000",                # أسود نقي
+            "bg_secondary": "#1C1C1E",      # رمادي داكن جداً
+            "card": "#1C1C1E",              # رمادي داكن للكروت
+            "glass": "#2C2C2E",             # زجاجي داكن
+            
+            # نصوص
+            "text": "#FFFFFF",              # أبيض للنصوص الرئيسية
+            "text_secondary": "#EBEBF5",    # رمادي فاتح للثانوي
+            "text_tertiary": "#98989D",     # رمادي للتفاصيل
+            
+            # حدود
+            "border": "#38383A",            # حدود رمادية داكنة
         }
     }
 
