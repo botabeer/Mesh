@@ -14,7 +14,10 @@ from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -25,7 +28,6 @@ game_mgr = GameManager(db)
 text_mgr = TextManager()
 executor = ThreadPoolExecutor(max_workers=Config.WORKERS, thread_name_prefix="worker")
 
-# ======= Rate Limiter =======
 class RateLimiter:
     def __init__(self, max_requests=20, window=60):
         self.max_requests = max_requests
@@ -43,15 +45,14 @@ class RateLimiter:
 
 rate_limiter = RateLimiter(Config.RATE_LIMIT_REQUESTS, Config.RATE_LIMIT_WINDOW)
 
-# ======= Cleanup =======
 def cleanup():
     logger.info("Shutting down executor...")
     executor.shutdown(wait=True, cancel_futures=True)
     db.cleanup_memory(timeout=0)
     logger.info("Cleanup completed")
+
 atexit.register(cleanup)
 
-# ======= Reply Helper =======
 def reply_message(reply_token, messages):
     if not reply_token or not messages:
         return
@@ -69,12 +70,12 @@ def reply_message(reply_token, messages):
     except Exception as e:
         logger.error(f"Reply error: {e}")
 
-# ======= Process Message =======
 def process_message(user_id, text, reply_token):
     try:
         if not rate_limiter.is_allowed(user_id):
             logger.warning(f"Rate limit exceeded for {user_id}")
             return
+            
         if len(text) > Config.MAX_MESSAGE_LENGTH:
             logger.warning(f"Message too long from {user_id}")
             return
@@ -96,9 +97,7 @@ def process_message(user_id, text, reply_token):
                 reply_message(reply_token, ui.ask_name())
             return
 
-        # ===== Commands =====
         if cmd in ("بداية", "بدايه"):
-            # تحقق من تسجيل المستخدم
             if not user:
                 reply_message(reply_token, ui.registration_choice())
             else:
@@ -140,40 +139,35 @@ def process_message(user_id, text, reply_token):
                 reply_message(reply_token, ui.registration_choice())
             return
 
-        # ===== User Commands =====
         if cmd == "نقاطي":
             reply_message(reply_token, ui.stats_card(user))
             return
+            
         if cmd in ("الصدارة", "الصداره"):
             reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
             return
+            
         if cmd == "العاب":
             reply_message(reply_token, ui.games_menu())
             return
+            
         if cmd in ("ايقاف", "ايقاف اللعبة"):
             if game_mgr.stop_game(user_id):
                 reply_message(reply_token, ui.game_stopped())
             return
 
-        # ===== Text Manager =====
         text_response = text_mgr.handle(cmd, theme)
         if text_response:
             reply_message(reply_token, text_response)
             return
 
-        # ===== Game Manager =====
         game_response = game_mgr.handle(user_id=user_id, cmd=cmd, theme=theme, raw_text=text)
         if game_response:
             reply_message(reply_token, game_response)
-        else:
-            # إذا لم يكن هناك رد، أرسل القائمة الرئيسية
-            if user:
-                reply_message(reply_token, ui.main_menu(user))
 
     except Exception as e:
         logger.exception(f"Processing error: {e}")
 
-# ===== Webhook =====
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event):
     executor.submit(process_message, event.source.user_id, event.message.text, event.reply_token)
@@ -194,11 +188,19 @@ def callback():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat(), "active_games": game_mgr.count_active()})
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "active_games": game_mgr.count_active()
+    })
 
 @app.route("/")
 def index():
-    return jsonify({"name": Config.BOT_NAME, "version": Config.VERSION, "status": "running"})
+    return jsonify({
+        "name": Config.BOT_NAME,
+        "version": Config.VERSION,
+        "status": "running"
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=Config.PORT, debug=False)
