@@ -10,7 +10,10 @@ class UI:
         return Config.get_theme(self.theme)
 
     def _qr(self):
-        commands = ["بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "ايقاف", "مساعدة", "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية"]
+        commands = [
+            "بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "ايقاف", "مساعدة",
+            "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية"
+        ]
         return QuickReply(items=[QuickReplyItem(action=MessageAction(label=c, text=c)) for c in commands])
 
     def main_menu(self, user=None):
@@ -130,23 +133,20 @@ class UI:
 
     def games_menu(self):
         c = self._c()
-        games_list = [["ذكاء", "خمن"], ["رياضيات", "ترتيب"], ["ضد", "اسرع"], ["سلسله", "انسان حيوان"], ["تكوين", "اغاني"], ["الوان", "توافق"], ["مافيا", ""]]
+        games_list = [["ذكاء", "خمن"], ["رياضيات", "ترتيب"], ["ضد", "اسرع"], ["سلسله", "انسان حيوان"], ["تكوين", "اغاني"], ["الوان", "توافق"]]
         contents = [
             {"type": "text", "text": "الألعاب المتاحة", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
             {"type": "separator", "margin": "lg", "color": c["border"]}
         ]
 
         for row in games_list:
-            if row[1]:
-                contents.append({
-                    "type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
-                    "contents": [
-                        {"type": "button", "action": {"type": "message", "label": row[0], "text": row[0]}, "style": "primary", "color": c["primary"], "flex": 1, "height": "sm"},
-                        {"type": "button", "action": {"type": "message", "label": row[1], "text": row[1]}, "style": "primary", "color": c["primary"], "flex": 1, "height": "sm"}
-                    ]
-                })
-            else:
-                contents.append({"type": "button", "action": {"type": "message", "label": row[0], "text": row[0]}, "style": "primary", "color": c["primary"], "margin": "sm", "height": "sm"})
+            contents.append({
+                "type": "box", "layout": "horizontal", "spacing": "sm", "margin": "sm",
+                "contents": [
+                    {"type": "button", "action": {"type": "message", "label": row[0], "text": row[0]}, "style": "primary", "color": c["primary"], "flex": 1, "height": "sm"},
+                    {"type": "button", "action": {"type": "message", "label": row[1], "text": row[1]}, "style": "primary", "color": c["primary"], "flex": 1, "height": "sm"}
+                ]
+            })
 
         bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "lg", "backgroundColor": c["bg"], "spacing": "none"}}
         return FlexMessage(alt_text="الالعاب", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
@@ -267,7 +267,7 @@ class UI:
                 "paddingAll": "lg", "cornerRadius": "md", "backgroundColor": c["glass"], "margin": "lg"}
         ]
         bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "lg", "backgroundColor": c["bg"], "spacing": "none"}}
-        return FlexMessage(alt_text="إدخال الاسم", contents=FlexContainer.from_dict(bubble))
+        return FlexMessage(alt_text="إدخال الاسم", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def ask_name_invalid(self):
         c = self._c()
@@ -284,7 +284,7 @@ class UI:
                 "paddingAll": "md", "cornerRadius": "md", "backgroundColor": c["glass"], "margin": "lg"}
         ]
         bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "lg", "backgroundColor": c["bg"], "spacing": "none"}}
-        return FlexMessage(alt_text="اسم غير صالح", contents=FlexContainer.from_dict(bubble))
+        return FlexMessage(alt_text="اسم غير صالح", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def game_stopped(self):
         c = self._c()
@@ -307,4 +307,4 @@ class UI:
                 "paddingAll": "md", "cornerRadius": "md", "backgroundColor": c["glass"], "margin": "lg"}
         ]
         bubble = {"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "lg", "backgroundColor": c["bg"], "spacing": "none"}}
-        return FlexMessage(alt_text="تم التبديل", contents=FlexContainer.from_dict(bubble))
+        return FlexMessage(alt_text="تم التبديل", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
