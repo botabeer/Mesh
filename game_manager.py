@@ -6,18 +6,17 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 class GameManager:
-    """مدير الألعاب - نسخة محسنة لكل الألعاب مع 5 جولات وأول إجابة صحيحة"""
+    """مدير الألعاب - نسخة محسنة مع 5 جولات"""
 
     MAX_ROUNDS = 5
 
     def __init__(self, db):
         self.db = db
         self._lock = Lock()
-        self._active = {}  # user_id -> game_state
+        self._active = {}
         self._games = self._load_games()
         logger.info(f"GameManager loaded {len(self._games)} games")
 
-    # ================= Load Games =================
     def _load_games(self):
         games = {}
         game_mappings = {
@@ -50,15 +49,13 @@ class GameManager:
 
         return games
 
-    # ================= Handle Commands =================
     def handle(self, user_id: str, cmd: str, theme: str, raw_text: str):
         user = self.db.get_user(user_id)
         normalized_cmd = Config.normalize(cmd)
 
-        # التحقق إذا المستخدم في وضع انسحب
         if self.db.is_ignored(user_id):
             if normalized_cmd in ["انسحب","تسجيل","بداية","العاب","نقاطي","الصدارة","ثيم","مساعدة"]:
-                pass  # يمكن التفاعل مع هذه الأوامر فقط
+                pass
             else:
                 return None
 
@@ -75,14 +72,12 @@ class GameManager:
 
         return None
 
-    # ================= Start / Stop =================
     def _start_game(self, user_id: str, game_name: str, theme: str):
         try:
             GameClass = self._games[game_name]
             game = GameClass(self.db, theme)
             game.game_name = game_name
 
-            # استعادة التقدم إذا موجود
             progress = self.db.get_game_progress(user_id)
             if progress and progress.get("game") == game_name:
                 if hasattr(game, "restore"):
@@ -91,7 +86,7 @@ class GameManager:
             with self._lock:
                 self._active[user_id] = {
                     "game": game,
-                    "round": 1,
+                    "round": 0,
                     "answered": False,
                     "score": 0,
                     "start_time": datetime.now()
@@ -128,42 +123,35 @@ class GameManager:
         logger.info(f"Game stopped for {user_id}")
         return True
 
-    # ================= Answer Handling =================
     def _handle_answer(self, user_id: str, answer: str):
         with self._lock:
             state = self._active.get(user_id)
+        
         if not state:
             return None
 
         game = state["game"]
 
-        # فقط أول إجابة صحيحة
-        if state["answered"]:
-            return None
-
         try:
             result = game.check(answer, user_id)
-            response = self._safe_response(result.get("response")) if isinstance(result, dict) else None
+            
+            if not result:
+                return None
 
-            if isinstance(result, dict) and result.get("correct"):
-                state["answered"] = True
-                state["score"] += result.get("points", 1)
-                # الانتقال للسؤال التالي
-                if state["round"] < self.MAX_ROUNDS:
-                    state["round"] += 1
-                    state["answered"] = False
-                    next_q = game.next_question(user_id)
-                    return self._safe_response(next_q)
-                else:
-                    # انتهاء اللعبة
-                    self.db.finish_game(user_id, True)
-                    self.db.add_points(user_id, state["score"])
-                    self.db.clear_game_progress(user_id)
-                    with self._lock:
-                        self._active.pop(user_id, None)
-                    return response or f"انتهت اللعبة! نقاطك: {state['score']}"
+            response = self._safe_response(result.get("response"))
+            
+            # انتهت اللعبة
+            if result.get("game_over"):
+                with self._lock:
+                    self._active.pop(user_id, None)
+                self.db.clear_game_progress(user_id)
+                return response
 
-            return response
+            # الإجابة صحيحة - الانتقال للسؤال التالي تلقائياً
+            if result.get("correct"):
+                return response
+
+            return None
 
         except Exception as e:
             logger.exception(f"Answer error: {e}")
@@ -171,7 +159,6 @@ class GameManager:
                 self._active.pop(user_id, None)
             return None
 
-    # ================= Safety =================
     def _safe_response(self, response):
         if not response:
             return None
@@ -179,8 +166,6 @@ class GameManager:
             return [r for r in response if r]
         return response
 
-    # ================= Count Active =================
     def count_active(self):
-        """عدد الألعاب النشطة"""
         with self._lock:
             return len(self._active)
