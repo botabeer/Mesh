@@ -44,9 +44,9 @@ class GameManager:
                 if not hasattr(instance, "start"):
                     raise AttributeError("Missing start()")
                 games[name] = game_class
-                logger.info(f"✓ Loaded game: {name}")
+                logger.info(f"Loaded game: {name}")
             except Exception as e:
-                logger.error(f"✗ Failed loading {name}: {e}")
+                logger.error(f"Failed loading {name}: {e}")
 
         return games
 
@@ -178,3 +178,9 @@ class GameManager:
         if isinstance(response, list):
             return [r for r in response if r]
         return response
+
+    # ================= Count Active =================
+    def count_active(self):
+        """عدد الألعاب النشطة"""
+        with self._lock:
+            return len(self._active)
