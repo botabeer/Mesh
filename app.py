@@ -1,13 +1,16 @@
 import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+
 from flask import Flask, request, jsonify, abort
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from linebot.v3.messaging import (
-    Configuration, ApiClient, MessagingApi,
+    Configuration,
+    ApiClient,
+    MessagingApi,
     ReplyMessageRequest
 )
 
@@ -17,21 +20,38 @@ from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
 
-# ================= Logging =================
+
+# ==================================================
+# Logging
+# ==================================================
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
+
 logger = logging.getLogger(__name__)
 
-# ================= App =================
+
+# ==================================================
+# App & LINE Setup
+# ==================================================
 
 app = Flask(__name__)
 
-line_config = Configuration(access_token=Config.LINE_TOKEN)
-handler = WebhookHandler(Config.LINE_SECRET)
+line_config = Configuration(
+    access_token=Config.LINE_TOKEN
+)
+
+handler = WebhookHandler(
+    Config.LINE_SECRET
+)
+
+
+# ==================================================
+# Core Services
+# ==================================================
 
 db = Database()
 game_mgr = GameManager(db)
@@ -42,7 +62,10 @@ executor = ThreadPoolExecutor(
     thread_name_prefix="worker"
 )
 
-# ================= Reply =================
+
+# ==================================================
+# Reply Helper
+# ==================================================
 
 def reply_message(reply_token: str, messages):
     if not reply_token or not messages:
@@ -51,9 +74,8 @@ def reply_message(reply_token: str, messages):
     if not isinstance(messages, list):
         messages = [messages]
 
-    # فلترة الرسائل غير الصالحة + حد LINE (5)
+    # إزالة الرسائل غير الصالحة + حد LINE (5)
     safe_messages = [m for m in messages if m][:5]
-
     if not safe_messages:
         return
 
@@ -69,24 +91,28 @@ def reply_message(reply_token: str, messages):
     except Exception as e:
         logger.error(f"Reply error: {e}")
 
-# ================= Core =================
+
+# ==================================================
+# Message Processing
+# ==================================================
 
 def process_message(user_id: str, text: str, reply_token: str):
     try:
-        logger.info(f"Processing: {user_id} -> {text[:50]}")
+        logger.info(f"Processing message from {user_id}: {text[:50]}")
 
         cmd = Config.normalize(text)
         if not cmd:
             return
 
         db.update_activity(user_id)
+
         user = db.get_user(user_id)
         is_ignored = db.is_ignored(user_id)
 
         theme = db.get_theme(user_id) if user else "light"
         ui = UI(theme=theme)
 
-        # ---------- Ignored ----------
+        # ---------------- Ignored Users ----------------
         if is_ignored:
             if cmd == "تسجيل":
                 db.set_ignored(user_id, False)
@@ -94,7 +120,7 @@ def process_message(user_id: str, text: str, reply_token: str):
                 reply_message(reply_token, ui.ask_name())
             return
 
-        # ---------- Main ----------
+        # ---------------- Main Commands ----------------
         if cmd in ("بداية", "بدايه"):
             reply_message(reply_token, ui.main_menu(user))
             return
@@ -103,32 +129,45 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, ui.help_menu())
             return
 
-        # ---------- Theme Toggle ----------
+        # ---------------- Theme Toggle ----------------
         if cmd == "ثيم":
             if user:
                 new_theme = db.toggle_theme(user_id)
                 user = db.get_user(user_id)
+
                 ui_new = UI(theme=new_theme)
-                theme_name = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
-                reply_message(reply_token, [
-                    ui_new.theme_changed(theme_name),
-                    ui_new.main_menu(user)
-                ])
+                theme_name = (
+                    "الوضع الداكن"
+                    if new_theme == "dark"
+                    else "الوضع الفاتح"
+                )
+
+                reply_message(
+                    reply_token,
+                    [
+                        ui_new.theme_changed(theme_name),
+                        ui_new.main_menu(user)
+                    ]
+                )
             else:
                 reply_message(reply_token, ui.registration_choice())
             return
 
-        # ---------- Registration ----------
+        # ---------------- Registration ----------------
         if db.is_waiting_name(user_id):
             if cmd in Config.RESERVED_COMMANDS:
                 reply_message(reply_token, ui.ask_name_invalid())
                 return
 
             name = text.strip()[:Config.MAX_NAME_LENGTH]
+
             if Config.validate_name(name):
                 db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
-                reply_message(reply_token, ui.main_menu(db.get_user(user_id)))
+                reply_message(
+                    reply_token,
+                    ui.main_menu(db.get_user(user_id))
+                )
             else:
                 reply_message(reply_token, ui.ask_name_invalid())
             return
@@ -141,13 +180,16 @@ def process_message(user_id: str, text: str, reply_token: str):
                 reply_message(reply_token, ui.registration_choice())
             return
 
-        # ---------- User Commands ----------
+        # ---------------- User Commands ----------------
         if cmd == "نقاطي":
             reply_message(reply_token, ui.stats_card(user))
             return
 
         if cmd in ("الصدارة", "الصداره"):
-            reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
+            reply_message(
+                reply_token,
+                ui.leaderboard_card(db.get_leaderboard())
+            )
             return
 
         if cmd == "العاب":
@@ -159,13 +201,13 @@ def process_message(user_id: str, text: str, reply_token: str):
                 reply_message(reply_token, ui.game_stopped())
             return
 
-        # ---------- Text ----------
+        # ---------------- Text Content ----------------
         text_response = text_mgr.handle(cmd, theme)
         if text_response:
             reply_message(reply_token, text_response)
             return
 
-        # ---------- Games ----------
+        # ---------------- Games ----------------
         game_response = game_mgr.handle(
             user_id=user_id,
             cmd=cmd,
@@ -181,7 +223,10 @@ def process_message(user_id: str, text: str, reply_token: str):
     except Exception as e:
         logger.exception(f"Processing error: {e}")
 
-# ================= Webhook =================
+
+# ==================================================
+# Webhook
+# ==================================================
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event: MessageEvent):
@@ -191,6 +236,7 @@ def on_message(event: MessageEvent):
         event.message.text,
         event.reply_token
     )
+
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -206,7 +252,10 @@ def callback():
 
     return "OK", 200
 
-# ================= Health =================
+
+# ==================================================
+# Health & Info
+# ==================================================
 
 @app.route("/health")
 def health():
@@ -216,6 +265,7 @@ def health():
         "active_games": game_mgr.count_active()
     })
 
+
 @app.route("/")
 def index():
     return jsonify({
@@ -223,3 +273,15 @@ def index():
         "version": Config.VERSION,
         "status": "running"
     })
+
+
+# ==================================================
+# Local Run (Optional)
+# ==================================================
+
+if __name__ == "__main__":
+    app.run(
+        host="0.0.0.0",
+        port=Config.PORT,
+        debug=False
+    )
