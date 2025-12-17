@@ -574,3 +574,37 @@ class UI:
             contents=FlexContainer.from_dict(bubble),
             quickReply=self._qr()
         )
+
+    def theme_changed(self, theme_name):
+        """رسالة تأكيد تبديل الثيم"""
+        c = self._c()
+        
+        contents = [
+            {"type": "text", "text": "تم تبديل الثيم", "size": "xl",
+             "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            
+            {"type": "box", "layout": "vertical", "contents": [
+                {"type": "text", "text": theme_name,
+                 "size": "lg", "color": c["text"], "wrap": True,
+                 "align": "center", "weight": "bold"}
+            ], "paddingAll": "md", "cornerRadius": "md",
+               "backgroundColor": c["glass"], "margin": "lg"}
+        ]
+        
+        bubble = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "paddingAll": "lg",
+                "backgroundColor": c["bg"],
+                "spacing": "none"
+            }
+        }
+        
+        return FlexMessage(
+            alt_text="تم التبديل",
+            contents=FlexContainer.from_dict(bubble)
+        )
