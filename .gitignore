@@ -8,30 +8,48 @@
 __pycache__/
 *.py[cod]
 *.so
+*.egg
 *.egg-info/
 dist/
 build/
+*.whl
 venv/
 env/
 .venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
 
 # Logs
 *.log
 logs/
+*.log.*
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.pydevproject
+.settings/
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 
@@ -40,7 +58,21 @@ desktop.ini
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+__pycache__/
+*.pyc
 
 # Tests
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.hypothesis/
+
+# Documentation
+docs/_build/
+site/
+
+# Backup
+*.bak
+*.tmp
+*.temp
