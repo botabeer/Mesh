@@ -1,12 +1,10 @@
 import logging
 from threading import Lock
 from datetime import datetime
-
 from config import Config
 from ui import UI
 
 logger = logging.getLogger(__name__)
-
 
 class GameManager:
     MAX_ROUNDS = 5
@@ -15,19 +13,14 @@ class GameManager:
         self.db = db
         self.theme = theme
         self.ui = UI(theme)
-
         self._lock = Lock()
-        self._active = {}
+        self._active = {}  # user_id -> state
         self._games = self._load_games()
-
         logger.info(f"GameManager loaded {len(self._games)} games")
-
-    # ================= Load =================
 
     def _load_games(self):
         games = {}
-
-        game_map = {
+        game_mappings = {
             "ذكاء": ("games.iq", "IqGame"),
             "خمن": ("games.guess", "GuessGame"),
             "رياضيات": ("games.math", "MathGame"),
@@ -40,37 +33,33 @@ class GameManager:
             "اغاني": ("games.song", "SongGame"),
             "الوان": ("games.word_color", "WordColorGame"),
             "توافق": ("games.compatibility", "CompatibilityGame"),
-            "مافيا": ("games.mafia", "MafiaGame"),
+            "مافيا": ("games.mafia", "MafiaGame"),  # تم إضافة المافيا
         }
 
-        for name, (path, cls_name) in game_map.items():
+        for name, (path, cls) in game_mappings.items():
             try:
-                module = __import__(path, fromlist=[cls_name])
-                game_cls = getattr(module, cls_name)
-
-                instance = game_cls(self.db, self.theme)
+                module = __import__(path, fromlist=[cls])
+                game_class = getattr(module, cls)
+                instance = game_class(self.db, self.theme)
                 if not hasattr(instance, "start"):
-                    raise AttributeError("Missing start()")
-
-                games[name] = game_cls
+                    raise AttributeError("Missing start() method")
+                games[name] = game_class
                 logger.info(f"Loaded game: {name}")
-
             except Exception as e:
                 logger.error(f"Failed loading {name}: {e}")
-
         return games
 
-    # ================= Public =================
-
     def handle(self, user_id, cmd, raw_text, theme="light"):
-        cmd = Config.normalize(cmd)
+        normalized_cmd = Config.normalize(cmd)
 
         if self.db.is_ignored(user_id):
-            if cmd not in Config.RESERVED_COMMANDS:
+            if normalized_cmd in ["انسحب", "تسجيل", "بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "مساعدة"]:
+                pass
+            else:
                 return None
 
-        if cmd in self._games:
-            return self._start_game(user_id, cmd, theme)
+        if normalized_cmd in self._games:
+            return self._start_game(user_id, normalized_cmd, theme)
 
         with self._lock:
             state = self._active.get(user_id)
@@ -79,6 +68,35 @@ class GameManager:
             return self._handle_answer(user_id, raw_text)
 
         return None
+
+    def _start_game(self, user_id, game_name, theme="light"):
+        try:
+            GameClass = self._games[game_name]
+            game = GameClass(self.db, theme)
+            game.game_name = game_name
+            game.total_q = self.MAX_ROUNDS
+
+            progress = self.db.get_game_progress(user_id)
+            if progress and progress.get("game") == game_name:
+                if hasattr(game, "restore"):
+                    game.restore(progress)
+
+            with self._lock:
+                self._active[user_id] = {
+                    "game": game,
+                    "round": getattr(progress, "round", 0) if progress else 0,
+                    "score": getattr(progress, "score", 0) if progress else 0,
+                    "start_time": datetime.now()
+                }
+
+            response = game.start(user_id)
+            return response
+
+        except Exception as e:
+            logger.exception(f"Start game error [{game_name}]: {e}")
+            with self._lock:
+                self._active.pop(user_id, None)
+            return None
 
     def stop_game(self, user_id):
         with self._lock:
@@ -94,63 +112,29 @@ class GameManager:
                 "score": state.get("score", 0),
                 "round": state.get("round", 0)
             })
-
             if hasattr(game, "on_stop"):
                 game.on_stop(user_id)
-
         except Exception as e:
             logger.error(f"Stop error: {e}")
 
+        logger.info(f"Game stopped for {user_id}")
         return True
 
-    def count_active(self):
-        with self._lock:
-            return len(self._active)
-
-    # ================= Internal =================
-
-    def _start_game(self, user_id, game_name, theme):
-        try:
-            GameClass = self._games[game_name]
-            game = GameClass(self.db, theme)
-
-            game.game_name = game_name
-            game.total_q = self.MAX_ROUNDS
-
-            progress = self.db.get_game_progress(user_id)
-            if progress and progress.get("game") == game_name:
-                if hasattr(game, "restore"):
-                    game.restore(progress)
-
-            state = {
-                "game": game,
-                "start_time": datetime.now()
-            }
-
-            if not hasattr(game, "is_group_game"):
-                state.update({"round": 0, "score": 0})
-
-            with self._lock:
-                self._active[user_id] = state
-
-            return game.start(user_id)
-
-        except Exception as e:
-            logger.exception(f"Start game error [{game_name}]: {e}")
-            with self._lock:
-                self._active.pop(user_id, None)
-            return None
-
-    def _handle_answer(self, user_id, text):
+    def _handle_answer(self, user_id, answer):
         with self._lock:
             state = self._active.get(user_id)
             if not state:
                 return None
-
+            
             game = state["game"]
+            game_data = {
+                'game': game,
+                'round': state['round'],
+                'score': state['score']
+            }
 
         try:
-            result = game.check(text, user_id)
+            result = game.check(answer, user_id)
             if not result:
                 return None
 
@@ -160,6 +144,11 @@ class GameManager:
                 self.db.clear_game_progress(user_id)
                 return result.get("response")
 
+            with self._lock:
+                if user_id in self._active:
+                    self._active[user_id]['round'] = game_data['round']
+                    self._active[user_id]['score'] = game_data['score']
+
             return result.get("response")
 
         except Exception as e:
@@ -167,3 +156,7 @@ class GameManager:
             with self._lock:
                 self._active.pop(user_id, None)
             return None
+
+    def count_active(self):
+        with self._lock:
+            return len(self._active)
