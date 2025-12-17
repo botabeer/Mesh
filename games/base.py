@@ -22,7 +22,10 @@ class BaseGame(ABC):
         return Config.get_theme(self.theme)
 
     def _qr(self):
-        items = ["العاب", "نقاطي", "الصدارة", "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية", "توافق", "مافيا", "مساعدة"]
+        items = [
+            "بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "ايقاف", "مساعدة",
+            "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية"
+        ]
         return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
 
     def _safe_text(self, text, fallback=" "):
@@ -100,11 +103,14 @@ class BaseGame(ABC):
 
     def _hint_message(self, hint):
         c = self._c()
-        bubble = {"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": [
-            {"type": "text", "text": "تلميح", "weight": "bold", "align": "center"},
-            {"type": "separator"},
-            {"type": "text", "text": self._safe_text(hint), "wrap": True, "align": "center"}
-        ], "backgroundColor": c["bg"]}}
+        contents = [
+            {"type": "text", "text": "تلميح", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "box", "layout": "vertical", "contents": [
+                {"type": "text", "text": self._safe_text(hint), "size": "md", "color": c["text"], "wrap": True, "align": "center"}
+            ], "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
         return FlexMessage(alt_text="تلميح", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def _reveal_message(self):
@@ -113,47 +119,78 @@ class BaseGame(ABC):
         self.current_q += 1
         if self.current_q >= self.total_q:
             return self._game_over_message()
-        bubble = {"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": [
-            {"type": "text", "text": "الإجابة", "weight": "bold", "align": "center"},
-            {"type": "separator"},
-            {"type": "text", "text": self._safe_text(ans), "wrap": True, "align": "center"}
-        ], "backgroundColor": c["bg"]}}
+        
+        contents = [
+            {"type": "text", "text": "الإجابة", "size": "lg", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "box", "layout": "vertical", "contents": [
+                {"type": "text", "text": self._safe_text(ans), "size": "md", "color": c["text"], "wrap": True, "align": "center"}
+            ], "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
         return FlexMessage(alt_text="الإجابة", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def _pause_message(self):
         c = self._c()
-        bubble = {"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": [
-            {"type": "text", "text": "تم حفظ تقدمك", "weight": "bold", "align": "center"},
-            {"type": "separator"},
-            {"type": "text", "text": f"النقاط: {self.score}", "align": "center"},
-            {"type": "text", "text": f"{self.current_q}/{self.total_q}", "align": "center"}
-        ], "backgroundColor": c["bg"]}}
+        contents = [
+            {"type": "text", "text": "تم حفظ تقدمك", "size": "lg", "weight": "bold", "color": c["warning"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "box", "layout": "vertical", "contents": [
+                {"type": "text", "text": f"النقاط: {self.score}", "size": "md", "color": c["text"], "align": "center"},
+                {"type": "text", "text": f"{self.current_q}/{self.total_q}", "size": "sm", "color": c["text_secondary"], "align": "center", "margin": "xs"}
+            ], "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
         return FlexMessage(alt_text="تم الإيقاف", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def _game_over_message(self):
         c = self._c()
         won = self.score == self.total_q
-        bubble = {"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": [
-            {"type": "text", "text": "انتهت اللعبة", "weight": "bold", "align": "center"},
-            {"type": "separator"},
-            {"type": "text", "text": "فوز كامل " if won else f"{self.score}/{self.total_q}", "align": "center"}
-        ], "backgroundColor": c["bg"]}}
+        contents = [
+            {"type": "text", "text": "انتهت اللعبة", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "box", "layout": "vertical", "contents": [
+                {"type": "text", "text": "فوز كامل" if won else f"النتيجة: {self.score}/{self.total_q}", "size": "lg", "color": c["success"] if won else c["text"], "align": "center", "weight": "bold"}
+            ], "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "20px", "margin": "lg"}
+        ]
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
         return FlexMessage(alt_text="النتيجة", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def build_question_flex(self, question_text, hint=None):
         c = self._c()
         contents = [
-            {"type": "text", "text": self._safe_text(self.game_name), "weight": "bold", "align": "center"},
-            {"type": "text", "text": f"{self.current_q+1}/{self.total_q}", "size": "xs", "align": "center"},
-            {"type": "separator"},
-            {"type": "text", "text": self._safe_text(question_text), "wrap": True, "align": "center"}
+            {"type": "box", "layout": "horizontal", "contents": [
+                {"type": "box", "layout": "vertical", "contents": [
+                    {"type": "text", "text": self._safe_text(self.game_name), "weight": "bold", "size": "lg", "color": c["primary"]}
+                ], "flex": 1},
+                {"type": "box", "layout": "vertical", "contents": [
+                    {"type": "text", "text": f"{self.current_q+1}/{self.total_q}", "size": "sm", "align": "end", "color": c["text_secondary"]}
+                ], "flex": 0}
+            ]},
+            {"type": "separator", "margin": "md", "color": c["border"]}
         ]
+        
         if hint:
-            contents.append({"type": "text", "text": self._safe_text(hint), "size": "xs", "align": "center"})
+            contents.append({
+                "type": "text", "text": self._safe_text(hint), "size": "xs", "color": c["text_tertiary"], "align": "center", "margin": "md"
+            })
+        
+        contents.append({
+            "type": "box", "layout": "vertical", 
+            "contents": [
+                {"type": "text", "text": self._safe_text(question_text), "wrap": True, "align": "center", "size": "md", "color": c["text"], "weight": "bold"}
+            ],
+            "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "lg"
+        })
+        
         if self.supports_hint and self.supports_reveal:
-            contents.append({"type": "box", "layout": "horizontal", "contents": [
-                {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}},
-                {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}}
-            ]})
-        bubble = {"type": "bubble", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"]}}
+            contents.append({
+                "type": "box", "layout": "horizontal", "spacing": "sm", "margin": "lg",
+                "contents": [
+                    {"type": "button", "action": {"type": "message", "label": "لمح", "text": "لمح"}, "style": "secondary", "flex": 1, "height": "sm"},
+                    {"type": "button", "action": {"type": "message", "label": "جاوب", "text": "جاوب"}, "style": "secondary", "flex": 1, "height": "sm"}
+                ]
+            })
+        
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
         return FlexMessage(alt_text=self.game_name, contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
