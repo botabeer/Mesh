@@ -1,6 +1,8 @@
 import logging
+import atexit
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
 from flask import Flask, request, jsonify, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -12,7 +14,11 @@ from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -22,6 +28,41 @@ db = Database()
 game_mgr = GameManager(db)
 text_mgr = TextManager()
 executor = ThreadPoolExecutor(max_workers=Config.WORKERS, thread_name_prefix="worker")
+
+
+class RateLimiter:
+    def __init__(self, max_requests=20, window=60):
+        self.max_requests = max_requests
+        self.window = window
+        self.requests = defaultdict(list)
+
+    def is_allowed(self, user_id):
+        now = datetime.now().timestamp()
+        cutoff = now - self.window
+        
+        self.requests[user_id] = [
+            req_time for req_time in self.requests[user_id]
+            if req_time > cutoff
+        ]
+        
+        if len(self.requests[user_id]) >= self.max_requests:
+            return False
+        
+        self.requests[user_id].append(now)
+        return True
+
+
+rate_limiter = RateLimiter(max_requests=Config.RATE_LIMIT_REQUESTS, window=Config.RATE_LIMIT_WINDOW)
+
+
+def cleanup():
+    logger.info("Shutting down executor...")
+    executor.shutdown(wait=True, cancel_futures=True)
+    db.cleanup_memory(timeout=0)
+    logger.info("Cleanup completed")
+
+
+atexit.register(cleanup)
 
 
 def reply_message(reply_token, messages):
@@ -34,7 +75,9 @@ def reply_message(reply_token, messages):
         return
     try:
         with ApiClient(line_config) as client:
-            MessagingApi(client).reply_message(ReplyMessageRequest(reply_token=reply_token, messages=safe_messages))
+            MessagingApi(client).reply_message(
+                ReplyMessageRequest(reply_token=reply_token, messages=safe_messages)
+            )
         logger.info(f"Reply sent ({len(safe_messages)})")
     except Exception as e:
         logger.error(f"Reply error: {e}")
@@ -42,6 +85,14 @@ def reply_message(reply_token, messages):
 
 def process_message(user_id, text, reply_token):
     try:
+        if not rate_limiter.is_allowed(user_id):
+            logger.warning(f"Rate limit exceeded for {user_id}")
+            return
+
+        if len(text) > Config.MAX_MESSAGE_LENGTH:
+            logger.warning(f"Message too long from {user_id}: {len(text)} chars")
+            return
+
         logger.info(f"Processing message from {user_id}: {text[:50]}")
         cmd = Config.normalize(text)
         if not cmd:
@@ -83,7 +134,7 @@ def process_message(user_id, text, reply_token):
             if cmd in Config.RESERVED_COMMANDS:
                 reply_message(reply_token, ui.ask_name_invalid())
                 return
-            name = text.strip()[:Config.MAX_NAME_LENGTH]
+            name = Config.sanitize_text(text.strip(), Config.MAX_NAME_LENGTH)
             if Config.validate_name(name):
                 db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
@@ -144,20 +195,30 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
+        logger.warning(f"Invalid signature from {request.remote_addr}")
         abort(400)
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        logger.exception(f"Webhook error: {e}")
+        abort(500)
     return "OK", 200
 
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat(), "active_games": game_mgr.count_active()})
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "active_games": game_mgr.count_active()
+    })
 
 
 @app.route("/")
 def index():
-    return jsonify({"name": Config.BOT_NAME, "version": Config.VERSION, "status": "running"})
+    return jsonify({
+        "name": Config.BOT_NAME,
+        "version": Config.VERSION,
+        "status": "running"
+    })
 
 
 if __name__ == "__main__":
