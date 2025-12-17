@@ -32,8 +32,16 @@ class BaseGame(ABC):
         return fallback
 
     def _separator(self, margin="md"):
+        """فاصل باستخدام box بدلاً من separator"""
         c = self._c()
-        return {"type": "separator", "margin": margin, "color": c["border"]}
+        return {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [],
+            "height": "1px",
+            "backgroundColor": c["border"],
+            "margin": margin
+        }
 
     def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
@@ -120,9 +128,10 @@ class BaseGame(ABC):
             return f"يبدا بـ {ans[0]}\nعدد الحروف {len(ans)}"
         return f"{ans[0]}_"
 
-    def _hint_message(self):
+    def _hint_message(self, hint=None):
         c = self._c()
-        hint = self._get_hint()
+        if hint is None:
+            hint = self._get_hint()
         
         contents = [
             {
