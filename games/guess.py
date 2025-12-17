@@ -84,7 +84,6 @@ class GuessGame(BaseGame):
         random.shuffle(self.questions)
     
     def get_question(self):
-        """اختيار سؤال"""
         idx = self.current_q % len(self.questions)
         q_data = self.questions[idx]
         self.current_answer = q_data["answers"]
@@ -94,6 +93,5 @@ class GuessGame(BaseGame):
         return self.build_question_flex(text, hint)
     
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الإجابة"""
         normalized = Config.normalize(answer)
         return any(Config.normalize(a) == normalized for a in self.current_answer)
