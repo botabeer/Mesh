@@ -15,6 +15,7 @@ class GameManager:
         self.ui = UI(theme)
         self._lock = Lock()
         self._active = {}  # user_id -> state
+        self._mafia_game = None  # Single mafia game instance
         self._games = self._load_games()
         logger.info(f"GameManager loaded {len(self._games)} games")
 
@@ -33,17 +34,23 @@ class GameManager:
             "اغاني": ("games.song", "SongGame"),
             "الوان": ("games.word_color", "WordColorGame"),
             "توافق": ("games.compatibility", "CompatibilityGame"),
-            "مافيا": ("games.mafia", "MafiaGame"),  # تم إضافة المافيا
+            "مافيا": ("games.mafia", "MafiaGame"),
         }
 
         for name, (path, cls) in game_mappings.items():
             try:
                 module = __import__(path, fromlist=[cls])
                 game_class = getattr(module, cls)
-                instance = game_class(self.db, self.theme)
-                if not hasattr(instance, "start"):
-                    raise AttributeError("Missing start() method")
-                games[name] = game_class
+                
+                # Special handling for mafia - it's a group game
+                if name == "مافيا":
+                    games[name] = game_class
+                else:
+                    instance = game_class(self.db, self.theme)
+                    if not hasattr(instance, "start"):
+                        raise AttributeError("Missing start() method")
+                    games[name] = game_class
+                
                 logger.info(f"Loaded game: {name}")
             except Exception as e:
                 logger.error(f"Failed loading {name}: {e}")
@@ -58,7 +65,18 @@ class GameManager:
             else:
                 return None
 
-        if normalized_cmd in self._games:
+        # Check for mafia game commands
+        if normalized_cmd == "مافيا":
+            return self._start_mafia_game(user_id, theme)
+        
+        # Check if mafia game is active and handle its commands
+        if self._mafia_game and self._mafia_game.game_active:
+            mafia_response = self._mafia_game.check(raw_text, user_id)
+            if mafia_response:
+                return mafia_response.get("response")
+
+        # Regular single-player games
+        if normalized_cmd in self._games and normalized_cmd != "مافيا":
             return self._start_game(user_id, normalized_cmd, theme)
 
         with self._lock:
@@ -68,6 +86,23 @@ class GameManager:
             return self._handle_answer(user_id, raw_text)
 
         return None
+
+    def _start_mafia_game(self, user_id, theme="light"):
+        """Start or join mafia game"""
+        try:
+            # Create new game if doesn't exist or previous ended
+            if not self._mafia_game or not self._mafia_game.game_active:
+                GameClass = self._games["مافيا"]
+                self._mafia_game = GameClass(self.db, theme)
+                responses = self._mafia_game.start(user_id)
+                return responses if isinstance(responses, list) else [responses]
+            else:
+                # Game already active, return status
+                return self._mafia_game.game_status_screen()
+        except Exception as e:
+            logger.exception(f"Start mafia game error: {e}")
+            self._mafia_game = None
+            return None
 
     def _start_game(self, user_id, game_name, theme="light"):
         try:
@@ -99,6 +134,11 @@ class GameManager:
             return None
 
     def stop_game(self, user_id):
+        # Check if user is in mafia game
+        if self._mafia_game and user_id in self._mafia_game.players:
+            # Don't allow stopping mafia mid-game
+            return False
+        
         with self._lock:
             state = self._active.pop(user_id, None)
 
@@ -159,4 +199,10 @@ class GameManager:
 
     def count_active(self):
         with self._lock:
-            return len(self._active)
+            count = len(self._active)
+        
+        # Add mafia game if active
+        if self._mafia_game and self._mafia_game.game_active:
+            count += 1
+        
+        return count
