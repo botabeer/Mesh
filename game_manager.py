@@ -1,23 +1,27 @@
 import logging
 from threading import Lock
+from datetime import datetime
 from config import Config
-from datetime import datetime, timedelta
+from ui import UI
 
 logger = logging.getLogger(__name__)
 
 class GameManager:
-    """مدير الألعاب - نسخة محسنة مع 5 جولات"""
+    """مدير الألعاب المحسّن - مدمج مع UI و BaseGame، 5 جولات"""
 
     MAX_ROUNDS = 5
 
-    def __init__(self, db):
+    def __init__(self, db, theme="light"):
         self.db = db
+        self.theme = theme
+        self.ui = UI(theme)
         self._lock = Lock()
-        self._active = {}
+        self._active = {}  # user_id -> {"game": game_instance, "round": int, ...}
         self._games = self._load_games()
         logger.info(f"GameManager loaded {len(self._games)} games")
 
     def _load_games(self):
+        """تحميل الألعاب ديناميكيًا"""
         games = {}
         game_mappings = {
             "ذكاء": ("games.iq", "IqGame"),
@@ -39,17 +43,17 @@ class GameManager:
             try:
                 module = __import__(path, fromlist=[cls])
                 game_class = getattr(module, cls)
-                instance = game_class(self.db, "light")
+                instance = game_class(self.db, self.theme)
                 if not hasattr(instance, "start"):
-                    raise AttributeError("Missing start()")
+                    raise AttributeError("Missing start() method")
                 games[name] = game_class
                 logger.info(f"Loaded game: {name}")
             except Exception as e:
                 logger.error(f"Failed loading {name}: {e}")
-
         return games
 
-    def handle(self, user_id: str, cmd: str, theme: str, raw_text: str):
+    def handle(self, user_id: str, cmd: str, raw_text: str):
+        """التعامل مع الأوامر أو الإجابات"""
         user = self.db.get_user(user_id)
         normalized_cmd = Config.normalize(cmd)
 
@@ -61,22 +65,23 @@ class GameManager:
 
         # بدء اللعبة
         if normalized_cmd in self._games:
-            return self._start_game(user_id, normalized_cmd, theme)
+            return self._start_game(user_id, normalized_cmd)
 
         # التحقق إذا اللعبة فعّالة
         with self._lock:
-            game_state = self._active.get(user_id)
+            state = self._active.get(user_id)
 
-        if game_state:
+        if state:
             return self._handle_answer(user_id, raw_text)
 
         return None
 
-    def _start_game(self, user_id: str, game_name: str, theme: str):
+    def _start_game(self, user_id: str, game_name: str):
         try:
             GameClass = self._games[game_name]
-            game = GameClass(self.db, theme)
+            game = GameClass(self.db, self.theme)
             game.game_name = game_name
+            game.total_q = self.MAX_ROUNDS
 
             progress = self.db.get_game_progress(user_id)
             if progress and progress.get("game") == game_name:
@@ -87,13 +92,12 @@ class GameManager:
                 self._active[user_id] = {
                     "game": game,
                     "round": 0,
-                    "answered": False,
                     "score": 0,
                     "start_time": datetime.now()
                 }
 
             response = game.start(user_id)
-            return self._safe_response(response)
+            return response
 
         except Exception as e:
             logger.exception(f"Start game error [{game_name}]: {e}")
@@ -126,7 +130,7 @@ class GameManager:
     def _handle_answer(self, user_id: str, answer: str):
         with self._lock:
             state = self._active.get(user_id)
-        
+
         if not state:
             return None
 
@@ -134,37 +138,23 @@ class GameManager:
 
         try:
             result = game.check(answer, user_id)
-            
             if not result:
                 return None
 
-            response = self._safe_response(result.get("response"))
-            
             # انتهت اللعبة
             if result.get("game_over"):
                 with self._lock:
                     self._active.pop(user_id, None)
                 self.db.clear_game_progress(user_id)
-                return response
+                return result.get("response")
 
-            # الإجابة صحيحة - الانتقال للسؤال التالي تلقائياً
-            if result.get("correct"):
-                return response
-
-            return None
+            return result.get("response")
 
         except Exception as e:
             logger.exception(f"Answer error: {e}")
             with self._lock:
                 self._active.pop(user_id, None)
             return None
-
-    def _safe_response(self, response):
-        if not response:
-            return None
-        if isinstance(response, list):
-            return [r for r in response if r]
-        return response
 
     def count_active(self):
         with self._lock:
