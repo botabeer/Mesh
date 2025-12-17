@@ -10,7 +10,7 @@ class UI:
         return Config.get_theme(self.theme)
 
     def _qr(self):
-        commands = ["العاب", "نقاطي", "الصدارة", "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية", "توافق", "مافيا", "مساعدة"]
+        commands = ["بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "ايقاف", "مساعدة", "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية"]
         return QuickReply(items=[QuickReplyItem(action=MessageAction(label=c, text=c)) for c in commands])
 
     def main_menu(self, user=None):
@@ -74,9 +74,57 @@ class UI:
         c = self._c()
         contents = [
             {"type": "text", "text": "دليل الاستخدام", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            
+            {"type": "text", "text": "الأوامر الأساسية", "size": "md", "weight": "bold", "color": c["text"], "margin": "lg"},
+            {"type": "box", "layout": "vertical", "backgroundColor": c["glass"], "cornerRadius": "8px", "paddingAll": "12px", "margin": "sm", "contents": [
+                {"type": "text", "text": "بداية: العودة للقائمة الرئيسية", "size": "sm", "color": c["text"], "wrap": True},
+                {"type": "text", "text": "العاب: عرض جميع الألعاب المتاحة", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "نقاطي: عرض إحصائياتك الشخصية", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "الصدارة: عرض أفضل اللاعبين", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "ثيم: تبديل بين الوضع الفاتح والداكن", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "ايقاف: إيقاف اللعبة الحالية", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"}
+            ]},
+            
+            {"type": "text", "text": "أوامر التسلية", "size": "md", "weight": "bold", "color": c["text"], "margin": "md"},
+            {"type": "box", "layout": "vertical", "backgroundColor": c["glass"], "cornerRadius": "8px", "paddingAll": "12px", "margin": "sm", "contents": [
+                {"type": "text", "text": "تحدي: تحديات عشوائية", "size": "sm", "color": c["text"], "wrap": True},
+                {"type": "text", "text": "سؤال: أسئلة متنوعة", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "اعتراف: اعترافات مسلية", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "منشن: منشن أصدقائك", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "موقف: مواقف افتراضية", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "حكمة: حكم وأقوال", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "شخصية: أسئلة شخصية", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"}
+            ]},
+            
+            {"type": "text", "text": "الألعاب المتوفرة", "size": "md", "weight": "bold", "color": c["text"], "margin": "md"},
+            {"type": "box", "layout": "vertical", "backgroundColor": c["glass"], "cornerRadius": "8px", "paddingAll": "12px", "margin": "sm", "contents": [
+                {"type": "text", "text": "ذكاء: ألغاز ذكاء", "size": "sm", "color": c["text"]},
+                {"type": "text", "text": "خمن: تخمين الكلمات", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "رياضيات: عمليات حسابية", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "ترتيب: ترتيب الحروف", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "ضد: عكس الكلمات", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "اسرع: كتابة سريعة", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "سلسلة: سلسلة كلمات", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "انسان حيوان: لعبة الفئات", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "تكوين: تكوين كلمات", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "اغاني: تخمين المغني", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "الوان: لعبة الألوان", "size": "sm", "color": c["text"], "margin": "xs"},
+                {"type": "text", "text": "توافق: حساب التوافق", "size": "sm", "color": c["text"], "margin": "xs"}
+            ]},
+            
+            {"type": "text", "text": "كيفية اللعب", "size": "md", "weight": "bold", "color": c["text"], "margin": "md"},
+            {"type": "box", "layout": "vertical", "backgroundColor": c["glass"], "cornerRadius": "8px", "paddingAll": "12px", "margin": "sm", "contents": [
+                {"type": "text", "text": "1. اختر لعبة من قائمة الألعاب", "size": "sm", "color": c["text"], "wrap": True},
+                {"type": "text", "text": "2. أجب على 5 أسئلة متتالية", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "3. اكسب نقطة عن كل إجابة صحيحة", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"},
+                {"type": "text", "text": "4. استخدم ايقاف لحفظ تقدمك", "size": "sm", "color": c["text"], "wrap": True, "margin": "xs"}
+            ]},
+
             {"type": "separator", "margin": "lg", "color": c["border"]},
-            {"type": "text", "text": "الأوامر الأساسية: بداية - العاب - نقاطي - الصدارة - ثيم - مساعدة", "size": "sm", "color": c["text_secondary"], "wrap": True, "margin": "md"}
+            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "primary", "color": c["primary"], "height": "sm", "margin": "md"}
         ]
+        
         bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "paddingAll": "lg", "backgroundColor": c["bg"], "spacing": "none"}}
         return FlexMessage(alt_text="المساعدة", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
