@@ -2,50 +2,30 @@ import os
 import re
 from dotenv import load_dotenv
 
-# تحميل متغيرات البيئة من ملف .env
 load_dotenv()
 
 
 class Config:
-    """إعدادات التطبيق الاحترافية والموحدة"""
-
-    # ==============================
-    # معلومات البوت
-    # ==============================
     BOT_NAME = "Bot Mesh"
     VERSION = "15.0"
     AUTHOR = "عبير الدوسري"
     COPYRIGHT = "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025"
 
-    # ==============================
-    # مفاتيح LINE
-    # ==============================
     LINE_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
     if not LINE_SECRET or not LINE_TOKEN:
-        raise RuntimeError(
-            "LINE credentials are missing. Please set LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN"
-        )
+        raise RuntimeError("LINE credentials missing")
 
-    # ==============================
-    # إعدادات قاعدة البيانات والبورت
-    # ==============================
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
     PORT = int(os.getenv("PORT", 5000))
     WORKERS = int(os.getenv("WORKERS", 4))
-    ENV = os.getenv("ENV", "production")  # "development" أو "production"
+    ENV = os.getenv("ENV", "production")
 
-    # ==============================
-    # إعدادات الألعاب
-    # ==============================
     QUESTIONS_PER_GAME = 5
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 1
 
-    # ==============================
-    # الأوامر المحجوزة
-    # ==============================
     RESERVED_COMMANDS = {
         "بدايه", "بداية", "العاب", "نقاطي", "الصداره", "الصدارة",
         "ثيم", "مساعده", "مساعدة", "تسجيل", "ايقاف", "انسحب",
@@ -56,9 +36,6 @@ class Config:
         "حكمه", "حكمة", "شخصيه", "شخصية", "مافيا"
     }
 
-    # ==============================
-    # الثيمات (Themes) المحسنة مع ظل
-    # ==============================
     THEMES = {
         "light": {
             "primary": "#2C3E50",
@@ -75,7 +52,7 @@ class Config:
             "text_secondary": "#5A6C7D",
             "text_tertiary": "#7F8C8D",
             "border": "#DDE1E5",
-            "shadow": "0 2px 6px rgba(0,0,0,0.1)"  # ظل خفيف للكروت
+            "shadow": "0 2px 6px rgba(0,0,0,0.1)"
         },
         "dark": {
             "primary": "#EAEAEA",
@@ -92,42 +69,32 @@ class Config:
             "text_secondary": "#C0C4C8",
             "text_tertiary": "#9CA3AF",
             "border": "#2E343B",
-            "shadow": "0 2px 8px rgba(0,0,0,0.3)"  # ظل أقوى للكروت الداكنة
+            "shadow": "0 2px 8px rgba(0,0,0,0.3)"
         },
     }
 
-    # ==============================
-    # دوال مساعدة
-    # ==============================
     @classmethod
-    def get_theme(cls, name: str = "light") -> dict:
-        """الحصول على ألوان الثيم، fallback إلى light إذا غير موجود"""
+    def get_theme(cls, name="light"):
         return cls.THEMES.get(name, cls.THEMES["light"])
 
     @classmethod
-    def normalize(cls, text: str) -> str:
-        """تطبيع النص العربي لحذف الحركات وتهيئة الأحرف"""
+    def normalize(cls, text):
         if not text:
             return ""
         text = text.strip().lower()[:1000]
-        # إزالة الحركات العربية
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-        # استبدال بعض الحروف لتوحيد النص
         replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
         for old, new in replacements.items():
             text = text.replace(old, new)
-        # إزالة الرموز الخاصة باستثناء الأحرف العربية والأرقام والمسافات
         text = re.sub(r"[^\w\sء-ي]", "", text)
         text = re.sub(r"\s+", " ", text).strip()
         return text
 
     @classmethod
-    def validate_name(cls, name: str) -> bool:
-        """التحقق من صحة الاسم حسب الطول والحروف المسموح بها"""
+    def validate_name(cls, name):
         if not name:
             return False
         name = name.strip()
         if not (cls.MIN_NAME_LENGTH <= len(name) <= cls.MAX_NAME_LENGTH):
             return False
-        # يسمح بالأحرف العربية، الإنجليزية، والمسافات
         return bool(re.match(r"^[\u0600-\u06FFa-zA-Z\s]+$", name))
