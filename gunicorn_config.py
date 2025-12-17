@@ -1,31 +1,49 @@
 import os
 import multiprocessing
 
-# ==== الإعدادات الأساسية ====
-PORT = int(os.getenv("PORT", 8080))
-ENV = os.getenv("ENV", "production")
+# ==============================
+# إعدادات البيئة والبورت
+# ==============================
+ENV = os.getenv("ENV", "production")         # "development" أو "production"
+PORT = int(os.getenv("PORT", 8080))         # البورت الذي يستمع عليه التطبيق
+bind = f"0.0.0.0:{PORT}"                     # IP والبورت للاستماع
 
-bind = f"0.0.0.0:{PORT}"
-workers = 1 if ENV == "development" else min(multiprocessing.cpu_count() * 2 + 1, 8)
-threads = 2 if ENV == "development" else 4
+# ==============================
+# إعدادات العمال والخيوط
+# ==============================
+if ENV == "development":
+    workers = 1
+    threads = 2
+    reload = True
+else:
+    cpu_count = multiprocessing.cpu_count()
+    # صيغة الإنتاجية: 2*CPU + 1، لا يزيد عن 8 أو حسب سيرفرك
+    workers = min(cpu_count * 2 + 1, 8)
+    threads = 4
+    reload = False
 
-# ==== وقت الاستجابة والتحكم بالطلبات ====
-timeout = 60               # المهلة لكل طلب
-graceful_timeout = 30      # مهلة الإغلاق
-keepalive = 5              # الاحتفاظ بالاتصال
+worker_class = "gthread"    # استخدام خيوط لدعم تعدد الطلبات
 
-max_requests = 2000        # إعادة تشغيل العامل بعد عدد معين من الطلبات
-max_requests_jitter = 100  # عشوائية لتجنب الإغلاق المتزامن للعمال
+# ==============================
+# التحكم بالطلبات ووقت الاستجابة
+# ==============================
+timeout = 60                # المهلة لكل طلب
+graceful_timeout = 30       # مهلة الإغلاق السلس للعامل
+keepalive = 5               # مدة الاحتفاظ بالاتصال المفتوح
+max_requests = 2000         # إعادة تشغيل العامل بعد هذا العدد من الطلبات
+max_requests_jitter = 100   # لتجنب إعادة التشغيل المتزامن للعمال
 
-# ==== السجلات ====
-loglevel = "info"
-accesslog = "-"            # السجل يظهر على stdout
-errorlog = "-"
+# ==============================
+# إعدادات السجلات
+# ==============================
+loglevel = "info"           # مستوى السجل
+accesslog = "-"             # طباعة سجل الوصول على stdout
+errorlog = "-"              # طباعة سجل الأخطاء على stdout
 
-# ==== خيارات إضافية ====
-preload_app = True         # تحميل التطبيق قبل إنشاء العمال
-reload = ENV == "development"  # إعادة التحميل التلقائي في التطوير
-worker_class = "gthread"   # استخدام خيوط Gthread للطلبات المتعددة
-
-proc_name = "bot-mesh"
-daemon = False
+# ==============================
+# إعدادات إضافية للإنتاج
+# ==============================
+preload_app = True          # تحميل التطبيق قبل إنشاء العمال لتحسين الأداء
+proc_name = "bot-mesh"      # اسم العملية في النظام
+daemon = False              # عدم التشغيل في الخلفية (يُفضل إدارة العملية بـ systemd أو supervisor)
+# حماية ضد DoS عبر حد الطلبات (يمكن إضافة لاحقًا بالـ reverse proxy مثل Nginx)
