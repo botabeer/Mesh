@@ -1,7 +1,7 @@
 import random
 import logging
 from datetime import datetime
-from base import BaseGame
+from games.base import BaseGame  # تصحيح المسار
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
