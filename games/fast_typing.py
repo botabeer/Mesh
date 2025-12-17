@@ -1,6 +1,7 @@
 import random
 import time
 from games.base import BaseGame
+from linebot.v3.messaging import FlexMessage, FlexContainer
 
 
 class FastTypingGame(BaseGame):
@@ -11,6 +12,9 @@ class FastTypingGame(BaseGame):
         self.game_name = "اسرع"
         self.time_limit = 10
         self.start_time = None
+        self.supports_hint = False
+        self.supports_reveal = False
+        self.show_timer = True
         
         self.phrases = [
             "سبحان الله", "الحمد لله", "الله اكبر", "لا اله الا الله",
@@ -36,7 +40,6 @@ class FastTypingGame(BaseGame):
         self.used = []
 
     def get_question(self):
-        """إنشاء سؤال مع توقيت"""
         available = [p for p in self.phrases if p not in self.used]
         if not available:
             self.used = []
@@ -47,11 +50,39 @@ class FastTypingGame(BaseGame):
         self.current_answer = phrase
         self.start_time = time.time()
 
-        hint = f"اكتب بسرعة - {self.time_limit} ثانية"
-        return self.build_question_flex(phrase, hint)
+        c = self._c()
+        
+        contents = [
+            {"type": "box", "layout": "horizontal", "contents": [
+                {"type": "box", "layout": "vertical", "contents": [
+                    {"type": "text", "text": self._safe_text(self.game_name), "weight": "bold", "size": "lg", "color": c["primary"]}
+                ], "flex": 1},
+                {"type": "box", "layout": "vertical", "contents": [
+                    {"type": "text", "text": f"{self.current_q+1}/{self.total_q}", "size": "sm", "align": "end", "color": c["text_secondary"]}
+                ], "flex": 0}
+            ]},
+            {"type": "separator", "margin": "md", "color": c["border"]},
+            {
+                "type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": f"الوقت: {self.time_limit} ثانية", "size": "xs", "color": c["warning"], "weight": "bold"}
+                ], "margin": "md"
+            },
+            {
+                "type": "box", "layout": "vertical", 
+                "contents": [
+                    {"type": "text", "text": self._safe_text(phrase), "wrap": True, "align": "center", "size": "md", "color": c["text"], "weight": "bold"}
+                ],
+                "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "md"
+            },
+            {
+                "type": "text", "text": "اكتب بسرعة", "size": "xs", "align": "center", "margin": "sm", "color": c["text_tertiary"]
+            }
+        ]
+
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
+        return FlexMessage(alt_text=self.game_name, contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def check_answer(self, answer: str) -> bool:
-        """التحقق مع الوقت"""
         if self.start_time is None:
             return False
         
