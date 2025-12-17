@@ -15,6 +15,7 @@ class BaseGame(ABC):
         self.user_id = None
         self.current_answer = None
         self.game_name = "لعبة"
+        self.game_icon = "🎮"
         self.supports_hint = True
         self.supports_reveal = True
 
@@ -22,11 +23,8 @@ class BaseGame(ABC):
         return Config.get_theme(self.theme)
 
     def _qr(self):
-        items = [
-            "بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "ايقاف", "مساعدة",
-            "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية"
-        ]
-        return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items[:13]])
+        items = ["بداية", "العاب", "نقاطي", "الصدارة", "ايقاف"]
+        return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
 
     def _safe_text(self, text, fallback=" "):
         if isinstance(text, str) and text.strip():
@@ -37,7 +35,7 @@ class BaseGame(ABC):
         c = self._c()
         return {"type": "separator", "margin": margin, "color": c["border"]}
 
-    def _glass_box(self, contents, padding="16px"):
+    def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
         return {
             "type": "box",
@@ -46,7 +44,8 @@ class BaseGame(ABC):
             "backgroundColor": c["glass"],
             "cornerRadius": "16px",
             "paddingAll": padding,
-            "spacing": "sm"
+            "spacing": "sm",
+            "margin": margin
         }
 
     @abstractmethod
@@ -121,16 +120,31 @@ class BaseGame(ABC):
             return f"يبدا بـ {ans[0]}\nعدد الحروف {len(ans)}"
         return f"{ans[0]}_"
 
-    def _hint_message(self, hint):
+    def _hint_message(self):
         c = self._c()
+        hint = self._get_hint()
+        
         contents = [
             {
-                "type": "text",
-                "text": "تلميح",
-                "size": "lg",
-                "weight": "bold",
-                "color": c["text"],
-                "align": "center"
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "💡",
+                        "size": "xl",
+                        "flex": 0
+                    },
+                    {
+                        "type": "text",
+                        "text": "تلميح",
+                        "size": "lg",
+                        "weight": "bold",
+                        "color": c["text"],
+                        "flex": 1,
+                        "margin": "md"
+                    }
+                ]
             },
             self._separator(),
             self._glass_box([
@@ -143,7 +157,7 @@ class BaseGame(ABC):
                     "align": "center",
                     "weight": "bold"
                 }
-            ])
+            ], "20px", "md")
         ]
         
         bubble = {
@@ -163,30 +177,53 @@ class BaseGame(ABC):
         c = self._c()
         ans = " او ".join(self.current_answer) if isinstance(self.current_answer, list) else str(self.current_answer)
         self.current_q += 1
+        
         if self.current_q >= self.total_q:
             return self._game_over_message()
         
         contents = [
             {
-                "type": "text",
-                "text": "الاجابة",
-                "size": "lg",
-                "weight": "bold",
-                "color": c["text"],
-                "align": "center"
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "✓",
+                        "size": "xl",
+                        "color": c["success"],
+                        "flex": 0
+                    },
+                    {
+                        "type": "text",
+                        "text": "الاجابة الصحيحة",
+                        "size": "lg",
+                        "weight": "bold",
+                        "color": c["text"],
+                        "flex": 1,
+                        "margin": "md"
+                    }
+                ]
             },
             self._separator(),
             self._glass_box([
                 {
                     "type": "text",
                     "text": self._safe_text(ans),
-                    "size": "md",
+                    "size": "lg",
                     "color": c["primary"],
                     "wrap": True,
                     "align": "center",
                     "weight": "bold"
                 }
-            ])
+            ], "20px", "md"),
+            {
+                "type": "text",
+                "text": f"السؤال التالي {self.current_q + 1}/{self.total_q}",
+                "size": "xs",
+                "color": c["text_tertiary"],
+                "align": "center",
+                "margin": "lg"
+            }
         ]
         
         bubble = {
@@ -204,34 +241,86 @@ class BaseGame(ABC):
 
     def _pause_message(self):
         c = self._c()
+        
         contents = [
+            {
+                "type": "text",
+                "text": "⏸",
+                "size": "xxl",
+                "align": "center",
+                "color": c["warning"]
+            },
             {
                 "type": "text",
                 "text": "تم حفظ تقدمك",
                 "size": "xl",
                 "weight": "bold",
-                "color": c["warning"],
-                "align": "center"
+                "color": c["text"],
+                "align": "center",
+                "margin": "md"
             },
-            self._separator(),
+            self._separator("lg"),
             self._glass_box([
                 {
-                    "type": "text",
-                    "text": f"النقاط {self.score}",
-                    "size": "md",
-                    "color": c["text"],
-                    "align": "center",
-                    "weight": "bold"
-                },
-                {
-                    "type": "text",
-                    "text": f"{self.current_q}/{self.total_q}",
-                    "size": "sm",
-                    "color": c["text_secondary"],
-                    "align": "center",
-                    "margin": "xs"
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": str(self.score),
+                                    "size": "xl",
+                                    "weight": "bold",
+                                    "color": c["success"],
+                                    "align": "center"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "النقاط",
+                                    "size": "xs",
+                                    "color": c["text_secondary"],
+                                    "align": "center"
+                                }
+                            ],
+                            "flex": 1
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": f"{self.current_q}/{self.total_q}",
+                                    "size": "xl",
+                                    "weight": "bold",
+                                    "color": c["primary"],
+                                    "align": "center"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "التقدم",
+                                    "size": "xs",
+                                    "color": c["text_secondary"],
+                                    "align": "center"
+                                }
+                            ],
+                            "flex": 1
+                        }
+                    ]
                 }
-            ])
+            ], "16px", "lg"),
+            {
+                "type": "text",
+                "text": "يمكنك العودة لاحقا لاستكمال اللعبة",
+                "size": "xs",
+                "color": c["text_tertiary"],
+                "align": "center",
+                "wrap": True,
+                "margin": "lg"
+            }
         ]
         
         bubble = {
@@ -254,23 +343,75 @@ class BaseGame(ABC):
         contents = [
             {
                 "type": "text",
-                "text": "انتهت اللعبة",
+                "text": "🏆" if won else "🎮",
                 "size": "xxl",
-                "weight": "bold",
-                "color": c["text"],
                 "align": "center"
             },
-            self._separator(),
+            {
+                "type": "text",
+                "text": "فوز رائع" if won else "انتهت اللعبة",
+                "size": "xxl",
+                "weight": "bold",
+                "color": c["success"] if won else c["text"],
+                "align": "center",
+                "margin": "md"
+            },
+            self._separator("lg"),
             self._glass_box([
                 {
-                    "type": "text",
-                    "text": "فوز كامل" if won else f"النتيجة {self.score}/{self.total_q}",
-                    "size": "xl",
-                    "color": c["success"] if won else c["text"],
-                    "align": "center",
-                    "weight": "bold"
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": f"{self.score}/{self.total_q}",
+                            "size": "xxl",
+                            "weight": "bold",
+                            "color": c["success"] if won else c["primary"],
+                            "align": "center"
+                        },
+                        {
+                            "type": "text",
+                            "text": "اجابة صحيحة",
+                            "size": "sm",
+                            "color": c["text_secondary"],
+                            "align": "center",
+                            "margin": "sm"
+                        }
+                    ]
                 }
-            ])
+            ], "24px", "lg"),
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "لعب مرة اخرى",
+                            "text": self.game_name
+                        },
+                        "style": "primary",
+                        "color": c["primary"],
+                        "height": "sm",
+                        "flex": 1
+                    },
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "البداية",
+                            "text": "بداية"
+                        },
+                        "style": "secondary",
+                        "height": "sm",
+                        "flex": 1
+                    }
+                ],
+                "spacing": "sm",
+                "margin": "lg"
+            }
         ]
         
         bubble = {
@@ -290,31 +431,70 @@ class BaseGame(ABC):
         c = self._c()
         
         contents = [
+            # Header
             {
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
                     {
                         "type": "text",
-                        "text": self._safe_text(self.game_name),
-                        "weight": "bold",
-                        "size": "lg",
-                        "color": c["text"],
-                        "flex": 1
+                        "text": self.game_icon,
+                        "size": "xl",
+                        "flex": 0
                     },
                     {
-                        "type": "text",
-                        "text": f"{self.current_q+1}/{self.total_q}",
-                        "size": "sm",
-                        "align": "end",
-                        "color": c["text_secondary"],
-                        "flex": 0
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": self._safe_text(self.game_name),
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": c["text"]
+                            },
+                            {
+                                "type": "text",
+                                "text": f"السؤال {self.current_q + 1} من {self.total_q}",
+                                "size": "xs",
+                                "color": c["text_secondary"]
+                            }
+                        ],
+                        "flex": 1,
+                        "margin": "md"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": str(self.score),
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": c["success"],
+                                "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": "نقطة",
+                                "size": "xs",
+                                "color": c["text_tertiary"],
+                                "align": "center"
+                            }
+                        ],
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "8px",
+                        "flex": 0,
+                        "width": "60px"
                     }
                 ]
             },
-            self._separator()
+            self._separator("lg")
         ]
         
+        # Hint if provided
         if hint:
             contents.append({
                 "type": "text",
@@ -325,6 +505,7 @@ class BaseGame(ABC):
                 "margin": "md"
             })
         
+        # Question box
         contents.append(
             self._glass_box([
                 {
@@ -332,35 +513,49 @@ class BaseGame(ABC):
                     "text": self._safe_text(question_text),
                     "wrap": True,
                     "align": "center",
-                    "size": "md",
+                    "size": "lg",
                     "color": c["text"],
                     "weight": "bold"
                 }
-            ], "20px")
+            ], "24px", "lg")
         )
         
-        if self.supports_hint and self.supports_reveal:
+        # Action buttons
+        button_contents = []
+        
+        if self.supports_hint:
+            button_contents.append({
+                "type": "button",
+                "action": {"type": "message", "label": "💡 تلميح", "text": "لمح"},
+                "style": "secondary",
+                "flex": 1,
+                "height": "sm"
+            })
+        
+        if self.supports_reveal:
+            button_contents.append({
+                "type": "button",
+                "action": {"type": "message", "label": "✓ الاجابة", "text": "جاوب"},
+                "style": "secondary",
+                "flex": 1,
+                "height": "sm"
+            })
+        
+        button_contents.append({
+            "type": "button",
+            "action": {"type": "message", "label": "⏸ ايقاف", "text": "ايقاف"},
+            "style": "secondary",
+            "flex": 1,
+            "height": "sm"
+        })
+        
+        if button_contents:
             contents.append({
                 "type": "box",
                 "layout": "horizontal",
+                "contents": button_contents,
                 "spacing": "sm",
-                "margin": "lg",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "لمح", "text": "لمح"},
-                        "style": "secondary",
-                        "flex": 1,
-                        "height": "sm"
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
-                        "style": "secondary",
-                        "flex": 1,
-                        "height": "sm"
-                    }
-                ]
+                "margin": "lg"
             })
         
         bubble = {
@@ -374,4 +569,9 @@ class BaseGame(ABC):
                 "paddingAll": "24px"
             }
         }
-        return FlexMessage(alt_text=self.game_name, contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
+        
+        return FlexMessage(
+            alt_text=self.game_name, 
+            contents=FlexContainer.from_dict(bubble), 
+            quickReply=self._qr()
+        )
