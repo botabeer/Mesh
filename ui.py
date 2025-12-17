@@ -18,12 +18,16 @@ class UI:
             items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items[:13]]
         )
 
-    def _separator(self, margin="md", color=None):
+    def _separator(self, margin="md"):
+        """فاصل بدون color - استخدام box بدلاً من separator"""
         c = self._c()
         return {
-            "type": "separator",
-            "margin": margin,
-            "color": color or c["border"]
+            "type": "box",
+            "layout": "vertical",
+            "contents": [],
+            "height": "1px",
+            "backgroundColor": c["border"],
+            "margin": margin
         }
 
     def _glass_box(self, contents, padding="16px", margin="none"):
