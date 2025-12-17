@@ -1,18 +1,28 @@
 import logging
 import atexit
 from datetime import datetime
+from threading import Lock
 from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
+
 from flask import Flask, request, jsonify, abort
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest
+from linebot.v3.messaging import (
+    Configuration,
+    ApiClient,
+    MessagingApi,
+    ReplyMessageRequest
+)
+
 from config import Config
 from database import Database
 from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
+
+# ================= Logging =================
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,42 +31,56 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ================= App =================
+
 app = Flask(__name__)
+
 line_config = Configuration(access_token=Config.LINE_TOKEN)
 handler = WebhookHandler(Config.LINE_SECRET)
+
 db = Database()
 game_mgr = GameManager(db)
 text_mgr = TextManager()
-executor = ThreadPoolExecutor(max_workers=Config.WORKERS, thread_name_prefix="worker")
 
+executor = ThreadPoolExecutor(
+    max_workers=Config.WORKERS,
+    thread_name_prefix="worker"
+)
+
+# ================= Rate Limiter =================
 
 class RateLimiter:
-    def __init__(self, max_requests=20, window=60):
+    def __init__(self, max_requests, window):
         self.max_requests = max_requests
         self.window = window
         self.requests = defaultdict(list)
+        self._lock = Lock()
 
     def is_allowed(self, user_id):
         now = datetime.now().timestamp()
         cutoff = now - self.window
-        
-        self.requests[user_id] = [
-            req_time for req_time in self.requests[user_id]
-            if req_time > cutoff
-        ]
-        
-        if len(self.requests[user_id]) >= self.max_requests:
-            return False
-        
-        self.requests[user_id].append(now)
-        return True
+
+        with self._lock:
+            self.requests[user_id] = [
+                t for t in self.requests[user_id] if t > cutoff
+            ]
+
+            if len(self.requests[user_id]) >= self.max_requests:
+                return False
+
+            self.requests[user_id].append(now)
+            return True
 
 
-rate_limiter = RateLimiter(max_requests=Config.RATE_LIMIT_REQUESTS, window=Config.RATE_LIMIT_WINDOW)
+rate_limiter = RateLimiter(
+    Config.RATE_LIMIT_REQUESTS,
+    Config.RATE_LIMIT_WINDOW
+)
 
+# ================= Cleanup =================
 
 def cleanup():
-    logger.info("Shutting down executor...")
+    logger.info("Shutting down executor")
     executor.shutdown(wait=True, cancel_futures=True)
     db.cleanup_memory(timeout=0)
     logger.info("Cleanup completed")
@@ -64,47 +88,51 @@ def cleanup():
 
 atexit.register(cleanup)
 
+# ================= LINE Helpers =================
 
 def reply_message(reply_token, messages):
     if not reply_token or not messages:
         return
+
     if not isinstance(messages, list):
         messages = [messages]
-    safe_messages = [m for m in messages if m][:5]
-    if not safe_messages:
+
+    messages = [m for m in messages if m][:5]
+    if not messages:
         return
+
     try:
         with ApiClient(line_config) as client:
             MessagingApi(client).reply_message(
-                ReplyMessageRequest(reply_token=reply_token, messages=safe_messages)
+                ReplyMessageRequest(
+                    reply_token=reply_token,
+                    messages=messages
+                )
             )
-        logger.info(f"Reply sent ({len(safe_messages)})")
     except Exception as e:
         logger.error(f"Reply error: {e}")
 
+# ================= Core Logic =================
 
 def process_message(user_id, text, reply_token):
     try:
         if not rate_limiter.is_allowed(user_id):
-            logger.warning(f"Rate limit exceeded for {user_id}")
+            logger.warning(f"Rate limit exceeded: {user_id}")
             return
 
-        if len(text) > Config.MAX_MESSAGE_LENGTH:
-            logger.warning(f"Message too long from {user_id}: {len(text)} chars")
+        if not text or len(text) > Config.MAX_MESSAGE_LENGTH:
             return
 
-        logger.info(f"Processing message from {user_id}: {text[:50]}")
         cmd = Config.normalize(text)
         if not cmd:
             return
 
         db.update_activity(user_id)
         user = db.get_user(user_id)
-        is_ignored = db.is_ignored(user_id)
         theme = db.get_theme(user_id) if user else "light"
-        ui = UI(theme=theme)
+        ui = UI(theme)
 
-        if is_ignored:
+        if db.is_ignored(user_id):
             if cmd == "تسجيل":
                 db.set_ignored(user_id, False)
                 db.set_waiting_name(user_id, True)
@@ -122,10 +150,12 @@ def process_message(user_id, text, reply_token):
         if cmd == "ثيم":
             if user:
                 new_theme = db.toggle_theme(user_id)
-                user = db.get_user(user_id)
-                ui_new = UI(theme=new_theme)
-                theme_name = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
-                reply_message(reply_token, [ui_new.theme_changed(theme_name), ui_new.main_menu(user)])
+                ui_new = UI(new_theme)
+                name = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
+                reply_message(
+                    reply_token,
+                    [ui_new.theme_changed(name), ui_new.main_menu(db.get_user(user_id))]
+                )
             else:
                 reply_message(reply_token, ui.registration_choice())
             return
@@ -134,7 +164,8 @@ def process_message(user_id, text, reply_token):
             if cmd in Config.RESERVED_COMMANDS:
                 reply_message(reply_token, ui.ask_name_invalid())
                 return
-            name = Config.sanitize_text(text.strip(), Config.MAX_NAME_LENGTH)
+
+            name = Config.sanitize_text(text, Config.MAX_NAME_LENGTH)
             if Config.validate_name(name):
                 db.register_user(user_id, name)
                 db.set_waiting_name(user_id, False)
@@ -156,7 +187,10 @@ def process_message(user_id, text, reply_token):
             return
 
         if cmd in ("الصدارة", "الصداره"):
-            reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
+            reply_message(
+                reply_token,
+                ui.leaderboard_card(db.get_leaderboard())
+            )
             return
 
         if cmd == "العاب":
@@ -173,25 +207,38 @@ def process_message(user_id, text, reply_token):
             reply_message(reply_token, text_response)
             return
 
-        game_response = game_mgr.handle(user_id=user_id, cmd=cmd, theme=theme, raw_text=text)
-        if game_response:
-            reply_message(reply_token, game_response)
-        else:
-            reply_message(reply_token, ui.main_menu(user))
+        game_response = game_mgr.handle(
+            user_id=user_id,
+            cmd=cmd,
+            raw_text=text,
+            theme=theme
+        )
+
+        reply_message(
+            reply_token,
+            game_response if game_response else ui.main_menu(user)
+        )
 
     except Exception as e:
-        logger.exception(f"Processing error: {e}")
+        logger.exception(f"Processing error [{user_id}]: {e}")
+        reply_message(reply_token, UI("light").error_message("general"))
 
+# ================= Webhooks =================
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event):
-    executor.submit(process_message, event.source.user_id, event.message.text, event.reply_token)
-
+    executor.submit(
+        process_message,
+        event.source.user_id,
+        event.message.text,
+        event.reply_token
+    )
 
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
+
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
@@ -200,26 +247,32 @@ def callback():
     except Exception as e:
         logger.exception(f"Webhook error: {e}")
         abort(500)
+
     return "OK", 200
 
+# ================= Health =================
 
 @app.route("/health")
 def health():
-    return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "active_games": game_mgr.count_active()
-    })
-
+    return jsonify(
+        status="healthy",
+        timestamp=datetime.utcnow().isoformat(),
+        active_games=game_mgr.count_active()
+    )
 
 @app.route("/")
 def index():
-    return jsonify({
-        "name": Config.BOT_NAME,
-        "version": Config.VERSION,
-        "status": "running"
-    })
+    return jsonify(
+        name=Config.BOT_NAME,
+        version=Config.VERSION,
+        status="running"
+    )
 
+# ================= Run =================
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=Config.PORT, debug=False)
+    app.run(
+        host="0.0.0.0",
+        port=Config.PORT,
+        debug=False
+    )
