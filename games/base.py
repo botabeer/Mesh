@@ -40,11 +40,13 @@ class BaseGame(ABC):
 
     def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
+        # استخدام لون صلب بدلاً من الشفاف
+        bg_color = c["card_secondary"] if self.theme == "light" else "#1A202C"
         return {
             "type": "box",
             "layout": "vertical",
             "contents": contents,
-            "backgroundColor": c["glass"],
+            "backgroundColor": bg_color,
             "cornerRadius": "16px",
             "paddingAll": padding,
             "spacing": "sm",
