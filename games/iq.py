@@ -31,7 +31,7 @@ class IqGame(BaseGame):
             {"q": "شيء يجري ولا يمشي", "a": ["الماء", "ماء", "النهر", "نهر"]},
             {"q": "شيء له اذن ولا يسمع", "a": ["الكوب", "الفنجان", "كوب", "فنجان"]},
             {"q": "شيء يمكن كسره دون ان تلمسه", "a": ["الوعد", "وعد", "القلب", "قلب"]},
-            {"q": "اخوان لا يرى احدهما الاخر", "a": ["الليل والنهار", "الليل", "النهار", "ليل", "نهر"]},
+            {"q": "اخوان لا يرى احدهما الاخر", "a": ["الليل والنهار", "الليل", "النهار", "ليل", "نهار"]},
             {"q": "ما هو الشيء الذي يحملك وانت تحمله", "a": ["الحذاء", "حذاء", "النعل", "نعل"]},
             {"q": "شيء له وجه واحد ولكن ليس له جسم", "a": ["المراه", "المرآه", "مراه", "مرآه"]},
             {"q": "ما هو الشيء الذي يبقى ثابتا مهما سخن", "a": ["الفلفل", "فلفل"]},
@@ -66,7 +66,6 @@ class IqGame(BaseGame):
         self.used_riddles = []
     
     def get_question(self):
-        """اختيار لغز"""
         available = [r for r in self.riddles if r not in self.used_riddles]
         if not available:
             self.used_riddles = []
@@ -80,6 +79,5 @@ class IqGame(BaseGame):
         return self.build_question_flex(riddle["q"], hint)
     
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الإجابة"""
         normalized = Config.normalize(answer)
         return any(Config.normalize(a) == normalized for a in self.current_answer)
