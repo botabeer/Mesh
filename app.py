@@ -118,6 +118,10 @@ def process_message(user_id, text, reply_token):
                 reply_message(reply_token, ui.registration_choice())
             return
             
+        if cmd in ("تحديات", "تحدي"):
+            reply_message(reply_token, ui.challenges_menu())
+            return
+            
         if db.is_waiting_name(user_id):
             if cmd in Config.RESERVED_COMMANDS:
                 reply_message(reply_token, ui.ask_name_invalid())
