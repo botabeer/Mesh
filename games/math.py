@@ -18,7 +18,6 @@ class MathGame(BaseGame):
         }
     
     def get_question(self):
-        """إنشاء سؤال رياضي"""
         level = min(self.current_q + 1, 5)
         cfg = self.levels[level]
         op = random.choice(cfg["ops"])
@@ -53,7 +52,6 @@ class MathGame(BaseGame):
         return self.build_question_flex(question, hint)
     
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الإجابة"""
         try:
             return str(int(answer.strip())) == self.current_answer
         except:
