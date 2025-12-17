@@ -32,14 +32,9 @@ class BaseGame(ABC):
         return fallback
 
     def _separator(self, margin="md"):
-        """فاصل باستخدام box بدلاً من separator"""
-        c = self._c()
+        """فاصل بسيط بدون ألوان"""
         return {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [],
-            "height": "1px",
-            "backgroundColor": c["border"],
+            "type": "separator",
             "margin": margin
         }
 
