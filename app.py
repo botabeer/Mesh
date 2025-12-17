@@ -98,11 +98,17 @@ def process_message(user_id, text, reply_token):
 
         # ===== Commands =====
         if cmd in ("بداية", "بدايه"):
-            reply_message(reply_token, ui.main_menu(user))
+            # تحقق من تسجيل المستخدم
+            if not user:
+                reply_message(reply_token, ui.registration_choice())
+            else:
+                reply_message(reply_token, ui.main_menu(user))
             return
+            
         if cmd in ("مساعدة", "مساعده"):
             reply_message(reply_token, ui.help_menu())
             return
+            
         if cmd == "ثيم":
             if user:
                 new_theme = db.toggle_theme(user_id)
@@ -112,6 +118,7 @@ def process_message(user_id, text, reply_token):
             else:
                 reply_message(reply_token, ui.registration_choice())
             return
+            
         if db.is_waiting_name(user_id):
             if cmd in Config.RESERVED_COMMANDS:
                 reply_message(reply_token, ui.ask_name_invalid())
@@ -124,6 +131,7 @@ def process_message(user_id, text, reply_token):
             else:
                 reply_message(reply_token, ui.ask_name_invalid())
             return
+            
         if not user:
             if cmd == "تسجيل":
                 db.set_waiting_name(user_id, True)
@@ -158,7 +166,9 @@ def process_message(user_id, text, reply_token):
         if game_response:
             reply_message(reply_token, game_response)
         else:
-            reply_message(reply_token, ui.main_menu(user))
+            # إذا لم يكن هناك رد، أرسل القائمة الرئيسية
+            if user:
+                reply_message(reply_token, ui.main_menu(user))
 
     except Exception as e:
         logger.exception(f"Processing error: {e}")
