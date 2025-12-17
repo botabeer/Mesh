@@ -1,49 +1,29 @@
 import os
 import multiprocessing
 
-# ==============================
-# إعدادات البيئة والبورت
-# ==============================
-ENV = os.getenv("ENV", "production")         # "development" أو "production"
-PORT = int(os.getenv("PORT", 8080))         # البورت الذي يستمع عليه التطبيق
-bind = f"0.0.0.0:{PORT}"                     # IP والبورت للاستماع
+ENV = os.getenv("ENV", "production")
+PORT = int(os.getenv("PORT", 8080))
+bind = f"0.0.0.0:{PORT}"
 
-# ==============================
-# إعدادات العمال والخيوط
-# ==============================
 if ENV == "development":
     workers = 1
     threads = 2
     reload = True
 else:
     cpu_count = multiprocessing.cpu_count()
-    # صيغة الإنتاجية: 2*CPU + 1، لا يزيد عن 8 أو حسب سيرفرك
     workers = min(cpu_count * 2 + 1, 8)
     threads = 4
     reload = False
 
-worker_class = "gthread"    # استخدام خيوط لدعم تعدد الطلبات
-
-# ==============================
-# التحكم بالطلبات ووقت الاستجابة
-# ==============================
-timeout = 60                # المهلة لكل طلب
-graceful_timeout = 30       # مهلة الإغلاق السلس للعامل
-keepalive = 5               # مدة الاحتفاظ بالاتصال المفتوح
-max_requests = 2000         # إعادة تشغيل العامل بعد هذا العدد من الطلبات
-max_requests_jitter = 100   # لتجنب إعادة التشغيل المتزامن للعمال
-
-# ==============================
-# إعدادات السجلات
-# ==============================
-loglevel = "info"           # مستوى السجل
-accesslog = "-"             # طباعة سجل الوصول على stdout
-errorlog = "-"              # طباعة سجل الأخطاء على stdout
-
-# ==============================
-# إعدادات إضافية للإنتاج
-# ==============================
-preload_app = True          # تحميل التطبيق قبل إنشاء العمال لتحسين الأداء
-proc_name = "bot-mesh"      # اسم العملية في النظام
-daemon = False              # عدم التشغيل في الخلفية (يُفضل إدارة العملية بـ systemd أو supervisor)
-# حماية ضد DoS عبر حد الطلبات (يمكن إضافة لاحقًا بالـ reverse proxy مثل Nginx)
+worker_class = "gthread"
+timeout = 60
+graceful_timeout = 30
+keepalive = 5
+max_requests = 2000
+max_requests_jitter = 100
+loglevel = "info"
+accesslog = "-"
+errorlog = "-"
+preload_app = True
+proc_name = "bot-mesh"
+daemon = False
