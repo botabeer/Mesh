@@ -52,20 +52,20 @@ class Config:
             "bg_secondary": "#EDF2F7",
             "bg_tertiary": "#E2E8F0",
             
-            "card": "rgba(255, 255, 255, 0.95)",
-            "card_secondary": "rgba(255, 255, 255, 0.85)",
-            "glass": "rgba(255, 255, 255, 0.75)",
-            "glass_strong": "rgba(255, 255, 255, 0.9)",
+            "card": "#FFFFFF",
+            "card_secondary": "#F7FAFC",
+            "glass": "#F7FAFC",
+            "glass_strong": "#FFFFFF",
             
             "text": "#1A202C",
             "text_secondary": "#4A5568",
             "text_tertiary": "#718096",
             "text_muted": "#A0AEC0",
             
-            "border": "rgba(226, 232, 240, 0.8)",
-            "border_light": "rgba(237, 242, 247, 0.6)",
+            "border": "#E2E8F0",
+            "border_light": "#EDF2F7",
             
-            "overlay": "rgba(0, 0, 0, 0.5)",
+            "overlay": "#000000",
             
             "shadow_sm": "0 2px 4px rgba(0, 0, 0, 0.06)",
             "shadow": "0 4px 12px rgba(0, 0, 0, 0.08)",
@@ -93,20 +93,20 @@ class Config:
             "bg_secondary": "#1A202C",
             "bg_tertiary": "#2D3748",
             
-            "card": "rgba(26, 32, 44, 0.95)",
-            "card_secondary": "rgba(45, 55, 72, 0.85)",
-            "glass": "rgba(26, 32, 44, 0.75)",
-            "glass_strong": "rgba(26, 32, 44, 0.9)",
+            "card": "#1A202C",
+            "card_secondary": "#2D3748",
+            "glass": "#1A202C",
+            "glass_strong": "#2D3748",
             
             "text": "#F7FAFC",
             "text_secondary": "#E2E8F0",
             "text_tertiary": "#CBD5E0",
             "text_muted": "#718096",
             
-            "border": "rgba(74, 85, 104, 0.6)",
-            "border_light": "rgba(45, 55, 72, 0.4)",
+            "border": "#2D3748",
+            "border_light": "#1A202C",
             
-            "overlay": "rgba(0, 0, 0, 0.7)",
+            "overlay": "#000000",
             
             "shadow_sm": "0 2px 4px rgba(0, 0, 0, 0.3)",
             "shadow": "0 4px 12px rgba(0, 0, 0, 0.4)",
