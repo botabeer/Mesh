@@ -19,15 +19,10 @@ class UI:
         )
 
     def _separator(self, margin="md"):
-        """فاصل بسيط بدون أي ألوان"""
-        return {
-            "type": "separator",
-            "margin": margin
-        }
+        return {"type": "separator", "margin": margin}
 
     def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
-        # استخدام لون صلب بدلاً من الشفاف
         bg_color = c["card_secondary"] if self.theme == "light" else "#1A202C"
         return {
             "type": "box",
@@ -40,28 +35,6 @@ class UI:
             "margin": margin
         }
 
-    def _icon_badge(self, text, color):
-        return {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": text,
-                    "size": "xs",
-                    "color": "#FFFFFF",
-                    "align": "center",
-                    "weight": "bold"
-                }
-            ],
-            "backgroundColor": color,
-            "cornerRadius": "12px",
-            "paddingAll": "8px",
-            "width": "48px",
-            "height": "48px",
-            "justifyContent": "center"
-        }
-
     # ================= Main Menu =================
     
     def main_menu(self, user: dict):
@@ -70,7 +43,6 @@ class UI:
         points = user.get('points', 0) if user else 0
         
         contents = [
-            # Header
             {
                 "type": "box",
                 "layout": "vertical",
@@ -117,34 +89,27 @@ class UI:
                 "spacing": "none"
             },
             self._separator("lg"),
-            
-            # Main Actions - Row 1
             {
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    self._main_button("العاب", c["primary"], "🎮"),
-                    self._main_button("نقاطي", c["secondary"], "📊")
+                    self._main_button("العاب", c["primary"]),
+                    self._main_button("نقاطي", c["secondary"])
                 ],
                 "spacing": "md",
                 "margin": "lg"
             },
-            
-            # Main Actions - Row 2
             {
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    self._main_button("الصدارة", c["success"], "🏆"),
-                    self._main_button("تحديات", c["accent"], "⚡")
+                    self._main_button("الصدارة", c["success"]),
+                    self._main_button("تحديات", c["accent"])
                 ],
                 "spacing": "md",
                 "margin": "sm"
             },
-            
             self._separator("lg"),
-            
-            # Secondary Actions
             {
                 "type": "box",
                 "layout": "horizontal",
@@ -178,7 +143,7 @@ class UI:
             quickReply=self._qr(qr_items)
         )
 
-    def _main_button(self, text, color, icon):
+    def _main_button(self, text, color):
         c = self._c()
         return {
             "type": "box",
@@ -190,25 +155,18 @@ class UI:
                     "contents": [
                         {
                             "type": "text",
-                            "text": icon,
-                            "size": "xl",
-                            "align": "center"
+                            "text": text,
+                            "size": "md",
+                            "align": "center",
+                            "color": "#FFFFFF",
+                            "weight": "bold"
                         }
                     ],
                     "backgroundColor": color,
                     "cornerRadius": "16px",
                     "paddingAll": "16px",
-                    "height": "64px",
+                    "height": "56px",
                     "justifyContent": "center"
-                },
-                {
-                    "type": "text",
-                    "text": text,
-                    "size": "sm",
-                    "color": c["text"],
-                    "align": "center",
-                    "weight": "bold",
-                    "margin": "md"
                 }
             ],
             "action": {
@@ -232,24 +190,148 @@ class UI:
             "flex": 1
         }
 
+    # ================= Challenges Menu =================
+    
+    def challenges_menu(self):
+        c = self._c()
+        
+        challenges = [
+            {"name": "تحدي", "desc": "تحديات ممتعة"},
+            {"name": "سؤال", "desc": "أسئلة عميقة"},
+            {"name": "اعتراف", "desc": "اعترافات صريحة"},
+            {"name": "منشن", "desc": "منشن أصدقائك"},
+            {"name": "موقف", "desc": "مواقف افتراضية"},
+            {"name": "حكمة", "desc": "حكم وأقوال"},
+            {"name": "شخصية", "desc": "اكتشف شخصيتك"}
+        ]
+        
+        contents = [
+            {
+                "type": "text",
+                "text": "التحديات",
+                "size": "xl",
+                "weight": "bold",
+                "color": c["text"],
+                "align": "center"
+            },
+            {
+                "type": "text",
+                "text": "اختر نوع التحدي",
+                "size": "xs",
+                "color": c["text_secondary"],
+                "align": "center",
+                "margin": "sm"
+            },
+            self._separator("lg")
+        ]
+        
+        for challenge in challenges:
+            contents.append(
+                self._glass_box([
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": challenge["name"],
+                                        "size": "md",
+                                        "color": c["text"],
+                                        "weight": "bold"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": challenge["desc"],
+                                        "size": "xs",
+                                        "color": c["text_tertiary"],
+                                        "margin": "xs"
+                                    }
+                                ],
+                                "flex": 1
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": ">",
+                                        "size": "lg",
+                                        "color": c["primary"],
+                                        "align": "center"
+                                    }
+                                ],
+                                "backgroundColor": c["primary"],
+                                "cornerRadius": "8px",
+                                "width": "40px",
+                                "height": "40px",
+                                "justifyContent": "center",
+                                "flex": 0
+                            }
+                        ]
+                    }
+                ], "12px", "sm")
+            )
+            contents[-1]["action"] = {
+                "type": "message",
+                "text": challenge["name"]
+            }
+        
+        contents.append(self._separator("lg"))
+        contents.append({
+            "type": "button",
+            "action": {
+                "type": "message",
+                "label": "رجوع للبداية",
+                "text": "بداية"
+            },
+            "style": "secondary",
+            "height": "sm",
+            "margin": "md"
+        })
+        
+        bubble = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "backgroundColor": c["card"],
+                "paddingAll": "24px"
+            }
+        }
+        
+        qr_items = ["تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية", "بداية"]
+        return FlexMessage(
+            alt_text="التحديات", 
+            contents=FlexContainer.from_dict(bubble),
+            quickReply=self._qr(qr_items)
+        )
+
     # ================= Games Menu =================
     
     def games_menu(self):
         c = self._c()
         
         games = [
-            {"name": "ذكاء", "icon": "🧠", "color": c["primary"]},
-            {"name": "خمن", "icon": "🤔", "color": c["secondary"]},
-            {"name": "رياضيات", "icon": "🔢", "color": c["success"]},
-            {"name": "ترتيب", "icon": "🔤", "color": c["accent"]},
-            {"name": "ضد", "icon": "⚖️", "color": c["warning"]},
-            {"name": "اسرع", "icon": "⚡", "color": c["danger"]},
-            {"name": "سلسله", "icon": "🔗", "color": c["primary"]},
-            {"name": "انسان حيوان", "icon": "🦁", "color": c["secondary"]},
-            {"name": "تكوين", "icon": "🔠", "color": c["success"]},
-            {"name": "اغاني", "icon": "🎵", "color": c["accent"]},
-            {"name": "الوان", "icon": "🎨", "color": c["warning"]},
-            {"name": "توافق", "icon": "❤️", "color": c["danger"]}
+            {"name": "ذكاء", "color": c["primary"]},
+            {"name": "خمن", "color": c["secondary"]},
+            {"name": "رياضيات", "color": c["success"]},
+            {"name": "ترتيب", "color": c["accent"]},
+            {"name": "ضد", "color": c["warning"]},
+            {"name": "اسرع", "color": c["danger"]},
+            {"name": "سلسله", "color": c["primary"]},
+            {"name": "انسان حيوان", "color": c["secondary"]},
+            {"name": "تكوين", "color": c["success"]},
+            {"name": "اغاني", "color": c["accent"]},
+            {"name": "الوان", "color": c["warning"]},
+            {"name": "توافق", "color": c["danger"]},
+            {"name": "مافيا", "color": "#8B0000"}
         ]
         
         contents = [
@@ -272,14 +354,13 @@ class UI:
             self._separator("lg")
         ]
         
-        # Create game grid (3 per row)
         for i in range(0, len(games), 3):
             row_games = games[i:i+3]
             contents.append({
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    self._game_card(game["name"], game["icon"], game["color"])
+                    self._game_card(game["name"], game["color"])
                     for game in row_games
                 ],
                 "spacing": "sm",
@@ -318,7 +399,7 @@ class UI:
             quickReply=self._qr(qr_items)
         )
 
-    def _game_card(self, name, icon, color):
+    def _game_card(self, name, color):
         c = self._c()
         return {
             "type": "box",
@@ -330,9 +411,11 @@ class UI:
                     "contents": [
                         {
                             "type": "text",
-                            "text": icon,
-                            "size": "lg",
-                            "align": "center"
+                            "text": name,
+                            "size": "sm",
+                            "align": "center",
+                            "color": "#FFFFFF",
+                            "weight": "bold"
                         }
                     ],
                     "backgroundColor": color,
@@ -340,15 +423,6 @@ class UI:
                     "paddingAll": "12px",
                     "height": "48px",
                     "justifyContent": "center"
-                },
-                {
-                    "type": "text",
-                    "text": name,
-                    "size": "xs",
-                    "color": c["text"],
-                    "align": "center",
-                    "weight": "bold",
-                    "margin": "sm"
                 }
             ],
             "action": {
@@ -364,14 +438,15 @@ class UI:
         c = self._c()
         
         commands = [
-            {"cmd": "بداية", "desc": "العودة للقائمة الرئيسية"},
-            {"cmd": "العاب", "desc": "عرض جميع الالعاب المتاحة"},
-            {"cmd": "نقاطي", "desc": "عرض احصائياتك"},
-            {"cmd": "الصدارة", "desc": "عرض لوحة المتصدرين"},
-            {"cmd": "ثيم", "desc": "تبديل بين الفاتح والداكن"},
-            {"cmd": "ايقاف", "desc": "ايقاف اللعبة الحالية"},
-            {"cmd": "لمح", "desc": "الحصول على تلميح"},
-            {"cmd": "جاوب", "desc": "عرض الاجابة والانتقال"}
+            {"cmd": "بداية", "desc": "القائمة الرئيسية"},
+            {"cmd": "العاب", "desc": "جميع الالعاب"},
+            {"cmd": "تحديات", "desc": "التحديات والأسئلة"},
+            {"cmd": "نقاطي", "desc": "احصائياتك"},
+            {"cmd": "الصدارة", "desc": "المتصدرين"},
+            {"cmd": "ثيم", "desc": "تبديل الثيم"},
+            {"cmd": "ايقاف", "desc": "ايقاف اللعبة"},
+            {"cmd": "لمح", "desc": "تلميح"},
+            {"cmd": "جاوب", "desc": "عرض الاجابة"}
         ]
         
         contents = [
@@ -424,17 +499,6 @@ class UI:
             )
         
         contents.append(self._separator("lg"))
-        contents.append(self._glass_box([
-            {
-                "type": "text",
-                "text": "استخدم الازرار او اكتب الاوامر مباشرة",
-                "size": "xs",
-                "color": c["text_tertiary"],
-                "align": "center",
-                "wrap": True
-            }
-        ], "12px", "md"))
-        
         contents.append({
             "type": "button",
             "action": {
@@ -543,9 +607,9 @@ class UI:
         c = self._c()
         
         stats = [
-            {"label": "النقاط", "value": str(user.get('points', 0)), "color": c["success"], "icon": "💎"},
-            {"label": "الالعاب", "value": str(user.get('games', 0)), "color": c["primary"], "icon": "🎮"},
-            {"label": "الفوز", "value": str(user.get('wins', 0)), "color": c["accent"], "icon": "🏆"}
+            {"label": "النقاط", "value": str(user.get('points', 0)), "color": c["success"]},
+            {"label": "الالعاب", "value": str(user.get('games', 0)), "color": c["primary"]},
+            {"label": "الفوز", "value": str(user.get('wins', 0)), "color": c["accent"]}
         ]
         
         win_rate = round((user.get('wins', 0) / user.get('games', 1)) * 100) if user.get('games', 0) > 0 else 0
@@ -570,7 +634,6 @@ class UI:
             self._separator("lg")
         ]
         
-        # Stats grid
         for stat in stats:
             contents.append(
                 self._glass_box([
@@ -578,12 +641,6 @@ class UI:
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
-                            {
-                                "type": "text",
-                                "text": stat["icon"],
-                                "size": "xl",
-                                "flex": 0
-                            },
                             {
                                 "type": "box",
                                 "layout": "vertical",
@@ -602,8 +659,7 @@ class UI:
                                         "color": c["text_secondary"]
                                     }
                                 ],
-                                "flex": 1,
-                                "margin": "md"
+                                "flex": 1
                             }
                         ]
                     }
@@ -611,8 +667,6 @@ class UI:
             )
         
         contents.append(self._separator("lg"))
-        
-        # Win rate badge
         contents.append(
             self._glass_box([
                 {
@@ -696,11 +750,9 @@ class UI:
         ]
         
         medal_colors = {1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32"}
-        medal_icons = {1: "🥇", 2: "🥈", 3: "🥉"}
         
         for i, leader in enumerate(leaders[:10], 1):
             medal_color = medal_colors.get(i, c["accent"])
-            medal_icon = medal_icons.get(i, "🏅")
             
             contents.append(
                 self._glass_box([
@@ -714,15 +766,17 @@ class UI:
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": medal_icon,
-                                        "size": "lg",
-                                        "align": "center"
+                                        "text": str(i),
+                                        "size": "md",
+                                        "align": "center",
+                                        "color": "#FFFFFF",
+                                        "weight": "bold"
                                     }
                                 ],
                                 "backgroundColor": medal_color,
                                 "cornerRadius": "50%",
-                                "width": "40px",
-                                "height": "40px",
+                                "width": "36px",
+                                "height": "36px",
                                 "justifyContent": "center",
                                 "flex": 0
                             },
