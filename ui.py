@@ -16,7 +16,7 @@ class UI:
         """إنشاء قائمة QuickReply مع الحد الأقصى 13 زر"""
         commands = [
             "بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "ايقاف", "مساعدة",
-            "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية"
+            "تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة"
         ]
         commands = commands[:13]  # الحد الأقصى 13 زر
         return QuickReply(
@@ -27,6 +27,7 @@ class UI:
 
     def main_menu(self, user: dict):
         c = self._c()
+        name = user.get('name', 'مستخدم') if user else 'مستخدم'
         bubble = {
             "type": "bubble",
             "size": "mega",
@@ -34,9 +35,9 @@ class UI:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": f"مرحباً {user.get('name', '')}!", "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"},
+                    {"type": "text", "text": f"مرحباً {name}!", "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"},
                     {"type": "separator", "margin": "md", "color": c["border"]},
-                    {"type": "text", "text": "اختر ما تريد فعله من الأزرار أدناه:", "size": "md", "color": c["text"], "align": "center", "margin": "md"}
+                    {"type": "text", "text": "اختر ما تريد فعله:", "size": "md", "color": c["text"], "align": "center", "margin": "md"}
                 ],
                 "backgroundColor": c["bg"],
                 "paddingAll": "20px"
@@ -59,7 +60,7 @@ class UI:
                 "contents": [
                     {"type": "text", "text": "قائمة المساعدة", "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"},
                     {"type": "separator", "margin": "md", "color": c["border"]},
-                    {"type": "text", "text": "يمكنك استخدام الأزرار التالية للتفاعل مع البوت.", "size": "md", "color": c["text"], "align": "center", "margin": "md"}
+                    {"type": "text", "text": "استخدم الأزرار للتفاعل مع البوت", "size": "sm", "color": c["text"], "align": "center", "margin": "md", "wrap": True}
                 ],
                 "backgroundColor": c["bg"],
                 "paddingAll": "20px"
@@ -80,19 +81,30 @@ class UI:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "مرحباً! يرجى اختيار:", "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"}
+                    {"type": "text", "text": "مرحباً بك!", "weight": "bold", "size": "xl", "color": c["primary"], "align": "center"},
+                    {"type": "separator", "margin": "md", "color": c["border"]},
+                    {"type": "text", "text": "للبدء، يرجى التسجيل أولاً", "size": "md", "color": c["text"], "align": "center", "margin": "lg", "wrap": True},
+                    {"type": "button", "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"}, "style": "primary", "margin": "lg"}
                 ],
                 "backgroundColor": c["bg"],
                 "paddingAll": "20px"
             }
         }
         return FlexMessage(
-            alt_text="مرحباً", 
-            contents=FlexContainer.from_dict(bubble), 
-            quickReply=self._qr()
+            alt_text="التسجيل", 
+            contents=FlexContainer.from_dict(bubble)
         )
 
-    def ask_name(self, title="أدخل اسمك"):
+    def ask_name(self):
+        return TextMessage(text="أدخل اسمك (عربي أو إنجليزي)")
+
+    def ask_name_invalid(self):
+        return TextMessage(text="الاسم غير صالح. حاول مرة أخرى")
+
+    def theme_changed(self, theme_name):
+        return TextMessage(text=f"تم التغيير إلى {theme_name}")
+
+    def stats_card(self, user: dict):
         c = self._c()
         bubble = {
             "type": "bubble",
@@ -101,74 +113,56 @@ class UI:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": title, "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"}
+                    {"type": "text", "text": "إحصائياتي", "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"},
+                    {"type": "separator", "margin": "md", "color": c["border"]},
+                    {"type": "box", "layout": "vertical", "contents": [
+                        {"type": "text", "text": f"النقاط: {user.get('points', 0)}", "size": "md", "color": c["text"]},
+                        {"type": "text", "text": f"الألعاب: {user.get('games', 0)}", "size": "md", "color": c["text"], "margin": "sm"},
+                        {"type": "text", "text": f"الفوز: {user.get('wins', 0)}", "size": "md", "color": c["text"], "margin": "sm"}
+                    ], "margin": "lg"}
                 ],
                 "backgroundColor": c["bg"],
                 "paddingAll": "20px"
             }
         }
-        return FlexMessage(
-            alt_text=title, 
-            contents=FlexContainer.from_dict(bubble), 
-            quickReply=self._qr()
-        )
+        return FlexMessage(alt_text="إحصائياتي", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
-    # ================= Game Question Builder =================
-
-    def build_question_flex(self, question_text, game_name="لعبة", current_q=0, total_q=5, hint=None):
+    def leaderboard_card(self, leaders: list):
         c = self._c()
         contents = [
-            {"type": "box", "layout": "horizontal", "contents": [
-                {"type": "box", "layout": "vertical", "contents": [
-                    {"type": "text", "text": game_name, "weight": "bold", "size": "lg", "color": c["primary"]}
-                ], "flex": 1},
-                {"type": "box", "layout": "vertical", "contents": [
-                    {"type": "text", "text": f"{current_q+1}/{total_q}", "size": "sm", "align": "end", "color": c["text_secondary"]}
-                ], "flex": 0}
-            ]},
+            {"type": "text", "text": "لوحة الصدارة", "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"},
             {"type": "separator", "margin": "md", "color": c["border"]}
         ]
-
-        if hint:
+        
+        for i, leader in enumerate(leaders[:10], 1):
             contents.append({
-                "type": "text", "text": hint, "size": "xs", "color": c["text_tertiary"], "align": "center", "margin": "md"
+                "type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": f"{i}. {leader.get('name', 'مجهول')}", "size": "sm", "color": c["text"], "flex": 3},
+                    {"type": "text", "text": f"{leader.get('points', 0)} نقطة", "size": "sm", "color": c["text_secondary"], "align": "end", "flex": 2}
+                ], "margin": "md"
             })
-
-        contents.append({
-            "type": "box", "layout": "vertical",
-            "contents": [
-                {"type": "text", "text": question_text, "wrap": True, "align": "center", "size": "md", "color": c["text"], "weight": "bold"}
-            ],
-            "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "lg"
-        })
-
+        
         bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
-        return FlexMessage(alt_text=game_name, contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
+        return FlexMessage(alt_text="الصدارة", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
-    # ================= Pause / Game Over =================
-
-    def pause_message(self, score=0, current_q=0, total_q=5):
+    def games_menu(self):
         c = self._c()
+        games = ["ذكاء", "خمن", "رياضيات", "ترتيب", "ضد", "اسرع", "سلسله", "انسان حيوان", "تكوين", "اغاني", "الوان", "توافق", "مافيا"]
         contents = [
-            {"type": "text", "text": "تم حفظ تقدمك", "size": "lg", "weight": "bold", "color": c["warning"], "align": "center"},
-            {"type": "separator", "margin": "md", "color": c["border"]},
-            {"type": "box", "layout": "vertical", "contents": [
-                {"type": "text", "text": f"النقاط: {score}", "size": "md", "color": c["text"], "align": "center"},
-                {"type": "text", "text": f"{current_q}/{total_q}", "size": "sm", "color": c["text_secondary"], "align": "center", "margin": "xs"}
-            ], "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "lg"}
+            {"type": "text", "text": "الألعاب المتاحة", "weight": "bold", "size": "lg", "color": c["primary"], "align": "center"},
+            {"type": "separator", "margin": "md", "color": c["border"]}
         ]
+        
+        for game in games[:13]:
+            contents.append({
+                "type": "button",
+                "action": {"type": "message", "label": game, "text": game},
+                "style": "secondary",
+                "margin": "xs"
+            })
+        
         bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
-        return FlexMessage(alt_text="تم الإيقاف", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
+        return FlexMessage(alt_text="الألعاب", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
-    def game_over_message(self, score=0, total_q=5):
-        c = self._c()
-        won = score == total_q
-        contents = [
-            {"type": "text", "text": "انتهت اللعبة", "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
-            {"type": "separator", "margin": "md", "color": c["border"]},
-            {"type": "box", "layout": "vertical", "contents": [
-                {"type": "text", "text": "فوز كامل" if won else f"النتيجة: {score}/{total_q}", "size": "lg", "color": c["success"] if won else c["text"], "align": "center", "weight": "bold"}
-            ], "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "20px", "margin": "lg"}
-        ]
-        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
-        return FlexMessage(alt_text="النتيجة", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
+    def game_stopped(self):
+        return TextMessage(text="تم إيقاف اللعبة")
