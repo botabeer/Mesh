@@ -103,6 +103,21 @@ def process_message(user_id: str, text: str, reply_token: str):
             reply_message(reply_token, ui.help_menu())
             return
 
+        # ---------- Theme Toggle ----------
+        if cmd == "ثيم":
+            if user:
+                new_theme = db.toggle_theme(user_id)
+                user = db.get_user(user_id)
+                ui_new = UI(theme=new_theme)
+                theme_name = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
+                reply_message(reply_token, [
+                    ui_new.theme_changed(theme_name),
+                    ui_new.main_menu(user)
+                ])
+            else:
+                reply_message(reply_token, ui.registration_choice())
+            return
+
         # ---------- Registration ----------
         if db.is_waiting_name(user_id):
             if cmd in Config.RESERVED_COMMANDS:
