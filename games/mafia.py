@@ -62,13 +62,8 @@ class MafiaGame:
             })
         
         if buttons:
-            # استخدام box بدلاً من separator
             contents.append({
-                "type": "box",
-                "layout": "vertical",
-                "contents": [],
-                "height": "1px",
-                "backgroundColor": c["border"],
+                "type": "separator",
                 "margin": "lg"
             })
             contents.extend(buttons)
@@ -92,7 +87,7 @@ class MafiaGame:
             f"اللاعبون المسجلون: {len(self.players)}",
             f"الحد الأدنى: {self.MIN_PLAYERS} لاعبين",
             f"الحد الأقصى: {self.MAX_PLAYERS} لاعبين",
-            "يجب إضافة البوت كصديق ليصلك دورك بالخاص"
+            "يجب إضافة البوت صديق ليصلك دورك بالخاص"
         ]
         buttons = [
             {
