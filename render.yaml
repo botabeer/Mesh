@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bot-mesh
+    name: bot-mesh-web
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app -c gunicorn_config.py
@@ -13,5 +13,19 @@ services:
         sync: false
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
+      - key: DB_PATH
+        value: /opt/render/project/data/botmesh.db
     healthCheckPath: /health
+    autoDeploy: true
+    
+  - type: worker
+    name: bot-mesh-scheduler
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scheduler_worker.py
+    envVars:
+      - key: ENV
+        value: production
+      - key: DB_PATH
+        value: /opt/render/project/data/botmesh.db
     autoDeploy: true
