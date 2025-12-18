@@ -4,11 +4,9 @@ from config import Config
 
 
 class SongGame(BaseGame):
-    """لعبة اغاني - 50 أغنية مشهورة"""
-    
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
-        self.game_name = "اغاني"
+        self.game_name = "اغنيه"
         
         self.songs = [
             {"lyrics": "رجعت لي أيام الماضي معاك", "artist": "أم كلثوم"},
@@ -57,13 +55,11 @@ class SongGame(BaseGame):
             {"lyrics": "استكثرك وقتي علي", "artist": "عبدالمجيد عبدالله"},
             {"lyrics": "ياما حاولت الفراق وما قويت", "artist": "عبدالمجيد عبدالله"}
         ]
-
         
         random.shuffle(self.songs)
         self.used = []
 
     def get_question(self):
-        """اختيار أغنية"""
         available = [s for s in self.songs if s not in self.used]
         if not available:
             self.used = []
@@ -77,6 +73,5 @@ class SongGame(BaseGame):
         return self.build_question_flex(song["lyrics"], hint)
 
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الإجابة"""
         normalized = Config.normalize(answer)
         return any(Config.normalize(a) == normalized for a in self.current_answer)
