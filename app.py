@@ -3,6 +3,7 @@ from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -30,7 +31,6 @@ db = Database()
 game_mgr = GameManager(db)
 text_mgr = TextManager()
 
-# استخدام ThreadPoolExecutor لمعالجة الرسائل في الخلفية
 executor = ThreadPoolExecutor(max_workers=Config.WORKERS, thread_name_prefix="worker")
 
 scheduler = BackgroundScheduler(timezone=pytz.UTC)
@@ -38,7 +38,6 @@ scheduler.add_job(func=lambda: db.cleanup_memory(), trigger="interval", minutes=
 scheduler.start()
 
 def reply_message(reply_token, messages):
-    """إرسال رد مع معالجة الأخطاء"""
     if not isinstance(messages, list):
         messages = [messages]
     safe_messages = [m for m in messages if m][:5]
@@ -51,13 +50,11 @@ def reply_message(reply_token, messages):
         logger.error(f"Reply error: {e}")
 
 def process_message(user_id, text, reply_token):
-    """معالجة الرسالة في الخلفية (خارج webhook)"""
     start_time = time.time()
     
     try:
         normalized = Config.normalize(text)
         
-        # حالة انتظار الاسم
         if db.is_waiting_name(user_id):
             if len(text) < Config.MIN_NAME_LENGTH or len(text) > Config.MAX_NAME_LENGTH:
                 reply_message(reply_token, TextMessage(
@@ -74,7 +71,6 @@ def process_message(user_id, text, reply_token):
             ])
             return
         
-        # حالة تغيير الاسم
         if db.is_changing_name(user_id):
             if len(text) < Config.MIN_NAME_LENGTH or len(text) > Config.MAX_NAME_LENGTH:
                 reply_message(reply_token, TextMessage(
@@ -90,7 +86,6 @@ def process_message(user_id, text, reply_token):
             ))
             return
         
-        # التحقق من التسجيل
         if not db.is_registered(user_id):
             if normalized in ["تسجيل", "بدايه", "بداية"]:
                 db.set_waiting_name(user_id)
@@ -108,7 +103,6 @@ def process_message(user_id, text, reply_token):
         db.update_activity(user_id)
         user = db.get_user(user_id)
         
-        # الانسحاب
         if normalized == "انسحب":
             db.unregister(user_id)
             reply_message(reply_token, TextMessage(
@@ -117,7 +111,6 @@ def process_message(user_id, text, reply_token):
             ))
             return
         
-        # معالجة اللعبة النشطة
         if db.has_active_game(user_id):
             if normalized == "ايقاف":
                 score = game_mgr.stop_game(user_id)
@@ -174,7 +167,6 @@ def process_message(user_id, text, reply_token):
                 reply_message(reply_token, messages)
             return
         
-        # الأوامر الرئيسية
         if normalized in ["بدايه", "بداية", "القائمه", "القائمة"]:
             reply_message(reply_token, UI.main_menu(user, db))
         
@@ -253,7 +245,6 @@ def process_message(user_id, text, reply_token):
 
 @app.route("/callback", methods=["POST"])
 def callback():
-    """Webhook - رد فوري على LINE"""
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
     
@@ -262,13 +253,10 @@ def callback():
     except InvalidSignatureError:
         abort(400)
     
-    # رد فوري على LINE (خلال < 1 ثانية)
     return "OK", 200
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event):
-    """معالج الرسائل - يرسل المهمة للخلفية فوراً"""
-    # إرسال المعالجة للخلفية مباشرة
     executor.submit(
         process_message,
         event.source.user_id,
@@ -278,7 +266,6 @@ def on_message(event):
 
 @app.route("/health")
 def health():
-    """فحص صحة الخادم"""
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
@@ -288,7 +275,6 @@ def health():
 
 @app.route("/")
 def index():
-    """الصفحة الرئيسية"""
     return "Bot Mesh v16.0 - Running"
 
 if __name__ == "__main__":
