@@ -4,8 +4,6 @@ from config import Config
 
 
 class ScrambleGame(BaseGame):
-    """لعبة ترتيب مع مستويات صعوبة"""
-    
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
         self.game_name = "ترتيب"
@@ -40,7 +38,6 @@ class ScrambleGame(BaseGame):
         self.used = []
 
     def _get_difficulty(self):
-        """تحديد مستوى الصعوبة حسب السؤال"""
         if self.current_q < 1:
             return 1
         elif self.current_q < 2:
@@ -53,7 +50,6 @@ class ScrambleGame(BaseGame):
             return 5
 
     def _scramble(self, word: str, difficulty: int) -> str:
-        """خلط الحروف حسب الصعوبة"""
         letters = list(word)
         attempts = difficulty * 3
         
@@ -66,7 +62,6 @@ class ScrambleGame(BaseGame):
         return ' '.join(word[::-1])
 
     def get_question(self):
-        """إنشاء سؤال حسب المستوى"""
         difficulty = self._get_difficulty()
         words = self.levels.get(difficulty, self.all_words)
         
@@ -84,5 +79,4 @@ class ScrambleGame(BaseGame):
         return self.build_question_flex(scrambled, hint)
 
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الإجابة"""
         return Config.normalize(answer) == Config.normalize(self.current_answer)
