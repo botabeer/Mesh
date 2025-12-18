@@ -1,5 +1,5 @@
 import re
-from linebot.v3.messaging import FlexMessage, FlexContainer
+from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from config import Config
 
 
@@ -13,6 +13,10 @@ class CompatibilityGame:
 
     def _c(self):
         return Config.get_theme(self.theme)
+    
+    def _qr(self):
+        items = ["سؤال", "منشن", "تحدي", "اعتراف", "شخصية", "حكمة", "موقف", "بداية", "العاب", "مساعدة"]
+        return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
 
     def normalize_name(self, name: str) -> str:
         return ' '.join(name.strip().split())
@@ -60,29 +64,34 @@ class CompatibilityGame:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "لعبة التوافق", "size": "xxl",
-                     "weight": "bold", "color": c["primary"], "align": "center"},
+                    {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "color": c["primary"], "align": "center"},
                     {"type": "separator", "margin": "lg", "color": c["border"]},
+                    {"type": "text", "text": "لعبة التوافق", "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "margin": "lg"},
                     {
                         "type": "box", "layout": "vertical",
-                        "backgroundColor": c["glass"], "cornerRadius": "12px",
-                        "paddingAll": "16px", "margin": "md", "spacing": "sm",
+                        "backgroundColor": c["card_secondary"], "cornerRadius": "12px",
+                        "paddingAll": "16px", "margin": "lg", "spacing": "sm",
                         "contents": [
-                            {"type": "text", "text": "ادخل اسمين مفصولين بـ و",
-                             "size": "md", "weight": "bold", "color": c["text"], "wrap": True},
-                            {"type": "text", "text": "مثال: اسم و اسم",
-                             "size": "sm", "color": c["text_tertiary"], "margin": "sm"}
+                            {"type": "text", "text": "ادخل اسمين مفصولين بـ و", "size": "md", "weight": "bold", "color": c["text"], "wrap": True, "align": "center"},
+                            {"type": "text", "text": "مثال: اسم و اسم", "size": "sm", "color": c["text_tertiary"], "margin": "sm", "align": "center"}
                         ]
                     },
                     {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"},
-                     "style": "secondary", "height": "sm", "margin": "md"}
+                    {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "secondary", "color": c["button_secondary"], "height": "sm", "margin": "md"},
+                    {
+                        "type": "text",
+                        "text": "Bot Mesh | عبير الدوسري 2025",
+                        "size": "xxs",
+                        "color": c["text_tertiary"],
+                        "align": "center",
+                        "margin": "lg"
+                    }
                 ],
-                "backgroundColor": c["bg"], "paddingAll": "20px", "spacing": "md"
+                "backgroundColor": c["card"], "paddingAll": "20px", "spacing": "md"
             }
         }
 
-        return FlexMessage(alt_text="لعبة التوافق", contents=FlexContainer.from_dict(bubble))
+        return FlexMessage(alt_text="لعبة التوافق", contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def check(self, user_answer: str, user_id: str):
         if not self.game_active or user_id != self.user_id:
@@ -99,7 +108,7 @@ class CompatibilityGame:
         message_text = self.get_compatibility_message(percentage)
         c = self._c()
 
-        bar_color = "#FF1493" if percentage >= 75 else "#FF69B4" if percentage >= 50 else "#FFB6C1"
+        bar_color = "#000000" if self.theme == "light" else "#FFFFFF"
 
         bubble = {
             "type": "bubble",
@@ -108,16 +117,14 @@ class CompatibilityGame:
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": "نتيجة التوافق", "size": "xxl",
-                     "weight": "bold", "color": c["primary"], "align": "center"},
+                    {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "color": c["primary"], "align": "center"},
                     {"type": "separator", "margin": "lg", "color": c["border"]},
-                    {"type": "text", "text": f"{name1} و {name2}", "size": "lg",
-                     "weight": "bold", "color": c["text"], "align": "center", "margin": "md"},
-                    {"type": "text", "text": f"{percentage}%", "size": "xxl",
-                     "weight": "bold", "color": bar_color, "align": "center", "margin": "md"},
+                    {"type": "text", "text": "نتيجة التوافق", "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "margin": "lg"},
+                    {"type": "text", "text": f"{name1} و {name2}", "size": "md", "weight": "bold", "color": c["text"], "align": "center", "margin": "md"},
+                    {"type": "text", "text": f"{percentage}%", "size": "xxl", "weight": "bold", "color": c["text"], "align": "center", "margin": "md"},
                     {
                         "type": "box", "layout": "vertical",
-                        "backgroundColor": c["glass"], "cornerRadius": "10px",
+                        "backgroundColor": c["card_secondary"], "cornerRadius": "10px",
                         "height": "20px", "margin": "md",
                         "contents": [{
                             "type": "box", "layout": "vertical",
@@ -125,27 +132,32 @@ class CompatibilityGame:
                             "width": f"{percentage}%", "height": "20px", "contents": []
                         }]
                     },
-                    {"type": "text", "text": message_text, "size": "md",
-                     "color": c["text_secondary"], "align": "center", "wrap": True, "margin": "md"},
+                    {"type": "text", "text": message_text, "size": "md", "color": c["text_secondary"], "align": "center", "wrap": True, "margin": "md"},
                     {"type": "separator", "margin": "lg", "color": c["border"]},
                     {
                         "type": "box", "layout": "horizontal", "spacing": "sm", "margin": "md",
                         "contents": [
-                            {"type": "button", "action": {"type": "message", "label": "اعادة", "text": "توافق"},
-                             "style": "primary", "color": c["primary"], "height": "sm", "flex": 1},
-                            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"},
-                             "style": "secondary", "height": "sm", "flex": 1}
+                            {"type": "button", "action": {"type": "message", "label": "اعادة", "text": "توافق"}, "style": "secondary", "color": c["button_secondary"], "height": "sm", "flex": 1},
+                            {"type": "button", "action": {"type": "message", "label": "البداية", "text": "بداية"}, "style": "primary", "color": c["button_primary"], "height": "sm", "flex": 1}
                         ]
+                    },
+                    {
+                        "type": "text",
+                        "text": "Bot Mesh | عبير الدوسري 2025",
+                        "size": "xxs",
+                        "color": c["text_tertiary"],
+                        "align": "center",
+                        "margin": "lg"
                     }
                 ],
-                "paddingAll": "20px", "spacing": "md", "backgroundColor": c["bg"]
+                "paddingAll": "20px", "spacing": "md", "backgroundColor": c["card"]
             }
         }
 
         self.game_active = False
         
         return {
-            'response': FlexMessage(alt_text="نتيجة التوافق", contents=FlexContainer.from_dict(bubble)),
+            'response': FlexMessage(alt_text="نتيجة التوافق", contents=FlexContainer.from_dict(bubble), quickReply=self._qr()),
             'game_over': True,
             'won': True
         }
