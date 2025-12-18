@@ -12,6 +12,7 @@ class FastTypingGame(BaseGame):
         self.start_time = None
         self.supports_hint = False
         self.supports_reveal = False
+        self.time_expired_message_sent = False
         
         self.phrases = [
             "سبحان الله", "الحمد لله", "الله اكبر", "لا اله الا الله",
@@ -46,7 +47,8 @@ class FastTypingGame(BaseGame):
         self.used.append(phrase)
         self.current_answer = phrase
         self.start_time = time.time()
-
+        self.time_expired_message_sent = False
+        
         c = self._c()
         
         contents = [
@@ -98,6 +100,9 @@ class FastTypingGame(BaseGame):
         elapsed = time.time() - self.start_time
         
         if elapsed > self.time_limit:
+            if not self.time_expired_message_sent:
+                self.time_expired_message_sent = True
+                self.error_message = "انتهى الوقت"
             return False
         
         return answer.strip() == self.current_answer
