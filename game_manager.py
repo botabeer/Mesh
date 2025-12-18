@@ -14,8 +14,8 @@ class GameManager:
         self.theme = theme
         self.ui = UI(theme)
         self._lock = Lock()
-        self._active = {}  # user_id -> state
-        self._mafia_game = None  # Single mafia game instance
+        self._active = {}
+        self._mafia_game = None
         self._games = self._load_games()
         logger.info(f"GameManager loaded {len(self._games)} games")
 
@@ -29,7 +29,7 @@ class GameManager:
             "ضد": ("games.opposite", "OppositeGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
-            "انسان حيوان": ("games.human_animal", "HumanAnimalGame"),
+            "لعبه": ("games.human_animal", "HumanAnimalGame"),
             "تكوين": ("games.letters_words", "LettersWordsGame"),
             "اغاني": ("games.song", "SongGame"),
             "الوان": ("games.word_color", "WordColorGame"),
@@ -42,7 +42,6 @@ class GameManager:
                 module = __import__(path, fromlist=[cls])
                 game_class = getattr(module, cls)
                 
-                # Special handling for mafia - it's a group game
                 if name == "مافيا":
                     games[name] = game_class
                 else:
@@ -65,17 +64,14 @@ class GameManager:
             else:
                 return None
 
-        # Check for mafia game commands
         if normalized_cmd == "مافيا":
             return self._start_mafia_game(user_id, theme)
         
-        # Check if mafia game is active and handle its commands
         if self._mafia_game and self._mafia_game.game_active:
             mafia_response = self._mafia_game.check(raw_text, user_id)
             if mafia_response:
                 return mafia_response.get("response")
 
-        # Regular single-player games
         if normalized_cmd in self._games and normalized_cmd != "مافيا":
             return self._start_game(user_id, normalized_cmd, theme)
 
@@ -88,16 +84,13 @@ class GameManager:
         return None
 
     def _start_mafia_game(self, user_id, theme="light"):
-        """Start or join mafia game"""
         try:
-            # Create new game if doesn't exist or previous ended
             if not self._mafia_game or not self._mafia_game.game_active:
                 GameClass = self._games["مافيا"]
                 self._mafia_game = GameClass(self.db, theme)
                 responses = self._mafia_game.start(user_id)
                 return responses if isinstance(responses, list) else [responses]
             else:
-                # Game already active, return status
                 return self._mafia_game.game_status_screen()
         except Exception as e:
             logger.exception(f"Start mafia game error: {e}")
@@ -134,9 +127,7 @@ class GameManager:
             return None
 
     def stop_game(self, user_id):
-        # Check if user is in mafia game
         if self._mafia_game and user_id in self._mafia_game.players:
-            # Don't allow stopping mafia mid-game
             return False
         
         with self._lock:
@@ -201,7 +192,6 @@ class GameManager:
         with self._lock:
             count = len(self._active)
         
-        # Add mafia game if active
         if self._mafia_game and self._mafia_game.game_active:
             count += 1
         
