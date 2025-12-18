@@ -32,7 +32,7 @@ class MafiaGame:
         return Config.get_theme(self.theme)
     
     def _qr(self):
-        items = ["بداية", "العاب", "نقاطي", "الصدارة", "مساعدة"]
+        items = ["سؤال", "منشن", "تحدي", "اعتراف", "شخصية", "حكمة", "موقف", "بداية", "العاب", "مساعدة"]
         return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
 
     def _separator(self, margin="md"):
