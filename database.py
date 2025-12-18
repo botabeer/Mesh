@@ -43,7 +43,8 @@ class Database:
                     last_reward TIMESTAMP,
                     streak INTEGER DEFAULT 0,
                     best_streak INTEGER DEFAULT 0,
-                    games_played TEXT DEFAULT ''
+                    games_played TEXT DEFAULT '',
+                    withdrawn INTEGER DEFAULT 0
                 )
             """)
             conn.execute("""
@@ -55,23 +56,36 @@ class Database:
                 )
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC, wins DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)")
     
     def is_registered(self, user_id):
         with self._get_conn() as conn:
-            row = conn.execute("SELECT 1 FROM users WHERE user_id=?", (user_id,)).fetchone()
-            return row is not None
+            row = conn.execute("SELECT withdrawn FROM users WHERE user_id=?", (user_id,)).fetchone()
+            if not row:
+                return False
+            return row['withdrawn'] == 0
     
     def register_user(self, user_id, name):
         now = datetime.now().isoformat()
         with self._get_conn() as conn:
-            conn.execute("""
-                INSERT OR IGNORE INTO users (user_id, name, last_active, created_at, last_reward)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, name, now, now, now))
+            existing = conn.execute("SELECT withdrawn FROM users WHERE user_id=?", (user_id,)).fetchone()
+            if existing:
+                if existing['withdrawn'] == 1:
+                    conn.execute("UPDATE users SET withdrawn=0, name=?, last_active=? WHERE user_id=?", 
+                               (name, now, user_id))
+            else:
+                conn.execute("""
+                    INSERT INTO users (user_id, name, last_active, created_at, last_reward)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (user_id, name, now, now, now))
+    
+    def withdraw_user(self, user_id):
+        with self._get_conn() as conn:
+            conn.execute("UPDATE users SET withdrawn=1 WHERE user_id=?", (user_id,))
     
     def get_user(self, user_id):
         with self._get_conn() as conn:
-            row = conn.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
+            row = conn.execute("SELECT * FROM users WHERE user_id=? AND withdrawn=0", (user_id,)).fetchone()
             return dict(row) if row else None
     
     def update_activity(self, user_id):
@@ -120,7 +134,7 @@ class Database:
         with self._get_conn() as conn:
             rows = conn.execute("""
                 SELECT name, points, wins, games, streak, best_streak
-                FROM users ORDER BY points DESC, wins DESC LIMIT ?
+                FROM users WHERE withdrawn=0 ORDER BY points DESC, wins DESC LIMIT ?
             """, (limit,)).fetchall()
             return [dict(row) for row in rows]
     
@@ -186,6 +200,12 @@ class Database:
                     new_achievements.append(achievement)
         
         return new_achievements
+    
+    def cleanup_inactive_users(self):
+        cutoff = (datetime.now() - timedelta(days=Config.INACTIVE_DAYS)).isoformat()
+        with self._get_conn() as conn:
+            conn.execute("DELETE FROM users WHERE last_active < ? AND withdrawn=0", (cutoff,))
+            conn.execute("DELETE FROM achievements WHERE user_id NOT IN (SELECT user_id FROM users)")
     
     def set_changing_name(self, user_id):
         with self._lock:
