@@ -5,20 +5,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    # إعدادات LINE
     LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+    
+    # إعدادات قاعدة البيانات
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
+    
+    # إعدادات الخادم
     PORT = int(os.getenv("PORT", 5000))
-    WORKERS = int(os.getenv("WORKERS", 4))
+    WORKERS = int(os.getenv("WORKERS", 4))  # زيادة Workers
     ENV = os.getenv("ENV", "production")
     
+    # إعدادات الألعاب
     QUESTIONS_PER_GAME = 5
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 1
     
+    # إعدادات المكافآت
     DAILY_REWARD_POINTS = 10
     DAILY_REWARD_HOURS = 24
     
+    # الإنجازات
     ACHIEVEMENTS = {
         "first_game": {"name": "اللعبة الاولى", "desc": "اكمل اول لعبة", "points": 5},
         "ten_games": {"name": "محترف", "desc": "اكمل 10 العاب", "points": 20},
@@ -34,56 +42,37 @@ class Config:
     
     @staticmethod
     def normalize(text):
+        """تطبيع النص العربي"""
         if not text:
             return ""
+        
+        # إزالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
+        
+        # توحيد الحروف
         replacements = {
             "أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي",
             "ة": "ه", "ؤ": "و", "ئ": "ي"
         }
         for old, new in replacements.items():
             text = text.replace(old, new)
+        
+        # إزالة الرموز
         text = re.sub(r"[^\w\sء-ي]", "", text)
+        
         return text.strip().lower()
     
     @staticmethod
     def get_theme(theme):
-        themes = {
-            "light": {
-                "primary": "#2C3E50",
-                "secondary": "#4A5A6A",
-                "success": "#16A34A",
-                "warning": "#CA8A04",
-                "danger": "#DC2626",
-                "info": "#2563EB",
-                "bg": "#F5F6F7",
-                "card": "#FFFFFF",
-                "card_secondary": "#F8FAFC",
-                "text": "#2C3E50",
-                "text_secondary": "#64748B",
-                "text_tertiary": "#94A3B8",
-                "border": "#E2E8F0",
-                "hover": "#F8FAFC",
-                "glass": "#F1F5F9",
-                "accent": "#8B5CF6"
-            },
-            "dark": {
-                "primary": "#60A5FA",
-                "secondary": "#94A3B8",
-                "success": "#4ADE80",
-                "warning": "#FBBF24",
-                "danger": "#F87171",
-                "info": "#60A5FA",
-                "bg": "#0F172A",
-                "card": "#1E293B",
-                "card_secondary": "#1A202C",
-                "text": "#F1F5F9",
-                "text_secondary": "#94A3B8",
-                "text_tertiary": "#64748B",
-                "border": "#334155",
-                "hover": "#334155",
-                "glass": "#1E293B",
-                "accent": "#A78BFA"
-            }
+        """الحصول على ألوان الثيم (موحد - أسود/أبيض)"""
+        return {
+            "bg": "#000000",
+            "text": "#FFFFFF",
+            "secondary": "#CCCCCC",
+            "border": "#333333",
+            "primary": "#FFFFFF",
+            "success": "#FFFFFF",
+            "warning": "#CCCCCC",
+            "danger": "#FFFFFF",
+            "info": "#CCCCCC"
         }
-        return themes.get(theme, themes["light"])
