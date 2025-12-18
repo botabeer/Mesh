@@ -14,9 +14,10 @@ class Config:
     
     QUESTIONS_PER_GAME = 5
     MAX_NAME_LENGTH = 50
-    MIN_NAME_LENGTH = 1
+    MIN_NAME_LENGTH = 2
     DAILY_REWARD_POINTS = 10
     DAILY_REWARD_HOURS = 24
+    INACTIVE_DAYS = 30
     
     ACHIEVEMENTS = {
         "first_game": {"name": "اللعبة الاولى", "desc": "اكمل اول لعبة", "points": 5},
@@ -44,21 +45,30 @@ class Config:
     
     @staticmethod
     def get_theme(theme):
-        """نظام الألوان الجديد - أبيض وأسود ورمادي"""
-        return {
-            "bg": "#FFFFFF",
-            "card": "#F8F9FA",
-            "text": "#1A1A1A",
-            "text_secondary": "#4A5568",
-            "text_tertiary": "#718096",
-            "border": "#E2E8F0",
-            "primary": "#2D3748",
-            "secondary": "#718096",
-            "success": "#2D3748",
-            "warning": "#4A5568",
-            "danger": "#1A1A1A",
-            "info": "#4A5568",
-            "accent": "#2D3748",
-            "glass": "#F7FAFC",
-            "card_secondary": "#EDF2F7"
-        }
+        """نظام ألوان محسّن - أبيض وأسود ورمادي فقط"""
+        if theme == "dark":
+            return {
+                "bg": "#0A0A0A",
+                "card": "#1A1A1A",
+                "card_secondary": "#2A2A2A",
+                "text": "#FFFFFF",
+                "text_secondary": "#B8B8B8",
+                "text_tertiary": "#808080",
+                "border": "#333333",
+                "primary": "#FFFFFF",
+                "button_primary": "#FFFFFF",
+                "button_secondary": "#404040"
+            }
+        else:
+            return {
+                "bg": "#FFFFFF",
+                "card": "#F5F5F5",
+                "card_secondary": "#E8E8E8",
+                "text": "#000000",
+                "text_secondary": "#4A4A4A",
+                "text_tertiary": "#808080",
+                "border": "#D0D0D0",
+                "primary": "#000000",
+                "button_primary": "#000000",
+                "button_secondary": "#E0E0E0"
+            }
