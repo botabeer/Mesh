@@ -5,16 +5,11 @@ from linebot.v3.messaging import FlexMessage, FlexContainer
 
 
 class FastTypingGame(BaseGame):
-    """لعبة اسرع مع توقيت"""
-    
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
         self.game_name = "اسرع"
         self.time_limit = 10
         self.start_time = None
-        self.supports_hint = False
-        self.supports_reveal = False
-        self.show_timer = True
         
         self.phrases = [
             "سبحان الله", "الحمد لله", "الله اكبر", "لا اله الا الله",
