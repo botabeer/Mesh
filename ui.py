@@ -19,7 +19,7 @@ class UI:
         )
 
     def _separator(self, margin="md"):
-        return {"type": "separator", "margin": margin}
+        return {"type": "separator", "margin": margin, "color": self._c()["border"]}
 
     def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
@@ -34,12 +34,72 @@ class UI:
             "margin": margin
         }
 
+    def text_content(self, title, content):
+        """عرض محتوى نصي (سؤال، منشن، تحدي، إلخ)"""
+        c = self._c()
+        
+        contents = [
+            {
+                "type": "text",
+                "text": title,
+                "size": "lg",
+                "weight": "bold",
+                "color": c["text"],
+                "align": "center"
+            },
+            self._separator("lg"),
+            {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": content,
+                        "size": "md",
+                        "color": c["text"],
+                        "wrap": True,
+                        "align": "center"
+                    }
+                ],
+                "backgroundColor": c["card_secondary"],
+                "cornerRadius": "12px",
+                "paddingAll": "24px",
+                "margin": "lg"
+            }
+        ]
+        
+        bubble = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "backgroundColor": c["card"],
+                "paddingAll": "24px"
+            }
+        }
+        
+        qr_items = ["سؤال", "منشن", "تحدي", "اعتراف", "موقف", "حكمة", "شخصية", "بداية"]
+        return FlexMessage(
+            alt_text=title, 
+            contents=FlexContainer.from_dict(bubble),
+            quickReply=self._qr(qr_items)
+        )
+
     def main_menu(self, user: dict):
         c = self._c()
         name = user.get('name', 'مستخدم') if user else 'مستخدم'
         points = user.get('points', 0) if user else 0
         
         contents = [
+            {
+                "type": "text",
+                "text": "Bot Mesh",
+                "size": "xs",
+                "color": c["text_tertiary"],
+                "align": "center"
+            },
             {
                 "type": "box",
                 "layout": "vertical",
@@ -83,7 +143,8 @@ class UI:
                         "margin": "md"
                     }
                 ],
-                "spacing": "none"
+                "spacing": "none",
+                "margin": "sm"
             },
             self._separator("lg"),
             {
@@ -100,8 +161,38 @@ class UI:
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    self._main_button("الصدارة", c["accent"]),
-                    self._main_button("تحديات", c["text"])
+                    self._main_button("الصدارة", c["primary"]),
+                    self._main_button("سؤال", c["secondary"])
+                ],
+                "spacing": "md",
+                "margin": "sm"
+            },
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    self._main_button("منشن", c["primary"]),
+                    self._main_button("تحدي", c["secondary"])
+                ],
+                "spacing": "md",
+                "margin": "sm"
+            },
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    self._main_button("اعتراف", c["primary"]),
+                    self._main_button("موقف", c["secondary"])
+                ],
+                "spacing": "md",
+                "margin": "sm"
+            },
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    self._main_button("حكمة", c["primary"]),
+                    self._main_button("شخصية", c["secondary"])
                 ],
                 "spacing": "md",
                 "margin": "sm"
@@ -112,11 +203,19 @@ class UI:
                 "layout": "horizontal",
                 "contents": [
                     self._secondary_button("ثيم", c["text_tertiary"]),
-                    self._secondary_button("مساعدة", c["text_tertiary"]),
-                    self._secondary_button("انسحب", c["text_muted"])
+                    self._secondary_button("مساعدة", c["text_tertiary"])
                 ],
                 "spacing": "sm",
                 "margin": "md"
+            },
+            {
+                "type": "text",
+                "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025",
+                "size": "xxs",
+                "color": c["text_tertiary"],
+                "align": "center",
+                "margin": "lg",
+                "wrap": True
             }
         ]
         
@@ -133,7 +232,7 @@ class UI:
             }
         }
         
-        qr_items = ["العاب", "نقاطي", "الصدارة", "تحديات", "ثيم", "مساعدة"]
+        qr_items = ["العاب", "نقاطي", "الصدارة", "سؤال", "منشن", "تحدي", "اعتراف", "موقف", "حكمة", "شخصية", "ثيم", "مساعدة"]
         return FlexMessage(
             alt_text="البداية", 
             contents=FlexContainer.from_dict(bubble), 
@@ -141,6 +240,7 @@ class UI:
         )
 
     def _main_button(self, text, color):
+        c = self._c()
         return {
             "type": "box",
             "layout": "vertical",
@@ -154,7 +254,7 @@ class UI:
                             "text": text,
                             "size": "md",
                             "align": "center",
-                            "color": "#FFFFFF" if self.theme == "light" else "#000000",
+                            "color": "#000000",
                             "weight": "bold"
                         }
                     ],
@@ -189,24 +289,22 @@ class UI:
     def challenges_menu(self):
         c = self._c()
         
-        challenges = [
-            {"name": "تحدي", "desc": "تحديات ممتعة"},
-            {"name": "سؤال", "desc": "أسئلة عميقة"},
-            {"name": "اعتراف", "desc": "اعترافات صريحة"},
-            {"name": "منشن", "desc": "منشن أصدقائك"},
-            {"name": "موقف", "desc": "مواقف افتراضية"},
-            {"name": "حكمة", "desc": "حكم وأقوال"},
-            {"name": "شخصية", "desc": "اكتشف شخصيتك"}
-        ]
-        
         contents = [
+            {
+                "type": "text",
+                "text": "Bot Mesh",
+                "size": "xs",
+                "color": c["text_tertiary"],
+                "align": "center"
+            },
             {
                 "type": "text",
                 "text": "التحديات",
                 "size": "xl",
                 "weight": "bold",
                 "color": c["text"],
-                "align": "center"
+                "align": "center",
+                "margin": "sm"
             },
             {
                 "type": "text",
@@ -219,62 +317,35 @@ class UI:
             self._separator("lg")
         ]
         
-        for challenge in challenges:
-            contents.append(
-                self._glass_box([
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": challenge["name"],
-                                        "size": "md",
-                                        "color": c["text"],
-                                        "weight": "bold"
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": challenge["desc"],
-                                        "size": "xs",
-                                        "color": c["text_tertiary"],
-                                        "margin": "xs"
-                                    }
-                                ],
-                                "flex": 1
-                            },
-                            {
-                                "type": "box",
-                                "layout": "vertical",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "›",
-                                        "size": "xl",
-                                        "color": "#FFFFFF" if self.theme == "light" else "#000000",
-                                        "align": "center",
-                                        "weight": "bold"
-                                    }
-                                ],
-                                "backgroundColor": c["primary"],
-                                "cornerRadius": "8px",
-                                "width": "40px",
-                                "height": "40px",
-                                "justifyContent": "center",
-                                "flex": 0
-                            }
-                        ]
-                    }
-                ], "12px", "sm")
-            )
-            contents[-1]["action"] = {
-                "type": "message",
-                "text": challenge["name"]
-            }
+        # سطرين × 2 أزرار
+        rows = [
+            ["سؤال", "منشن"],
+            ["تحدي", "اعتراف"],
+            ["موقف", "حكمة"],
+            ["شخصية", ""]
+        ]
+        
+        for row in rows:
+            if row[1]:  # إذا كان هناك زرّان
+                contents.append({
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        self._challenge_button(row[0], c["primary"]),
+                        self._challenge_button(row[1], c["secondary"])
+                    ],
+                    "spacing": "md",
+                    "margin": "md"
+                })
+            else:  # زرّ واحد
+                contents.append({
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        self._challenge_button(row[0], c["primary"])
+                    ],
+                    "margin": "md"
+                })
         
         contents.append(self._separator("lg"))
         contents.append({
@@ -289,6 +360,16 @@ class UI:
             "margin": "md"
         })
         
+        contents.append({
+            "type": "text",
+            "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025",
+            "size": "xxs",
+            "color": c["text_tertiary"],
+            "align": "center",
+            "margin": "md",
+            "wrap": True
+        })
+        
         bubble = {
             "type": "bubble",
             "size": "mega",
@@ -301,12 +382,44 @@ class UI:
             }
         }
         
-        qr_items = ["تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية", "بداية"]
+        qr_items = ["سؤال", "منشن", "تحدي", "اعتراف", "موقف", "حكمة", "شخصية", "بداية"]
         return FlexMessage(
             alt_text="التحديات", 
             contents=FlexContainer.from_dict(bubble),
             quickReply=self._qr(qr_items)
         )
+
+    def _challenge_button(self, text, color):
+        return {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": text,
+                            "size": "md",
+                            "align": "center",
+                            "color": "#000000",
+                            "weight": "bold"
+                        }
+                    ],
+                    "backgroundColor": color,
+                    "cornerRadius": "12px",
+                    "paddingAll": "16px",
+                    "height": "56px",
+                    "justifyContent": "center"
+                }
+            ],
+            "action": {
+                "type": "message",
+                "text": text
+            },
+            "flex": 1
+        }
 
     def games_menu(self):
         c = self._c()
@@ -314,27 +427,35 @@ class UI:
         games = [
             {"name": "ذكاء", "color": c["primary"]},
             {"name": "خمن", "color": c["secondary"]},
-            {"name": "رياضيات", "color": c["accent"]},
-            {"name": "ترتيب", "color": c["text"]},
-            {"name": "ضد", "color": c["text_secondary"]},
-            {"name": "اسرع", "color": c["text_tertiary"]},
+            {"name": "رياضيات", "color": c["primary"]},
+            {"name": "ترتيب", "color": c["secondary"]},
+            {"name": "ضد", "color": c["primary"]},
+            {"name": "اسرع", "color": c["secondary"]},
             {"name": "سلسله", "color": c["primary"]},
             {"name": "لعبه", "color": c["secondary"]},
-            {"name": "تكوين", "color": c["accent"]},
-            {"name": "اغاني", "color": c["text"]},
-            {"name": "الوان", "color": c["text_secondary"]},
-            {"name": "توافق", "color": c["text_tertiary"]},
-            {"name": "مافيا", "color": c["text_muted"]}
+            {"name": "تكوين", "color": c["primary"]},
+            {"name": "اغاني", "color": c["secondary"]},
+            {"name": "الوان", "color": c["primary"]},
+            {"name": "توافق", "color": c["secondary"]},
+            {"name": "مافيا", "color": c["primary"]}
         ]
         
         contents = [
+            {
+                "type": "text",
+                "text": "Bot Mesh",
+                "size": "xs",
+                "color": c["text_tertiary"],
+                "align": "center"
+            },
             {
                 "type": "text",
                 "text": "الالعاب المتاحة",
                 "size": "xl",
                 "weight": "bold",
                 "color": c["text"],
-                "align": "center"
+                "align": "center",
+                "margin": "sm"
             },
             {
                 "type": "text",
@@ -347,8 +468,8 @@ class UI:
             self._separator("lg")
         ]
         
-        for i in range(0, len(games), 3):
-            row_games = games[i:i+3]
+        for i in range(0, len(games), 2):
+            row_games = games[i:i+2]
             contents.append({
                 "type": "box",
                 "layout": "horizontal",
@@ -356,7 +477,7 @@ class UI:
                     self._game_card(game["name"], game["color"])
                     for game in row_games
                 ],
-                "spacing": "sm",
+                "spacing": "md",
                 "margin": "md"
             })
         
@@ -371,6 +492,16 @@ class UI:
             "style": "secondary",
             "height": "sm",
             "margin": "md"
+        })
+        
+        contents.append({
+            "type": "text",
+            "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025",
+            "size": "xxs",
+            "color": c["text_tertiary"],
+            "align": "center",
+            "margin": "md",
+            "wrap": True
         })
         
         bubble = {
@@ -404,16 +535,16 @@ class UI:
                         {
                             "type": "text",
                             "text": name,
-                            "size": "sm",
+                            "size": "md",
                             "align": "center",
-                            "color": "#FFFFFF" if self.theme == "light" else "#000000",
+                            "color": "#000000",
                             "weight": "bold"
                         }
                     ],
                     "backgroundColor": color,
                     "cornerRadius": "12px",
-                    "paddingAll": "12px",
-                    "height": "48px",
+                    "paddingAll": "16px",
+                    "height": "56px",
                     "justifyContent": "center"
                 }
             ],
@@ -430,9 +561,15 @@ class UI:
         commands = [
             {"cmd": "بداية", "desc": "القائمة الرئيسية"},
             {"cmd": "العاب", "desc": "جميع الالعاب"},
-            {"cmd": "تحديات", "desc": "التحديات والأسئلة"},
             {"cmd": "نقاطي", "desc": "احصائياتك"},
             {"cmd": "الصدارة", "desc": "المتصدرين"},
+            {"cmd": "سؤال", "desc": "أسئلة عميقة"},
+            {"cmd": "منشن", "desc": "منشن أصدقائك"},
+            {"cmd": "تحدي", "desc": "تحديات ممتعة"},
+            {"cmd": "اعتراف", "desc": "اعترافات صريحة"},
+            {"cmd": "موقف", "desc": "مواقف افتراضية"},
+            {"cmd": "حكمة", "desc": "حكم وأقوال"},
+            {"cmd": "شخصية", "desc": "اكتشف شخصيتك"},
             {"cmd": "ثيم", "desc": "تبديل الثيم"},
             {"cmd": "ايقاف", "desc": "ايقاف اللعبة"},
             {"cmd": "لمح", "desc": "تلميح"},
@@ -442,11 +579,19 @@ class UI:
         contents = [
             {
                 "type": "text",
+                "text": "Bot Mesh",
+                "size": "xs",
+                "color": c["text_tertiary"],
+                "align": "center"
+            },
+            {
+                "type": "text",
                 "text": "دليل الاستخدام",
                 "size": "xl",
                 "weight": "bold",
                 "color": c["text"],
-                "align": "center"
+                "align": "center",
+                "margin": "sm"
             },
             {
                 "type": "text",
@@ -500,6 +645,16 @@ class UI:
             "color": c["primary"],
             "height": "sm",
             "margin": "lg"
+        })
+        
+        contents.append({
+            "type": "text",
+            "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025",
+            "size": "xxs",
+            "color": c["text_tertiary"],
+            "align": "center",
+            "margin": "md",
+            "wrap": True
         })
         
         bubble = {
