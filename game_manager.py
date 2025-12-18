@@ -37,7 +37,7 @@ class GameManager:
 
             self.db.set_game_progress(user_id, game)
             
-            # العاب خاصة لها منطق مختلف
+            # ألعاب خاصة لها منطق مختلف
             if game_cmd in ["مافيا", "توافق"]:
                 return game.start(user_id)
             
