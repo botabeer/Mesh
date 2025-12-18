@@ -33,7 +33,7 @@ class LettersWordsGame(BaseGame):
         
         letters_display = ' - '.join(self.current_letters)
         hint = f"السؤال {self.current_q + 1}/{self.total_q} - مطلوب {self.required} كلمات"
-        question = f"كون كلمات من هذه الاحرف:\n\n{letters_display}\n\nيمكنك استخدام كل حرف اكثر من مرة"
+        question = f"كون كلمات من هذه الاحرف:\n\n{letters_display}\n\nاستخدم كل حرف مرة واحدة فقط"
         
         return self.build_question_flex(question, hint)
 
@@ -43,11 +43,15 @@ class LettersWordsGame(BaseGame):
         if len(normalized) < 2 or normalized in self.found_words:
             return False
         
-        available_letters = [Config.normalize(letter) for letter in self.current_letters]
+        # نسخة من الحروف المتاحة
+        available = [Config.normalize(letter) for letter in self.current_letters]
         
+        # تحقق من كل حرف
         for char in normalized:
-            if char not in available_letters:
-                return False
+            if char in available:
+                available.remove(char)  # احذف الحرف بعد استخدامه
+            else:
+                return False  # الحرف غير موجود أو مستخدم أكثر من مرة
         
         self.found_words.add(normalized)
         return len(self.found_words) >= self.required
