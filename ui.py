@@ -10,7 +10,6 @@ class UI:
     @staticmethod
     def main_menu(user, db):
         c = Config.get_theme(user.get('theme', 'light'))
-        can_reward = db.can_claim_reward(user['user_id'])
         
         bubble = {
             "type": "bubble",
@@ -24,7 +23,7 @@ class UI:
                         "text": "Bot Mesh",
                         "size": "xxl",
                         "weight": "bold",
-                        "color": c["text"],
+                        "color": c["primary"],
                         "align": "center"
                     },
                     {
@@ -95,6 +94,95 @@ class UI:
                         "color": c["border"]
                     },
                     {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "تسجيل", "text": "تسجيل"},
+                                "style": "primary",
+                                "color": c["primary"],
+                                "height": "sm",
+                                "flex": 1
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "انسحب", "text": "انسحب"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            }
+                        ],
+                        "spacing": "sm",
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "انجازات", "text": "انجازات"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            }
+                        ],
+                        "spacing": "sm",
+                        "margin": "sm"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "ثيم", "text": "ثيم"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "مساعدة", "text": "مساعدة"},
+                                "style": "secondary",
+                                "height": "sm",
+                                "flex": 1
+                            },
+                            {
+                                "type": "button",
+                                "action": {"type": "message", "label": "العاب", "text": "العاب"},
+                                "style": "primary",
+                                "color": c["primary"],
+                                "height": "sm",
+                                "flex": 1
+                            }
+                        ],
+                        "spacing": "sm",
+                        "margin": "sm"
+                    },
+                    {
                         "type": "text",
                         "text": "تم الانشاء بواسطة عبير الدوسري @ 2025",
                         "size": "xxs",
@@ -105,75 +193,6 @@ class UI:
                 ],
                 "backgroundColor": c["bg"],
                 "paddingAll": "24px"
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "العاب", "text": "العاب"},
-                                "style": "primary",
-                                "color": c["primary"],
-                                "height": "sm"
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "نقاطي", "text": "نقاطي"},
-                                "style": "secondary",
-                                "height": "sm"
-                            }
-                        ],
-                        "spacing": "sm"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "الصدارة", "text": "الصدارة"},
-                                "style": "secondary",
-                                "height": "sm"
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "انجازات", "text": "انجازات"},
-                                "style": "secondary",
-                                "height": "sm"
-                            }
-                        ],
-                        "spacing": "sm",
-                        "margin": "sm"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "مكافأة" if can_reward else "غير متاح", "text": "مكافأة"},
-                                "style": "primary" if can_reward else "secondary",
-                                "color": c["primary"] if can_reward else None,
-                                "height": "sm"
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "تغيير", "text": "تغيير"},
-                                "style": "secondary",
-                                "height": "sm"
-                            }
-                        ],
-                        "spacing": "sm",
-                        "margin": "sm"
-                    }
-                ],
-                "backgroundColor": c["bg"],
-                "paddingAll": "20px"
             }
         }
         
@@ -209,7 +228,7 @@ class UI:
                 "text": "الالعاب",
                 "size": "xxl",
                 "weight": "bold",
-                "color": c["text"],
+                "color": c["primary"],
                 "align": "center"
             },
             {
@@ -239,6 +258,15 @@ class UI:
                 "margin": "md"
             })
         
+        contents.append({
+            "type": "text",
+            "text": "تم الانشاء بواسطة عبير الدوسري @ 2025",
+            "size": "xxs",
+            "color": c["text_tertiary"],
+            "align": "center",
+            "margin": "lg"
+        })
+        
         bubble = {
             "type": "bubble",
             "size": "mega",
@@ -266,7 +294,7 @@ class UI:
                 "text": "لوحة الصدارة",
                 "size": "xxl",
                 "weight": "bold",
-                "color": c["text"],
+                "color": c["primary"],
                 "align": "center"
             },
             {
@@ -338,7 +366,6 @@ class UI:
     def achievements_list(user_achievements, theme="light"):
         c = Config.get_theme(theme)
         
-        # تقسيم الإنجازات إلى مجموعات
         achievements_groups = [
             ("الالعاب", ["first_game", "ten_games", "fifty_games", "hundred_games"]),
             ("الانتصارات", ["first_win", "ten_wins"]),
@@ -351,7 +378,7 @@ class UI:
                 "text": "الانجازات",
                 "size": "xxl",
                 "weight": "bold",
-                "color": c["text"],
+                "color": c["primary"],
                 "align": "center"
             },
             {
@@ -451,7 +478,7 @@ class UI:
                         "text": "انجاز جديد",
                         "size": "xl",
                         "weight": "bold",
-                        "color": c["text"],
+                        "color": c["primary"],
                         "align": "center"
                     },
                     {
@@ -464,7 +491,7 @@ class UI:
                         "text": achievement['name'],
                         "size": "lg",
                         "weight": "bold",
-                        "color": c["primary"],
+                        "color": c["text"],
                         "margin": "lg",
                         "align": "center"
                     },
@@ -513,7 +540,7 @@ class UI:
                         "text": "المساعدة",
                         "size": "xxl",
                         "weight": "bold",
-                        "color": c["text"],
+                        "color": c["primary"],
                         "align": "center"
                     },
                     {
@@ -534,7 +561,7 @@ class UI:
                             },
                             {
                                 "type": "text",
-                                "text": "بداية - القائمة الرئيسية\nالعاب - قائمة الالعاب\nنقاطي - احصائياتك\nالصدارة - المتصدرين\nانجازات - انجازاتك\nمكافأة - مكافأة يومية\nتغيير - تغيير الاسم\nايقاف - ايقاف اللعبة",
+                                "text": "بداية - القائمة الرئيسية\nالعاب - قائمة الالعاب\nنقاطي - احصائياتك\nالصدارة - المتصدرين\nانجازات - انجازاتك\nمكافأة - مكافأة يومية\nتغيير - تغيير الاسم\nثيم - تغيير الثيم\nايقاف - ايقاف اللعبة",
                                 "size": "sm",
                                 "color": c["text_secondary"],
                                 "wrap": True,
@@ -570,6 +597,14 @@ class UI:
                         "paddingAll": "12px",
                         "backgroundColor": c["card"],
                         "cornerRadius": "8px"
+                    },
+                    {
+                        "type": "text",
+                        "text": "تم الانشاء بواسطة عبير الدوسري @ 2025",
+                        "size": "xxs",
+                        "color": c["text_tertiary"],
+                        "align": "center",
+                        "margin": "lg"
                     }
                 ],
                 "backgroundColor": c["bg"],
