@@ -19,8 +19,8 @@ class GameManager:
             "تكوين": ("games.letters_words", "LettersWordsGame"),
             "لون": ("games.word_color", "WordColorGame"),
             "حرف": ("games.letters", "LettersGame")
-            "مافيا": ("games.Mafia", "MafiaGame")
-            "توافق": ("games.letters", "LettersGame")
+            "مافيا": ("games.mafia", "MafiaGame")
+            "توافق": ("games.compatibility", "CompatibilityGame")
         }
     
     def start_game(self, user_id, game_cmd, theme="light"):
