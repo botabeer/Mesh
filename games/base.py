@@ -14,6 +14,8 @@ class BaseGame(ABC):
         self.user_id = None
         self.current_answer = None
         self.game_name = "لعبة"
+        self.supports_hint = True
+        self.supports_reveal = True
 
     def _c(self):
         return Config.get_theme(self.theme)
@@ -60,17 +62,17 @@ class BaseGame(ABC):
                         "type": "box",
                         "layout": "vertical",
                         "width": "60px",
-                        "backgroundColor": c["glass"],
+                        "backgroundColor": c["card_secondary"],
                         "cornerRadius": "12px",
                         "paddingAll": "8px",
                         "contents": [
-                            {"type": "text", "text": str(self.score), "size": "xl", "weight": "bold", "color": c["success"], "align": "center"},
+                            {"type": "text", "text": str(self.score), "size": "xl", "weight": "bold", "color": c["text"], "align": "center"},
                             {"type": "text", "text": "نقطة", "size": "xs", "color": c["text_tertiary"], "align": "center"}
                         ]
                     }
                 ]
             },
-            {"type": "separator", "margin": "lg"}
+            {"type": "separator", "margin": "lg", "color": c["border"]}
         ]
 
         if hint:
@@ -86,7 +88,7 @@ class BaseGame(ABC):
         contents.append({
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": c["glass"],
+            "backgroundColor": c["card_secondary"],
             "cornerRadius": "12px",
             "paddingAll": "24px",
             "margin": "lg",
@@ -102,6 +104,45 @@ class BaseGame(ABC):
                 }
             ]
         })
+
+        # أزرار التحكم
+        if self.supports_hint or self.supports_reveal:
+            button_contents = []
+            if self.supports_hint:
+                button_contents.append({
+                    "type": "button",
+                    "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                    "style": "secondary",
+                    "color": c["button_secondary"],
+                    "height": "sm",
+                    "flex": 1
+                })
+            if self.supports_reveal:
+                button_contents.append({
+                    "type": "button",
+                    "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                    "style": "secondary",
+                    "color": c["button_secondary"],
+                    "height": "sm",
+                    "flex": 1
+                })
+            button_contents.append({
+                "type": "button",
+                "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"},
+                "style": "primary",
+                "color": c["button_primary"],
+                "height": "sm",
+                "flex": 1
+            })
+            
+            contents.append({"type": "separator", "margin": "lg", "color": c["border"]})
+            contents.append({
+                "type": "box",
+                "layout": "horizontal",
+                "contents": button_contents,
+                "spacing": "sm",
+                "margin": "md"
+            })
 
         bubble = {
             "type": "bubble",
@@ -120,3 +161,22 @@ class BaseGame(ABC):
             contents=FlexContainer.from_dict(bubble),
             quickReply=self._qr()
         )
+    
+    def get_hint(self):
+        """إعطاء تلميح - أول حرف وعدد الحروف"""
+        if not self.supports_hint or not self.current_answer:
+            return None
+        
+        answer = str(self.current_answer[0]) if isinstance(self.current_answer, list) else str(self.current_answer)
+        first_letter = answer[0] if answer else ""
+        length = len(answer)
+        
+        return f"التلميح: {first_letter}{'_' * (length - 1)} ({length} حروف)"
+    
+    def reveal_answer(self):
+        """كشف الإجابة الصحيحة"""
+        if not self.supports_reveal or not self.current_answer:
+            return None
+        
+        answer = self.current_answer[0] if isinstance(self.current_answer, list) else self.current_answer
+        return f"الاجابة الصحيحة: {answer}"
