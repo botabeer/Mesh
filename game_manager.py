@@ -8,7 +8,7 @@ class GameManager:
         self.db = db
         self.game_mappings = {
             "خمن": ("games.guess", "GuessGame"),
-            "ذكاء": ("games.iq", "IQGame"),
+            "ذكاء": ("games.iq", "IqGame"),
             "ترتيب": ("games.scramble", "ScrambleGame"),
             "رياضيات": ("games.math", "MathGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
@@ -21,9 +21,7 @@ class GameManager:
             "اغنية": ("games.song", "SongGame"),
             "تكوين": ("games.letters_words", "LettersWordsGame"),
             "لون": ("games.word_color", "WordColorGame"),
-            "حرف": ("games.letters_words", "LettersWordsGame"),
-            "مافيا": ("games.mafia", "MafiaGame"),
-            "توافق": ("games.compatibility", "CompatibilityGame")
+            "حرف": ("games.letters_words", "LettersWordsGame")
         }
     
     def start_game(self, user_id, game_cmd, theme="light"):
@@ -44,53 +42,45 @@ class GameManager:
     def process_answer(self, user_id, answer):
         game = self.db.get_game_progress(user_id)
         if not game:
-            return None, None
+            return None, False
         
-        result = game.check(answer, user_id)
+        correct = game.check_answer(answer)
         
-        if result is None:
-            score = game.score
-            total = game.total_q
-            game_name = game.game_name
-            self.db.add_points(user_id, score)
-            self.db.increment_games(user_id)
+        if correct:
+            game.score += 1
+            self.db.add_points(user_id, 1)
+            game.current_q += 1
             
-            if score == total:
-                self.db.increment_wins(user_id)
-            else:
-                self.db.reset_streak(user_id)
-            
-            self.db.add_game_played(user_id, game_name)
-            achievements = self.db.check_achievements(user_id)
-            self.db.clear_game_progress(user_id)
-            
-            return {
-                "finished": True,
-                "score": score,
-                "total": total,
-                "game_name": game_name,
-                "achievements": achievements
-            }, None
-        
-        if isinstance(result, dict):
-            if result.get("game_over"):
+            if game.current_q >= game.total_q:
+                score = game.score
+                total = game.total_q
+                game_name = game.game_name
+                
+                self.db.increment_games(user_id)
+                
+                if score == total:
+                    self.db.increment_wins(user_id)
+                else:
+                    self.db.reset_streak(user_id)
+                
+                self.db.add_game_played(user_id, game_name)
+                achievements = self.db.check_achievements(user_id)
                 self.db.clear_game_progress(user_id)
-                return result, None
-            return result.get("response"), result.get("skip", False)
+                
+                return {
+                    "finished": True,
+                    "score": score,
+                    "total": total,
+                    "game_name": game_name,
+                    "achievements": achievements
+                }, True
         
-        question, correct = result
-        return question, correct
+        return None, correct
     
-    def get_hint(self, user_id):
+    def next_question(self, user_id):
         game = self.db.get_game_progress(user_id)
-        if game and hasattr(game, 'get_hint'):
-            return game.get_hint()
-        return None
-    
-    def reveal_answer(self, user_id):
-        game = self.db.get_game_progress(user_id)
-        if game and hasattr(game, 'reveal_answer'):
-            return game.reveal_answer()
+        if game:
+            return game.get_question()
         return None
     
     def stop_game(self, user_id):
@@ -102,6 +92,3 @@ class GameManager:
             self.db.clear_game_progress(user_id)
             return score
         return 0
-    
-    def count_active(self):
-        return len(self.db._game_progress)
