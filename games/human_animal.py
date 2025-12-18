@@ -6,7 +6,7 @@ from config import Config
 class HumanAnimalGame(BaseGame):
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
-        self.game_name = "انسان حيوان"
+        self.game_name = "لعبه"
         
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
         random.shuffle(self.letters)
