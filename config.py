@@ -44,39 +44,21 @@ class Config:
     
     @staticmethod
     def get_theme(theme):
-        if theme == "dark":
-            return {
-                "bg": "#000000",
-                "card": "#1A1A1A",
-                "text": "#FFFFFF",
-                "text_secondary": "#B3B3B3",
-                "text_tertiary": "#808080",
-                "border": "#333333",
-                "primary": "#FFFFFF",
-                "secondary": "#B3B3B3",
-                "success": "#22C55E",
-                "warning": "#F59E0B",
-                "danger": "#EF4444",
-                "info": "#3B82F6",
-                "accent": "#8B5CF6",
-                "glass": "#1A1A1A",
-                "card_secondary": "#262626"
-            }
-        else:
-            return {
-                "bg": "#FFFFFF",
-                "card": "#F9FAFB",
-                "text": "#111827",
-                "text_secondary": "#6B7280",
-                "text_tertiary": "#9CA3AF",
-                "border": "#E5E7EB",
-                "primary": "#3B82F6",
-                "secondary": "#6B7280",
-                "success": "#10B981",
-                "warning": "#F59E0B",
-                "danger": "#EF4444",
-                "info": "#3B82F6",
-                "accent": "#8B5CF6",
-                "glass": "#F3F4F6",
-                "card_secondary": "#F3F4F6"
-            }
+        """نظام الألوان الجديد - أبيض وأسود ورمادي"""
+        return {
+            "bg": "#FFFFFF",
+            "card": "#F8F9FA",
+            "text": "#1A1A1A",
+            "text_secondary": "#4A5568",
+            "text_tertiary": "#718096",
+            "border": "#E2E8F0",
+            "primary": "#2D3748",
+            "secondary": "#718096",
+            "success": "#2D3748",
+            "warning": "#4A5568",
+            "danger": "#1A1A1A",
+            "info": "#4A5568",
+            "accent": "#2D3748",
+            "glass": "#F7FAFC",
+            "card_secondary": "#EDF2F7"
+        }
