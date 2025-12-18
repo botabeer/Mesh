@@ -5,11 +5,9 @@ from linebot.v3.messaging import FlexMessage, FlexContainer
 
 
 class WordColorGame(BaseGame):
-    """لعبة الألوان - نسخة آمنة لـ LINE"""
-
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
-        self.game_name = "الوان"
+        self.game_name = "لون"
 
         self.colors = {
             "احمر": "#DC2626",
@@ -23,8 +21,6 @@ class WordColorGame(BaseGame):
         }
 
         self.color_names = list(self.colors.keys())
-
-    # ================= Question =================
 
     def get_question(self):
         word = random.choice(self.color_names)
@@ -42,21 +38,33 @@ class WordColorGame(BaseGame):
 
         contents = [
             {
-                "type": "text",
-                "text": self._safe_text(self.game_name),
-                "size": "lg",
-                "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "flex": 1,
+                        "contents": [
+                            {"type": "text", "text": self._safe_text(self.game_name), "weight": "bold", "size": "lg", "color": c["text"]},
+                            {"type": "text", "text": f"السؤال {self.current_q + 1}/{self.total_q}", "size": "xs", "color": c["text_secondary"]}
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "width": "60px",
+                        "backgroundColor": c["card_secondary"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "8px",
+                        "contents": [
+                            {"type": "text", "text": str(self.score), "size": "xl", "weight": "bold", "color": c["text"], "align": "center"},
+                            {"type": "text", "text": "نقطة", "size": "xs", "color": c["text_tertiary"], "align": "center"}
+                        ]
+                    }
+                ]
             },
-            {
-                "type": "text",
-                "text": f"السؤال {self.current_q + 1}/{self.total_q}",
-                "size": "xs",
-                "color": c["text_tertiary"],
-                "align": "center"
-            },
-            {"type": "separator", "margin": "md", "color": c["border"]},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
             {
                 "type": "text",
                 "text": "ما لون هذه الكلمة؟",
@@ -80,7 +88,7 @@ class WordColorGame(BaseGame):
                 ],
                 "cornerRadius": "12px",
                 "paddingAll": "20px",
-                "backgroundColor": c["card"],
+                "backgroundColor": c["card_secondary"],
                 "borderWidth": "2px",
                 "borderColor": hex_color,
                 "margin": "lg"
@@ -93,28 +101,40 @@ class WordColorGame(BaseGame):
                 "align": "center",
                 "margin": "md"
             },
-            {"type": "separator", "margin": "lg", "color": c["border"]}
-        ]
-
-        if self.supports_hint and self.supports_reveal:
-            contents.append({
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
                 "type": "box",
                 "layout": "horizontal",
-                "spacing": "sm",
-                "margin": "md",
                 "contents": [
                     {
                         "type": "button",
                         "action": {"type": "message", "label": "لمح", "text": "لمح"},
-                        "style": "secondary"
+                        "style": "secondary",
+                        "color": c["button_secondary"],
+                        "height": "sm",
+                        "flex": 1
                     },
                     {
                         "type": "button",
                         "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
-                        "style": "secondary"
+                        "style": "secondary",
+                        "color": c["button_secondary"],
+                        "height": "sm",
+                        "flex": 1
+                    },
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"},
+                        "style": "primary",
+                        "color": c["button_primary"],
+                        "height": "sm",
+                        "flex": 1
                     }
-                ]
-            })
+                ],
+                "spacing": "sm",
+                "margin": "md"
+            }
+        ]
 
         bubble = {
             "type": "bubble",
@@ -124,7 +144,7 @@ class WordColorGame(BaseGame):
                 "layout": "vertical",
                 "contents": contents,
                 "paddingAll": "20px",
-                "backgroundColor": c["bg"]
+                "backgroundColor": c["card"]
             }
         }
 
@@ -133,8 +153,6 @@ class WordColorGame(BaseGame):
             contents=FlexContainer.from_dict(bubble),
             quickReply=self._qr()
         )
-
-    # ================= Answer =================
 
     def check_answer(self, answer: str) -> bool:
         return Config.normalize(answer) == Config.normalize(self.current_answer)
