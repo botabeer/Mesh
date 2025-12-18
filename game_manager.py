@@ -36,6 +36,11 @@ class GameManager:
             game = game_class(self.db, theme)
 
             self.db.set_game_progress(user_id, game)
+            
+            # العاب خاصة لها منطق مختلف
+            if game_cmd in ["مافيا", "توافق"]:
+                return game.start(user_id)
+            
             return game.start(user_id)
 
         except Exception as e:
@@ -45,6 +50,16 @@ class GameManager:
     def process_answer(self, user_id, answer):
         game = self.db.get_game_progress(user_id)
         if not game:
+            return None, False
+
+        # لعبة التوافق والمافيا لها منطق مختلف
+        if hasattr(game, 'check'):
+            result = game.check(answer, user_id)
+            if result:
+                if result.get('game_over'):
+                    self.db.clear_game_progress(user_id)
+                    return {"finished": True, "score": 1, "total": 1, "game_name": game.game_name, "achievements": []}, True
+                return None, False
             return None, False
 
         correct = game.check_answer(answer)
@@ -90,7 +105,7 @@ class GameManager:
     def stop_game(self, user_id):
         game = self.db.get_game_progress(user_id)
         if game:
-            score = game.score
+            score = game.score if hasattr(game, 'score') else 0
             self.db.add_points(user_id, score)
             self.db.reset_streak(user_id)
             self.db.clear_game_progress(user_id)
