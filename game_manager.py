@@ -14,14 +14,12 @@ class GameManager:
             "اسرع": ("games.fast_typing", "FastTypingGame"),
             "ضد": ("games.opposite", "OppositeGame"),
             "لعبه": ("games.human_animal", "HumanAnimalGame"),
-            "لعبة": ("games.human_animal", "HumanAnimalGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
-            "سلسلة": ("games.chain_words", "ChainWordsGame"),
             "اغنيه": ("games.song", "SongGame"),
-            "اغنية": ("games.song", "SongGame"),
             "تكوين": ("games.letters_words", "LettersWordsGame"),
             "لون": ("games.word_color", "WordColorGame"),
-            "حرف": ("games.letters_words", "LettersWordsGame")
+            "حرف": ("games.letters", "LettersGame")
+            "مافيا": ("games.letters", "LettersGame")
         }
     
     def start_game(self, user_id, game_cmd, theme="light"):
