@@ -3,7 +3,7 @@ from games.base import BaseGame
 from config import Config
 
 
-class IqGame(BaseGame):
+class IQGame(BaseGame):  # تم تغيير IqGame إلى IQGame
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
         self.game_name = "ذكاء"
