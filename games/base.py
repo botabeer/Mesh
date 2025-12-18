@@ -47,10 +47,7 @@ class BaseGame(ABC):
         return fallback
 
     def _separator(self, margin="md"):
-        return {
-            "type": "separator",
-            "margin": margin
-        }
+        return {"type": "separator", "margin": margin}
 
     def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
@@ -104,24 +101,13 @@ class BaseGame(ABC):
             return None
 
         if cmd in {"ايقاف", "ايقاف اللعبة"}:
-            return {
-                "response": self._pause_message(),
-                "game_over": True
-            }
+            return {"response": self._pause_message(), "game_over": True}
 
         if self.supports_hint and cmd == "لمح":
-            hint = self._get_hint()
-            return {
-                "response": self._hint_message(hint),
-                "game_over": False
-            }
+            return {"response": self._hint_message(self._get_hint()), "game_over": False}
 
         if self.supports_reveal and cmd == "جاوب":
-            return {
-                "response": self._reveal_message(),
-                "game_over": False,
-                "skip": True
-            }
+            return {"response": self._reveal_message(), "game_over": False, "skip": True}
 
         try:
             correct = self.check_answer(answer)
@@ -149,10 +135,7 @@ class BaseGame(ABC):
                 "won": won
             }
 
-        return {
-            "response": self.get_question(),
-            "game_over": False
-        }
+        return {"response": self.get_question(), "game_over": False}
 
     def _get_hint(self):
         if not self.current_answer:
@@ -171,7 +154,6 @@ class BaseGame(ABC):
 
     def _hint_message(self, hint):
         c = self._c()
-
         bubble = {
             "type": "bubble",
             "size": "mega",
@@ -212,7 +194,6 @@ class BaseGame(ABC):
 
     def _reveal_message(self):
         c = self._c()
-
         ans = (
             " أو ".join(self.current_answer)
             if isinstance(self.current_answer, list)
@@ -259,7 +240,6 @@ class BaseGame(ABC):
 
     def _pause_message(self):
         c = self._c()
-
         bubble = {
             "type": "bubble",
             "size": "mega",
@@ -332,6 +312,144 @@ class BaseGame(ABC):
 
         return FlexMessage(
             alt_text="النتيجة",
+            contents=FlexContainer.from_dict(bubble),
+            quickReply=self._qr()
+        )
+
+    def build_question_flex(self, question_text, hint=None):
+        c = self._c()
+
+        contents = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {"type": "text", "text": self.game_icon, "size": "xl", "flex": 0},
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "flex": 1,
+                        "margin": "md",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": self._safe_text(self.game_name),
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": c["text"]
+                            },
+                            {
+                                "type": "text",
+                                "text": f"السؤال {self.current_q + 1} من {self.total_q}",
+                                "size": "xs",
+                                "color": c["text_secondary"]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "width": "60px",
+                        "backgroundColor": c["glass"],
+                        "cornerRadius": "12px",
+                        "paddingAll": "8px",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": str(self.score),
+                                "size": "xl",
+                                "weight": "bold",
+                                "color": c["success"],
+                                "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": "نقطة",
+                                "size": "xs",
+                                "color": c["text_tertiary"],
+                                "align": "center"
+                            }
+                        ]
+                    }
+                ]
+            },
+            self._separator("lg")
+        ]
+
+        if hint:
+            contents.append({
+                "type": "text",
+                "text": self._safe_text(hint),
+                "size": "xs",
+                "color": c["text_tertiary"],
+                "align": "center",
+                "margin": "md"
+            })
+
+        contents.append(
+            self._glass_box([
+                {
+                    "type": "text",
+                    "text": self._safe_text(question_text),
+                    "wrap": True,
+                    "align": "center",
+                    "size": "lg",
+                    "weight": "bold",
+                    "color": c["text"]
+                }
+            ], "24px", "lg")
+        )
+
+        buttons = []
+
+        if self.supports_hint:
+            buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": "تلميح", "text": "لمح"},
+                "style": "secondary",
+                "flex": 1,
+                "height": "sm"
+            })
+
+        if self.supports_reveal:
+            buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": "الإجابة", "text": "جاوب"},
+                "style": "secondary",
+                "flex": 1,
+                "height": "sm"
+            })
+
+        buttons.append({
+            "type": "button",
+            "action": {"type": "message", "label": "إيقاف", "text": "ايقاف"},
+            "style": "secondary",
+            "flex": 1,
+            "height": "sm"
+        })
+
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "contents": buttons,
+            "spacing": "sm",
+            "margin": "lg"
+        })
+
+        bubble = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "backgroundColor": c["card"],
+                "paddingAll": "24px"
+            }
+        }
+
+        return FlexMessage(
+            alt_text=self.game_name,
             contents=FlexContainer.from_dict(bubble),
             quickReply=self._qr()
         )
