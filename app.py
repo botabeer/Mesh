@@ -51,15 +51,15 @@ def process_message(user_id, text, reply_token):
         
         # التسجيل الأولي
         if not db.is_registered(user_id):
-            if normalized in ["تسجيل", "بدايه", "بداية"]:
+            user = db.get_user(user_id)
+            if not user:
                 db.register_user(user_id, f"لاعب{user_id[-4:]}")
                 user = db.get_user(user_id)
-                reply_message(reply_token, [TextMessage(text=f"مرحبا! تم تسجيلك بنجاح", quickReply=UI.get_quick_reply()), UI.main_menu(user, db)])
-            return
-        
-        # التأكد من التسجيل
-        if not db.is_registered(user_id):
-            return
+                reply_message(reply_token, [
+                    TextMessage(text=f"مرحبا! تم تسجيلك بنجاح", quickReply=UI.get_quick_reply()),
+                    UI.main_menu(user, db)
+                ])
+                return
         
         db.update_activity(user_id)
         user = db.get_user(user_id)
@@ -130,11 +130,6 @@ def process_message(user_id, text, reply_token):
                 reply_message(reply_token, TextMessage(text=f"تم! حصلت على +{Config.DAILY_REWARD_POINTS} نقطة", quickReply=UI.get_quick_reply()))
             else:
                 reply_message(reply_token, TextMessage(text=f"يمكنك الحصول على المكافأة كل {Config.DAILY_REWARD_HOURS} ساعة", quickReply=UI.get_quick_reply()))
-        
-        elif normalized == "ثيم":
-            new_theme = "dark" if user['theme'] == "light" else "light"
-            db.change_theme(user_id, new_theme)
-            reply_message(reply_token, TextMessage(text=f"تم تغيير الثيم", quickReply=UI.get_quick_reply()))
         
         elif normalized == "تغيير":
             db.set_changing_name(user_id)
