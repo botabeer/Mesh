@@ -18,11 +18,18 @@ class Database:
     
     @contextmanager
     def _get_conn(self):
-        conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False, isolation_level=None)
+        conn = sqlite3.connect(
+            self.db_path,
+            timeout=30,
+            check_same_thread=False,
+            isolation_level=None
+        )
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA cache_size=-64000")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        conn.execute("PRAGMA mmap_size=268435456")
         try:
             yield conn
         finally:
@@ -57,6 +64,7 @@ class Database:
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC, wins DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_withdrawn ON users(withdrawn)")
     
     def is_registered(self, user_id):
         with self._get_conn() as conn:
@@ -71,8 +79,10 @@ class Database:
             existing = conn.execute("SELECT withdrawn FROM users WHERE user_id=?", (user_id,)).fetchone()
             if existing:
                 if existing['withdrawn'] == 1:
-                    conn.execute("UPDATE users SET withdrawn=0, name=?, last_active=? WHERE user_id=?", 
-                               (name, now, user_id))
+                    conn.execute(
+                        "UPDATE users SET withdrawn=0, name=?, last_active=? WHERE user_id=?",
+                        (name, now, user_id)
+                    )
             else:
                 conn.execute("""
                     INSERT INTO users (user_id, name, last_active, created_at, last_reward)
@@ -85,7 +95,10 @@ class Database:
     
     def get_user(self, user_id):
         with self._get_conn() as conn:
-            row = conn.execute("SELECT * FROM users WHERE user_id=? AND withdrawn=0", (user_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM users WHERE user_id=? AND withdrawn=0",
+                (user_id,)
+            ).fetchone()
             return dict(row) if row else None
     
     def update_activity(self, user_id):
@@ -149,26 +162,34 @@ class Database:
         if self.can_claim_reward(user_id):
             now = datetime.now().isoformat()
             with self._get_conn() as conn:
-                conn.execute("UPDATE users SET points=points+?, last_reward=? WHERE user_id=?",
-                           (Config.DAILY_REWARD_POINTS, now, user_id))
+                conn.execute(
+                    "UPDATE users SET points=points+?, last_reward=? WHERE user_id=?",
+                    (Config.DAILY_REWARD_POINTS, now, user_id)
+                )
             return True
         return False
     
     def unlock_achievement(self, user_id, achievement_id):
         with self._get_conn() as conn:
-            existing = conn.execute("SELECT 1 FROM achievements WHERE user_id=? AND achievement_id=?",
-                                   (user_id, achievement_id)).fetchone()
+            existing = conn.execute(
+                "SELECT 1 FROM achievements WHERE user_id=? AND achievement_id=?",
+                (user_id, achievement_id)
+            ).fetchone()
             if not existing:
                 now = datetime.now().isoformat()
-                conn.execute("INSERT INTO achievements VALUES (?, ?, ?)",
-                           (user_id, achievement_id, now))
+                conn.execute(
+                    "INSERT INTO achievements VALUES (?, ?, ?)",
+                    (user_id, achievement_id, now)
+                )
                 return True
         return False
     
     def get_user_achievements(self, user_id):
         with self._get_conn() as conn:
-            rows = conn.execute("SELECT achievement_id FROM achievements WHERE user_id=?",
-                              (user_id,)).fetchall()
+            rows = conn.execute(
+                "SELECT achievement_id FROM achievements WHERE user_id=?",
+                (user_id,)
+            ).fetchall()
             return [row[0] for row in rows]
     
     def check_achievements(self, user_id):
@@ -204,8 +225,13 @@ class Database:
     def cleanup_inactive_users(self):
         cutoff = (datetime.now() - timedelta(days=Config.INACTIVE_DAYS)).isoformat()
         with self._get_conn() as conn:
-            conn.execute("DELETE FROM users WHERE last_active < ? AND withdrawn=0", (cutoff,))
+            result = conn.execute(
+                "DELETE FROM users WHERE last_active < ? AND withdrawn=0",
+                (cutoff,)
+            )
+            deleted = result.rowcount
             conn.execute("DELETE FROM achievements WHERE user_id NOT IN (SELECT user_id FROM users)")
+            logger.info(f"Cleaned up {deleted} inactive users")
     
     def set_changing_name(self, user_id):
         with self._lock:
@@ -238,4 +264,11 @@ class Database:
     def cleanup_memory(self, timeout=1800):
         now = time.time()
         with self._lock:
-            self._changing_names = {k: v for k, v in self._changing_names.items() if now - v < timeout}
+            old_count = len(self._changing_names)
+            self._changing_names = {
+                k: v for k, v in self._changing_names.items()
+                if now - v < timeout
+            }
+            cleaned = old_count - len(self._changing_names)
+            if cleaned > 0:
+                logger.info(f"Cleaned {cleaned} expired name change sessions")
