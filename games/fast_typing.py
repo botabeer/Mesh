@@ -10,6 +10,8 @@ class FastTypingGame(BaseGame):
         self.game_name = "اسرع"
         self.time_limit = 10
         self.start_time = None
+        self.supports_hint = False
+        self.supports_reveal = False
         
         self.phrases = [
             "سبحان الله", "الحمد لله", "الله اكبر", "لا اله الا الله",
@@ -50,7 +52,7 @@ class FastTypingGame(BaseGame):
         contents = [
             {"type": "box", "layout": "horizontal", "contents": [
                 {"type": "box", "layout": "vertical", "contents": [
-                    {"type": "text", "text": self._safe_text(self.game_name), "weight": "bold", "size": "lg", "color": c["primary"]}
+                    {"type": "text", "text": self._safe_text(self.game_name), "weight": "bold", "size": "lg", "color": c["text"]}
                 ], "flex": 1},
                 {"type": "box", "layout": "vertical", "contents": [
                     {"type": "text", "text": f"{self.current_q+1}/{self.total_q}", "size": "sm", "align": "end", "color": c["text_secondary"]}
@@ -59,7 +61,7 @@ class FastTypingGame(BaseGame):
             {"type": "separator", "margin": "md", "color": c["border"]},
             {
                 "type": "box", "layout": "horizontal", "contents": [
-                    {"type": "text", "text": f"الوقت: {self.time_limit} ثانية", "size": "xs", "color": c["warning"], "weight": "bold"}
+                    {"type": "text", "text": f"الوقت: {self.time_limit} ثانية", "size": "xs", "color": c["text_tertiary"], "weight": "bold"}
                 ], "margin": "md"
             },
             {
@@ -67,14 +69,26 @@ class FastTypingGame(BaseGame):
                 "contents": [
                     {"type": "text", "text": self._safe_text(phrase), "wrap": True, "align": "center", "size": "md", "color": c["text"], "weight": "bold"}
                 ],
-                "backgroundColor": c["glass"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "md"
+                "backgroundColor": c["card_secondary"], "cornerRadius": "12px", "paddingAll": "16px", "margin": "md"
             },
             {
                 "type": "text", "text": "اكتب بسرعة", "size": "xs", "align": "center", "margin": "sm", "color": c["text_tertiary"]
+            },
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {
+                "type": "box", "layout": "horizontal", "contents": [
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"},
+                        "style": "primary",
+                        "color": c["button_primary"],
+                        "height": "sm"
+                    }
+                ], "margin": "md"
             }
         ]
 
-        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["bg"], "paddingAll": "20px"}}
+        bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["card"], "paddingAll": "20px"}}
         return FlexMessage(alt_text=self.game_name, contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
     def check_answer(self, answer: str) -> bool:
