@@ -12,7 +12,7 @@ class CompatibilityGame(BaseGame):
         self.total_q = 1
 
     def get_question(self):
-        question = "اكتب اسمين وبينهما كلمة و\nمثال: محمد و فاطمة"
+        question = "اكتب اسمين وبينهما كلمة و\nمثال: اسم و اسم"
         return self.build_question_flex(question, None)
 
     def check_answer(self, answer: str) -> bool:
