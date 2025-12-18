@@ -3,8 +3,6 @@ from games.base import BaseGame
 
 
 class MathGame(BaseGame):
-    """لعبة رياضيات محسّنة"""
-    
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
         self.game_name = "رياضيات"
