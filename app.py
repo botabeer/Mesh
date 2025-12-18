@@ -3,11 +3,8 @@ from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from apscheduler.schedulers.background import BackgroundScheduler
-import pytz
 import time
 
 from config import Config
@@ -16,7 +13,11 @@ from game_manager import GameManager
 from text_manager import TextManager
 from ui import UI
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -29,18 +30,15 @@ text_mgr = TextManager()
 
 executor = ThreadPoolExecutor(max_workers=Config.WORKERS, thread_name_prefix="worker")
 
-scheduler = BackgroundScheduler(timezone=pytz.UTC)
-scheduler.add_job(func=lambda: db.cleanup_memory(), trigger="interval", minutes=30)
-scheduler.add_job(func=lambda: db.cleanup_inactive_users(), trigger="interval", hours=24)
-scheduler.start()
-
 def reply_message(reply_token, messages):
     if not isinstance(messages, list):
         messages = [messages]
     safe_messages = [m for m in messages if m][:5]
     try:
         with ApiClient(line_config) as client:
-            MessagingApi(client).reply_message(ReplyMessageRequest(reply_token=reply_token, messages=safe_messages))
+            MessagingApi(client).reply_message(
+                ReplyMessageRequest(reply_token=reply_token, messages=safe_messages)
+            )
     except Exception as e:
         logger.error(f"Reply error: {e}")
 
@@ -50,9 +48,7 @@ def process_message(user_id, text, reply_token):
     try:
         normalized = Config.normalize(text)
         
-        # تجاهل المنسحبين
         if not db.is_registered(user_id):
-            # التسجيل فقط بأمر "تسجيل"
             if normalized == "تسجيل":
                 db.register_user(user_id, f"لاعب{user_id[-4:]}")
                 user = db.get_user(user_id)
@@ -62,17 +58,18 @@ def process_message(user_id, text, reply_token):
         db.update_activity(user_id)
         user = db.get_user(user_id)
         
-        # تغيير الاسم
         if db.is_changing_name(user_id):
             if len(text) < Config.MIN_NAME_LENGTH or len(text) > Config.MAX_NAME_LENGTH:
-                reply_message(reply_token, TextMessage(text=f"الاسم يجب ان يكون بين {Config.MIN_NAME_LENGTH} و {Config.MAX_NAME_LENGTH} حرف"))
+                reply_message(
+                    reply_token,
+                    TextMessage(text=f"الاسم يجب ان يكون بين {Config.MIN_NAME_LENGTH} و {Config.MAX_NAME_LENGTH} حرف")
+                )
                 return
             db.update_name(user_id, text)
             db.clear_changing_name(user_id)
             reply_message(reply_token, TextMessage(text=f"تم تغيير اسمك الى: {text}"))
             return
         
-        # اللعب - لمح وجاوب
         if db.has_active_game(user_id):
             game = db.get_game_progress(user_id)
             
@@ -113,7 +110,6 @@ def process_message(user_id, text, reply_token):
                     reply_message(reply_token, result)
             return
         
-        # الأوامر
         if normalized in ["بدايه", "بداية", "القائمه", "القائمة"]:
             reply_message(reply_token, UI.main_menu(user, db))
         
@@ -190,11 +186,23 @@ def on_message(event):
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat()})
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "web"
+    })
 
 @app.route("/")
 def index():
     return "Bot Mesh - Running"
+
+@app.route("/cleanup")
+def cleanup():
+    try:
+        db.cleanup_memory()
+        return jsonify({"status": "cleaned", "timestamp": datetime.utcnow().isoformat()})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=Config.PORT, debug=(Config.ENV == "development"))
