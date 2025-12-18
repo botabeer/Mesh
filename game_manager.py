@@ -37,10 +37,6 @@ class GameManager:
 
             self.db.set_game_progress(user_id, game)
             
-            # ألعاب خاصة لها منطق مختلف
-            if game_cmd in ["مافيا", "توافق"]:
-                return game.start(user_id)
-            
             return game.start(user_id)
 
         except Exception as e:
@@ -52,14 +48,23 @@ class GameManager:
         if not game:
             return None, False
 
-        # لعبة التوافق والمافيا لها منطق مختلف
         if hasattr(game, 'check'):
             result = game.check(answer, user_id)
             if result:
-                if result.get('game_over'):
-                    self.db.clear_game_progress(user_id)
-                    return {"finished": True, "score": 1, "total": 1, "game_name": game.game_name, "achievements": []}, True
-                return None, False
+                if isinstance(result, dict):
+                    if result.get('game_over'):
+                        self.db.clear_game_progress(user_id)
+                        return {
+                            "finished": True,
+                            "score": 1,
+                            "total": 1,
+                            "game_name": game.game_name,
+                            "achievements": []
+                        }, True
+                    elif result.get('response'):
+                        from linebot.v3.messaging import TextMessage
+                        if not isinstance(result['response'], TextMessage):
+                            return result['response'], False
             return None, False
 
         correct = game.check_answer(answer)
