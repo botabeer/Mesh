@@ -23,20 +23,17 @@ class UI:
 
     def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
-        bg_color = c["card_secondary"] if self.theme == "light" else "#1A202C"
         return {
             "type": "box",
             "layout": "vertical",
             "contents": contents,
-            "backgroundColor": bg_color,
-            "cornerRadius": "16px",
+            "backgroundColor": c["card_secondary"],
+            "cornerRadius": "12px",
             "paddingAll": padding,
             "spacing": "sm",
             "margin": margin
         }
 
-    # ================= Main Menu =================
-    
     def main_menu(self, user: dict):
         c = self._c()
         name = user.get('name', 'مستخدم') if user else 'مستخدم'
@@ -71,7 +68,7 @@ class UI:
                                 "type": "text",
                                 "text": f"{points}",
                                 "size": "md",
-                                "color": c["success"],
+                                "color": c["text"],
                                 "weight": "bold"
                             },
                             {
@@ -103,8 +100,8 @@ class UI:
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    self._main_button("الصدارة", c["success"]),
-                    self._main_button("تحديات", c["accent"])
+                    self._main_button("الصدارة", c["accent"]),
+                    self._main_button("تحديات", c["text"])
                 ],
                 "spacing": "md",
                 "margin": "sm"
@@ -116,7 +113,7 @@ class UI:
                 "contents": [
                     self._secondary_button("ثيم", c["text_tertiary"]),
                     self._secondary_button("مساعدة", c["text_tertiary"]),
-                    self._secondary_button("انسحب", c["danger"])
+                    self._secondary_button("انسحب", c["text_muted"])
                 ],
                 "spacing": "sm",
                 "margin": "md"
@@ -144,7 +141,6 @@ class UI:
         )
 
     def _main_button(self, text, color):
-        c = self._c()
         return {
             "type": "box",
             "layout": "vertical",
@@ -158,12 +154,12 @@ class UI:
                             "text": text,
                             "size": "md",
                             "align": "center",
-                            "color": "#FFFFFF",
+                            "color": "#FFFFFF" if self.theme == "light" else "#000000",
                             "weight": "bold"
                         }
                     ],
                     "backgroundColor": color,
-                    "cornerRadius": "16px",
+                    "cornerRadius": "12px",
                     "paddingAll": "16px",
                     "height": "56px",
                     "justifyContent": "center"
@@ -190,8 +186,6 @@ class UI:
             "flex": 1
         }
 
-    # ================= Challenges Menu =================
-    
     def challenges_menu(self):
         c = self._c()
         
@@ -259,10 +253,11 @@ class UI:
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": ">",
-                                        "size": "lg",
-                                        "color": c["primary"],
-                                        "align": "center"
+                                        "text": "›",
+                                        "size": "xl",
+                                        "color": "#FFFFFF" if self.theme == "light" else "#000000",
+                                        "align": "center",
+                                        "weight": "bold"
                                     }
                                 ],
                                 "backgroundColor": c["primary"],
@@ -313,25 +308,23 @@ class UI:
             quickReply=self._qr(qr_items)
         )
 
-    # ================= Games Menu =================
-    
     def games_menu(self):
         c = self._c()
         
         games = [
             {"name": "ذكاء", "color": c["primary"]},
             {"name": "خمن", "color": c["secondary"]},
-            {"name": "رياضيات", "color": c["success"]},
-            {"name": "ترتيب", "color": c["accent"]},
-            {"name": "ضد", "color": c["warning"]},
-            {"name": "اسرع", "color": c["danger"]},
+            {"name": "رياضيات", "color": c["accent"]},
+            {"name": "ترتيب", "color": c["text"]},
+            {"name": "ضد", "color": c["text_secondary"]},
+            {"name": "اسرع", "color": c["text_tertiary"]},
             {"name": "سلسله", "color": c["primary"]},
-            {"name": "انسان حيوان", "color": c["secondary"]},
-            {"name": "تكوين", "color": c["success"]},
-            {"name": "اغاني", "color": c["accent"]},
-            {"name": "الوان", "color": c["warning"]},
-            {"name": "توافق", "color": c["danger"]},
-            {"name": "مافيا", "color": "#8B0000"}
+            {"name": "لعبه", "color": c["secondary"]},
+            {"name": "تكوين", "color": c["accent"]},
+            {"name": "اغاني", "color": c["text"]},
+            {"name": "الوان", "color": c["text_secondary"]},
+            {"name": "توافق", "color": c["text_tertiary"]},
+            {"name": "مافيا", "color": c["text_muted"]}
         ]
         
         contents = [
@@ -400,7 +393,6 @@ class UI:
         )
 
     def _game_card(self, name, color):
-        c = self._c()
         return {
             "type": "box",
             "layout": "vertical",
@@ -414,7 +406,7 @@ class UI:
                             "text": name,
                             "size": "sm",
                             "align": "center",
-                            "color": "#FFFFFF",
+                            "color": "#FFFFFF" if self.theme == "light" else "#000000",
                             "weight": "bold"
                         }
                     ],
@@ -432,8 +424,6 @@ class UI:
             "flex": 1
         }
 
-    # ================= Help Menu =================
-    
     def help_menu(self):
         c = self._c()
         
@@ -480,7 +470,7 @@ class UI:
                                 "type": "text",
                                 "text": cmd["cmd"],
                                 "size": "sm",
-                                "color": c["primary"],
+                                "color": c["text"],
                                 "weight": "bold",
                                 "flex": 0
                             },
@@ -531,8 +521,6 @@ class UI:
             quickReply=self._qr(qr_items)
         )
 
-    # ================= Registration =================
-    
     def registration_choice(self):
         c = self._c()
         
@@ -601,15 +589,13 @@ class UI:
         
         return FlexMessage(alt_text="التسجيل", contents=FlexContainer.from_dict(bubble))
 
-    # ================= Stats =================
-    
     def stats_card(self, user: dict):
         c = self._c()
         
         stats = [
-            {"label": "النقاط", "value": str(user.get('points', 0)), "color": c["success"]},
-            {"label": "الالعاب", "value": str(user.get('games', 0)), "color": c["primary"]},
-            {"label": "الفوز", "value": str(user.get('wins', 0)), "color": c["accent"]}
+            {"label": "النقاط", "value": str(user.get('points', 0)), "color": c["text"]},
+            {"label": "الالعاب", "value": str(user.get('games', 0)), "color": c["text"]},
+            {"label": "الفوز", "value": str(user.get('wins', 0)), "color": c["text"]}
         ]
         
         win_rate = round((user.get('wins', 0) / user.get('games', 1)) * 100) if user.get('games', 0) > 0 else 0
@@ -685,7 +671,7 @@ class UI:
                             "text": f"{win_rate}%",
                             "size": "lg",
                             "weight": "bold",
-                            "color": c["success"],
+                            "color": c["text"],
                             "flex": 0
                         }
                     ]
@@ -724,8 +710,6 @@ class UI:
             quickReply=self._qr(qr_items)
         )
 
-    # ================= Leaderboard =================
-    
     def leaderboard_card(self, leaders: list):
         c = self._c()
         
@@ -749,10 +733,8 @@ class UI:
             self._separator("lg")
         ]
         
-        medal_colors = {1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32"}
-        
         for i, leader in enumerate(leaders[:10], 1):
-            medal_color = medal_colors.get(i, c["accent"])
+            medal_color = c["text"] if i <= 3 else c["text_secondary"]
             
             contents.append(
                 self._glass_box([
@@ -769,7 +751,7 @@ class UI:
                                         "text": str(i),
                                         "size": "md",
                                         "align": "center",
-                                        "color": "#FFFFFF",
+                                        "color": "#FFFFFF" if self.theme == "light" else "#000000",
                                         "weight": "bold"
                                     }
                                 ],
@@ -805,7 +787,7 @@ class UI:
                                 "type": "text",
                                 "text": str(leader.get('points', 0)),
                                 "size": "xl",
-                                "color": c["primary"],
+                                "color": c["text"],
                                 "weight": "bold",
                                 "flex": 0
                             }
@@ -846,8 +828,6 @@ class UI:
             quickReply=self._qr(qr_items)
         )
 
-    # ================= Simple Messages =================
-    
     def ask_name(self):
         return TextMessage(text="ادخل اسمك عربي او انجليزي")
 
