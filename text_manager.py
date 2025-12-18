@@ -1,8 +1,7 @@
 import random
 import logging
 import os
-from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
-from config import Config
+from ui import UI
 
 logger = logging.getLogger(__name__)
 
@@ -31,83 +30,9 @@ class TextManager:
             logger.error(f"Load {path} error: {e}")
             return []
 
-    def _create_text_bubble(self, title, content, theme="light"):
-        """إنشاء Bubble مخصص للمحتوى النصي"""
-        c = Config.get_theme(theme)
-        
-        contents = [
-            {
-                "type": "text",
-                "text": title,
-                "size": "xl",
-                "weight": "bold",
-                "color": c["primary"],
-                "align": "center"
-            },
-            {"type": "separator", "margin": "lg"},
-            {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": content,
-                        "size": "md",
-                        "color": c["text"],
-                        "wrap": True,
-                        "align": "center"
-                    }
-                ],
-                "backgroundColor": c["card_secondary"],
-                "cornerRadius": "16px",
-                "paddingAll": "20px",
-                "margin": "lg"
-            },
-            {"type": "separator", "margin": "lg"},
-            {
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "مرة اخرى", "text": title},
-                        "style": "primary",
-                        "color": c["primary"],
-                        "height": "sm",
-                        "flex": 1
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "البداية", "text": "بداية"},
-                        "style": "secondary",
-                        "height": "sm",
-                        "flex": 1
-                    }
-                ],
-                "spacing": "sm",
-                "margin": "md"
-            }
-        ]
-        
-        bubble = {
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": contents,
-                "backgroundColor": c["card"],
-                "paddingAll": "24px"
-            }
-        }
-        
-        qr_items = ["تحدي", "سؤال", "اعتراف", "منشن", "موقف", "حكمة", "شخصية", "بداية"]
-        qr = QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in qr_items])
-        
-        return FlexMessage(alt_text=title, contents=FlexContainer.from_dict(bubble), quickReply=qr)
-
     def handle(self, cmd, theme="light"):
         cmd = cmd.strip().lower()
+        ui = UI(theme)
         
         mapping = {
             "تحدي": ("تحدي", self.challenges),
@@ -126,7 +51,7 @@ class TextManager:
             title, data = mapping[cmd]
             if data:
                 content = random.choice(data)
-                return self._create_text_bubble(title, content, theme)
+                return ui.text_content(title, content)
             else:
                 logger.warning(f"No data for command: {cmd}")
 
