@@ -19,7 +19,7 @@ class GameManager:
             "تكوين": ("games.letters_words", "LettersWordsGame"),
             "لون": ("games.word_color", "WordColorGame"),
             "حرف": ("games.letters", "LettersGame")
-            "مافيا": ("games.letters", "LettersGame")
+            "مافيا": ("games.Mafia", "MafiaGame")
             "توافق": ("games.letters", "LettersGame")
         }
     
