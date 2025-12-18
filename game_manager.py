@@ -13,7 +13,6 @@ class GameManager:
             "رياضيات": ("games.math", "MathGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
             "ضد": ("games.opposite", "OppositeGame"),
-            "اضداد": ("games.opposite", "OppositeGame"),
             "لعبه": ("games.human_animal", "HumanAnimalGame"),
             "لعبة": ("games.human_animal", "HumanAnimalGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
