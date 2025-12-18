@@ -9,7 +9,7 @@ class GameManager:
         self.db = db
         self.game_mappings = {
             "خمن": ("games.guess", "GuessGame"),
-            "ذكاء": ("games.iq", "IqGame"),
+            "ذكاء": ("games.iq", "IQGame"),  # تم تغيير IqGame إلى IQGame
             "ترتيب": ("games.scramble", "ScrambleGame"),
             "رياضيات": ("games.math", "MathGame"),
             "اسرع": ("games.fast_typing", "FastTypingGame"),
