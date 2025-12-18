@@ -5,28 +5,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # إعدادات LINE
     LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-    
-    # إعدادات قاعدة البيانات
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
-    
-    # إعدادات الخادم
     PORT = int(os.getenv("PORT", 5000))
-    WORKERS = int(os.getenv("WORKERS", 4))  # زيادة Workers
+    WORKERS = int(os.getenv("WORKERS", 4))
     ENV = os.getenv("ENV", "production")
     
-    # إعدادات الألعاب
     QUESTIONS_PER_GAME = 5
     MAX_NAME_LENGTH = 50
     MIN_NAME_LENGTH = 1
-    
-    # إعدادات المكافآت
     DAILY_REWARD_POINTS = 10
     DAILY_REWARD_HOURS = 24
     
-    # الإنجازات
     ACHIEVEMENTS = {
         "first_game": {"name": "اللعبة الاولى", "desc": "اكمل اول لعبة", "points": 5},
         "ten_games": {"name": "محترف", "desc": "اكمل 10 العاب", "points": 20},
@@ -42,37 +33,48 @@ class Config:
     
     @staticmethod
     def normalize(text):
-        """تطبيع النص العربي"""
         if not text:
             return ""
-        
-        # إزالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-        
-        # توحيد الحروف
-        replacements = {
-            "أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي",
-            "ة": "ه", "ؤ": "و", "ئ": "ي"
-        }
+        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
         for old, new in replacements.items():
             text = text.replace(old, new)
-        
-        # إزالة الرموز
         text = re.sub(r"[^\w\sء-ي]", "", text)
-        
         return text.strip().lower()
     
     @staticmethod
     def get_theme(theme):
-        """الحصول على ألوان الثيم (موحد - أسود/أبيض)"""
-        return {
-            "bg": "#000000",
-            "text": "#FFFFFF",
-            "secondary": "#CCCCCC",
-            "border": "#333333",
-            "primary": "#FFFFFF",
-            "success": "#FFFFFF",
-            "warning": "#CCCCCC",
-            "danger": "#FFFFFF",
-            "info": "#CCCCCC"
-        }
+        if theme == "dark":
+            return {
+                "bg": "#000000",
+                "card": "#1A1A1A",
+                "text": "#FFFFFF",
+                "text_secondary": "#B3B3B3",
+                "text_tertiary": "#808080",
+                "border": "#333333",
+                "primary": "#FFFFFF",
+                "success": "#22C55E",
+                "warning": "#F59E0B",
+                "danger": "#EF4444",
+                "info": "#3B82F6",
+                "accent": "#8B5CF6",
+                "glass": "#1A1A1A",
+                "card_secondary": "#262626"
+            }
+        else:
+            return {
+                "bg": "#FFFFFF",
+                "card": "#F9FAFB",
+                "text": "#111827",
+                "text_secondary": "#6B7280",
+                "text_tertiary": "#9CA3AF",
+                "border": "#E5E7EB",
+                "primary": "#3B82F6",
+                "success": "#10B981",
+                "warning": "#F59E0B",
+                "danger": "#EF4444",
+                "info": "#3B82F6",
+                "accent": "#8B5CF6",
+                "glass": "#F3F4F6",
+                "card_secondary": "#F3F4F6"
+            }
