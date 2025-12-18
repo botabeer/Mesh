@@ -7,26 +7,24 @@ class GameManager:
     def __init__(self, db):
         self.db = db
         self.game_mappings = {
-            "ذكاء": ("games.iq", "IQGame"),
             "خمن": ("games.guess", "GuessGame"),
-            "رياضيات": ("games.math", "MathGame"),
+            "ذكاء": ("games.iq", "IQGame"),
             "ترتيب": ("games.scramble", "ScrambleGame"),
+            "رياضيات": ("games.math", "MathGame"),
+            "اسرع": ("games.fast_typing", "FastTypingGame"),
             "ضد": ("games.opposite", "OppositeGame"),
             "اضداد": ("games.opposite", "OppositeGame"),
-            "كتابه": ("games.fast_typing", "FastTypingGame"),
-            "كتابة": ("games.fast_typing", "FastTypingGame"),
+            "لعبه": ("games.human_animal", "HumanAnimalGame"),
+            "لعبة": ("games.human_animal", "HumanAnimalGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
             "سلسلة": ("games.chain_words", "ChainWordsGame"),
-            "انسان": ("games.human_animal", "HumanAnimalGame"),
-            "إنسان": ("games.human_animal", "HumanAnimalGame"),
-            "حيوان": ("games.human_animal", "HumanAnimalGame"),
-            "كلمات": ("games.letters_words", "LettersWordsGame"),
             "اغنيه": ("games.song", "SongGame"),
-            "أغنية": ("games.song", "SongGame"),
-            "الوان": ("games.word_color", "WordColorGame"),
-            "ألوان": ("games.word_color", "WordColorGame"),
-            "توافق": ("games.compatibility", "CompatibilityGame"),
-            "مافيا": ("games.mafia", "MafiaGame")
+            "اغنية": ("games.song", "SongGame"),
+            "تكوين": ("games.letters_words", "LettersWordsGame"),
+            "لون": ("games.word_color", "WordColorGame"),
+            "حرف": ("games.letters_words", "LettersWordsGame"),
+            "مافيا": ("games.mafia", "MafiaGame"),
+            "توافق": ("games.compatibility", "CompatibilityGame")
         }
     
     def start_game(self, user_id, game_cmd, theme="light"):
@@ -39,7 +37,7 @@ class GameManager:
             game_class = getattr(module, class_name)
             game = game_class(self.db, theme)
             self.db.set_game_progress(user_id, game)
-            return game.start()
+            return game.start(user_id)
         except Exception as e:
             logger.error(f"Error starting game {game_cmd}: {e}")
             return None
@@ -49,7 +47,7 @@ class GameManager:
         if not game:
             return None, None
         
-        result = game.check(answer)
+        result = game.check(answer, user_id)
         
         if result is None:
             score = game.score
@@ -75,18 +73,24 @@ class GameManager:
                 "achievements": achievements
             }, None
         
+        if isinstance(result, dict):
+            if result.get("game_over"):
+                self.db.clear_game_progress(user_id)
+                return result, None
+            return result.get("response"), result.get("skip", False)
+        
         question, correct = result
         return question, correct
     
     def get_hint(self, user_id):
         game = self.db.get_game_progress(user_id)
-        if game:
+        if game and hasattr(game, 'get_hint'):
             return game.get_hint()
         return None
     
     def reveal_answer(self, user_id):
         game = self.db.get_game_progress(user_id)
-        if game:
+        if game and hasattr(game, 'reveal_answer'):
             return game.reveal_answer()
         return None
     
