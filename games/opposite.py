@@ -4,8 +4,6 @@ from config import Config
 
 
 class OppositeGame(BaseGame):
-    """لعبة ضد - 50 كلمة وعكسها"""
-    
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
         self.game_name = "ضد"
@@ -67,7 +65,6 @@ class OppositeGame(BaseGame):
         random.shuffle(self.questions)
 
     def get_question(self):
-        """اختيار كلمة"""
         word = self.questions[self.current_q % len(self.questions)]
         self.current_answer = self.opposites[word]
         
@@ -75,6 +72,5 @@ class OppositeGame(BaseGame):
         return self.build_question_flex(word, hint)
 
     def check_answer(self, answer: str) -> bool:
-        """التحقق من الإجابة"""
         normalized = Config.normalize(answer)
         return any(Config.normalize(a) == normalized for a in self.current_answer)
