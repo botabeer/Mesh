@@ -2,6 +2,7 @@ import random
 from games.base import BaseGame
 from config import Config
 
+
 class ChainWordsGame(BaseGame):
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
@@ -17,6 +18,7 @@ class ChainWordsGame(BaseGame):
         
         self.last_word = random.choice(self.words)
         self.used = {self.last_word}
+        self.error_message = None
 
     def get_question(self):
         last_letter = self.last_word[-1]
@@ -30,18 +32,22 @@ class ChainWordsGame(BaseGame):
         normalized = Config.normalize(answer)
         
         if len(normalized) < 2:
+            self.error_message = "الكلمة قصيرة جدا"
             return False
         
         required_letter = Config.normalize(self.last_word[-1])
         first_letter = normalized[0]
         
         if first_letter != required_letter:
+            self.error_message = f"يجب ان تبدأ الكلمة بحرف: {required_letter}"
             return False
         
         if normalized in self.used:
+            self.error_message = "هذه الكلمة مستخدمة بالفعل"
             return False
         
         self.used.add(normalized)
         self.last_word = answer.strip()
+        self.error_message = None
         
         return True
