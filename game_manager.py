@@ -20,6 +20,7 @@ class GameManager:
             "لون": ("games.word_color", "WordColorGame"),
             "حرف": ("games.letters", "LettersGame")
             "مافيا": ("games.letters", "LettersGame")
+            "توافق": ("games.letters", "LettersGame")
         }
     
     def start_game(self, user_id, game_cmd, theme="light"):
