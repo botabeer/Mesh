@@ -1,198 +1,104 @@
+import importlib
 import logging
-from threading import Lock
-from datetime import datetime
-from config import Config
-from ui import UI
 
 logger = logging.getLogger(__name__)
 
 class GameManager:
-    MAX_ROUNDS = 5
-
-    def __init__(self, db, theme="light"):
+    def __init__(self, db):
         self.db = db
-        self.theme = theme
-        self.ui = UI(theme)
-        self._lock = Lock()
-        self._active = {}
-        self._mafia_game = None
-        self._games = self._load_games()
-        logger.info(f"GameManager loaded {len(self._games)} games")
-
-    def _load_games(self):
-        games = {}
-        game_mappings = {
-            "ذكاء": ("games.iq", "IqGame"),
+        self.game_mappings = {
+            "ذكاء": ("games.iq", "IQGame"),
             "خمن": ("games.guess", "GuessGame"),
             "رياضيات": ("games.math", "MathGame"),
             "ترتيب": ("games.scramble", "ScrambleGame"),
             "ضد": ("games.opposite", "OppositeGame"),
-            "اسرع": ("games.fast_typing", "FastTypingGame"),
+            "اضداد": ("games.opposite", "OppositeGame"),
+            "كتابه": ("games.fast_typing", "FastTypingGame"),
+            "كتابة": ("games.fast_typing", "FastTypingGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
-            "لعبه": ("games.human_animal", "HumanAnimalGame"),
-            "تكوين": ("games.letters_words", "LettersWordsGame"),
-            "اغاني": ("games.song", "SongGame"),
+            "سلسلة": ("games.chain_words", "ChainWordsGame"),
+            "انسان": ("games.human_animal", "HumanAnimalGame"),
+            "إنسان": ("games.human_animal", "HumanAnimalGame"),
+            "حيوان": ("games.human_animal", "HumanAnimalGame"),
+            "كلمات": ("games.letters_words", "LettersWordsGame"),
+            "اغنيه": ("games.song", "SongGame"),
+            "أغنية": ("games.song", "SongGame"),
             "الوان": ("games.word_color", "WordColorGame"),
+            "ألوان": ("games.word_color", "WordColorGame"),
             "توافق": ("games.compatibility", "CompatibilityGame"),
-            "مافيا": ("games.mafia", "MafiaGame"),
+            "مافيا": ("games.mafia", "MafiaGame")
         }
-
-        for name, (path, cls) in game_mappings.items():
-            try:
-                module = __import__(path, fromlist=[cls])
-                game_class = getattr(module, cls)
-                
-                if name == "مافيا":
-                    games[name] = game_class
-                else:
-                    instance = game_class(self.db, self.theme)
-                    if not hasattr(instance, "start"):
-                        raise AttributeError("Missing start() method")
-                    games[name] = game_class
-                
-                logger.info(f"Loaded game: {name}")
-            except Exception as e:
-                logger.error(f"Failed loading {name}: {e}")
-        return games
-
-    def handle(self, user_id, cmd, raw_text, theme="light"):
-        normalized_cmd = Config.normalize(cmd)
-
-        if self.db.is_ignored(user_id):
-            if normalized_cmd in ["انسحب", "تسجيل", "بداية", "العاب", "نقاطي", "الصدارة", "ثيم", "مساعدة"]:
-                pass
-            else:
-                return None
-
-        if normalized_cmd == "مافيا":
-            return self._start_mafia_game(user_id, theme)
-        
-        if self._mafia_game and self._mafia_game.game_active:
-            mafia_response = self._mafia_game.check(raw_text, user_id)
-            if mafia_response:
-                return mafia_response.get("response")
-
-        if normalized_cmd in self._games and normalized_cmd != "مافيا":
-            return self._start_game(user_id, normalized_cmd, theme)
-
-        with self._lock:
-            state = self._active.get(user_id)
-
-        if state:
-            return self._handle_answer(user_id, raw_text)
-
-        return None
-
-    def _start_mafia_game(self, user_id, theme="light"):
-        try:
-            if not self._mafia_game or not self._mafia_game.game_active:
-                GameClass = self._games["مافيا"]
-                self._mafia_game = GameClass(self.db, theme)
-                responses = self._mafia_game.start(user_id)
-                return responses if isinstance(responses, list) else [responses]
-            else:
-                return self._mafia_game.game_status_screen()
-        except Exception as e:
-            logger.exception(f"Start mafia game error: {e}")
-            self._mafia_game = None
+    
+    def start_game(self, user_id, game_cmd, theme="light"):
+        if game_cmd not in self.game_mappings:
             return None
-
-    def _start_game(self, user_id, game_name, theme="light"):
-        try:
-            GameClass = self._games[game_name]
-            game = GameClass(self.db, theme)
-            game.game_name = game_name
-            game.total_q = self.MAX_ROUNDS
-
-            progress = self.db.get_game_progress(user_id)
-            if progress and progress.get("game") == game_name:
-                if hasattr(game, "restore"):
-                    game.restore(progress)
-
-            with self._lock:
-                self._active[user_id] = {
-                    "game": game,
-                    "round": getattr(progress, "round", 0) if progress else 0,
-                    "score": getattr(progress, "score", 0) if progress else 0,
-                    "start_time": datetime.now()
-                }
-
-            response = game.start(user_id)
-            return response
-
-        except Exception as e:
-            logger.exception(f"Start game error [{game_name}]: {e}")
-            with self._lock:
-                self._active.pop(user_id, None)
-            return None
-
-    def stop_game(self, user_id):
-        if self._mafia_game and user_id in self._mafia_game.players:
-            return False
         
-        with self._lock:
-            state = self._active.pop(user_id, None)
-
-        if not state:
-            return False
-
+        module_name, class_name = self.game_mappings[game_cmd]
         try:
-            game = state["game"]
-            self.db.save_game_progress(user_id, {
-                "game": getattr(game, "game_name", ""),
-                "score": state.get("score", 0),
-                "round": state.get("round", 0)
-            })
-            if hasattr(game, "on_stop"):
-                game.on_stop(user_id)
+            module = importlib.import_module(module_name)
+            game_class = getattr(module, class_name)
+            game = game_class(self.db, theme)
+            self.db.set_game_progress(user_id, game)
+            return game.start()
         except Exception as e:
-            logger.error(f"Stop error: {e}")
-
-        logger.info(f"Game stopped for {user_id}")
-        return True
-
-    def _handle_answer(self, user_id, answer):
-        with self._lock:
-            state = self._active.get(user_id)
-            if not state:
-                return None
+            logger.error(f"Error starting game {game_cmd}: {e}")
+            return None
+    
+    def process_answer(self, user_id, answer):
+        game = self.db.get_game_progress(user_id)
+        if not game:
+            return None, None
+        
+        result = game.check(answer)
+        
+        if result is None:
+            score = game.score
+            total = game.total_q
+            game_name = game.game_name
+            self.db.add_points(user_id, score)
+            self.db.increment_games(user_id)
             
-            game = state["game"]
-            game_data = {
-                'game': game,
-                'round': state['round'],
-                'score': state['score']
-            }
-
-        try:
-            result = game.check(answer, user_id)
-            if not result:
-                return None
-
-            if result.get("game_over"):
-                with self._lock:
-                    self._active.pop(user_id, None)
-                self.db.clear_game_progress(user_id)
-                return result.get("response")
-
-            with self._lock:
-                if user_id in self._active:
-                    self._active[user_id]['round'] = game_data['round']
-                    self._active[user_id]['score'] = game_data['score']
-
-            return result.get("response")
-
-        except Exception as e:
-            logger.exception(f"Answer error: {e}")
-            with self._lock:
-                self._active.pop(user_id, None)
-            return None
-
+            if score == total:
+                self.db.increment_wins(user_id)
+            else:
+                self.db.reset_streak(user_id)
+            
+            self.db.add_game_played(user_id, game_name)
+            achievements = self.db.check_achievements(user_id)
+            self.db.clear_game_progress(user_id)
+            
+            return {
+                "finished": True,
+                "score": score,
+                "total": total,
+                "game_name": game_name,
+                "achievements": achievements
+            }, None
+        
+        question, correct = result
+        return question, correct
+    
+    def get_hint(self, user_id):
+        game = self.db.get_game_progress(user_id)
+        if game:
+            return game.get_hint()
+        return None
+    
+    def reveal_answer(self, user_id):
+        game = self.db.get_game_progress(user_id)
+        if game:
+            return game.reveal_answer()
+        return None
+    
+    def stop_game(self, user_id):
+        game = self.db.get_game_progress(user_id)
+        if game:
+            score = game.score
+            self.db.add_points(user_id, score)
+            self.db.reset_streak(user_id)
+            self.db.clear_game_progress(user_id)
+            return score
+        return 0
+    
     def count_active(self):
-        with self._lock:
-            count = len(self._active)
-        
-        if self._mafia_game and self._mafia_game.game_active:
-            count += 1
-        
-        return count
+        return len(self.db._game_progress)

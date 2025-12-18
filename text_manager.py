@@ -1,58 +1,40 @@
 import random
-import logging
 import os
-from ui import UI
-
-logger = logging.getLogger(__name__)
-
 
 class TextManager:
     def __init__(self):
-        self.challenges = self._load_file("games/challenges.txt")
-        self.confessions = self._load_file("games/confessions.txt")
-        self.mentions = self._load_file("games/mentions.txt")
-        self.personality = self._load_file("games/personality.txt")
-        self.questions = self._load_file("games/questions.txt")
-        self.quotes = self._load_file("games/quotes.txt")
-        self.situations = self._load_file("games/situations.txt")
-        logger.info(f"TextManager loaded {sum(len(v) for v in [self.challenges, self.confessions, self.mentions, self.personality, self.questions, self.quotes, self.situations])} items")
-
-    def _load_file(self, path):
+        self.base_path = "games"
+        self.challenges = self._load_file("challenges.txt")
+        self.confessions = self._load_file("confessions.txt")
+        self.mentions = self._load_file("mentions.txt")
+        self.personality = self._load_file("personality.txt")
+        self.questions = self._load_file("questions.txt")
+        self.quotes = self._load_file("quotes.txt")
+        self.situations = self._load_file("situations.txt")
+        
+        self.cmd_mapping = {
+            "تحدي": self.challenges,
+            "اعتراف": self.confessions,
+            "منشن": self.mentions,
+            "شخصيه": self.personality,
+            "شخصية": self.personality,
+            "سؤال": self.questions,
+            "حكمه": self.quotes,
+            "حكمة": self.quotes,
+            "موقف": self.situations
+        }
+    
+    def _load_file(self, filename):
+        path = os.path.join(self.base_path, filename)
         try:
-            if not os.path.exists(path):
-                logger.warning(f"File not found: {path}")
-                return []
             with open(path, "r", encoding="utf-8") as f:
                 lines = [line.strip() for line in f if line.strip()]
-                logger.info(f"Loaded {len(lines)} items from {path}")
-                return lines
-        except Exception as e:
-            logger.error(f"Load {path} error: {e}")
-            return []
-
-    def handle(self, cmd, theme="light"):
-        cmd = cmd.strip().lower()
-        ui = UI(theme)
-        
-        mapping = {
-            "تحدي": ("تحدي", self.challenges),
-            "اعتراف": ("اعتراف", self.confessions),
-            "منشن": ("منشن", self.mentions),
-            "شخصيه": ("شخصية", self.personality),
-            "شخصية": ("شخصية", self.personality),
-            "سؤال": ("سؤال", self.questions),
-            "سوال": ("سؤال", self.questions),
-            "حكمه": ("حكمة", self.quotes),
-            "حكمة": ("حكمة", self.quotes),
-            "موقف": ("موقف", self.situations)
-        }
-        
-        if cmd in mapping:
-            title, data = mapping[cmd]
-            if data:
-                content = random.choice(data)
-                return ui.text_content(title, content)
-            else:
-                logger.warning(f"No data for command: {cmd}")
-
+                return lines if lines else ["المحتوى غير متوفر"]
+        except:
+            return ["المحتوى غير متوفر"]
+    
+    def get_content(self, cmd):
+        content_list = self.cmd_mapping.get(cmd)
+        if content_list:
+            return random.choice(content_list)
         return None

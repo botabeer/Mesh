@@ -1,13 +1,14 @@
 import logging
-import atexit
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
-from collections import defaultdict
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
+from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, QuickReply, QuickReplyItem, MessageAction
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+import pytz
+
 from config import Config
 from database import Database
 from game_manager import GameManager
@@ -16,165 +17,220 @@ from ui import UI
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-line_config = Configuration(access_token=Config.LINE_TOKEN)
-handler = WebhookHandler(Config.LINE_SECRET)
+line_config = Configuration(access_token=Config.LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler(Config.LINE_CHANNEL_SECRET)
+
 db = Database()
 game_mgr = GameManager(db)
 text_mgr = TextManager()
+
 executor = ThreadPoolExecutor(max_workers=Config.WORKERS, thread_name_prefix="worker")
 
-class RateLimiter:
-    def __init__(self, max_requests=20, window=60):
-        self.max_requests = max_requests
-        self.window = window
-        self.requests = defaultdict(list)
+scheduler = BackgroundScheduler(timezone=pytz.UTC)
+scheduler.add_job(func=lambda: db.cleanup_memory(), trigger="interval", minutes=30)
+scheduler.start()
 
-    def is_allowed(self, user_id):
-        now = datetime.now().timestamp()
-        cutoff = now - self.window
-        self.requests[user_id] = [t for t in self.requests[user_id] if t > cutoff]
-        if len(self.requests[user_id]) >= self.max_requests:
-            return False
-        self.requests[user_id].append(now)
-        return True
-
-rate_limiter = RateLimiter(Config.RATE_LIMIT_REQUESTS, Config.RATE_LIMIT_WINDOW)
-
-def cleanup():
-    logger.info("Shutting down executor...")
-    executor.shutdown(wait=True, cancel_futures=True)
-    db.cleanup_memory(timeout=0)
-    logger.info("Cleanup completed")
-
-atexit.register(cleanup)
+def get_quick_reply():
+    items = []
+    commands = [
+        "بداية", "العاب", "نقاطي", "الصدارة", "انجازات", "مكافأة",
+        "ثيم", "ايقاف", "مساعدة", "تحدي", "سؤال", "اعتراف",
+        "منشن", "موقف", "حكمة", "شخصية"
+    ]
+    for cmd in commands:
+        items.append(QuickReplyItem(action=MessageAction(label=cmd, text=cmd)))
+    return QuickReply(items=items)
 
 def reply_message(reply_token, messages):
-    if not reply_token or not messages:
-        return
     if not isinstance(messages, list):
         messages = [messages]
-    messages = [m for m in messages if m][:5]
-    if not messages:
-        return
+    safe_messages = [m for m in messages if m][:5]
     try:
         with ApiClient(line_config) as client:
             MessagingApi(client).reply_message(
-                ReplyMessageRequest(reply_token=reply_token, messages=messages)
+                ReplyMessageRequest(reply_token=reply_token, messages=safe_messages)
             )
-        logger.info(f"Reply sent ({len(messages)})")
     except Exception as e:
         logger.error(f"Reply error: {e}")
 
 def process_message(user_id, text, reply_token):
     try:
-        if not rate_limiter.is_allowed(user_id):
-            logger.warning(f"Rate limit exceeded for {user_id}")
+        normalized = Config.normalize(text)
+        
+        if db.is_waiting_name(user_id):
+            if len(text) < Config.MIN_NAME_LENGTH or len(text) > Config.MAX_NAME_LENGTH:
+                reply_message(reply_token, TextMessage(text=f"الاسم يجب أن يكون بين {Config.MIN_NAME_LENGTH} و {Config.MAX_NAME_LENGTH} حرف"))
+                return
+            db.register_user(user_id, text)
+            db.clear_waiting_name(user_id)
+            user = db.get_user(user_id)
+            reply_message(reply_token, [
+                TextMessage(text=f"مرحبا {text}! تم تسجيلك بنجاح"),
+                UI.main_menu(user, db)
+            ])
             return
-            
-        if len(text) > Config.MAX_MESSAGE_LENGTH:
-            logger.warning(f"Message too long from {user_id}")
+        
+        if db.is_changing_name(user_id):
+            if len(text) < Config.MIN_NAME_LENGTH or len(text) > Config.MAX_NAME_LENGTH:
+                reply_message(reply_token, TextMessage(text=f"الاسم يجب أن يكون بين {Config.MIN_NAME_LENGTH} و {Config.MAX_NAME_LENGTH} حرف"))
+                return
+            db.update_name(user_id, text)
+            db.clear_changing_name(user_id)
+            reply_message(reply_token, TextMessage(text=f"تم تغيير اسمك إلى: {text}"))
             return
-
-        logger.info(f"Processing message from {user_id}: {text[:50]}")
-        cmd = Config.normalize(text)
-        if not cmd:
+        
+        if not db.is_registered(user_id):
+            if normalized in ["تسجيل", "بدايه", "بداية"]:
+                db.set_waiting_name(user_id)
+                reply_message(reply_token, TextMessage(text="اكتب اسمك للتسجيل:"))
+            else:
+                reply_message(reply_token, TextMessage(text="مرحبا! اكتب 'تسجيل' للبدء"))
             return
-
+        
         db.update_activity(user_id)
         user = db.get_user(user_id)
-        theme = db.get_theme(user_id) if user else "light"
-        ui = UI(theme=theme)
-
-        if db.is_ignored(user_id):
-            if cmd == "تسجيل":
-                db.set_ignored(user_id, False)
-                db.set_waiting_name(user_id, True)
-                reply_message(reply_token, ui.ask_name())
+        
+        if normalized == "انسحب":
+            db.unregister(user_id)
+            reply_message(reply_token, TextMessage(text="تم حذف حسابك بنجاح. اكتب 'تسجيل' للعودة"))
             return
-
-        if cmd in ("بداية", "بدايه"):
-            if not user:
-                reply_message(reply_token, ui.registration_choice())
-            else:
-                reply_message(reply_token, ui.main_menu(user))
-            return
-            
-        if cmd in ("مساعدة", "مساعده"):
-            reply_message(reply_token, ui.help_menu())
-            return
-            
-        if cmd == "ثيم":
-            if user:
-                new_theme = db.toggle_theme(user_id)
-                ui_new = UI(theme=new_theme)
-                theme_name = "الوضع الداكن" if new_theme == "dark" else "الوضع الفاتح"
-                reply_message(reply_token, [ui_new.theme_changed(theme_name), ui_new.main_menu(user)])
-            else:
-                reply_message(reply_token, ui.registration_choice())
-            return
-            
-        if cmd in ("تحديات", "تحدي"):
-            reply_message(reply_token, ui.challenges_menu())
-            return
-            
-        if db.is_waiting_name(user_id):
-            if cmd in Config.RESERVED_COMMANDS:
-                reply_message(reply_token, ui.ask_name_invalid())
+        
+        if db.has_active_game(user_id):
+            if normalized == "ايقاف":
+                score = game_mgr.stop_game(user_id)
+                reply_message(reply_token, TextMessage(
+                    text=f"تم إيقاف اللعبة. حصلت على {score} نقطة",
+                    quickReply=get_quick_reply()
+                ))
                 return
-            name = Config.sanitize_text(text.strip(), Config.MAX_NAME_LENGTH)
-            if Config.validate_name(name):
-                db.register_user(user_id, name)
-                db.set_waiting_name(user_id, False)
-                reply_message(reply_token, ui.main_menu(db.get_user(user_id)))
+            
+            if normalized == "تلميح":
+                hint_msg = game_mgr.get_hint(user_id)
+                if hint_msg:
+                    reply_message(reply_token, hint_msg)
+                else:
+                    reply_message(reply_token, TextMessage(text="التلميحات غير متوفرة"))
+                return
+            
+            if normalized in ["الاجابه", "الإجابة", "اجابه", "إجابة"]:
+                reveal_msg = game_mgr.reveal_answer(user_id)
+                if reveal_msg:
+                    reply_message(reply_token, reveal_msg)
+                else:
+                    reply_message(reply_token, TextMessage(text="عرض الإجابة غير متوفر"))
+                return
+            
+            result, correct = game_mgr.process_answer(user_id, text)
+            
+            if result and result.get("finished"):
+                score = result['score']
+                total = result['total']
+                game_name = result['game_name']
+                achievements = result.get('achievements', [])
+                
+                status = "ممتاز! فوز مثالي" if score == total else f"جيد! {score}/{total}"
+                msg = f"{game_name}\n{status}\nالنقاط: +{score}"
+                
+                messages = [TextMessage(text=msg, quickReply=get_quick_reply())]
+                
+                for achievement in achievements:
+                    messages.append(UI.achievement_unlocked(achievement, user['theme']))
+                
+                reply_message(reply_token, messages)
             else:
-                reply_message(reply_token, ui.ask_name_invalid())
+                feedback = "صحيح" if correct else f"خطأ. الإجابة: {game_mgr.db.get_game_progress(user_id).current_answer if not correct else ''}"
+                messages = [TextMessage(text=feedback)]
+                if result:
+                    messages.append(result)
+                reply_message(reply_token, messages)
             return
-            
-        if not user:
-            if cmd == "تسجيل":
-                db.set_waiting_name(user_id, True)
-                reply_message(reply_token, ui.ask_name())
+        
+        if normalized in ["بدايه", "بداية", "القائمه", "القائمة"]:
+            reply_message(reply_token, UI.main_menu(user, db))
+        
+        elif normalized == "العاب":
+            reply_message(reply_token, UI.games_list(user['theme']))
+        
+        elif normalized in ["نقاطي", "احصائياتي", "إحصائياتي"]:
+            win_rate = (user['wins'] / user['games'] * 100) if user['games'] > 0 else 0
+            msg = f"اسم: {user['name']}\nنقاط: {user['points']}\nألعاب: {user['games']}\nانتصارات: {user['wins']}\nنسبة الفوز: {win_rate:.1f}%\nسلسلة: {user['streak']}\nأفضل سلسلة: {user['best_streak']}"
+            reply_message(reply_token, TextMessage(text=msg, quickReply=get_quick_reply()))
+        
+        elif normalized in ["الصداره", "الصدارة"]:
+            leaders = db.get_leaderboard(10)
+            reply_message(reply_token, UI.leaderboard(leaders, user['theme']))
+        
+        elif normalized in ["انجازات", "إنجازات"]:
+            user_achievements = db.get_user_achievements(user_id)
+            reply_message(reply_token, UI.achievements_list(user_achievements, user['theme']))
+        
+        elif normalized in ["مكافأة", "مكافاة"]:
+            if db.claim_reward(user_id):
+                reply_message(reply_token, TextMessage(
+                    text=f"تم! حصلت على +{Config.DAILY_REWARD_POINTS} نقطة",
+                    quickReply=get_quick_reply()
+                ))
             else:
-                reply_message(reply_token, ui.registration_choice())
-            return
+                reply_message(reply_token, TextMessage(
+                    text=f"يمكنك الحصول على المكافأة كل {Config.DAILY_REWARD_HOURS} ساعة",
+                    quickReply=get_quick_reply()
+                ))
+        
+        elif normalized == "ثيم":
+            new_theme = "dark" if user['theme'] == "light" else "light"
+            db.change_theme(user_id, new_theme)
+            reply_message(reply_token, TextMessage(
+                text=f"تم تغيير الثيم إلى: {'الداكن' if new_theme == 'dark' else 'الفاتح'}",
+                quickReply=get_quick_reply()
+            ))
+        
+        elif normalized in ["مساعده", "مساعدة", "help"]:
+            help_text = """Bot Mesh - بوت ألعاب عربي
 
-        if cmd == "نقاطي":
-            reply_message(reply_token, ui.stats_card(user))
-            return
-            
-        if cmd in ("الصدارة", "الصداره"):
-            reply_message(reply_token, ui.leaderboard_card(db.get_leaderboard()))
-            return
-            
-        if cmd == "العاب":
-            reply_message(reply_token, ui.games_menu())
-            return
-            
-        if cmd in ("ايقاف", "ايقاف اللعبة"):
-            if game_mgr.stop_game(user_id):
-                reply_message(reply_token, ui.game_stopped())
-            return
+الأوامر الأساسية:
+• بداية - القائمة الرئيسية
+• العاب - قائمة الألعاب
+• نقاطي - إحصائياتك
+• الصدارة - أفضل اللاعبين
+• انجازات - إنجازاتك
+• مكافأة - مكافأة يومية
+• ثيم - تغيير الثيم
+• ايقاف - إيقاف اللعبة
 
-        text_response = text_mgr.handle(cmd, theme)
-        if text_response:
-            reply_message(reply_token, text_response)
-            return
+الألعاب المتوفرة:
+ذكاء، خمن، رياضيات، ترتيب، ضد، كتابه، سلسله، انسان، كلمات، اغنيه، الوان، توافق
 
-        game_response = game_mgr.handle(user_id=user_id, cmd=cmd, theme=theme, raw_text=text)
-        if game_response:
-            reply_message(reply_token, game_response)
-
+محتوى إضافي:
+تحدي، سؤال، اعتراف، منشن، موقف، حكمة، شخصية"""
+            reply_message(reply_token, TextMessage(text=help_text, quickReply=get_quick_reply()))
+        
+        elif normalized in game_mgr.game_mappings:
+            question = game_mgr.start_game(user_id, normalized, user['theme'])
+            if question:
+                reply_message(reply_token, question)
+            else:
+                reply_message(reply_token, TextMessage(text="خطأ في بدء اللعبة", quickReply=get_quick_reply()))
+        
+        elif normalized in text_mgr.cmd_mapping:
+            content = text_mgr.get_content(normalized)
+            if content:
+                reply_message(reply_token, TextMessage(text=content, quickReply=get_quick_reply()))
+        
+        else:
+            reply_message(reply_token, TextMessage(
+                text="أمر غير معروف. اكتب 'مساعدة' لعرض الأوامر",
+                quickReply=get_quick_reply()
+            ))
+    
     except Exception as e:
         logger.exception(f"Processing error: {e}")
-
-@handler.add(MessageEvent, message=TextMessageContent)
-def on_message(event):
-    executor.submit(process_message, event.source.user_id, event.message.text, event.reply_token)
+        reply_message(reply_token, TextMessage(text="حدث خطأ. حاول مرة أخرى"))
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -183,12 +239,12 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        logger.warning(f"Invalid signature from {request.remote_addr}")
         abort(400)
-    except Exception as e:
-        logger.exception(f"Webhook error: {e}")
-        abort(500)
-    return "OK", 200
+    return "OK"
+
+@handler.add(MessageEvent, message=TextMessageContent)
+def on_message(event):
+    executor.submit(process_message, event.source.user_id, event.message.text, event.reply_token)
 
 @app.route("/health")
 def health():
@@ -200,11 +256,7 @@ def health():
 
 @app.route("/")
 def index():
-    return jsonify({
-        "name": Config.BOT_NAME,
-        "version": Config.VERSION,
-        "status": "running"
-    })
+    return "Bot Mesh v15.0 - Running"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=Config.PORT, debug=False)
+    app.run(host="0.0.0.0", port=Config.PORT, debug=(Config.ENV == "development"))
