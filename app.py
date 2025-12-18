@@ -51,15 +51,13 @@ def process_message(user_id, text, reply_token):
         
         # التسجيل الأولي
         if not db.is_registered(user_id):
+            db.register_user(user_id, f"لاعب{user_id[-4:]}")
             user = db.get_user(user_id)
-            if not user:
-                db.register_user(user_id, f"لاعب{user_id[-4:]}")
-                user = db.get_user(user_id)
-                reply_message(reply_token, [
-                    TextMessage(text=f"مرحبا! تم تسجيلك بنجاح", quickReply=UI.get_quick_reply()),
-                    UI.main_menu(user, db)
-                ])
-                return
+            reply_message(reply_token, [
+                TextMessage(text=f"مرحبا! تم تسجيلك بنجاح", quickReply=UI.get_quick_reply()),
+                UI.main_menu(user, db)
+            ])
+            return
         
         db.update_activity(user_id)
         user = db.get_user(user_id)
@@ -106,7 +104,7 @@ def process_message(user_id, text, reply_token):
             return
         
         # القوائم والأوامر
-        if normalized in ["بدايه", "بداية", "القائمه", "القائمة"]:
+        if normalized in ["بدايه", "بداية", "القائمه", "القائمة", "تسجيل"]:
             reply_message(reply_token, UI.main_menu(user, db))
         
         elif normalized == "العاب":
@@ -134,6 +132,16 @@ def process_message(user_id, text, reply_token):
         elif normalized == "تغيير":
             db.set_changing_name(user_id)
             reply_message(reply_token, TextMessage(text="اكتب اسمك الجديد:", quickReply=UI.get_quick_reply()))
+        
+        elif normalized == "ثيم":
+            current_theme = user.get('theme', 'light')
+            new_theme = 'dark' if current_theme == 'light' else 'light'
+            db.change_theme(user_id, new_theme)
+            theme_name = "داكن" if new_theme == 'dark' else "فاتح"
+            reply_message(reply_token, TextMessage(text=f"تم تغيير الثيم الى: {theme_name}", quickReply=UI.get_quick_reply()))
+        
+        elif normalized == "انسحب":
+            reply_message(reply_token, TextMessage(text="شكرا لاستخدامك البوت!", quickReply=UI.get_quick_reply()))
         
         elif normalized in ["مساعده", "مساعدة"]:
             reply_message(reply_token, UI.help_screen())
