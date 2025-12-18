@@ -19,8 +19,11 @@ class BaseGame(ABC):
         return Config.get_theme(self.theme)
 
     def _qr(self):
-        items = ["بداية", "العاب", "ايقاف"]
+        items = ["سؤال", "منشن", "تحدي", "اعتراف", "شخصية", "حكمة", "موقف", "بداية", "العاب", "مساعدة"]
         return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
+    
+    def _safe_text(self, text):
+        return str(text) if text else ""
 
     @abstractmethod
     def get_question(self):
@@ -49,7 +52,7 @@ class BaseGame(ABC):
                         "layout": "vertical",
                         "flex": 1,
                         "contents": [
-                            {"type": "text", "text": self.game_name, "weight": "bold", "size": "lg", "color": c["text"]},
+                            {"type": "text", "text": self._safe_text(self.game_name), "weight": "bold", "size": "lg", "color": c["text"]},
                             {"type": "text", "text": f"السؤال {self.current_q + 1}/{self.total_q}", "size": "xs", "color": c["text_secondary"]}
                         ]
                     },
@@ -73,7 +76,7 @@ class BaseGame(ABC):
         if hint:
             contents.append({
                 "type": "text",
-                "text": hint,
+                "text": self._safe_text(hint),
                 "size": "xs",
                 "color": c["text_tertiary"],
                 "align": "center",
@@ -90,7 +93,7 @@ class BaseGame(ABC):
             "contents": [
                 {
                     "type": "text",
-                    "text": question_text,
+                    "text": self._safe_text(question_text),
                     "wrap": True,
                     "align": "center",
                     "size": "lg",
