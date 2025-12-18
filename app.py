@@ -2,7 +2,14 @@ import logging
 from flask import Flask, request, abort, jsonify
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage
+from linebot.v3.messaging import (
+    Configuration,
+    ApiClient,
+    MessagingApi,
+    ReplyMessageRequest,
+    TextMessage
+)
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import time
@@ -182,7 +189,12 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def on_message(event):
-    executor.submit(process_message, event.source.user_id, event.message.text, event.reply_token)
+    executor.submit(
+        process_message,
+        event.source.user_id,
+        event.message.text,
+        event.reply_token
+    )
 
 @app.route("/health")
 def health():
@@ -200,9 +212,19 @@ def index():
 def cleanup():
     try:
         db.cleanup_memory()
-        return jsonify({"status": "cleaned", "timestamp": datetime.utcnow().isoformat()})
+        return jsonify({
+            "status": "cleaned",
+            "timestamp": datetime.utcnow().isoformat()
+        })
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=Config.PORT, debug=(Config.ENV == "development"))
+    app.run(
+        host="0.0.0.0",
+        port=Config.PORT,
+        debug=(Config.ENV == "development")
+    )
