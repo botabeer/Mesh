@@ -4,8 +4,6 @@ from config import Config
 
 
 class GuessGame(BaseGame):
-    """لعبة خمن - 50 فئة متنوعة"""
-    
     def __init__(self, db, theme: str = "light"):
         super().__init__(db, theme)
         self.game_name = "خمن"
