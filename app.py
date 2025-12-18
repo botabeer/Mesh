@@ -31,6 +31,7 @@ executor = ThreadPoolExecutor(max_workers=Config.WORKERS, thread_name_prefix="wo
 
 scheduler = BackgroundScheduler(timezone=pytz.UTC)
 scheduler.add_job(func=lambda: db.cleanup_memory(), trigger="interval", minutes=30)
+scheduler.add_job(func=lambda: db.cleanup_inactive_users(), trigger="interval", hours=24)
 scheduler.start()
 
 def reply_message(reply_token, messages):
@@ -49,14 +50,13 @@ def process_message(user_id, text, reply_token):
     try:
         normalized = Config.normalize(text)
         
-        # التسجيل الأولي
+        # تجاهل المنسحبين
         if not db.is_registered(user_id):
-            db.register_user(user_id, f"لاعب{user_id[-4:]}")
-            user = db.get_user(user_id)
-            reply_message(reply_token, [
-                TextMessage(text=f"مرحبا! تم تسجيلك بنجاح", quickReply=UI.get_quick_reply()),
-                UI.main_menu(user, db)
-            ])
+            # التسجيل فقط بأمر "تسجيل"
+            if normalized == "تسجيل":
+                db.register_user(user_id, f"لاعب{user_id[-4:]}")
+                user = db.get_user(user_id)
+                reply_message(reply_token, UI.registration_success(user['name'], user['theme']))
             return
         
         db.update_activity(user_id)
@@ -65,21 +65,34 @@ def process_message(user_id, text, reply_token):
         # تغيير الاسم
         if db.is_changing_name(user_id):
             if len(text) < Config.MIN_NAME_LENGTH or len(text) > Config.MAX_NAME_LENGTH:
-                reply_message(reply_token, TextMessage(text=f"الاسم يجب ان يكون بين {Config.MIN_NAME_LENGTH} و {Config.MAX_NAME_LENGTH} حرف", quickReply=UI.get_quick_reply()))
+                reply_message(reply_token, TextMessage(text=f"الاسم يجب ان يكون بين {Config.MIN_NAME_LENGTH} و {Config.MAX_NAME_LENGTH} حرف"))
                 return
             db.update_name(user_id, text)
             db.clear_changing_name(user_id)
-            reply_message(reply_token, TextMessage(text=f"تم تغيير اسمك الى: {text}", quickReply=UI.get_quick_reply()))
+            reply_message(reply_token, TextMessage(text=f"تم تغيير اسمك الى: {text}"))
             return
         
-        # إيقاف اللعبة
-        if db.has_active_game(user_id) and normalized == "ايقاف":
-            score = game_mgr.stop_game(user_id)
-            reply_message(reply_token, TextMessage(text=f"تم ايقاف اللعبة. حصلت على {score} نقطة", quickReply=UI.get_quick_reply()))
-            return
-        
-        # اللعب
+        # اللعب - لمح وجاوب
         if db.has_active_game(user_id):
+            game = db.get_game_progress(user_id)
+            
+            if normalized == "لمح" and game.supports_hint:
+                hint = game.get_hint()
+                if hint:
+                    reply_message(reply_token, TextMessage(text=hint))
+                return
+            
+            if normalized == "جاوب" and game.supports_reveal:
+                answer = game.reveal_answer()
+                if answer:
+                    reply_message(reply_token, TextMessage(text=answer))
+                return
+            
+            if normalized == "ايقاف":
+                score = game_mgr.stop_game(user_id)
+                reply_message(reply_token, TextMessage(text=f"تم ايقاف اللعبة. حصلت على {score} نقطة"))
+                return
+            
             result, correct = game_mgr.process_answer(user_id, text)
             
             if result and isinstance(result, dict) and result.get("finished"):
@@ -88,10 +101,7 @@ def process_message(user_id, text, reply_token):
                 game_name = result['game_name']
                 achievements = result.get('achievements', [])
                 
-                status = f"فوز رائع {score}/{total}" if score == total else f"جيد {score}/{total}"
-                msg = f"{game_name}\n{status}\nالنقاط: +{score}"
-                
-                messages = [TextMessage(text=msg, quickReply=UI.get_quick_reply())]
+                messages = [UI.game_result(game_name, score, total, user['theme'])]
                 
                 for achievement in achievements:
                     messages.append(UI.achievement_unlocked(achievement, user['theme']))
@@ -103,17 +113,15 @@ def process_message(user_id, text, reply_token):
                     reply_message(reply_token, result)
             return
         
-        # القوائم والأوامر
-        if normalized in ["بدايه", "بداية", "القائمه", "القائمة", "تسجيل"]:
+        # الأوامر
+        if normalized in ["بدايه", "بداية", "القائمه", "القائمة"]:
             reply_message(reply_token, UI.main_menu(user, db))
         
         elif normalized == "العاب":
             reply_message(reply_token, UI.games_list(user['theme']))
         
         elif normalized in ["نقاطي", "احصائياتي"]:
-            win_rate = (user['wins'] / user['games'] * 100) if user['games'] > 0 else 0
-            msg = f"الاسم: {user['name']}\nالنقاط: {user['points']}\nالالعاب: {user['games']}\nالانتصارات: {user['wins']}\nنسبة الفوز: {win_rate:.1f}%\nالسلسلة: {user['streak']}\nافضل سلسلة: {user['best_streak']}"
-            reply_message(reply_token, TextMessage(text=msg, quickReply=UI.get_quick_reply()))
+            reply_message(reply_token, UI.user_stats(user))
         
         elif normalized in ["الصداره", "الصدارة"]:
             leaders = db.get_leaderboard(10)
@@ -125,26 +133,28 @@ def process_message(user_id, text, reply_token):
         
         elif normalized == "مكافأة":
             if db.claim_reward(user_id):
-                reply_message(reply_token, TextMessage(text=f"تم! حصلت على +{Config.DAILY_REWARD_POINTS} نقطة", quickReply=UI.get_quick_reply()))
+                reply_message(reply_token, TextMessage(text=f"تم! حصلت على +{Config.DAILY_REWARD_POINTS} نقطة"))
             else:
-                reply_message(reply_token, TextMessage(text=f"يمكنك الحصول على المكافأة كل {Config.DAILY_REWARD_HOURS} ساعة", quickReply=UI.get_quick_reply()))
+                reply_message(reply_token, TextMessage(text=f"يمكنك الحصول على المكافأة كل {Config.DAILY_REWARD_HOURS} ساعة"))
         
         elif normalized == "تغيير":
             db.set_changing_name(user_id)
-            reply_message(reply_token, TextMessage(text="اكتب اسمك الجديد:", quickReply=UI.get_quick_reply()))
+            reply_message(reply_token, TextMessage(text="اكتب اسمك الجديد:"))
         
         elif normalized == "ثيم":
             current_theme = user.get('theme', 'light')
             new_theme = 'dark' if current_theme == 'light' else 'light'
             db.change_theme(user_id, new_theme)
             theme_name = "داكن" if new_theme == 'dark' else "فاتح"
-            reply_message(reply_token, TextMessage(text=f"تم تغيير الثيم الى: {theme_name}", quickReply=UI.get_quick_reply()))
+            reply_message(reply_token, TextMessage(text=f"تم تغيير الثيم الى: {theme_name}"))
         
         elif normalized == "انسحب":
-            reply_message(reply_token, TextMessage(text="شكرا لاستخدامك البوت!", quickReply=UI.get_quick_reply()))
+            db.withdraw_user(user_id)
+            db.clear_game_progress(user_id)
+            reply_message(reply_token, TextMessage(text="تم الانسحاب. يمكنك العودة بكتابة: تسجيل"))
         
         elif normalized in ["مساعده", "مساعدة"]:
-            reply_message(reply_token, UI.help_screen())
+            reply_message(reply_token, UI.help_screen(user['theme']))
         
         elif normalized in game_mgr.game_mappings:
             question = game_mgr.start_game(user_id, normalized, user['theme'])
@@ -154,7 +164,7 @@ def process_message(user_id, text, reply_token):
         elif normalized in text_mgr.cmd_mapping:
             content = text_mgr.get_content(normalized)
             if content:
-                reply_message(reply_token, TextMessage(text=content, quickReply=UI.get_quick_reply()))
+                reply_message(reply_token, TextMessage(text=content))
         
         elapsed = time.time() - start_time
         logger.info(f"Message processed in {elapsed:.2f}s")
