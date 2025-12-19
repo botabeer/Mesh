@@ -45,10 +45,10 @@ class Config:
     
     @staticmethod
     def get_theme(theme):
-        """الثيمات حسب التصميم"""
+        """الثيم بدون اللون الازرق"""
         if theme == "dark":
             return {
-                "bg": "#8FAFD9",
+                "bg": "#121212",
                 "card": "#000000",
                 "card_secondary": "#2C2C2E",
                 "text": "#FFFFFF",
@@ -61,7 +61,7 @@ class Config:
             }
         else:
             return {
-                "bg": "#8FAFD9",
+                "bg": "#F2F2F7",
                 "card": "#FFFFFF",
                 "card_secondary": "#E5E7EB",
                 "text": "#111827",
