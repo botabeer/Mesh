@@ -36,39 +36,47 @@ class Config:
     def normalize(text):
         if not text:
             return ""
+        # ازالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
+        # توحيد الحروف
+        replacements = {
+            "أ": "ا", "إ": "ا", "آ": "ا", 
+            "ى": "ي", "ة": "ه", 
+            "ؤ": "و", "ئ": "ي"
+        }
         for old, new in replacements.items():
             text = text.replace(old, new)
+        # ازالة الاحرف غير العربية والانجليزية
         text = re.sub(r"[^\w\sء-ي]", "", text)
         return text.strip().lower()
     
     @staticmethod
     def get_theme(theme):
-        """الثيم بدون اللون الازرق"""
         if theme == "dark":
             return {
-                "bg": "#121212",
-                "card": "#000000",
-                "card_secondary": "#2C2C2E",
+                "bg": "#1A1A1A",
+                "card": "#2D2D2D",
+                "card_secondary": "#3D3D3D",
                 "text": "#FFFFFF",
-                "text_secondary": "#E5E5EA",
-                "text_tertiary": "#A1A1AA",
-                "border": "#2C2C2E",
+                "text_secondary": "#CCCCCC",
+                "text_tertiary": "#999999",
+                "border": "#4D4D4D",
                 "primary": "#FFFFFF",
-                "button_primary": "#E5E5EA",
-                "button_text": "#000000"
+                "button_primary": "#4D4D4D",
+                "button_secondary": "#3D3D3D",
+                "button_text": "#FFFFFF"
             }
         else:
             return {
-                "bg": "#F2F2F7",
-                "card": "#FFFFFF",
-                "card_secondary": "#E5E7EB",
-                "text": "#111827",
-                "text_secondary": "#1F2937",
-                "text_tertiary": "#6B7280",
-                "border": "#E5E7EB",
-                "primary": "#111827",
-                "button_primary": "#DEE1E7",
-                "button_text": "#111827"
+                "bg": "#FFFFFF",
+                "card": "#F5F5F5",
+                "card_secondary": "#E8E8E8",
+                "text": "#1A1A1A",
+                "text_secondary": "#4D4D4D",
+                "text_tertiary": "#808080",
+                "border": "#CCCCCC",
+                "primary": "#1A1A1A",
+                "button_primary": "#E8E8E8",
+                "button_secondary": "#D8D8D8",
+                "button_text": "#1A1A1A"
             }
