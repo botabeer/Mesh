@@ -44,10 +44,12 @@ def process_message(user_id, text, reply_token):
         
         # تسجيل جديد
         if not db.is_registered(user_id):
-            if normalized == "تسجيل":
+            if normalized in ["تسجيل", "تسجل", "سجل"]:
                 db.register_user(user_id, f"لاعب{user_id[-4:]}")
                 user = db.get_user(user_id)
                 reply_message(reply_token, UI.registration_success(user['name'], user['theme']))
+            else:
+                reply_message(reply_token, UI.text_message("اكتب تسجيل للبدء"))
             return
         
         db.update_activity(user_id)
@@ -59,25 +61,27 @@ def process_message(user_id, text, reply_token):
                 db.update_name(user_id, text)
                 db.clear_changing_name(user_id)
                 reply_message(reply_token, UI.text_message(f"تم تغيير اسمك الى: {text}"))
+            else:
+                reply_message(reply_token, UI.text_message(f"الاسم يجب ان يكون بين {Config.MIN_NAME_LENGTH} و {Config.MAX_NAME_LENGTH} حرف"))
             return
         
         # لعبة نشطة
         if db.has_active_game(user_id):
             game = db.get_game_progress(user_id)
             
-            if normalized == "لمح" and game.supports_hint:
+            if normalized in ["لمح", "تلميح"] and hasattr(game, 'supports_hint') and game.supports_hint:
                 hint = game.get_hint()
                 if hint:
                     reply_message(reply_token, UI.text_message(hint))
                 return
             
-            if normalized == "جاوب" and game.supports_reveal:
+            if normalized in ["جاوب", "الجواب", "الاجابه", "الاجابة"] and hasattr(game, 'supports_reveal') and game.supports_reveal:
                 answer = game.reveal_answer()
                 if answer:
                     reply_message(reply_token, UI.text_message(answer))
                 return
             
-            if normalized == "ايقاف":
+            if normalized in ["ايقاف", "توقف", "اوقف", "انهاء", "انهي"]:
                 score = game_mgr.stop_game(user_id)
                 reply_message(reply_token, UI.text_message(f"تم ايقاف اللعبة. حصلت على {score} نقطة"))
                 return
@@ -93,52 +97,59 @@ def process_message(user_id, text, reply_token):
                 result = game_mgr.next_question(user_id)
                 if result:
                     reply_message(reply_token, result)
+            else:
+                reply_message(reply_token, UI.text_message("اجابة خاطئة، حاول مرة اخرى"))
             return
         
         # اوامر رئيسية
-        if normalized in ["بدايه", "بداية", "القائمه", "القائمة"]:
+        if normalized in ["بدايه", "بداية", "القائمه", "القائمة", "الرئيسية", "رئيسية"]:
             reply_message(reply_token, UI.main_menu(user, db))
-        elif normalized == "العاب":
+        elif normalized in ["العاب", "الالعاب"]:
             reply_message(reply_token, UI.games_list(user['theme']))
-        elif normalized in ["نقاطي", "احصائياتي"]:
+        elif normalized in ["نقاطي", "احصائياتي", "احصائيات", "نقاط"]:
             reply_message(reply_token, UI.user_stats(user))
-        elif normalized in ["الصداره", "الصدارة"]:
+        elif normalized in ["الصداره", "الصدارة", "المتصدرين"]:
             leaders = db.get_leaderboard(10)
             reply_message(reply_token, UI.leaderboard(leaders, user['theme']))
-        elif normalized == "انجازات":
+        elif normalized in ["انجازات", "انجازاتي", "الانجازات"]:
             user_achievements = db.get_user_achievements(user_id)
             reply_message(reply_token, UI.achievements_list(user_achievements, user['theme']))
-        elif normalized == "مكافأة":
+        elif normalized in ["مكافأة", "مكافاه", "جائزة", "يومية"]:
             if db.claim_reward(user_id):
                 reply_message(reply_token, UI.text_message(f"تم! حصلت على +{Config.DAILY_REWARD_POINTS} نقطة"))
             else:
                 reply_message(reply_token, UI.text_message(f"يمكنك الحصول على المكافأة كل {Config.DAILY_REWARD_HOURS} ساعة"))
-        elif normalized == "تغيير":
+        elif normalized in ["تغيير", "تغير", "غير"]:
             db.set_changing_name(user_id)
             reply_message(reply_token, UI.text_message("اكتب اسمك الجديد:"))
-        elif normalized == "ثيم":
+        elif normalized in ["ثيم", "ثم", "المظهر"]:
             current_theme = user.get('theme', 'light')
             new_theme = 'dark' if current_theme == 'light' else 'light'
             db.change_theme(user_id, new_theme)
             theme_name = "داكن" if new_theme == 'dark' else "فاتح"
             reply_message(reply_token, UI.text_message(f"تم تغيير الثيم الى: {theme_name}"))
-        elif normalized == "انسحب":
+        elif normalized in ["انسحب", "انسحاب", "حذف", "مسح"]:
             db.withdraw_user(user_id)
             db.clear_game_progress(user_id)
             reply_message(reply_token, UI.text_message("تم الانسحاب. يمكنك العودة بكتابة: تسجيل"))
-        elif normalized in ["مساعده", "مساعدة"]:
+        elif normalized in ["مساعده", "مساعدة", "ساعدني", "ساعد"]:
             reply_message(reply_token, UI.help_screen(user['theme']))
         elif normalized in game_mgr.game_mappings:
             question = game_mgr.start_game(user_id, normalized, user['theme'])
             if question:
                 reply_message(reply_token, question)
+            else:
+                reply_message(reply_token, UI.text_message("حدث خطأ في بدء اللعبة"))
         elif normalized in text_mgr.cmd_mapping:
             content = text_mgr.get_content(normalized)
             if content:
                 reply_message(reply_token, UI.text_message(content))
+        else:
+            reply_message(reply_token, UI.text_message("امر غير معروف. اكتب مساعدة لعرض الاوامر"))
     
     except Exception as e:
         logger.exception(f"Processing error: {e}")
+        reply_message(reply_token, UI.text_message("حدث خطأ. حاول مرة اخرى"))
 
 @app.route("/callback", methods=["POST"])
 def callback():
