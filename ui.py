@@ -194,31 +194,137 @@ class UI:
         return FlexMessage(alt_text="انجاز جديد", contents=FlexContainer.from_dict(bubble))
     
     @staticmethod
-    def game_result(game_name, score, total, theme="light"):
-        c = Config.get_theme(theme)
-        status = "فوز رائع" if score == total else "جيد"
-        bubble = {
-            "type": "bubble", "size": "mega",
-            "body": {"type": "box", "layout": "vertical", "contents": [
-                {"type": "text", "text": game_name, "size": "lg", "weight": "bold", "color": c["text"], "align": "center"},
-                {"type": "text", "text": status, "size": "xl", "weight": "bold", "color": c["text"], "align": "center", "margin": "lg"},
-                {"type": "text", "text": f"{score}/{total}", "size": "lg", "color": c["text_secondary"], "align": "center", "margin": "sm"},
-                UI._footer(theme)
-            ], "backgroundColor": c["bg"], "paddingAll": "24px"}
+def win_screen(game_name, player_name, score, total, theme="light"):
+    c = Config.get_theme(theme)
+    bubble = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": player_name,
+                    "size": "sm",
+                    "weight": "bold",
+                    "color": c["text"],
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": game_name,
+                    "size": "xs",
+                    "color": c["text_secondary"],
+                    "align": "center",
+                    "margin": "xs"
+                },
+                {
+                    "type": "text",
+                    "text": "فوز",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": c["text"],
+                    "align": "center",
+                    "margin": "sm"
+                },
+                {
+                    "type": "text",
+                    "text": f"{score}/{total}",
+                    "size": "sm",
+                    "color": c["text_secondary"],
+                    "align": "center",
+                    "margin": "xs"
+                },
+                {
+                    "type": "text",
+                    "text": "Bot Mesh | عبير الدوسري 2025",
+                    "size": "xxs",
+                    "color": c["text_tertiary"],
+                    "align": "center",
+                    "margin": "md"
+                }
+            ],
+            "paddingAll": "16px",
+            "backgroundColor": c["bg"]
         }
-        return FlexMessage(alt_text="نتيجة اللعبة", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+    }
+
+    return FlexMessage(
+        alt_text="فوز",
+        contents=FlexContainer.from_dict(bubble),
+        quick_reply=UI.get_quick_reply()
+    )
     
     @staticmethod
-    def help_screen(theme="light"):
-        c = Config.get_theme(theme)
-        bubble = {
-            "type": "bubble", "size": "mega",
-            "body": {"type": "box", "layout": "vertical", "contents": [
-                {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "color": c["primary"], "align": "center"},
-                {"type": "separator", "margin": "lg", "color": c["border"]},
-                {"type": "text", "text": "المساعدة", "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "margin": "lg"},
-                {"type": "text", "text": "تسجيل - بداية - العاب\nنقاطي - الصدارة - انجازات\nثيم - تغيير - مساعدة", "size": "sm", "color": c["text_secondary"], "wrap": True, "margin": "lg"},
-                UI._footer(theme)
-            ], "backgroundColor": c["bg"], "paddingAll": "24px"}
+def help_screen():
+    bubble = {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "Bot Mesh",
+                    "size": "xl",
+                    "weight": "bold",
+                    "color": "#1A1A1A",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": "المساعدة",
+                    "size": "lg",
+                    "weight": "bold",
+                    "align": "center",
+                    "margin": "sm"
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "text",
+                    "size": "xs",
+                    "wrap": True,
+                    "color": "#4D4D4D",
+                    "text":
+                        "الاوامر الاساسية:\n"
+                        "تسجيل - بداية - العاب - نقاطي - الصدارة - انجازات - مكافأة - تغيير - ثيم - مساعدة\n\n"
+                        "الاوامر الترفيهية:\n"
+                        "سؤال - منشن - تحدي - اعتراف - شخصية - حكمة - موقف\n\n"
+                        "اوامر اللعب:\n"
+                        "لمح - جاوب - ايقاف"
+                },
+                {
+                    "type": "button",
+                    "margin": "lg",
+                    "height": "sm",
+                    "style": "primary",
+                    "color": "#E8E8E8",
+                    "action": {
+                        "type": "message",
+                        "label": "بداية",
+                        "text": "بداية"
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": "Bot Mesh | عبير الدوسري 2025",
+                    "size": "xxs",
+                    "color": "#808080",
+                    "align": "center",
+                    "margin": "md"
+                }
+            ],
+            "backgroundColor": "#FFFFFF",
+            "paddingAll": "20px"
         }
-        return FlexMessage(alt_text="مساعدة", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+    }
+
+    return FlexMessage(
+        alt_text="المساعدة",
+        contents=FlexContainer.from_dict(bubble),
+        quick_reply=UI.get_quick_reply()
+    )
