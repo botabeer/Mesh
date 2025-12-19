@@ -3,7 +3,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class GameManager:
     def __init__(self, db):
         self.db = db
@@ -15,8 +14,11 @@ class GameManager:
             "اسرع": ("games.fast_typing", "FastTypingGame"),
             "ضد": ("games.opposite", "OppositeGame"),
             "لعبه": ("games.human_animal", "HumanAnimalGame"),
+            "لعبة": ("games.human_animal", "HumanAnimalGame"),
             "سلسله": ("games.chain_words", "ChainWordsGame"),
+            "سلسلة": ("games.chain_words", "ChainWordsGame"),
             "اغنيه": ("games.song", "SongGame"),
+            "اغنية": ("games.song", "SongGame"),
             "تكوين": ("games.letters_words", "LettersWordsGame"),
             "لون": ("games.word_color", "WordColorGame"),
             "حرف": ("games.letters", "LettersGame"),
@@ -35,10 +37,8 @@ class GameManager:
             game_class = getattr(module, class_name)
             game = game_class(self.db, theme)
 
-            # حفظ حالة اللعبة للمستخدم
             self.db.set_game_progress(user_id, game)
             
-            # بدء اللعبة
             if hasattr(game, "start"):
                 return game.start(user_id)
             elif hasattr(game, "get_question"):
@@ -55,8 +55,8 @@ class GameManager:
         if not game:
             return None, False
 
-        # الألعاب التي تستخدم check (مثل المافيا)
-        if hasattr(game, 'check'):
+        # لعبة المافيا
+        if hasattr(game, 'check') and game.game_name == "مافيا":
             try:
                 result = game.check(answer, user_id)
                 if result:
@@ -65,34 +65,31 @@ class GameManager:
                             self.db.clear_game_progress(user_id)
                             return {
                                 "finished": True,
-                                "score": getattr(game, 'score', 0),
-                                "total": getattr(game, 'total_q', 1),
-                                "game_name": getattr(game, 'game_name', "لعبة"),
+                                "score": 0,
+                                "total": 1,
+                                "game_name": "مافيا",
                                 "achievements": []
                             }, True
                         elif result.get('response'):
-                            from linebot.v3.messaging import TextMessage
-                            if not isinstance(result['response'], TextMessage):
-                                return result['response'], False
+                            return result['response'], False
                 return None, False
             except Exception as e:
-                logger.error(f"Error processing check in {game.game_name}: {e}")
+                logger.error(f"Error processing mafia game: {e}")
                 return None, False
 
-        # الألعاب التي تستخدم check_answer (مثل التوافق، الحروف، الخمن)
+        # باقي الالعاب
         if hasattr(game, 'check_answer'):
             try:
                 correct = game.check_answer(answer)
 
                 if correct:
-                    # تحديث النقاط و التقدم
                     game.score += 1
                     self.db.add_points(user_id, 1)
                     game.current_q += 1
 
-                    if game.current_q >= getattr(game, 'total_q', 1):
+                    if game.current_q >= getattr(game, 'total_q', 5):
                         score = getattr(game, 'score', 0)
-                        total = getattr(game, 'total_q', 1)
+                        total = getattr(game, 'total_q', 5)
                         game_name = getattr(game, 'game_name', "لعبة")
 
                         self.db.increment_games(user_id)
@@ -117,10 +114,9 @@ class GameManager:
 
                 return None, correct
             except Exception as e:
-                logger.error(f"Error processing check_answer in {game.game_name}: {e}")
+                logger.error(f"Error processing answer: {e}")
                 return None, False
 
-        # إذا اللعبة لا تحتوي على أي دالة للتحقق
         return None, False
 
     def next_question(self, user_id):
@@ -131,7 +127,7 @@ class GameManager:
             try:
                 return game.get_question()
             except Exception as e:
-                logger.error(f"Error getting next question for {getattr(game, 'game_name', 'لعبة')}: {e}")
+                logger.error(f"Error getting next question: {e}")
                 return None
         return None
 
