@@ -45,30 +45,30 @@ class Config:
     
     @staticmethod
     def get_theme(theme):
-        """نظام ألوان محسّن - أبيض وأسود ورمادي فقط"""
+        """الثيمات حسب التصميم"""
         if theme == "dark":
             return {
-                "bg": "#0A0A0A",
-                "card": "#1A1A1A",
-                "card_secondary": "#2A2A2A",
+                "bg": "#8FAFD9",
+                "card": "#000000",
+                "card_secondary": "#2C2C2E",
                 "text": "#FFFFFF",
-                "text_secondary": "#B8B8B8",
-                "text_tertiary": "#808080",
-                "border": "#333333",
+                "text_secondary": "#E5E5EA",
+                "text_tertiary": "#A1A1AA",
+                "border": "#2C2C2E",
                 "primary": "#FFFFFF",
-                "button_primary": "#FFFFFF",
-                "button_secondary": "#404040"
+                "button_primary": "#E5E5EA",
+                "button_text": "#000000"
             }
         else:
             return {
-                "bg": "#FFFFFF",
-                "card": "#F5F5F5",
-                "card_secondary": "#E8E8E8",
-                "text": "#000000",
-                "text_secondary": "#4A4A4A",
-                "text_tertiary": "#808080",
-                "border": "#D0D0D0",
-                "primary": "#000000",
-                "button_primary": "#000000",
-                "button_secondary": "#E0E0E0"
+                "bg": "#8FAFD9",
+                "card": "#FFFFFF",
+                "card_secondary": "#E5E7EB",
+                "text": "#111827",
+                "text_secondary": "#1F2937",
+                "text_tertiary": "#6B7280",
+                "border": "#E5E7EB",
+                "primary": "#111827",
+                "button_primary": "#DEE1E7",
+                "button_text": "#111827"
             }
