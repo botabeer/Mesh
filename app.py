@@ -88,8 +88,7 @@ def process_message(user_id, text, reply_token):
             question = game_mgr.start_game(
                 user_id,
                 normalized,
-                "light",
-                skip_registration=True
+                "light"
             )
             if question:
                 reply_message(reply_token, question)
