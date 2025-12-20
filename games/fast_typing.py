@@ -5,7 +5,7 @@ from linebot.v3.messaging import FlexMessage, FlexContainer
 
 
 class FastTypingGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "اسرع"
         self.time_limit = 10
@@ -20,19 +20,7 @@ class FastTypingGame(BaseGame):
             "اللهم صل على محمد", "رب اغفر لي", "يا رب العالمين",
             "الصبر مفتاح الفرج", "من جد وجد", "العلم نور", "الوقت كالسيف",
             "العقل السليم في الجسم السليم", "اتق الله حيثما كنت", "قل خيرا او اصمت",
-            "الصدق منجاة", "الكذب مهلكة", "الامانة صفة المؤمنين",
-            "العمل عبادة", "طلب العلم فريضة", "النظافة من الايمان",
-            "التواضع من شيم الكرام", "الكتاب خير جليس", "القراءة غذاء العقل",
-            "الحكمة ضالة المؤمن", "العدل اساس الملك", "الظلم ظلمات",
-            "الرفق ما كان في شيء الا زانه", "البر لا يبلى", "الاحسان الى الناس",
-            "صلة الرحم تزيد في العمر", "بر الوالدين", "احترام الكبير",
-            "العطف على الصغير", "مساعدة المحتاج", "اطعام الطعام",
-            "الكلمة الطيبة صدقة", "التبسم في وجه اخيك صدقة", "ازالة الاذى عن الطريق",
-            "حفظ اللسان", "غض البصر", "الصلاة عماد الدين",
-            "الزكاة تطهر المال", "الصوم جنة", "الحج ركن من اركان الاسلام",
-            "قراءة القران", "ذكر الله", "الدعاء مخ العبادة",
-            "التوبة باب مفتوح", "الاستغفار يمحو الذنوب", "الصدقة تطفئ الخطيئة",
-            "العفو عند المقدرة", "الصفح الجميل", "الحلم سيد الاخلاق"
+            "الصدق منجاة", "الكذب مهلكة", "الامانة صفة المؤمنين"
         ]
         random.shuffle(self.phrases)
         self.used = []
@@ -82,8 +70,8 @@ class FastTypingGame(BaseGame):
                     {
                         "type": "button",
                         "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"},
-                        "style": "primary",
-                        "color": c["button_primary"],
+                        "style": "secondary",
+                        "color": c["button"],
                         "height": "sm"
                     }
                 ], "margin": "md"
@@ -93,7 +81,7 @@ class FastTypingGame(BaseGame):
         bubble = {"type": "bubble", "size": "mega", "body": {"type": "box", "layout": "vertical", "contents": contents, "backgroundColor": c["card"], "paddingAll": "20px"}}
         return FlexMessage(alt_text=self.game_name, contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         if self.start_time is None:
             return False
         
