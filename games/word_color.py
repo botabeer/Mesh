@@ -5,9 +5,11 @@ from linebot.v3.messaging import FlexMessage, FlexContainer
 
 
 class WordColorGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "لون"
+        self.supports_hint = False
+        self.supports_reveal = False
 
         self.colors = {
             "احمر": "#DC2626",
@@ -25,7 +27,6 @@ class WordColorGame(BaseGame):
     def get_question(self):
         word = random.choice(self.color_names)
 
-        # 70% لون مختلف
         if random.random() < 0.7:
             color_name = random.choice([c for c in self.color_names if c != word])
         else:
@@ -108,30 +109,12 @@ class WordColorGame(BaseGame):
                 "contents": [
                     {
                         "type": "button",
-                        "action": {"type": "message", "label": "لمح", "text": "لمح"},
-                        "style": "secondary",
-                        "color": c["button_secondary"],
-                        "height": "sm",
-                        "flex": 1
-                    },
-                    {
-                        "type": "button",
-                        "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
-                        "style": "secondary",
-                        "color": c["button_secondary"],
-                        "height": "sm",
-                        "flex": 1
-                    },
-                    {
-                        "type": "button",
                         "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"},
-                        "style": "primary",
-                        "color": c["button_primary"],
-                        "height": "sm",
-                        "flex": 1
+                        "style": "secondary",
+                        "color": c["button"],
+                        "height": "sm"
                     }
                 ],
-                "spacing": "sm",
                 "margin": "md"
             }
         ]
@@ -154,5 +137,5 @@ class WordColorGame(BaseGame):
             quickReply=self._qr()
         )
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         return Config.normalize(answer) == Config.normalize(self.current_answer)
