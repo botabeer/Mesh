@@ -5,7 +5,7 @@ class UI:
     @staticmethod
     def get_quick_reply():
         items = ["سؤال","منشن","تحدي","اعتراف","شخصية","حكمة","موقف","بداية","العاب","مساعدة"]
-        return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i,text=i)) for i in items])
+        return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
 
     @staticmethod
     def text_message(text):
@@ -13,91 +13,120 @@ class UI:
 
     @staticmethod
     def _footer(theme):
-        c=Config.get_theme(theme)
+        c = Config.get_theme(theme)
         return {"type":"text","text":"Bot Mesh | عبير الدوسري 2025","size":"xxs","color":c["text_tertiary"],"align":"center","margin":"lg"}
 
     @staticmethod
-    def registration_success(name,theme="light"):
-        c=Config.get_theme(theme)
-        bubble={"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":[
-            {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-            {"type":"separator","margin":"lg","color":c["border"]},
-            {"type":"text","text":f"مرحبا {name}","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
-            {"type":"text","text":"تم تسجيلك بنجاح","size":"md","color":c["text_secondary"],"align":"center","margin":"sm"},
-            {"type":"separator","margin":"lg","color":c["border"]},
-            {"type":"box","layout":"horizontal","contents":[
-                {"type":"button","action":{"type":"message","label":"بداية","text":"بداية"},"style":"primary","color":c["button_primary"],"height":"sm"},
-                {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"primary","color":c["button_primary"],"height":"sm"}
-            ],"spacing":"sm","margin":"lg"},
-            UI._footer(theme)
-        ],"backgroundColor":c["bg"],"paddingAll":"24px"}}
-        return FlexMessage(alt_text="تسجيل ناجح",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+    def registration_success(name, theme="light"):
+        c = Config.get_theme(theme)
+        bubble = {
+            "type":"bubble","size":"mega",
+            "body":{
+                "type":"box","layout":"vertical",
+                "contents":[
+                    {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"text","text":f"مرحبا {name}","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
+                    {"type":"text","text":"تم تسجيلك بنجاح","size":"md","color":c["text_secondary"],"align":"center","margin":"sm"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"box","layout":"horizontal","contents":[
+                        {"type":"button","action":{"type":"message","label":"بداية","text":"بداية"},"style":"primary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"primary","color":c["button_primary"],"height":"sm"}
+                    ],"spacing":"sm","margin":"lg"},
+                    UI._footer(theme)
+                ],
+                "backgroundColor":c["bg"],"paddingAll":"24px"
+            }
+        }
+        return FlexMessage(alt_text="تسجيل ناجح", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
 
     @staticmethod
-    def main_menu(user,db):
-        c=Config.get_theme(user.get('theme','light'))
-        bubble={"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":[
-            {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-            {"type":"separator","margin":"lg","color":c["border"]},
-            {"type":"text","text":f"مرحبا {user['name']}","size":"lg","color":c["text"],"margin":"lg","align":"center"},
-            {"type":"box","layout":"vertical","contents":[
-                {"type":"box","layout":"horizontal","contents":[
-                    {"type":"text","text":f"النقاط: {user['points']}","size":"sm","color":c["text"]},
-                    {"type":"text","text":f"الالعاب: {user['games']}","size":"sm","color":c["text_secondary"],"align":"end"}
-                ]},
-                {"type":"box","layout":"horizontal","contents":[
-                    {"type":"text","text":f"الفوز: {user['wins']}","size":"sm","color":c["text"]},
-                    {"type":"text","text":f"السلسلة: {user['streak']}","size":"sm","color":c["text_secondary"],"align":"end"}
-                ],"margin":"sm"}
-            ],"margin":"lg","paddingAll":"15px","backgroundColor":c["card_secondary"],"cornerRadius":"10px"},
-            {"type":"separator","margin":"lg","color":c["border"]},
-            {"type":"box","layout":"horizontal","contents":[
-                {"type":"button","action":{"type":"message","label":"تسجيل","text":"تسجيل"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                {"type":"button","action":{"type":"message","label":"تغيير","text":"تغيير"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                {"type":"button","action":{"type":"message","label":"انسحب","text":"انسحب"},"style":"secondary","color":c["button_primary"],"height":"sm"}
-            ],"spacing":"sm","margin":"lg"},
-            {"type":"box","layout":"horizontal","contents":[
-                {"type":"button","action":{"type":"message","label":"نقاطي","text":"نقاطي"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                {"type":"button","action":{"type":"message","label":"الصدارة","text":"الصدارة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                {"type":"button","action":{"type":"message","label":"انجازاتي","text":"انجازات"},"style":"secondary","color":c["button_primary"],"height":"sm"}
-            ],"spacing":"sm","margin":"sm"},
-            {"type":"box","layout":"horizontal","contents":[
-                {"type":"button","action":{"type":"message","label":"ثيم","text":"ثيم"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                {"type":"button","action":{"type":"message","label":"مساعدة","text":"مساعدة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"primary","color":c["button_primary"],"height":"sm"}
-            ],"spacing":"sm","margin":"sm"},
-            UI._footer(user.get('theme','light'))
-        ],"backgroundColor":c["bg"],"paddingAll":"24px"}}
-        return FlexMessage(alt_text="القائمة الرئيسية",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+    def main_menu(user, db=None):
+        c = Config.get_theme(user.get('theme','light'))
+        bubble = {
+            "type":"bubble","size":"mega",
+            "body":{
+                "type":"box","layout":"vertical",
+                "contents":[
+                    {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"text","text":f"مرحبا {user['name']}","size":"lg","color":c["text"],"margin":"lg","align":"center"},
+                    {"type":"box","layout":"vertical","contents":[
+                        {"type":"box","layout":"horizontal","contents":[
+                            {"type":"text","text":f"النقاط: {user['points']}","size":"sm","color":c["text"]},
+                            {"type":"text","text":f"الالعاب: {user['games']}","size":"sm","color":c["text_secondary"],"align":"end"}
+                        ]},
+                        {"type":"box","layout":"horizontal","contents":[
+                            {"type":"text","text":f"الفوز: {user['wins']}","size":"sm","color":c["text"]},
+                            {"type":"text","text":f"السلسلة: {user['streak']}","size":"sm","color":c["text_secondary"],"align":"end"}
+                        ],"margin":"sm"}
+                    ],"margin":"lg","paddingAll":"15px","backgroundColor":c["card_secondary"],"cornerRadius":"10px"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"box","layout":"horizontal","contents":[
+                        {"type":"button","action":{"type":"message","label":"تسجيل","text":"تسجيل"},"style":"secondary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"تغيير","text":"تغيير"},"style":"secondary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"انسحب","text":"انسحب"},"style":"secondary","color":c["button_primary"],"height":"sm"}
+                    ],"spacing":"sm","margin":"lg"},
+                    {"type":"box","layout":"horizontal","contents":[
+                        {"type":"button","action":{"type":"message","label":"نقاطي","text":"نقاطي"},"style":"secondary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"الصدارة","text":"الصدارة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"انجازاتي","text":"انجازات"},"style":"secondary","color":c["button_primary"],"height":"sm"}
+                    ],"spacing":"sm","margin":"sm"},
+                    {"type":"box","layout":"horizontal","contents":[
+                        {"type":"button","action":{"type":"message","label":"ثيم","text":"ثيم"},"style":"secondary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"مساعدة","text":"مساعدة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"primary","color":c["button_primary"],"height":"sm"}
+                    ],"spacing":"sm","margin":"sm"},
+                    UI._footer(user.get('theme','light'))
+                ],
+                "backgroundColor":c["bg"],"paddingAll":"24px"
+            }
+        }
+        return FlexMessage(alt_text="القائمة الرئيسية", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
 
     @staticmethod
-    def win_screen(game_name,player_name,score,total,theme="light"):
-        c=Config.get_theme(theme)
-        bubble={"type":"bubble","body":{"type":"box","layout":"vertical","contents":[
-            {"type":"text","text":player_name,"size":"sm","weight":"bold","color":c["text"],"align":"center"},
-            {"type":"text","text":game_name,"size":"xs","color":c["text_secondary"],"align":"center","margin":"xs"},
-            {"type":"text","text":"فوز","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"sm"},
-            {"type":"text","text":f"{score}/{total}","size":"sm","color":c["text_secondary"],"align":"center","margin":"xs"},
-            {"type":"text","text":"Bot Mesh | عبير الدوسري 2025","size":"xxs","color":c["text_tertiary"],"align":"center","margin":"md"}
-        ],"paddingAll":"16px","backgroundColor":c["bg"]}}
-        return FlexMessage(alt_text="فوز",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+    def win_screen(game_name, player_name, score, total, theme="light"):
+        c = Config.get_theme(theme)
+        bubble = {
+            "type":"bubble",
+            "body":{
+                "type":"box","layout":"vertical",
+                "contents":[
+                    {"type":"text","text":player_name,"size":"sm","weight":"bold","color":c["text"],"align":"center"},
+                    {"type":"text","text":game_name,"size":"xs","color":c["text_secondary"],"align":"center","margin":"xs"},
+                    {"type":"text","text":"فوز","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"sm"},
+                    {"type":"text","text":f"{score}/{total}","size":"sm","color":c["text_secondary"],"align":"center","margin":"xs"},
+                    UI._footer(theme)
+                ],
+                "paddingAll":"16px","backgroundColor":c["bg"]
+            }
+        }
+        return FlexMessage(alt_text="فوز", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
 
     @staticmethod
-    def help_screen():
-        bubble={"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":[
-            {"type":"text","text":"Bot Mesh","size":"xl","weight":"bold","color":"#1A1A1A","align":"center"},
-            {"type":"text","text":"المساعدة","size":"lg","weight":"bold","align":"center","margin":"sm"},
-            {"type":"separator","margin":"md"},
-            {"type":"text","size":"xs","wrap":True,"color":"#4D4D4D","text":
-                "الاوامر الاساسية:\nتسجيل - بداية - العاب - نقاطي - الصدارة - انجازات - مكافأة - تغيير - ثيم - مساعدة\n\nالاوامر الترفيهية:\nسؤال - منشن - تحدي - اعتراف - شخصية - حكمة - موقف\n\nاوامر اللعب:\nلمح - جاوب - ايقاف"},
-            {"type":"button","margin":"lg","height":"sm","style":"primary","color":"#E8E8E8","action":{"type":"message","label":"بداية","text":"بداية"}},
-            {"type":"text","text":"Bot Mesh | عبير الدوسري 2025","size":"xxs","color":"#808080","align":"center","margin":"md"}
-        ],"backgroundColor":"#FFFFFF","paddingAll":"20px"}}
-        return FlexMessage(alt_text="المساعدة",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+    def help_screen(theme="light"):
+        c = Config.get_theme(theme)
+        bubble = {
+            "type":"bubble","size":"mega",
+            "body":{
+                "type":"box","layout":"vertical",
+                "contents":[
+                    {"type":"text","text":"Bot Mesh","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
+                    {"type":"text","text":"المساعدة","size":"lg","weight":"bold","align":"center","margin":"sm"},
+                    {"type":"separator","margin":"md"},
+                    {"type":"text","size":"xs","wrap":True,"color":c["text_secondary"],"text":
+                        "الاوامر الاساسية:\nتسجيل - بداية - العاب - نقاطي - الصدارة - انجازات - مكافأة - تغيير - ثيم - مساعدة\n\nالاوامر الترفيهية:\nسؤال - منشن - تحدي - اعتراف - شخصية - حكمة - موقف\n\nاوامر اللعب:\nلمح - جاوب - ايقاف"},
+                    {"type":"button","margin":"lg","height":"sm","style":"primary","color":c["button_primary"],"action":{"type":"message","label":"بداية","text":"بداية"}},
+                    UI._footer(theme)
+                ],
+                "backgroundColor":c["bg"],"paddingAll":"20px"
+            }
+        }
+        return FlexMessage(alt_text="المساعدة", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
 
     @staticmethod
     def games_list(theme="light"):
-        c=Config.get_theme(theme)
+        c = Config.get_theme(theme)
         games=[["خمن","خمن"],["ذكاء","ذكاء"],["ترتيب","ترتيب"],["رياضيات","رياضيات"],["اسرع","اسرع"],["ضد","ضد"],["لعبه","لعبة"],["سلسله","سلسلة"],["اغنيه","اغنية"],["تكوين","تكوين"],["لون","لون"],["حرف","حرف"],["مافيا","مافيا"],["توافق","توافق"]]
         contents=[{"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
                   {"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":"الالعاب","size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"}]
@@ -129,7 +158,7 @@ class UI:
         return FlexMessage(alt_text="احصائياتي",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
 
     @staticmethod
-    def leaderboard(leaders,theme="light"):
+    def leaderboard(leaders, theme="light"):
         c=Config.get_theme(theme)
         contents=[{"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
                   {"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":"لوحة الصدارة","size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"}]
@@ -145,12 +174,12 @@ class UI:
         return FlexMessage(alt_text="لوحة الصدارة",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
 
     @staticmethod
-    def achievements_list(user_achievements,theme="light"):
+    def achievements_list(user_achievements, theme="light"):
         c=Config.get_theme(theme)
         contents=[{"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
                   {"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":"الانجازات","size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"}]
         for aid,ach in Config.ACHIEVEMENTS.items():
-            unlocked=aid in user_achievements
+            unlocked = aid in user_achievements
             contents.append({"type":"box","layout":"horizontal","contents":[
                 {"type":"box","layout":"vertical","contents":[{"type":"text","text":ach['name'],"size":"sm","weight":"bold","color":c["text"]},{"type":"text","text":ach['desc'],"size":"xs","color":c["text_secondary"],"wrap":True}],"flex":1},
                 {"type":"text","text":f"+{ach['points']}" if unlocked else "مقفل","size":"xs","color":c["text"] if unlocked else c["text_tertiary"],"flex":0,"align":"center"}
@@ -160,7 +189,7 @@ class UI:
         return FlexMessage(alt_text="الانجازات",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
 
     @staticmethod
-    def achievement_unlocked(achievement,theme="light"):
+    def achievement_unlocked(achievement, theme="light"):
         c=Config.get_theme(theme)
         bubble={"type":"bubble","body":{"type":"box","layout":"vertical","contents":[
             {"type":"text","text":"انجاز جديد","size":"lg","weight":"bold","color":c["text"],"align":"center"},
