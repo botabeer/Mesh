@@ -17,6 +17,31 @@ class UI:
         return {"type":"text","text":"Bot Mesh | عبير الدوسري 2025","size":"xxs","color":c["text_tertiary"],"align":"center","margin":"lg"}
 
     @staticmethod
+    def welcome_screen(theme="light"):
+        """شاشة الترحيب للمستخدمين الجدد"""
+        c = Config.get_theme(theme)
+        bubble = {
+            "type":"bubble","size":"mega",
+            "body":{
+                "type":"box","layout":"vertical",
+                "contents":[
+                    {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"text","text":"مرحبا بك","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
+                    {"type":"text","text":"للبدء يرجى التسجيل","size":"md","color":c["text_secondary"],"align":"center","margin":"sm"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"box","layout":"horizontal","contents":[
+                        {"type":"button","action":{"type":"message","label":"تسجيل","text":"تسجيل"},"style":"primary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"مساعدة","text":"مساعدة"},"style":"secondary","color":c["button_secondary"],"height":"sm"}
+                    ],"spacing":"sm","margin":"lg"},
+                    UI._footer(theme)
+                ],
+                "backgroundColor":c["bg"],"paddingAll":"24px"
+            }
+        }
+        return FlexMessage(alt_text="مرحبا بك", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+
+    @staticmethod
     def registration_success(name, theme="light"):
         c = Config.get_theme(theme)
         bubble = {
@@ -63,7 +88,7 @@ class UI:
                     ],"margin":"lg","paddingAll":"15px","backgroundColor":c["card_secondary"],"cornerRadius":"10px"},
                     {"type":"separator","margin":"lg","color":c["border"]},
                     {"type":"box","layout":"horizontal","contents":[
-                        {"type":"button","action":{"type":"message","label":"تسجيل","text":"تسجيل"},"style":"secondary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"مكافأة","text":"مكافأة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
                         {"type":"button","action":{"type":"message","label":"تغيير","text":"تغيير"},"style":"secondary","color":c["button_primary"],"height":"sm"},
                         {"type":"button","action":{"type":"message","label":"انسحب","text":"انسحب"},"style":"secondary","color":c["button_primary"],"height":"sm"}
                     ],"spacing":"sm","margin":"lg"},
@@ -85,23 +110,34 @@ class UI:
         return FlexMessage(alt_text="القائمة الرئيسية", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
 
     @staticmethod
-    def win_screen(game_name, player_name, score, total, theme="light"):
+    def game_result(game_name, score, total, theme="light"):
+        """شاشة نتيجة اللعبة"""
         c = Config.get_theme(theme)
+        is_perfect = score == total
+        
         bubble = {
-            "type":"bubble",
+            "type":"bubble","size":"mega",
             "body":{
                 "type":"box","layout":"vertical",
                 "contents":[
-                    {"type":"text","text":player_name,"size":"sm","weight":"bold","color":c["text"],"align":"center"},
-                    {"type":"text","text":game_name,"size":"xs","color":c["text_secondary"],"align":"center","margin":"xs"},
-                    {"type":"text","text":"فوز","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"sm"},
-                    {"type":"text","text":f"{score}/{total}","size":"sm","color":c["text_secondary"],"align":"center","margin":"xs"},
+                    {"type":"text","text":"Bot Mesh","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"text","text":game_name,"size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
+                    {"type":"text","text":"فوز مثالي!" if is_perfect else "انتهت اللعبة","size":"md","color":c["text"],"align":"center","margin":"sm"},
+                    {"type":"box","layout":"vertical","contents":[
+                        {"type":"text","text":f"{score}/{total}","size":"xxl","weight":"bold","color":c["text"],"align":"center"}
+                    ],"margin":"lg","paddingAll":"20px","backgroundColor":c["card_secondary"],"cornerRadius":"12px"},
+                    {"type":"separator","margin":"lg","color":c["border"]},
+                    {"type":"box","layout":"horizontal","contents":[
+                        {"type":"button","action":{"type":"message","label":"بداية","text":"بداية"},"style":"primary","color":c["button_primary"],"height":"sm"},
+                        {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"secondary","color":c["button_secondary"],"height":"sm"}
+                    ],"spacing":"sm","margin":"lg"},
                     UI._footer(theme)
                 ],
-                "paddingAll":"16px","backgroundColor":c["bg"]
+                "backgroundColor":c["bg"],"paddingAll":"24px"
             }
         }
-        return FlexMessage(alt_text="فوز", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+        return FlexMessage(alt_text="نتيجة اللعبة", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
 
     @staticmethod
     def help_screen(theme="light"):
