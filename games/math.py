@@ -3,9 +3,11 @@ from games.base import BaseGame
 
 
 class MathGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "رياضيات"
+        self.supports_hint = False
+        self.supports_reveal = False
         
         self.levels = {
             1: {"min": 1, "max": 20, "ops": ["+", "-"]},
@@ -25,20 +27,17 @@ class MathGame(BaseGame):
             b = random.randint(cfg["min"], cfg["max"])
             self.current_answer = str(a + b)
             question = f"{a} + {b} = ؟"
-        
         elif op == "-":
             a = random.randint(cfg["min"] + 10, cfg["max"])
             b = random.randint(cfg["min"], a - 1)
             self.current_answer = str(a - b)
             question = f"{a} - {b} = ؟"
-        
         elif op == "*":
             max_factor = min(20, cfg["max"] // 10)
             a = random.randint(2, max_factor)
             b = random.randint(2, max_factor)
             self.current_answer = str(a * b)
             question = f"{a} × {b} = ؟"
-        
         else:
             divisor = random.randint(2, 15)
             result = random.randint(2, 20)
@@ -49,7 +48,7 @@ class MathGame(BaseGame):
         hint = f"المستوى {level}"
         return self.build_question_flex(question, hint)
     
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         try:
             return str(int(answer.strip())) == self.current_answer
         except:
