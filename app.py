@@ -84,6 +84,17 @@ def process_message(user_id, text, reply_token):
             if content:
                 reply_message(reply_token, UI.text_message(content))
             return
+        
+        # شرح لعبة المافيا
+        if normalized == "شرح":
+            theme = "light"
+            if db.is_registered(user_id):
+                user = db.get_user(user_id)
+                theme = user.get("theme", "light")
+            from games.mafia import MafiaGame
+            mafia = MafiaGame(db, theme)
+            reply_message(reply_token, mafia.help_screen())
+            return
 
         # لعبه التوافق - متاحة للجميع
         if normalized == "توافق":
