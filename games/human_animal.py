@@ -4,9 +4,11 @@ from config import Config
 
 
 class HumanAnimalGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "لعبه"
+        self.supports_hint = False
+        self.supports_reveal = False
         
         self.letters = list("ابتجحدرزسشصطعفقكلمنهوي")
         random.shuffle(self.letters)
@@ -25,7 +27,7 @@ class HumanAnimalGame(BaseGame):
         
         return self.build_question_flex(question, hint)
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         normalized = Config.normalize(answer)
         
         if len(normalized) < 2:
