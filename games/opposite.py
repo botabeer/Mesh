@@ -4,9 +4,11 @@ from config import Config
 
 
 class OppositeGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "ضد"
+        self.supports_hint = True
+        self.supports_reveal = True
         
         self.opposites = {
             "كبير": ["صغير", "قصير"],
@@ -71,6 +73,6 @@ class OppositeGame(BaseGame):
         hint = "ما عكس الكلمة"
         return self.build_question_flex(word, hint)
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         normalized = Config.normalize(answer)
         return any(Config.normalize(a) == normalized for a in self.current_answer)
