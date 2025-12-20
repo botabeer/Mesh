@@ -78,14 +78,14 @@ def process_message(user_id, text, reply_token):
             reply_message(reply_token, UI.help_screen(theme))
             return
 
-        # محتوى نصي
+        # محتوى نصي - متاح للجميع
         if normalized in text_mgr.cmd_mapping:
             content = text_mgr.get_content(normalized)
             if content:
                 reply_message(reply_token, UI.text_message(content))
             return
 
-        # لعبه التوافق بدون تسجيل
+        # لعبه التوافق - متاحة للجميع
         if normalized == "توافق":
             theme = "light"
             if db.is_registered(user_id):
@@ -110,20 +110,18 @@ def process_message(user_id, text, reply_token):
                     )
                 return
 
-        # تسجيل جديد
+        # تسجيل جديد - يدوي فقط
         if not db.is_registered(user_id):
-            if normalized in ["تسجيل"]:
+            if normalized == "تسجيل":
                 db.register_user(user_id, f"لاعب{user_id[-4:]}")
                 user = db.get_user(user_id)
                 reply_message(
                     reply_token,
                     UI.registration_success(user["name"], user["theme"])
                 )
-            else:
-                reply_message(reply_token, UI.welcome_screen())
             return
 
-        # مستخدم مسجل
+        # مستخدم مسجل - الاوامر فقط
         db.update_activity(user_id)
         user = db.get_user(user_id)
 
@@ -192,7 +190,7 @@ def process_message(user_id, text, reply_token):
                 reply_message(reply_token, UI.text_message("اجابه خاطئه، حاول مره اخرى"))
             return
 
-        # اوامر رئيسيه
+        # اوامر رئيسيه - فقط للمسجلين
         if normalized in ["القائمه", "القائمة", "الرئيسيه", "الرئيسية"]:
             reply_message(reply_token, UI.main_menu(user, db))
 
@@ -250,18 +248,9 @@ def process_message(user_id, text, reply_token):
             question = game_mgr.start_game(user_id, normalized, user["theme"])
             if question:
                 reply_message(reply_token, question)
-            else:
-                reply_message(reply_token, UI.text_message("حدث خطأ في بدء اللعبه"))
-
-        else:
-            reply_message(
-                reply_token,
-                UI.text_message("امر غير معروف. اكتب مساعده لعرض الاوامر")
-            )
 
     except Exception as e:
         logger.exception(f"Processing error: {e}")
-        reply_message(reply_token, UI.text_message("حدث خطأ. حاول مره اخرى"))
 
 @app.route("/callback", methods=["POST"])
 def callback():
