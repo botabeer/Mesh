@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
-from config import Config
+from ui import UI
 
 class BaseGame(ABC):
     QUESTIONS_PER_GAME = 5
@@ -18,7 +18,7 @@ class BaseGame(ABC):
         self.supports_reveal = True
 
     def _c(self):
-        return Config.get_theme(self.theme)
+        return UI.get_theme(self.theme)
 
     def _qr(self):
         items = ["سؤال", "منشن", "تحدي", "اعتراف", "شخصية", "حكمة", "موقف", "بداية", "العاب", "مساعدة"]
@@ -148,7 +148,7 @@ class BaseGame(ABC):
         
         contents.append({
             "type": "text",
-            "text": "Bot Mesh | 2025 عبير الدوسري",
+            "text": "Bot Mesh | 2025",
             "size": "xxs",
             "color": c["text_secondary"],
             "align": "center",
