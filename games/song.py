@@ -4,9 +4,11 @@ from config import Config
 
 
 class SongGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "اغنيه"
+        self.supports_hint = True
+        self.supports_reveal = True
         
         self.songs = [
             {"lyrics": "رجعت لي أيام الماضي معاك", "artist": "أم كلثوم"},
@@ -72,6 +74,6 @@ class SongGame(BaseGame):
         hint = "من المغني"
         return self.build_question_flex(song["lyrics"], hint)
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         normalized = Config.normalize(answer)
         return any(Config.normalize(a) == normalized for a in self.current_answer)
