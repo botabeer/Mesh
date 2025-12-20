@@ -4,9 +4,11 @@ from config import Config
 
 
 class ChainWordsGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "سلسله"
+        self.supports_hint = False
+        self.supports_reveal = False
         
         self.words = [
             "سياره", "تفاح", "قلم", "نجم", "كتاب", "باب", "رمل", "لعبه",
@@ -28,7 +30,7 @@ class ChainWordsGame(BaseGame):
         
         return self.build_question_flex(question, hint)
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         normalized = Config.normalize(answer)
         
         if len(normalized) < 2:
