@@ -18,27 +18,23 @@ class TextManager:
         }
 
         # تحميل الملفات وتنظيفها
-        self.challenges = self._load_file("challenges.txt")
-        self.confessions = self._load_file("confessions.txt")
-        self.mentions = self._load_file("mentions.txt")
-        self.personality = self._load_file("personality.txt")
-        self.questions = self._load_file("questions.txt")
-        self.quotes = self._load_file("quotes.txt")
-        self.situations = self._load_file("situations.txt")
-        
-        # ربط الأوامر بالمحتوى
-        self.cmd_mapping = {
-            "تحدي": self.challenges,
-            "اعتراف": self.confessions,
-            "منشن": self.mentions,
-            "شخصيه": self.personality,
-            "شخصية": self.personality,
-            "سؤال": self.questions,
-            "حكمه": self.quotes,
-            "حكمة": self.quotes,
-            "موقف": self.situations
+        self.original_content = {}  # المحتوى الأصلي لكل ملف
+        for file in self.files_config:
+            self.original_content[file] = self._load_file(file)
+
+        # محتوى متبقي لكل أمر لتجنب التكرار
+        self.remaining_content = {
+            "تحدي": self.original_content["challenges.txt"].copy(),
+            "اعتراف": self.original_content["confessions.txt"].copy(),
+            "منشن": self.original_content["mentions.txt"].copy(),
+            "شخصيه": self.original_content["personality.txt"].copy(),
+            "شخصية": self.original_content["personality.txt"].copy(),
+            "سؤال": self.original_content["questions.txt"].copy(),
+            "حكمه": self.original_content["quotes.txt"].copy(),
+            "حكمة": self.original_content["quotes.txt"].copy(),
+            "موقف": self.original_content["situations.txt"].copy()
         }
-    
+
     def _load_file(self, filename):
         """
         قراءة الملف وإرجاع قائمة الأسطر بعد إزالة البادئة وتجاهل الرموز غير النصية.
@@ -70,13 +66,33 @@ class TextManager:
         except Exception as e:
             print(f"[Error] لم يتم تحميل {filename}: {e}")
             return ["المحتوى غير متوفر"]
-    
+
     def get_content(self, cmd):
         """
-        إرجاع محتوى عشوائي بناءً على الأمر.
+        إرجاع محتوى عشوائي من الأمر بدون تكرار حتى يتم استنفاد كل المحتوى.
+        عند استنفاد المحتوى، يتم إعادة تعبئة القائمة تلقائيًا.
         """
-        content_list = self.cmd_mapping.get(cmd)
-        if content_list:
-            return random.choice(content_list)
-        print(f"[Warning] الأمر '{cmd}' غير موجود في cmd_mapping")
-        return None
+        if cmd not in self.remaining_content:
+            print(f"[Warning] الأمر '{cmd}' غير موجود في cmd_mapping")
+            return None
+
+        # إعادة تعبئة القائمة إذا انتهت
+        if not self.remaining_content[cmd]:
+            original_file = {
+                "تحدي": "challenges.txt",
+                "اعتراف": "confessions.txt",
+                "منشن": "mentions.txt",
+                "شخصيه": "personality.txt",
+                "شخصية": "personality.txt",
+                "سؤال": "questions.txt",
+                "حكمه": "quotes.txt",
+                "حكمة": "quotes.txt",
+                "موقف": "situations.txt"
+            }[cmd]
+            self.remaining_content[cmd] = self.original_content[original_file].copy()
+            print(f"[Info] تم إعادة تعبئة قائمة '{cmd}' بعد استنفادها")
+
+        # اختيار عنصر عشوائي وإزالته من القائمة
+        choice = random.choice(self.remaining_content[cmd])
+        self.remaining_content[cmd].remove(choice)
+        return choice
