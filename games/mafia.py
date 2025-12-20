@@ -1,7 +1,8 @@
 import random
 import logging
-from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction, TextMessage
+from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction
 from config import Config
+from ui import UI
 
 logger = logging.getLogger(__name__)
 
@@ -25,30 +26,15 @@ class MafiaGame:
         self.detective = None
         self.doctor = None
         self.voted_players = []
+        self.supports_hint = False
+        self.supports_reveal = False
         
     def _c(self):
-        return Config.get_theme(self.theme)
+        return UI.get_theme(self.theme)
     
     def _qr(self):
-        items = ["سؤال", "منشن", "تحدي", "اعتراف", "شخصية", "حكمة", "موقف", "بداية", "العاب", "مساعدة"]
+        items = ["الحالة", "شرح", "بداية", "العاب", "مساعدة"]
         return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
-    
-    def _separator(self, margin="md"):
-        c = self._c()
-        return {"type": "separator", "margin": margin, "color": c["border"]}
-    
-    def _glass_box(self, contents, padding="16px", margin="none"):
-        c = self._c()
-        return {
-            "type": "box",
-            "layout": "vertical",
-            "contents": contents,
-            "backgroundColor": c["card"],
-            "cornerRadius": "12px",
-            "paddingAll": padding,
-            "spacing": "sm",
-            "margin": margin
-        }
     
     def _create_bubble(self, title, contents, buttons=None):
         c = self._c()
@@ -61,12 +47,12 @@ class MafiaGame:
         body.extend(contents)
         
         if buttons:
-            body.append(self._separator("lg"))
+            body.append({"type": "separator", "margin": "lg", "color": c["border"]})
             body.extend(buttons)
         
         body.append({
             "type": "text",
-            "text": "Bot Mesh | 2025 عبير الدوسري",
+            "text": "Bot Mesh | 2025",
             "size": "xxs",
             "color": c["text_secondary"],
             "align": "center",
@@ -86,13 +72,80 @@ class MafiaGame:
         }
         return FlexMessage(alt_text=title, contents=FlexContainer.from_dict(bubble), quickReply=self._qr())
     
+    def _glass_box(self, contents, padding="16px", margin="lg"):
+        c = self._c()
+        return {
+            "type": "box",
+            "layout": "vertical",
+            "contents": contents,
+            "backgroundColor": c["card"],
+            "cornerRadius": "12px",
+            "paddingAll": padding,
+            "spacing": "sm",
+            "margin": margin
+        }
+    
+    def _button(self, label, text):
+        c = self._c()
+        return {
+            "type": "button",
+            "action": {"type": "message", "label": label, "text": text},
+            "style": "secondary",
+            "color": c["button"],
+            "height": "sm"
+        }
+    
+    def help_screen(self):
+        c = self._c()
+        contents = [
+            self._glass_box([
+                {"type": "text", "text": "كيف تلعب المافيا؟", "weight": "bold", "color": c["text"], "size": "md", "align": "center"},
+                {"type": "separator", "margin": "md", "color": c["border"]},
+                {"type": "text", "text": "1. اكتب: انضم مافيا للتسجيل", "size": "sm", "color": c["text"], "margin": "md", "wrap": True},
+                {"type": "text", "text": "2. يجب 4 لاعبين على الاقل", "size": "sm", "color": c["text"], "margin": "xs", "wrap": True},
+                {"type": "text", "text": "3. اكتب: بدء مافيا لبدء اللعبة", "size": "sm", "color": c["text"], "margin": "xs", "wrap": True}
+            ]),
+            self._glass_box([
+                {"type": "text", "text": "في القروب:", "weight": "bold", "color": c["text"], "size": "sm"},
+                {"type": "text", "text": "- التسجيل والتصويت", "size": "xs", "color": c["text_secondary"], "margin": "xs", "wrap": True},
+                {"type": "text", "text": "- النقاش بين اللاعبين", "size": "xs", "color": c["text_secondary"], "margin": "xs", "wrap": True},
+                {"type": "text", "text": "- مشاهدة من مات", "size": "xs", "color": c["text_secondary"], "margin": "xs", "wrap": True}
+            ]),
+            self._glass_box([
+                {"type": "text", "text": "في الخاص:", "weight": "bold", "color": c["text"], "size": "sm"},
+                {"type": "text", "text": "- ستعرف دورك (مافيا/محقق/طبيب/مواطن)", "size": "xs", "color": c["text_secondary"], "margin": "xs", "wrap": True},
+                {"type": "text", "text": "- المافيا: اختر من تقتل ليلا", "size": "xs", "color": c["text_secondary"], "margin": "xs", "wrap": True},
+                {"type": "text", "text": "- المحقق: اسأل عن اي لاعب", "size": "xs", "color": c["text_secondary"], "margin": "xs", "wrap": True},
+                {"type": "text", "text": "- الطبيب: اختر من تحمي", "size": "xs", "color": c["text_secondary"], "margin": "xs", "wrap": True}
+            ]),
+            self._glass_box([
+                {"type": "text", "text": "ملاحظة مهمة", "weight": "bold", "color": "#DC2626", "size": "sm", "align": "center"},
+                {"type": "text", "text": "يجب اضافة البوت كصديق ليصلك دورك في الخاص", "size": "xs", "color": c["text"], "margin": "xs", "wrap": True, "align": "center"}
+            ])
+        ]
+        
+        action_buttons = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    self._button("انضم", "انضم مافيا"),
+                    self._button("بدء", "بدء مافيا")
+                ],
+                "spacing": "sm",
+                "margin": "md"
+            }
+        ]
+        
+        return self._create_bubble("شرح لعبة المافيا", contents, action_buttons)
+    
     def registration_screen(self):
         c = self._c()
         contents = [
             self._glass_box([
                 {"type": "text", "text": f"اللاعبون المسجلون: {len(self.players)}", "size": "md", "color": c["text"], "weight": "bold", "align": "center"},
                 {"type": "text", "text": f"الحد الادنى: {self.MIN_PLAYERS} - الحد الاقصى: {self.MAX_PLAYERS}", "size": "xs", "color": c["text_secondary"], "align": "center", "margin": "sm"}
-            ], "20px", "lg")
+            ], "20px")
         ]
         
         if self.players:
@@ -107,13 +160,18 @@ class MafiaGame:
                 })
             contents.append(self._glass_box(player_list, "12px", "md"))
         
+        contents.append(self._glass_box([
+            {"type": "text", "text": "ملاحظة: يجب اضافة البوت كصديق", "size": "xs", "color": "#DC2626", "align": "center", "wrap": True}
+        ], "12px", "md"))
+        
         action_buttons = [
             {
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم مافيا"}, "style": "secondary", "color": c["button"], "height": "sm", "flex": 1},
-                    {"type": "button", "action": {"type": "message", "label": "بدء", "text": "بدء مافيا"}, "style": "secondary", "color": c["button"], "height": "sm", "flex": 1}
+                    self._button("انضم", "انضم مافيا"),
+                    self._button("بدء", "بدء مافيا"),
+                    self._button("شرح", "شرح")
                 ],
                 "spacing": "sm",
                 "margin": "md"
@@ -139,11 +197,12 @@ class MafiaGame:
             return self.registration_screen()
         except Exception as e:
             logger.error(f"Error in start: {e}")
+            from linebot.v3.messaging import TextMessage
             return TextMessage(text="حدث خطأ في بدء اللعبة")
     
     def add_player(self, user_id):
         try:
-            c = self._c()
+            from linebot.v3.messaging import TextMessage
             
             if self.phase != "registration":
                 return {"response": TextMessage(text="التسجيل مغلق الان"), "game_over": False}
@@ -161,11 +220,12 @@ class MafiaGame:
             return {"response": self.registration_screen(), "game_over": False}
         except Exception as e:
             logger.error(f"Error in add_player: {e}")
+            from linebot.v3.messaging import TextMessage
             return {"response": TextMessage(text="حدث خطأ"), "game_over": False}
     
     def assign_roles(self):
         try:
-            c = self._c()
+            from linebot.v3.messaging import TextMessage
             
             if len(self.players) < self.MIN_PLAYERS:
                 return {"response": TextMessage(text=f"يجب {self.MIN_PLAYERS} لاعبين على الاقل"), "game_over": False}
@@ -189,36 +249,12 @@ class MafiaGame:
             self.phase = "night"
             self.day = 1
             
-            message = f"بدأت اللعبة!\nعدد اللاعبين: {num_players}\nعدد المافيا: {num_mafia}\n\nالمرحلة: الليل"
+            message = f"بدأت اللعبة!\nعدد اللاعبين: {num_players}\nعدد المافيا: {num_mafia}\n\nالمرحلة: الليل\n\nتحقق من رسائلك الخاصة لمعرفة دورك!"
             return {"response": TextMessage(text=message), "game_over": False}
         except Exception as e:
             logger.error(f"Error in assign_roles: {e}")
+            from linebot.v3.messaging import TextMessage
             return {"response": TextMessage(text="حدث خطأ"), "game_over": False}
-    
-    def check(self, text, user_id):
-        try:
-            cmd = Config.normalize(text)
-            
-            if self.phase == "registration":
-                if cmd == "انضم مافيا":
-                    return self.add_player(user_id)
-                elif cmd == "بدء مافيا":
-                    return self.assign_roles()
-                elif cmd in ("الحاله", "الحالة", "حالة"):
-                    return {"response": self.get_status(), "game_over": False}
-            
-            elif self.phase == "voting":
-                if cmd.startswith("صوت "):
-                    target_name = text[4:].strip()
-                    return self.cast_vote(user_id, target_name)
-            
-            elif self.phase == "night":
-                return self.night_phase_action(user_id, text)
-            
-            return None
-        except Exception as e:
-            logger.error(f"Error in check: {e}")
-            return None
     
     def get_status(self):
         c = self._c()
@@ -230,7 +266,7 @@ class MafiaGame:
             self._glass_box([
                 {"type": "text", "text": f"المرحلة: {self.phase}", "size": "md", "color": c["text"], "align": "center"},
                 {"type": "text", "text": f"اليوم: {self.day}", "size": "sm", "color": c["text_secondary"], "align": "center", "margin": "xs"}
-            ], "16px", "lg")
+            ], "16px")
         ]
         
         if alive_names:
@@ -243,124 +279,25 @@ class MafiaGame:
         
         return self._create_bubble("حالة اللعبة", contents, None)
     
-    def night_phase_action(self, user_id, text):
+    def check(self, text, user_id):
         try:
-            if user_id not in self.alive_players:
-                return None
+            cmd = Config.normalize(text)
             
-            role = self.players[user_id]["role"]
+            if cmd == "شرح":
+                return {"response": self.help_screen(), "game_over": False}
             
-            if role == "mafia":
-                target_name = text.strip()
-                if target_name in [self.players[uid]["name"] for uid in self.alive_players if uid != user_id]:
-                    self.night_actions.setdefault("mafia_targets", []).append(target_name)
-                    return {"response": TextMessage(text=f"تم اختيار {target_name}"), "game_over": False}
-            
-            elif role == "detective":
-                target_name = text.strip()
-                for uid, pdata in self.players.items():
-                    if pdata["name"] == target_name:
-                        role_name = "مافيا" if pdata["role"] == "mafia" else "مواطن"
-                        return {"response": TextMessage(text=f"{target_name} هو {role_name}"), "game_over": False}
-            
-            elif role == "doctor":
-                target_name = text.strip()
-                if target_name in [self.players[uid]["name"] for uid in self.alive_players]:
-                    self.night_actions["doctor_target"] = target_name
-                    return {"response": TextMessage(text=f"تم حماية {target_name}"), "game_over": False}
+            if self.phase == "registration":
+                if cmd == "انضم مافيا":
+                    return self.add_player(user_id)
+                elif cmd == "بدء مافيا":
+                    return self.assign_roles()
+                elif cmd in ("الحاله", "الحالة", "حالة"):
+                    return {"response": self.get_status(), "game_over": False}
             
             return None
         except Exception as e:
-            logger.error(f"Error in night_phase_action: {e}")
+            logger.error(f"Error in check: {e}")
             return None
     
-    def cast_vote(self, user_id, target_name):
-        try:
-            if user_id not in self.alive_players or user_id in self.voted_players:
-                return None
-            
-            if target_name not in [self.players[uid]["name"] for uid in self.alive_players if uid != user_id]:
-                return {"response": TextMessage(text="لاعب غير صالح"), "game_over": False}
-            
-            self.votes[user_id] = target_name
-            self.voted_players.append(user_id)
-            
-            if len(self.votes) >= len(self.alive_players):
-                return self.resolve_voting()
-            
-            return {"response": TextMessage(text=f"تم التصويت على {target_name}"), "game_over": False}
-        except Exception as e:
-            logger.error(f"Error in cast_vote: {e}")
-            return None
-    
-    def resolve_voting(self):
-        try:
-            counts = {}
-            for target in self.votes.values():
-                counts[target] = counts.get(target, 0) + 1
-            
-            max_votes = max(counts.values())
-            voted_out = random.choice([name for name, count in counts.items() if count == max_votes])
-            
-            for uid, pdata in self.players.items():
-                if pdata["name"] == voted_out:
-                    self.players[uid]["alive"] = False
-                    self.alive_players.remove(uid)
-                    self.dead_players.append(uid)
-                    eliminated_role = pdata["role"]
-                    break
-            
-            self.votes = {}
-            self.voted_players = []
-            self.day += 1
-            self.phase = "night"
-            
-            winner = self.check_win()
-            if winner:
-                return self.end_game(winner)
-            
-            message = f"{voted_out} خرج من اللعبة\nالدور: {eliminated_role}"
-            return {"response": TextMessage(text=message), "game_over": False}
-        except Exception as e:
-            logger.error(f"Error in resolve_voting: {e}")
-            return None
-    
-    def check_win(self):
-        mafia_alive = [uid for uid in self.mafia_list if self.players[uid]["alive"]]
-        citizens_alive = [uid for uid in self.alive_players if uid not in self.mafia_list]
-        
-        if not mafia_alive:
-            return "المواطنين"
-        if len(mafia_alive) >= len(citizens_alive):
-            return "المافيا"
-        return None
-    
-    def end_game(self, winner):
-        try:
-            c = self._c()
-            
-            result_list = []
-            for uid, pdata in self.players.items():
-                status = "حي" if pdata["alive"] else "ميت"
-                result_list.append({
-                    "type": "text",
-                    "text": f"{pdata['name']} - {pdata['role']} - {status}",
-                    "size": "sm",
-                    "color": c["text"] if pdata["alive"] else c["text_tertiary"],
-                    "margin": "xs"
-                })
-            
-            contents = [
-                self._glass_box([
-                    {"type": "text", "text": f"الفائز: {winner}", "size": "lg", "color": c["text"], "weight": "bold", "align": "center"}
-                ], "16px", "lg"),
-                self._glass_box(result_list, "12px", "md")
-            ]
-            
-            self.phase = "finished"
-            self.game_active = False
-            
-            return {"response": self._create_bubble("انتهت اللعبة", contents, None), "game_over": True}
-        except Exception as e:
-            logger.error(f"Error in end_game: {e}")
-            return {"response": TextMessage(text="انتهت اللعبة"), "game_over": True}
+    def check_answer(self, answer):
+        return False
