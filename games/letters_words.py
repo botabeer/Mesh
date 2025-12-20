@@ -4,21 +4,18 @@ from config import Config
 
 
 class LettersWordsGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "تكوين"
+        self.supports_hint = True
+        self.supports_reveal = True
         
         self.letter_sets = [
             ["ق", "ل", "م", "ع", "ر", "ب"],
             ["س", "ا", "ر", "ه", "ي", "م"],
             ["ك", "ت", "ا", "ب", "م", "ل"],
             ["د", "ر", "س", "ه", "م", "ا"],
-            ["ح", "د", "ي", "ق", "ه", "ر"],
-            ["ن", "و", "ر", "ا", "ل", "م"],
-            ["ش", "م", "س", "ا", "ل", "ر"],
-            ["ب", "ح", "ر", "ا", "ل", "م"],
-            ["ج", "ب", "ل", "ا", "ر", "م"],
-            ["ف", "ر", "ح", "ا", "ل", "م"]
+            ["ح", "د", "ي", "ق", "ه", "ر"]
         ]
         random.shuffle(self.letter_sets)
         
@@ -37,21 +34,19 @@ class LettersWordsGame(BaseGame):
         
         return self.build_question_flex(question, hint)
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         normalized = Config.normalize(answer)
         
         if len(normalized) < 2 or normalized in self.found_words:
             return False
         
-        # نسخة من الحروف المتاحة
         available = [Config.normalize(letter) for letter in self.current_letters]
         
-        # تحقق من كل حرف
         for char in normalized:
             if char in available:
-                available.remove(char)  # احذف الحرف بعد استخدامه
+                available.remove(char)
             else:
-                return False  # الحرف غير موجود أو مستخدم أكثر من مرة
+                return False
         
         self.found_words.add(normalized)
         return len(self.found_words) >= self.required
