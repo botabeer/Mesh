@@ -36,7 +36,9 @@ class Config:
     def normalize(text):
         if not text:
             return ""
+        # ازالة التشكيل
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
+        # توحيد الحروف
         replacements = {
             "أ": "ا", "إ": "ا", "آ": "ا", 
             "ى": "ي", "ة": "ه", 
@@ -44,26 +46,30 @@ class Config:
         }
         for old, new in replacements.items():
             text = text.replace(old, new)
+        # ازالة الاحرف غير العربية والانجليزية
         text = re.sub(r"[^\w\sء-ي]", "", text)
         return text.strip().lower()
     
     @staticmethod
     def get_theme(theme):
+        """ثيمات محدثة حسب الصورة"""
         if theme == "dark":
             return {
-                "bg": "#1a1a1a",
-                "card": "#1a1a1a",
-                "text": "#ffffff",
-                "text_secondary": "#a0a0a0",
-                "border": "#333333",
-                "button": "#404040"
+                "bg": "#000000",           # خلفية سوداء
+                "card": "#1C1C1E",         # كارد رمادي غامق
+                "text": "#FFFFFF",         # نص أبيض
+                "text_secondary": "#8E8E93",  # نص ثانوي رمادي
+                "border": "#38383A",       # حدود رمادية
+                "button": "#C7C7CC",       # أزرار رمادي فاتح
+                "button_text": "#000000"   # نص الأزرار أسود
             }
-        else:
+        else:  # light theme
             return {
-                "bg": "#ffffff",
-                "card": "#ffffff",
-                "text": "#000000",
-                "text_secondary": "#666666",
-                "border": "#e0e0e0",
-                "button": "#d8d8d8"
+                "bg": "#FFFFFF",           # خلفية بيضاء
+                "card": "#F2F2F7",         # كارد رمادي فاتح
+                "text": "#000000",         # نص أسود
+                "text_secondary": "#8E8E93",  # نص ثانوي رمادي
+                "border": "#D1D1D6",       # حدود رمادية فاتحة
+                "button": "#E5E5EA",       # أزرار رمادي فاتح
+                "button_text": "#000000"   # نص الأزرار أسود
             }
