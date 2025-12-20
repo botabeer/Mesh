@@ -1,12 +1,14 @@
 import random
 import os
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TextManager:
     def __init__(self):
         self.base_path = "games"
-
-        # تعريف الملفات والبادئات المراد إزالتها
+        
         self.files_config = {
             "challenges.txt": "تحدي ",
             "confessions.txt": "اعتراف ",
@@ -16,29 +18,29 @@ class TextManager:
             "quotes.txt": "حكمة ",
             "situations.txt": "موقف "
         }
-
-        # تحميل الملفات وتنظيفها
-        self.original_content = {}  # المحتوى الأصلي لكل ملف
+        
+        self.original_content = {}
         for file in self.files_config:
             self.original_content[file] = self._load_file(file)
-
-        # محتوى متبقي لكل أمر لتجنب التكرار
-        self.remaining_content = {
-            "تحدي": self.original_content["challenges.txt"].copy(),
-            "اعتراف": self.original_content["confessions.txt"].copy(),
-            "منشن": self.original_content["mentions.txt"].copy(),
-            "شخصيه": self.original_content["personality.txt"].copy(),
-            "شخصية": self.original_content["personality.txt"].copy(),
-            "سؤال": self.original_content["questions.txt"].copy(),
-            "حكمه": self.original_content["quotes.txt"].copy(),
-            "حكمة": self.original_content["quotes.txt"].copy(),
-            "موقف": self.original_content["situations.txt"].copy()
+        
+        self.cmd_mapping = {
+            "تحدي": "challenges.txt",
+            "اعتراف": "confessions.txt",
+            "منشن": "mentions.txt",
+            "شخصيه": "personality.txt",
+            "شخصية": "personality.txt",
+            "سؤال": "questions.txt",
+            "حكمه": "quotes.txt",
+            "حكمة": "quotes.txt",
+            "موقف": "situations.txt"
         }
+        
+        self.remaining_content = {}
+        for cmd in self.cmd_mapping:
+            file = self.cmd_mapping[cmd]
+            self.remaining_content[cmd] = self.original_content[file].copy()
 
     def _load_file(self, filename):
-        """
-        قراءة الملف وإرجاع قائمة الأسطر بعد إزالة البادئة وتجاهل الرموز غير النصية.
-        """
         path = os.path.join(self.base_path, filename)
         remove_prefix = self.files_config.get(filename, None)
         lines = []
@@ -48,51 +50,34 @@ class TextManager:
                 for line in f:
                     line = line.strip()
                     if not line:
-                        continue  # تجاهل الأسطر الفارغة
+                        continue
                     if remove_prefix and line.startswith(remove_prefix):
-                        line = line[len(remove_prefix):]  # إزالة البادئة
-                    # تجاهل الأسطر التي تحتوي فقط على رموز غير نصية
+                        line = line[len(remove_prefix):]
                     if not re.search(r'\w', line, re.UNICODE):
                         continue
                     lines.append(line)
 
             if not lines:
-                print(f"[Warning] {filename} فارغ أو يحتوي أسطر غير صالحة، سيتم استخدام رسالة افتراضية")
+                logger.warning(f"{filename} empty or contains invalid lines")
                 return ["المحتوى غير متوفر"]
 
-            print(f"[Info] تم تحميل {len(lines)} أسطر صالحة من {filename}")
+            logger.info(f"Loaded {len(lines)} lines from {filename}")
             return lines
 
         except Exception as e:
-            print(f"[Error] لم يتم تحميل {filename}: {e}")
+            logger.error(f"Failed to load {filename}: {e}")
             return ["المحتوى غير متوفر"]
 
     def get_content(self, cmd):
-        """
-        إرجاع محتوى عشوائي من الأمر بدون تكرار حتى يتم استنفاد كل المحتوى.
-        عند استنفاد المحتوى، يتم إعادة تعبئة القائمة تلقائيًا.
-        """
         if cmd not in self.remaining_content:
-            print(f"[Warning] الأمر '{cmd}' غير موجود في cmd_mapping")
+            logger.warning(f"Command '{cmd}' not found")
             return None
 
-        # إعادة تعبئة القائمة إذا انتهت
         if not self.remaining_content[cmd]:
-            original_file = {
-                "تحدي": "challenges.txt",
-                "اعتراف": "confessions.txt",
-                "منشن": "mentions.txt",
-                "شخصيه": "personality.txt",
-                "شخصية": "personality.txt",
-                "سؤال": "questions.txt",
-                "حكمه": "quotes.txt",
-                "حكمة": "quotes.txt",
-                "موقف": "situations.txt"
-            }[cmd]
-            self.remaining_content[cmd] = self.original_content[original_file].copy()
-            print(f"[Info] تم إعادة تعبئة قائمة '{cmd}' بعد استنفادها")
+            file = self.cmd_mapping[cmd]
+            self.remaining_content[cmd] = self.original_content[file].copy()
+            logger.info(f"Refilled content list for '{cmd}'")
 
-        # اختيار عنصر عشوائي وإزالته من القائمة
         choice = random.choice(self.remaining_content[cmd])
         self.remaining_content[cmd].remove(choice)
         return choice
