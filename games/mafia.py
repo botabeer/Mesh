@@ -34,7 +34,8 @@ class MafiaGame:
         return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
     
     def _separator(self, margin="md"):
-        return {"type": "separator", "margin": margin}
+        c = self._c()
+        return {"type": "separator", "margin": margin, "color": c["border"]}
     
     def _glass_box(self, contents, padding="16px", margin="none"):
         c = self._c()
@@ -42,7 +43,7 @@ class MafiaGame:
             "type": "box",
             "layout": "vertical",
             "contents": contents,
-            "backgroundColor": c["card_secondary"],
+            "backgroundColor": c["card"],
             "cornerRadius": "12px",
             "paddingAll": padding,
             "spacing": "sm",
@@ -52,14 +53,25 @@ class MafiaGame:
     def _create_bubble(self, title, contents, buttons=None):
         c = self._c()
         body = [
-            {"type": "text", "text": title, "size": "xl", "weight": "bold", "color": c["primary"], "align": "center"},
-            self._separator("lg")
+            {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "color": c["text"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "text", "text": title, "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "margin": "lg"},
+            {"type": "separator", "margin": "lg", "color": c["border"]}
         ]
         body.extend(contents)
         
         if buttons:
             body.append(self._separator("lg"))
             body.extend(buttons)
+        
+        body.append({
+            "type": "text",
+            "text": "Bot Mesh | 2025 عبير الدوسري",
+            "size": "xxs",
+            "color": c["text_secondary"],
+            "align": "center",
+            "margin": "lg"
+        })
         
         bubble = {
             "type": "bubble",
@@ -68,7 +80,7 @@ class MafiaGame:
                 "type": "box",
                 "layout": "vertical",
                 "contents": body,
-                "backgroundColor": c["card"],
+                "backgroundColor": c["bg"],
                 "paddingAll": "24px"
             }
         }
@@ -100,8 +112,8 @@ class MafiaGame:
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                    {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم مافيا"}, "style": "primary", "height": "sm", "flex": 1},
-                    {"type": "button", "action": {"type": "message", "label": "بدء", "text": "بدء مافيا"}, "style": "primary", "height": "sm", "flex": 1}
+                    {"type": "button", "action": {"type": "message", "label": "انضم", "text": "انضم مافيا"}, "style": "secondary", "color": c["button"], "height": "sm", "flex": 1},
+                    {"type": "button", "action": {"type": "message", "label": "بدء", "text": "بدء مافيا"}, "style": "secondary", "color": c["button"], "height": "sm", "flex": 1}
                 ],
                 "spacing": "sm",
                 "margin": "md"
