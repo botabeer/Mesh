@@ -45,9 +45,12 @@ class BaseGame(ABC):
         c = self._c()
 
         contents = [
+            {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "color": c["text"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
             {
                 "type": "box",
                 "layout": "horizontal",
+                "margin": "lg",
                 "contents": [
                     {
                         "type": "box",
@@ -88,7 +91,7 @@ class BaseGame(ABC):
         contents.append({
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": c["card_secondary"],
+            "backgroundColor": c["card"],
             "cornerRadius": "12px",
             "paddingAll": "24px",
             "margin": "lg",
@@ -105,44 +108,52 @@ class BaseGame(ABC):
             ]
         })
 
-        # أزرار التحكم
-        if self.supports_hint or self.supports_reveal:
-            button_contents = []
-            if self.supports_hint:
-                button_contents.append({
-                    "type": "button",
-                    "action": {"type": "message", "label": "لمح", "text": "لمح"},
-                    "style": "secondary",
-                    "color": c["button_secondary"],
-                    "height": "sm",
-                    "flex": 1
-                })
-            if self.supports_reveal:
-                button_contents.append({
-                    "type": "button",
-                    "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
-                    "style": "secondary",
-                    "color": c["button_secondary"],
-                    "height": "sm",
-                    "flex": 1
-                })
+        # ازرار التحكم
+        button_contents = []
+        if self.supports_hint:
             button_contents.append({
                 "type": "button",
-                "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"},
-                "style": "primary",
-                "color": c["button_primary"],
+                "action": {"type": "message", "label": "لمح", "text": "لمح"},
+                "style": "secondary",
+                "color": c["button"],
                 "height": "sm",
                 "flex": 1
             })
-            
-            contents.append({"type": "separator", "margin": "lg", "color": c["border"]})
-            contents.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": button_contents,
-                "spacing": "sm",
-                "margin": "md"
+        if self.supports_reveal:
+            button_contents.append({
+                "type": "button",
+                "action": {"type": "message", "label": "جاوب", "text": "جاوب"},
+                "style": "secondary",
+                "color": c["button"],
+                "height": "sm",
+                "flex": 1
             })
+        button_contents.append({
+            "type": "button",
+            "action": {"type": "message", "label": "ايقاف", "text": "ايقاف"},
+            "style": "secondary",
+            "color": c["button"],
+            "height": "sm",
+            "flex": 1
+        })
+        
+        contents.append({"type": "separator", "margin": "lg", "color": c["border"]})
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "contents": button_contents,
+            "spacing": "sm",
+            "margin": "md"
+        })
+        
+        contents.append({
+            "type": "text",
+            "text": "Bot Mesh | 2025 عبير الدوسري",
+            "size": "xxs",
+            "color": c["text_secondary"],
+            "align": "center",
+            "margin": "lg"
+        })
 
         bubble = {
             "type": "bubble",
@@ -151,7 +162,7 @@ class BaseGame(ABC):
                 "type": "box",
                 "layout": "vertical",
                 "contents": contents,
-                "backgroundColor": c["card"],
+                "backgroundColor": c["bg"],
                 "paddingAll": "24px"
             }
         }
@@ -163,7 +174,7 @@ class BaseGame(ABC):
         )
     
     def get_hint(self):
-        """إعطاء تلميح - أول حرف وعدد الحروف"""
+        """اعطاء تلميح - اول حرف وعدد الحروف"""
         if not self.supports_hint or not self.current_answer:
             return None
         
@@ -174,7 +185,7 @@ class BaseGame(ABC):
         return f"التلميح: {first_letter}{'_' * (length - 1)} ({length} حروف)"
     
     def reveal_answer(self):
-        """كشف الإجابة الصحيحة"""
+        """كشف الاجابة الصحيحة"""
         if not self.supports_reveal or not self.current_answer:
             return None
         
