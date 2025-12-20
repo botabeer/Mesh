@@ -1,235 +1,312 @@
-from linebot.v3.messaging import FlexMessage, FlexContainer, QuickReply, QuickReplyItem, MessageAction, TextMessage
+from linebot.v3.messaging import (
+    FlexMessage,
+    FlexContainer,
+    QuickReply,
+    QuickReplyItem,
+    MessageAction,
+    TextMessage
+)
 from config import Config
 
+
 class UI:
+
+    # ================= Quick Reply =================
     @staticmethod
     def get_quick_reply():
-        items = ["سؤال","منشن","تحدي","اعتراف","شخصية","حكمة","موقف","بداية","العاب","مساعدة"]
-        return QuickReply(items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items])
+        items = ["سؤال", "منشن", "تحدي", "اعتراف", "شخصية", "حكمة", "موقف", "بداية", "العاب", "مساعدة"]
+        return QuickReply(
+            items=[QuickReplyItem(action=MessageAction(label=i, text=i)) for i in items]
+        )
 
+    # ================= Text =================
     @staticmethod
     def text_message(text):
         return TextMessage(text=text)
 
+    # ================= Base Components =================
+    @staticmethod
+    def _header(title, theme):
+        c = Config.get_theme(theme)
+        return [
+            {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "color": c["text"], "align": "center"},
+            {"type": "separator", "margin": "lg", "color": c["border"]},
+            {"type": "text", "text": title, "size": "lg", "weight": "bold", "color": c["text"], "align": "center", "margin": "lg"}
+        ]
+
     @staticmethod
     def _footer(theme):
         c = Config.get_theme(theme)
-        return {"type":"text","text":"Bot Mesh | عبير الدوسري 2025","size":"xxs","color":c["text_tertiary"],"align":"center","margin":"lg"}
+        return {
+            "type": "text",
+            "text": "تم الانشاء بواسطة عبير الدوسري @ 2025",
+            "size": "xxs",
+            "color": c["text_secondary"],
+            "align": "center",
+            "margin": "lg"
+        }
 
+    @staticmethod
+    def _card(contents, theme, margin="lg"):
+        c = Config.get_theme(theme)
+        return {
+            "type": "box",
+            "layout": "vertical",
+            "contents": contents,
+            "backgroundColor": c["card"],
+            "cornerRadius": "10px",
+            "paddingAll": "16px",
+            "margin": margin
+        }
+
+    @staticmethod
+    def _button(label, text, theme, style="default"):
+        c = Config.get_theme(theme)
+        return {
+            "type": "button",
+            "action": {"type": "message", "label": label, "text": text},
+            "style": "primary" if style == "primary" else "secondary",
+            "color": c["button"],
+            "height": "sm"
+        }
+
+    @staticmethod
+    def _bubble(contents, theme, alt):
+        c = Config.get_theme(theme)
+        bubble = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": c["bg"],
+                "paddingAll": "24px",
+                "contents": contents
+            }
+        }
+        return FlexMessage(
+            alt_text=alt,
+            contents=FlexContainer.from_dict(bubble),
+            quick_reply=UI.get_quick_reply()
+        )
+
+    # ================= Welcome =================
     @staticmethod
     def welcome_screen(theme="light"):
-        """شاشة الترحيب للمستخدمين الجدد"""
-        c = Config.get_theme(theme)
-        bubble = {
-            "type":"bubble","size":"mega",
-            "body":{
-                "type":"box","layout":"vertical",
-                "contents":[
-                    {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"text","text":"مرحبا بك","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
-                    {"type":"text","text":"للبدء يرجى التسجيل","size":"md","color":c["text_secondary"],"align":"center","margin":"sm"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"box","layout":"horizontal","contents":[
-                        {"type":"button","action":{"type":"message","label":"تسجيل","text":"تسجيل"},"style":"primary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"مساعدة","text":"مساعدة"},"style":"secondary","color":c["button_secondary"],"height":"sm"}
-                    ],"spacing":"sm","margin":"lg"},
-                    UI._footer(theme)
-                ],
-                "backgroundColor":c["bg"],"paddingAll":"24px"
-            }
-        }
-        return FlexMessage(alt_text="مرحبا بك", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+        contents = []
+        contents += UI._header("مرحبا بك", theme)
+        contents.append(UI._card([
+            {"type": "text", "text": "للبدء يرجى التسجيل", "align": "center"}
+        ], theme))
+        contents.append(UI._button("تسجيل", "تسجيل", theme))
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "مرحبا بك")
 
+    # ================= Registration =================
     @staticmethod
     def registration_success(name, theme="light"):
-        c = Config.get_theme(theme)
-        bubble = {
-            "type":"bubble","size":"mega",
-            "body":{
-                "type":"box","layout":"vertical",
-                "contents":[
-                    {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"text","text":f"مرحبا {name}","size":"xl","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
-                    {"type":"text","text":"تم تسجيلك بنجاح","size":"md","color":c["text_secondary"],"align":"center","margin":"sm"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"box","layout":"horizontal","contents":[
-                        {"type":"button","action":{"type":"message","label":"بداية","text":"بداية"},"style":"primary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"primary","color":c["button_primary"],"height":"sm"}
-                    ],"spacing":"sm","margin":"lg"},
-                    UI._footer(theme)
-                ],
-                "backgroundColor":c["bg"],"paddingAll":"24px"
-            }
-        }
-        return FlexMessage(alt_text="تسجيل ناجح", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+        contents = []
+        contents += UI._header(f"مرحبا {name}", theme)
+        contents.append(UI._card([
+            {"type": "text", "text": "تم تسجيلك بنجاح", "align": "center"}
+        ], theme))
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                UI._button("بداية", "بداية", theme),
+                UI._button("العاب", "العاب", theme)
+            ]
+        })
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "تسجيل ناجح")
 
+    # ================= Main Menu =================
     @staticmethod
-    def main_menu(user, db=None):
-        c = Config.get_theme(user.get('theme','light'))
-        bubble = {
-            "type":"bubble","size":"mega",
-            "body":{
-                "type":"box","layout":"vertical",
-                "contents":[
-                    {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"text","text":f"مرحبا {user['name']}","size":"lg","color":c["text"],"margin":"lg","align":"center"},
-                    {"type":"box","layout":"vertical","contents":[
-                        {"type":"box","layout":"horizontal","contents":[
-                            {"type":"text","text":f"النقاط: {user['points']}","size":"sm","color":c["text"]},
-                            {"type":"text","text":f"الالعاب: {user['games']}","size":"sm","color":c["text_secondary"],"align":"end"}
-                        ]},
-                        {"type":"box","layout":"horizontal","contents":[
-                            {"type":"text","text":f"الفوز: {user['wins']}","size":"sm","color":c["text"]},
-                            {"type":"text","text":f"السلسلة: {user['streak']}","size":"sm","color":c["text_secondary"],"align":"end"}
-                        ],"margin":"sm"}
-                    ],"margin":"lg","paddingAll":"15px","backgroundColor":c["card_secondary"],"cornerRadius":"10px"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"box","layout":"horizontal","contents":[
-                        {"type":"button","action":{"type":"message","label":"مكافأة","text":"مكافأة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"تغيير","text":"تغيير"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"انسحب","text":"انسحب"},"style":"secondary","color":c["button_primary"],"height":"sm"}
-                    ],"spacing":"sm","margin":"lg"},
-                    {"type":"box","layout":"horizontal","contents":[
-                        {"type":"button","action":{"type":"message","label":"نقاطي","text":"نقاطي"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"الصدارة","text":"الصدارة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"انجازاتي","text":"انجازات"},"style":"secondary","color":c["button_primary"],"height":"sm"}
-                    ],"spacing":"sm","margin":"sm"},
-                    {"type":"box","layout":"horizontal","contents":[
-                        {"type":"button","action":{"type":"message","label":"ثيم","text":"ثيم"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"مساعدة","text":"مساعدة"},"style":"secondary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"primary","color":c["button_primary"],"height":"sm"}
-                    ],"spacing":"sm","margin":"sm"},
-                    UI._footer(user.get('theme','light'))
-                ],
-                "backgroundColor":c["bg"],"paddingAll":"24px"
-            }
-        }
-        return FlexMessage(alt_text="القائمة الرئيسية", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+    def main_menu(user):
+        theme = user.get("theme", "light")
+        contents = []
+        contents += UI._header(f"مرحبا {user['name']}", theme)
 
-    @staticmethod
-    def game_result(game_name, score, total, theme="light"):
-        """شاشة نتيجة اللعبة"""
-        c = Config.get_theme(theme)
-        is_perfect = score == total
-        
-        bubble = {
-            "type":"bubble","size":"mega",
-            "body":{
-                "type":"box","layout":"vertical",
-                "contents":[
-                    {"type":"text","text":"Bot Mesh","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"text","text":game_name,"size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
-                    {"type":"text","text":"فوز مثالي!" if is_perfect else "انتهت اللعبة","size":"md","color":c["text"],"align":"center","margin":"sm"},
-                    {"type":"box","layout":"vertical","contents":[
-                        {"type":"text","text":f"{score}/{total}","size":"xxl","weight":"bold","color":c["text"],"align":"center"}
-                    ],"margin":"lg","paddingAll":"20px","backgroundColor":c["card_secondary"],"cornerRadius":"12px"},
-                    {"type":"separator","margin":"lg","color":c["border"]},
-                    {"type":"box","layout":"horizontal","contents":[
-                        {"type":"button","action":{"type":"message","label":"بداية","text":"بداية"},"style":"primary","color":c["button_primary"],"height":"sm"},
-                        {"type":"button","action":{"type":"message","label":"العاب","text":"العاب"},"style":"secondary","color":c["button_secondary"],"height":"sm"}
-                    ],"spacing":"sm","margin":"lg"},
-                    UI._footer(theme)
-                ],
-                "backgroundColor":c["bg"],"paddingAll":"24px"
-            }
-        }
-        return FlexMessage(alt_text="نتيجة اللعبة", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+        contents.append(UI._card([
+            {"type": "box", "layout": "horizontal", "contents": [
+                {"type": "text", "text": "النقاط"},
+                {"type": "text", "text": str(user["points"]), "align": "end"}
+            ]},
+            {"type": "box", "layout": "horizontal", "margin": "sm", "contents": [
+                {"type": "text", "text": "الالعاب"},
+                {"type": "text", "text": str(user["games"]), "align": "end"}
+            ]},
+            {"type": "box", "layout": "horizontal", "margin": "sm", "contents": [
+                {"type": "text", "text": "الفوز"},
+                {"type": "text", "text": str(user["wins"]), "align": "end"}
+            ]},
+            {"type": "box", "layout": "horizontal", "margin": "sm", "contents": [
+                {"type": "text", "text": "السلسلة"},
+                {"type": "text", "text": str(user["streak"]), "align": "end"}
+            ]}
+        ], theme))
 
-    @staticmethod
-    def help_screen(theme="light"):
-        c = Config.get_theme(theme)
-        bubble = {
-            "type":"bubble","size":"mega",
-            "body":{
-                "type":"box","layout":"vertical",
-                "contents":[
-                    {"type":"text","text":"Bot Mesh","size":"xl","weight":"bold","color":c["primary"],"align":"center"},
-                    {"type":"text","text":"المساعدة","size":"lg","weight":"bold","align":"center","margin":"sm"},
-                    {"type":"separator","margin":"md"},
-                    {"type":"text","size":"xs","wrap":True,"color":c["text_secondary"],"text":
-                        "الاوامر الاساسية:\nتسجيل - بداية - العاب - نقاطي - الصدارة - انجازات - مكافأة - تغيير - ثيم - مساعدة\n\nالاوامر الترفيهية:\nسؤال - منشن - تحدي - اعتراف - شخصية - حكمة - موقف\n\nاوامر اللعب:\nلمح - جاوب - ايقاف"},
-                    {"type":"button","margin":"lg","height":"sm","style":"primary","color":c["button_primary"],"action":{"type":"message","label":"بداية","text":"بداية"}},
-                    UI._footer(theme)
-                ],
-                "backgroundColor":c["bg"],"paddingAll":"20px"
-            }
-        }
-        return FlexMessage(alt_text="المساعدة", contents=FlexContainer.from_dict(bubble), quick_reply=UI.get_quick_reply())
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                UI._button("العاب", "العاب", theme, "primary"),
+                UI._button("نقاطي", "نقاطي", theme),
+                UI._button("انسحب", "انسحب", theme)
+            ]
+        })
 
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "margin": "sm",
+            "contents": [
+                UI._button("الصدارة", "الصدارة", theme),
+                UI._button("انجازات", "انجازات", theme),
+                UI._button("ثيم", "ثيم", theme)
+            ]
+        })
+
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "القائمة الرئيسية")
+
+    # ================= Games List =================
     @staticmethod
     def games_list(theme="light"):
-        c = Config.get_theme(theme)
-        games=[["خمن","خمن"],["ذكاء","ذكاء"],["ترتيب","ترتيب"],["رياضيات","رياضيات"],["اسرع","اسرع"],["ضد","ضد"],["لعبه","لعبة"],["سلسله","سلسلة"],["اغنيه","اغنية"],["تكوين","تكوين"],["لون","لون"],["حرف","حرف"],["مافيا","مافيا"],["توافق","توافق"]]
-        contents=[{"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-                  {"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":"الالعاب","size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"}]
-        for i in range(0,len(games),2):
-            row=[]
-            for j in range(2):
-                if i+j<len(games):
-                    cmd,label=games[i+j]
-                    row.append({"type":"button","action":{"type":"message","label":label,"text":cmd},"style":"secondary","color":c["button_primary"],"height":"sm","flex":1})
-            contents.append({"type":"box","layout":"horizontal","contents":row,"spacing":"sm","margin":"md"})
-        contents.append(UI._footer(theme))
-        bubble={"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":contents,"backgroundColor":c["bg"],"paddingAll":"24px"}}
-        return FlexMessage(alt_text="قائمة الالعاب",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+        games = [
+            "خمن", "ذكاء", "ترتيب", "رياضيات",
+            "اسرع", "ضد", "سلسلة", "اغنية",
+            "تكوين", "لون", "حرف", "مافيا",
+            "توافق"
+        ]
 
+        contents = []
+        contents += UI._header("اختر لعبة", theme)
+
+        for i in range(0, len(games), 2):
+            row = [UI._button(g, g, theme) for g in games[i:i+2]]
+            contents.append({
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "margin": "sm",
+                "contents": row
+            })
+
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "قائمة الالعاب")
+
+    # ================= Compatibility =================
+    @staticmethod
+    def compatibility_game(theme="light"):
+        contents = []
+        contents += UI._header("لعبة التوافق", theme)
+        contents.append(UI._card([
+            {"type": "text", "text": "اكتب اسمين بينهما كلمة و", "align": "center"},
+            {"type": "text", "text": "مثال: احمد و سارة", "size": "sm", "align": "center", "margin": "md"}
+        ], theme))
+        contents.append({"type": "text", "text": "للترفيه فقط - بدون نقاط", "size": "xs", "align": "center"})
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "لعبة التوافق")
+
+    @staticmethod
+    def compatibility_result(name1, name2, percentage, message, theme="light"):
+        contents = []
+        contents += UI._header("نسبة التوافق", theme)
+        contents.append(UI._card([
+            {"type": "text", "text": f"{name1} و {name2}", "align": "center"},
+            {"type": "text", "text": f"{percentage}%", "size": "xxl", "weight": "bold", "align": "center", "margin": "lg"},
+            {"type": "text", "text": message, "size": "sm", "align": "center", "margin": "md"}
+        ], theme))
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+                UI._button("مرة اخرى", "توافق", theme),
+                UI._button("بداية", "بداية", theme)
+            ]
+        })
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "نتيجة التوافق")
+
+    # ================= Help =================
+    @staticmethod
+    def help_screen(theme="light"):
+        contents = []
+        contents += UI._header("المساعدة", theme)
+        contents.append(UI._card([
+            {"type": "text", "text": "الاوامر الاساسية", "weight": "bold"},
+            {"type": "text", "text": "تسجيل - بداية - العاب"},
+            {"type": "text", "text": "نقاطي - الصدارة - انجازات"},
+            {"type": "text", "text": "ثيم - انسحب"}
+        ], theme))
+        contents.append(UI._button("بداية", "بداية", theme))
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "المساعدة")
+
+    # ================= User Stats =================
     @staticmethod
     def user_stats(user):
-        c=Config.get_theme(user.get('theme','light'))
-        win_rate=(user['wins']/user['games']*100) if user['games']>0 else 0
-        bubble={"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":[
-            {"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-            {"type":"separator","margin":"lg","color":c["border"]},
-            {"type":"text","text":"احصائياتي","size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"},
-            {"type":"box","layout":"vertical","contents":[
-                {"type":"box","layout":"horizontal","contents":[{"type":"text","text":"الاسم","size":"sm","color":c["text_secondary"]},{"type":"text","text":user['name'],"size":"sm","color":c["text"],"align":"end"}]},
-                {"type":"box","layout":"horizontal","contents":[{"type":"text","text":"النقاط","size":"sm","color":c["text_secondary"]},{"type":"text","text":str(user['points']),"size":"sm","color":c["text"],"align":"end"}],"margin":"sm"},
-                {"type":"box","layout":"horizontal","contents":[{"type":"text","text":"نسبة الفوز","size":"sm","color":c["text_secondary"]},{"type":"text","text":f"{win_rate:.1f}%","size":"sm","color":c["text"],"align":"end"}],"margin":"sm"}
-            ],"margin":"lg","paddingAll":"15px","backgroundColor":c["card_secondary"],"cornerRadius":"10px"},
-            UI._footer(user.get('theme','light'))],"backgroundColor":c["bg"],"paddingAll":"24px"}}
-        return FlexMessage(alt_text="احصائياتي",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+        theme = user.get("theme", "light")
+        rate = (user["wins"] / user["games"] * 100) if user["games"] else 0
 
+        contents = []
+        contents += UI._header("احصائياتي", theme)
+        contents.append(UI._card([
+            {"type": "text", "text": f"الاسم: {user['name']}"},
+            {"type": "text", "text": f"النقاط: {user['points']}"},
+            {"type": "text", "text": f"نسبة الفوز: {rate:.1f}%"}
+        ], theme))
+        contents.append(UI._button("بداية", "بداية", theme))
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "احصائياتي")
+
+    # ================= Leaderboard =================
     @staticmethod
     def leaderboard(leaders, theme="light"):
-        c=Config.get_theme(theme)
-        contents=[{"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-                  {"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":"لوحة الصدارة","size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"}]
-        for idx,leader in enumerate(leaders[:10]):
-            rank=idx+1
-            contents.append({"type":"box","layout":"horizontal","contents":[
-                {"type":"text","text":f"{rank}","size":"md","weight":"bold","color":c["text"],"flex":0},
-                {"type":"text","text":leader['name'],"size":"sm","color":c["text"],"flex":1,"margin":"md"},
-                {"type":"text","text":str(leader['points']),"size":"sm","color":c["text_secondary"],"align":"end","flex":0}
-            ],"margin":"md","paddingAll":"12px","backgroundColor":c["card_secondary"],"cornerRadius":"8px"})
-        contents.append(UI._footer(theme))
-        bubble={"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":contents,"backgroundColor":c["bg"],"paddingAll":"24px"}}
-        return FlexMessage(alt_text="لوحة الصدارة",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+        contents = []
+        contents += UI._header("لوحة الصدارة", theme)
 
+        for i, u in enumerate(leaders[:10], 1):
+            contents.append(UI._card([
+                {"type": "text", "text": f"{i}. {u['name']} - {u['points']} نقطة"}
+            ], theme, margin="sm"))
+
+        contents.append(UI._button("بداية", "بداية", theme))
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "لوحة الصدارة")
+
+    # ================= Achievements =================
     @staticmethod
     def achievements_list(user_achievements, theme="light"):
-        c=Config.get_theme(theme)
-        contents=[{"type":"text","text":"Bot Mesh","size":"xxl","weight":"bold","color":c["primary"],"align":"center"},
-                  {"type":"separator","margin":"lg","color":c["border"]},{"type":"text","text":"الانجازات","size":"lg","weight":"bold","color":c["text"],"align":"center","margin":"lg"}]
-        for aid,ach in Config.ACHIEVEMENTS.items():
-            unlocked = aid in user_achievements
-            contents.append({"type":"box","layout":"horizontal","contents":[
-                {"type":"box","layout":"vertical","contents":[{"type":"text","text":ach['name'],"size":"sm","weight":"bold","color":c["text"]},{"type":"text","text":ach['desc'],"size":"xs","color":c["text_secondary"],"wrap":True}],"flex":1},
-                {"type":"text","text":f"+{ach['points']}" if unlocked else "مقفل","size":"xs","color":c["text"] if unlocked else c["text_tertiary"],"flex":0,"align":"center"}
-            ],"paddingAll":"10px","backgroundColor":c["card_secondary"] if unlocked else c["card"],"cornerRadius":"8px","margin":"sm"})
-        contents.append(UI._footer(theme))
-        bubble={"type":"bubble","size":"mega","body":{"type":"box","layout":"vertical","contents":contents,"backgroundColor":c["bg"],"paddingAll":"24px"}}
-        return FlexMessage(alt_text="الانجازات",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+        contents = []
+        contents += UI._header("الانجازات", theme)
 
+        for aid, ach in Config.ACHIEVEMENTS.items():
+            unlocked = aid in user_achievements
+            contents.append(UI._card([
+                {"type": "text", "text": ach["name"], "weight": "bold"},
+                {"type": "text", "text": ach["desc"], "size": "xs"},
+                {"type": "text", "text": f"+{ach['points']} نقطة" if unlocked else "مقفل", "size": "xs"}
+            ], theme, margin="sm"))
+
+        contents.append(UI._button("بداية", "بداية", theme))
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "الانجازات")
+
+    # ================= Achievement Unlocked =================
     @staticmethod
     def achievement_unlocked(achievement, theme="light"):
-        c=Config.get_theme(theme)
-        bubble={"type":"bubble","body":{"type":"box","layout":"vertical","contents":[
-            {"type":"text","text":"انجاز جديد","size":"lg","weight":"bold","color":c["text"],"align":"center"},
-            {"type":"text","text":achievement['name'],"size":"md","weight":"bold","color":c["text"],"margin":"md","align":"center"},
-            {"type":"text","text":f"+{achievement['points']} نقطة","size":"sm","color":c["text_tertiary"],"margin":"md","align":"center"}
-        ],"backgroundColor":c["bg"],"paddingAll":"24px"}}
-        return FlexMessage(alt_text="انجاز جديد",contents=FlexContainer.from_dict(bubble),quick_reply=UI.get_quick_reply())
+        contents = []
+        contents += UI._header("انجاز جديد", theme)
+        contents.append(UI._card([
+            {"type": "text", "text": achievement["name"], "weight": "bold", "align": "center"},
+            {"type": "text", "text": f"+{achievement['points']} نقطة", "align": "center", "size": "sm"}
+        ], theme))
+        contents.append(UI._footer(theme))
+        return UI._bubble(contents, theme, "انجاز جديد")
