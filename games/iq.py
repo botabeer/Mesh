@@ -3,8 +3,8 @@ from games.base import BaseGame
 from config import Config
 
 
-class IQGame(BaseGame):  # تم تغيير IqGame إلى IQGame
-    def __init__(self, db, theme: str = "light"):
+class IQGame(BaseGame):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "ذكاء"
         
@@ -38,7 +38,6 @@ class IQGame(BaseGame):  # تم تغيير IqGame إلى IQGame
             {"q": "شيء له اربع ارجل في الصباح واثنين في الظهر وثلاثه في المساء", "a": ["الانسان", "انسان"]},
             {"q": "ما هو الشيء الذي يوجد في وسط باريس", "a": ["حرف الراء", "الراء", "راء", "ر"]},
             {"q": "شيء اسمه مثل لونه", "a": ["البيض", "البيضه", "بيض", "بيضه"]},
-            {"q": "ما هو الشيء الذي تاكله بعد طبخه", "a": ["الطعام", "الاكل", "طعام", "اكل"]},
             {"q": "شيء كلما ازددت منه خف", "a": ["الثقوب", "الحفر", "ثقوب", "حفر"]},
             {"q": "ما هو الشيء الذي يكون اخضر في الارض واسود في السوق واحمر في البيت", "a": ["الشاي", "شاي"]},
             {"q": "شيء له رقبه بلا راس", "a": ["القميص", "قميص", "الزجاجه", "زجاجه"]},
@@ -46,7 +45,6 @@ class IQGame(BaseGame):  # تم تغيير IqGame إلى IQGame
             {"q": "شيء اذا لمسته صاح", "a": ["الجرس", "جرس"]},
             {"q": "ما هو الشيء الذي يسير امامك ولا تراه", "a": ["المستقبل", "مستقبل", "الغد", "غد"]},
             {"q": "شيء يطير بلا جناح", "a": ["الدخان", "دخان", "السحاب", "سحاب"]},
-            {"q": "ما هو الشيء الذي له راس واحد وثلاث ارجل", "a": ["العصا", "عصا"]},
             {"q": "شيء ترميه كلما احتجت اليه", "a": ["الشبكه", "شبكه", "السناره", "سناره"]},
             {"q": "ما هو الشيء الذي يكبر بالضرب", "a": ["الطبل", "طبل"]},
             {"q": "شيء له فروع ولا اوراق له", "a": ["البنك", "بنك"]},
@@ -76,6 +74,6 @@ class IQGame(BaseGame):  # تم تغيير IqGame إلى IQGame
         hint = "لغز ذكاء"
         return self.build_question_flex(riddle["q"], hint)
     
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         normalized = Config.normalize(answer)
         return any(Config.normalize(a) == normalized for a in self.current_answer)
