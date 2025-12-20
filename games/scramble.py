@@ -4,31 +4,18 @@ from config import Config
 
 
 class ScrambleGame(BaseGame):
-    def __init__(self, db, theme: str = "light"):
+    def __init__(self, db, theme="light"):
         super().__init__(db, theme)
         self.game_name = "ترتيب"
+        self.supports_hint = True
+        self.supports_reveal = True
         
         self.levels = {
-            1: [
-                "قلم", "كتاب", "باب", "نافذه", "سرير", "كرسي", "طاوله", "مكتب",
-                "تفاح", "موز", "برتقال", "عنب", "شمس", "قمر", "نجم", "بحر"
-            ],
-            2: [
-                "مدرسه", "جامعه", "مكتبه", "مستشفى", "حديقه", "ملعب", "سوق", "مطعم",
-                "طائره", "سياره", "قطار", "حافله", "دراجه", "مركب", "باخره", "غواصه"
-            ],
-            3: [
-                "حاسوب", "تلفون", "تلفزيون", "ثلاجه", "غسالة", "مكيف", "مروحه", "سخان",
-                "اسد", "نمر", "فيل", "زرافه", "قرد", "حصان", "جمل", "غزال"
-            ],
-            4: [
-                "معلومات", "تكنولوجيا", "انترنت", "برمجه", "تطبيق", "موقع", "منصه", "نظام",
-                "مهندس", "طبيب", "معلم", "محامي", "صحفي", "كاتب", "رسام", "نحات"
-            ],
-            5: [
-                "استقلال", "ديمقراطيه", "جمهوريه", "ملكيه", "برلمان", "حكومه", "وزاره", "سفاره",
-                "مسؤوليه", "انضباط", "احترام", "تعاون", "صداقه", "امانه", "صدق", "وفاء"
-            ]
+            1: ["قلم", "كتاب", "باب", "نافذه", "سرير", "كرسي", "طاوله", "مكتب"],
+            2: ["مدرسه", "جامعه", "مكتبه", "مستشفى", "حديقه", "ملعب", "سوق", "مطعم"],
+            3: ["حاسوب", "تلفون", "تلفزيون", "ثلاجه", "غسالة", "مكيف", "مروحه", "سخان"],
+            4: ["معلومات", "تكنولوجيا", "انترنت", "برمجه", "تطبيق", "موقع", "منصه", "نظام"],
+            5: ["استقلال", "ديمقراطيه", "جمهوريه", "ملكيه", "برلمان", "حكومه", "وزاره", "سفاره"]
         }
         
         self.all_words = []
@@ -49,7 +36,7 @@ class ScrambleGame(BaseGame):
         else:
             return 5
 
-    def _scramble(self, word: str, difficulty: int) -> str:
+    def _scramble(self, word, difficulty):
         letters = list(word)
         attempts = difficulty * 3
         
@@ -78,5 +65,5 @@ class ScrambleGame(BaseGame):
         hint = f"المستوى {difficulty} - رتب الحروف"
         return self.build_question_flex(scrambled, hint)
 
-    def check_answer(self, answer: str) -> bool:
+    def check_answer(self, answer):
         return Config.normalize(answer) == Config.normalize(self.current_answer)
