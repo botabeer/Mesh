@@ -8,8 +8,14 @@ class Config:
     LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
     LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
-    PORT = int(os.getenv("PORT", 5000))
-    WORKERS = int(os.getenv("WORKERS", 4))
+    
+    # اصلاح: التعامل مع PORT الفارغ
+    _port = os.getenv("PORT", "5000").strip()
+    PORT = int(_port) if _port else 5000
+    
+    _workers = os.getenv("WORKERS", "4").strip()
+    WORKERS = int(_workers) if _workers else 4
+    
     ENV = os.getenv("ENV", "production")
     
     QUESTIONS_PER_GAME = 5
