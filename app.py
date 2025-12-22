@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# التحقق من المتغيرات الاساسية
+if not Config.LINE_CHANNEL_ACCESS_TOKEN or not Config.LINE_CHANNEL_SECRET:
+    logger.error("Missing LINE credentials")
+    raise ValueError("LINE_CHANNEL_ACCESS_TOKEN and LINE_CHANNEL_SECRET are required")
+
 line_config = Configuration(
     access_token=Config.LINE_CHANNEL_ACCESS_TOKEN
 )
@@ -341,6 +346,7 @@ def index():
     return "Bot Mesh - Running"
 
 if __name__ == "__main__":
+    logger.info(f"Starting on port {Config.PORT}")
     app.run(
         host="0.0.0.0",
         port=Config.PORT,
