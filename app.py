@@ -157,6 +157,36 @@ def process_message(user_id, text, reply_token):
         if db.has_active_game(user_id):
             game = db.get_game_progress(user_id)
 
+            # لعبة المافيا - معالجة خاصة
+            if getattr(game, "game_name", None) == "مافيا":
+                result = game_mgr.process_answer(user_id, text)
+                if result and isinstance(result, tuple):
+                    response, correct = result
+                    if response:
+                        reply_message(reply_token, response)
+                return
+
+            # لعبة اسرع - عرض التلميح التلقائي
+            if getattr(game, "game_name", None) == "اسرع":
+                hint = game.get_hint()
+                if hint:
+                    result, correct = game_mgr.process_answer(user_id, text)
+                    if correct:
+                        next_q = game_mgr.next_question(user_id)
+                        if next_q:
+                            reply_message(reply_token, next_q)
+                        else:
+                            score = getattr(game, 'score', 0)
+                            total = getattr(game, 'total_q', 5)
+                            reply_message(
+                                reply_token,
+                                UI.game_result("اسرع", score, total, user["theme"])
+                            )
+                    else:
+                        reply_message(reply_token, UI.text_message(game.last_error or "خطأ"))
+                    return
+
+            # التلميحات والاجابات
             if normalized in ["لمح", "تلميح"] and getattr(game, "supports_hint", False):
                 hint = game.get_hint()
                 if hint:
