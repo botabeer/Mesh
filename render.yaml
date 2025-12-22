@@ -2,30 +2,22 @@ services:
   - type: web
     name: bot-mesh-web
     env: python
+    region: oregon
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app -c gunicorn_config.py
     envVars:
       - key: PORT
-        value: 8080
+        generateValue: false
       - key: ENV
         value: production
+      - key: WORKERS
+        value: 2
       - key: LINE_CHANNEL_SECRET
         sync: false
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
       - key: DB_PATH
-        value: /opt/render/project/data/botmesh.db
+        value: /opt/render/project/src/botmesh.db
     healthCheckPath: /health
-    autoDeploy: true
-    
-  - type: worker
-    name: bot-mesh-scheduler
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python scheduler_worker.py
-    envVars:
-      - key: ENV
-        value: production
-      - key: DB_PATH
-        value: /opt/render/project/data/botmesh.db
     autoDeploy: true
