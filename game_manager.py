@@ -55,7 +55,7 @@ class GameManager:
         if not game:
             return None, False
 
-        # لعبة المافيا
+        # لعبة المافيا - معالجة خاصة
         if hasattr(game, 'check') and game.game_name == "مافيا":
             try:
                 result = game.check(answer, user_id)
