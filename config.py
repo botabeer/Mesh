@@ -9,11 +9,10 @@ class Config:
     LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
     
-    # اصلاح: التعامل مع PORT الفارغ
-    _port = os.getenv("PORT", "5000").strip()
+    _port = os.getenv('PORT', '5000').strip()
     PORT = int(_port) if _port else 5000
     
-    _workers = os.getenv("WORKERS", "4").strip()
+    _workers = os.getenv('WORKERS', '4').strip()
     WORKERS = int(_workers) if _workers else 4
     
     ENV = os.getenv("ENV", "production")
@@ -43,11 +42,7 @@ class Config:
         if not text:
             return ""
         text = re.sub(r"[\u064B-\u065F\u0670]", "", text)
-        replacements = {
-            "أ": "ا", "إ": "ا", "آ": "ا", 
-            "ى": "ي", "ة": "ه", 
-            "ؤ": "و", "ئ": "ي"
-        }
+        replacements = {"أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ة": "ه", "ؤ": "و", "ئ": "ي"}
         for old, new in replacements.items():
             text = text.replace(old, new)
         text = re.sub(r"[^\w\sء-ي]", "", text)
