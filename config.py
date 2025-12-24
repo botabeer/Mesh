@@ -9,8 +9,8 @@ class Config:
     LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
     DB_PATH = os.getenv("DB_PATH", "botmesh.db")
     
-    _port = os.getenv('PORT', '5000').strip()
-    PORT = int(_port) if _port else 5000
+    _port = os.getenv('PORT', '8080').strip()
+    PORT = int(_port) if _port else 8080
     
     _workers = os.getenv('WORKERS', '4').strip()
     WORKERS = int(_workers) if _workers else 4
