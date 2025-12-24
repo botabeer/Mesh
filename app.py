@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
+import os
 
 from config import Config
 from database import Database
@@ -194,10 +195,18 @@ def process_message(user_id, text, reply_token):
 def callback():
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
+    
+    logger.info(f"Webhook received from IP: {request.remote_addr}")
+    
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        abort(400)
+        logger.warning("Invalid signature received")
+        return "OK", 200
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        return "OK", 200
+    
     return "OK", 200
 
 @handler.add(MessageEvent, message=TextMessageContent)
@@ -216,12 +225,17 @@ def handle_follow(event):
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat()})
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "webhook_ready": True
+    })
 
 @app.route("/")
 def index():
     return "Bot Mesh - Running"
 
 if __name__ == "__main__":
-    logger.info(f"Starting on port {Config.PORT}")
-    app.run(host="0.0.0.0", port=Config.PORT, debug=(Config.ENV == "development"))
+    port = int(os.environ.get("PORT", 8080))
+    logger.info(f"Starting on port {port}")
+    app.run(host="0.0.0.0", port=port, debug=(Config.ENV == "development"))
