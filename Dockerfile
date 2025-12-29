@@ -1,35 +1,28 @@
+# Base image
 FROM python:3.11-slim
 
-# تثبيت dependencies للنظام
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    sqlite3 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
+# Set working directory
 WORKDIR /app
 
-# نسخ requirements أولاً (للاستفادة من cache)
+# Copy and install requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# نسخ الكود
+# Copy app source code
 COPY . .
 
-# إنشاء مجلد البيانات
-RUN mkdir -p data && chmod 755 data
+# Ensure games directory exists
+RUN mkdir -p games
 
-# Environment Variables
-ENV PORT=8080
-ENV DB_PATH=/app/data/botmesh.db
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+# Expose port
+EXPOSE 5000
 
-# Health Check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+# Set default environment
+ENV ENV_MODE=prod
+ENV PORT=5000
 
-EXPOSE 8080
+# Entrypoint script to choose Dev/Prod mode
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# تشغيل مع إشارات الإغلاق الصحيحة
-CMD ["gunicorn", "-c", "gunicorn_config.py", "app:app"]
+CMD ["/entrypoint.sh"]

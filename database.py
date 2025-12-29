@@ -1,274 +1,263 @@
 import sqlite3
 import logging
-import time
+import os
+from threading import Lock
 from datetime import datetime, timedelta
 from contextlib import contextmanager
-from threading import Lock
-from config import Config
 
 logger = logging.getLogger(__name__)
 
-class Database:
-    def __init__(self, db_path=None):
-        self.db_path = db_path or Config.DB_PATH
-        self._lock = Lock()
-        self._changing_names = {}
-        self._game_progress = {}
-        self._init_db()
-    
+# Smart DB path handling
+if os.getenv("RENDER"):
+    DB_PATH = "/opt/render/project/src/data/bot65.db"
+else:
+    DB_PATH = os.getenv("DB_PATH", "data/bot65.db")
+
+class DB:
+    _lock = Lock()
+    _connection_pool = []
+    _pool_size = 5
+    _initialized = False
+
+    @staticmethod
     @contextmanager
-    def _get_conn(self):
-        conn = sqlite3.connect(
-            self.db_path,
-            timeout=30,
-            check_same_thread=False,
-            isolation_level=None
-        )
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
-        conn.execute("PRAGMA cache_size=-64000")
-        conn.execute("PRAGMA temp_store=MEMORY")
-        conn.execute("PRAGMA mmap_size=268435456")
+    def conn():
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            try:
+                os.makedirs(db_dir, exist_ok=True)
+                logger.info(f"Created database directory: {db_dir}")
+            except Exception as e:
+                logger.error(f"Failed to create DB directory: {e}")
+        
+        c = None
+        with DB._lock:
+            if DB._connection_pool:
+                c = DB._connection_pool.pop()
+        
+        if c is None:
+            c = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
+            c.row_factory = sqlite3.Row
+            c.execute('PRAGMA journal_mode=WAL')
+            c.execute('PRAGMA synchronous=NORMAL')
+            c.execute('PRAGMA cache_size=10000')
+            c.execute('PRAGMA temp_store=MEMORY')
+        
         try:
-            yield conn
-        finally:
-            conn.close()
-    
-    def _init_db(self):
-        with self._get_conn() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS users (
+            yield c
+            c.commit()
+            with DB._lock:
+                if len(DB._connection_pool) < DB._pool_size:
+                    DB._connection_pool.append(c)
+                else:
+                    c.close()
+        except Exception as e:
+            c.rollback()
+            logger.error(f"Database error: {e}")
+            c.close()
+            raise
+
+    @staticmethod
+    def init():
+        try:
+            with DB.conn() as c:
+                # Users table
+                c.execute('''CREATE TABLE IF NOT EXISTS users (
                     user_id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     points INTEGER DEFAULT 0,
                     games INTEGER DEFAULT 0,
                     wins INTEGER DEFAULT 0,
                     theme TEXT DEFAULT 'light',
-                    last_active TIMESTAMP,
-                    created_at TIMESTAMP,
-                    last_reward TIMESTAMP,
-                    streak INTEGER DEFAULT 0,
-                    best_streak INTEGER DEFAULT 0,
-                    games_played TEXT DEFAULT '',
-                    withdrawn INTEGER DEFAULT 0
-                )
-            """)
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS achievements (
+                    activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )''')
+
+                # History table
+                c.execute('''CREATE TABLE IF NOT EXISTS history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id TEXT,
-                    achievement_id TEXT,
-                    unlocked_at TIMESTAMP,
-                    PRIMARY KEY (user_id, achievement_id)
-                )
-            """)
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC, wins DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_active ON users(last_active DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_withdrawn ON users(withdrawn)")
+                    game TEXT,
+                    points INTEGER,
+                    won INTEGER,
+                    played TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                )''')
+
+                # Indexes
+                c.execute('CREATE INDEX IF NOT EXISTS idx_points ON users(points DESC)')
+                c.execute('CREATE INDEX IF NOT EXISTS idx_activity ON users(activity DESC)')
+                c.execute('CREATE INDEX IF NOT EXISTS idx_history_user ON history(user_id)')
+                c.execute('CREATE INDEX IF NOT EXISTS idx_history_game ON history(game)')
+                c.execute('CREATE INDEX IF NOT EXISTS idx_history_played ON history(played DESC)')
+                c.execute('CREATE INDEX IF NOT EXISTS idx_user_game ON history(user_id, game)')
+                
+                c.execute('PRAGMA foreign_keys = ON')
+                
+                row = c.execute('SELECT COUNT(*) as count FROM users').fetchone()
+                user_count = row['count'] if row else 0
+
+            DB._initialized = True
+            logger.info(f"Database initialized at: {DB_PATH}")
+            logger.info(f"Registered users: {user_count}")
+        except Exception as e:
+            logger.error(f"Database init failed: {e}")
+            raise
     
-    def is_registered(self, user_id):
-        with self._get_conn() as conn:
-            row = conn.execute("SELECT withdrawn FROM users WHERE user_id=?", (user_id,)).fetchone()
-            if not row:
-                return False
-            return row['withdrawn'] == 0
+    @staticmethod
+    def get_user(user_id):
+        try:
+            with DB.conn() as c:
+                row = c.execute('SELECT * FROM users WHERE user_id = ?', (user_id,)).fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error fetching user {user_id}: {e}")
+            return None
     
-    def register_user(self, user_id, name):
-        now = datetime.now().isoformat()
-        with self._get_conn() as conn:
-            existing = conn.execute("SELECT withdrawn FROM users WHERE user_id=?", (user_id,)).fetchone()
-            if existing:
-                if existing['withdrawn'] == 1:
-                    conn.execute(
-                        "UPDATE users SET withdrawn=0, name=?, last_active=? WHERE user_id=?",
-                        (name, now, user_id)
-                    )
-            else:
-                conn.execute("""
-                    INSERT INTO users (user_id, name, last_active, created_at, last_reward)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (user_id, name, now, now, now))
-    
-    def withdraw_user(self, user_id):
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET withdrawn=1 WHERE user_id=?", (user_id,))
-    
-    def get_user(self, user_id):
-        with self._get_conn() as conn:
-            row = conn.execute(
-                "SELECT * FROM users WHERE user_id=? AND withdrawn=0",
-                (user_id,)
-            ).fetchone()
-            return dict(row) if row else None
-    
-    def update_activity(self, user_id):
-        now = datetime.now().isoformat()
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET last_active=? WHERE user_id=?", (now, user_id))
-    
-    def update_name(self, user_id, name):
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET name=? WHERE user_id=?", (name, user_id))
-    
-    def change_theme(self, user_id, theme):
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET theme=? WHERE user_id=?", (theme, user_id))
-    
-    def add_points(self, user_id, points):
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET points=points+? WHERE user_id=?", (points, user_id))
-    
-    def increment_games(self, user_id):
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET games=games+1 WHERE user_id=?", (user_id,))
-    
-    def increment_wins(self, user_id):
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET wins=wins+1, streak=streak+1 WHERE user_id=?", (user_id,))
-            user = self.get_user(user_id)
-            if user and user['streak'] > user['best_streak']:
-                conn.execute("UPDATE users SET best_streak=streak WHERE user_id=?", (user_id,))
-    
-    def reset_streak(self, user_id):
-        with self._get_conn() as conn:
-            conn.execute("UPDATE users SET streak=0 WHERE user_id=?", (user_id,))
-    
-    def add_game_played(self, user_id, game_name):
-        user = self.get_user(user_id)
-        if user:
-            played = user.get('games_played', '').split(',')
-            if game_name not in played:
-                played.append(game_name)
-                played_str = ','.join(filter(None, played))
-                with self._get_conn() as conn:
-                    conn.execute("UPDATE users SET games_played=? WHERE user_id=?", (played_str, user_id))
-    
-    def get_leaderboard(self, limit=10):
-        with self._get_conn() as conn:
-            rows = conn.execute("""
-                SELECT name, points, wins, games, streak, best_streak
-                FROM users WHERE withdrawn=0 ORDER BY points DESC, wins DESC LIMIT ?
-            """, (limit,)).fetchall()
-            return [dict(row) for row in rows]
-    
-    def can_claim_reward(self, user_id):
-        user = self.get_user(user_id)
-        if not user or not user.get('last_reward'):
+    @staticmethod
+    def register_user(user_id, name):
+        try:
+            with DB.conn() as c:
+                existing = c.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,)).fetchone()
+                
+                if existing:
+                    c.execute('''UPDATE users SET name = ?, activity = CURRENT_TIMESTAMP 
+                                WHERE user_id = ?''', (name, user_id))
+                    logger.info(f"Updated user: {user_id} - {name}")
+                else:
+                    c.execute('''INSERT INTO users (user_id, name) VALUES (?, ?)''',
+                             (user_id, name))
+                    logger.info(f"Registered new user: {user_id} - {name}")
             return True
-        last = datetime.fromisoformat(user['last_reward'])
-        return datetime.now() - last >= timedelta(hours=Config.DAILY_REWARD_HOURS)
+        except Exception as e:
+            logger.error(f"Error registering user {user_id}: {e}")
+            return False
     
-    def claim_reward(self, user_id):
-        if self.can_claim_reward(user_id):
-            now = datetime.now().isoformat()
-            with self._get_conn() as conn:
-                conn.execute(
-                    "UPDATE users SET points=points+?, last_reward=? WHERE user_id=?",
-                    (Config.DAILY_REWARD_POINTS, now, user_id)
-                )
+    @staticmethod
+    def update_activity(user_id):
+        try:
+            with DB.conn() as c:
+                c.execute('UPDATE users SET activity = CURRENT_TIMESTAMP WHERE user_id = ?', 
+                         (user_id,))
+        except Exception as e:
+            logger.error(f"Error updating activity {user_id}: {e}")
+    
+    @staticmethod
+    def add_points(user_id, points, won, game_name):
+        try:
+            with DB.conn() as c:
+                c.execute('''UPDATE users SET 
+                            points = points + ?,
+                            games = games + 1,
+                            wins = wins + ?,
+                            activity = CURRENT_TIMESTAMP
+                            WHERE user_id = ?''', 
+                         (points, 1 if won else 0, user_id))
+                
+                c.execute('''INSERT INTO history (user_id, game, points, won) 
+                            VALUES (?, ?, ?, ?)''',
+                         (user_id, game_name, points, 1 if won else 0))
+            
+            logger.info(f"Added points to {user_id}: {points} ({game_name})")
             return True
-        return False
+        except Exception as e:
+            logger.error(f"Error adding points to {user_id}: {e}")
+            return False
     
-    def unlock_achievement(self, user_id, achievement_id):
-        with self._get_conn() as conn:
-            existing = conn.execute(
-                "SELECT 1 FROM achievements WHERE user_id=? AND achievement_id=?",
-                (user_id, achievement_id)
-            ).fetchone()
-            if not existing:
-                now = datetime.now().isoformat()
-                conn.execute(
-                    "INSERT INTO achievements VALUES (?, ?, ?)",
-                    (user_id, achievement_id, now)
-                )
-                return True
-        return False
-    
-    def get_user_achievements(self, user_id):
-        with self._get_conn() as conn:
-            rows = conn.execute(
-                "SELECT achievement_id FROM achievements WHERE user_id=?",
-                (user_id,)
-            ).fetchall()
-            return [row[0] for row in rows]
-    
-    def check_achievements(self, user_id):
-        user = self.get_user(user_id)
-        if not user:
+    @staticmethod
+    def get_leaderboard(limit=20):
+        try:
+            with DB.conn() as c:
+                rows = c.execute('''SELECT user_id, name, points, games, wins 
+                                   FROM users 
+                                   WHERE points > 0
+                                   ORDER BY points DESC, wins DESC 
+                                   LIMIT ?''', 
+                                (limit,)).fetchall()
+                return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Error fetching leaderboard: {e}")
             return []
-        
-        unlocked = self.get_user_achievements(user_id)
-        new_achievements = []
-        
-        checks = [
-            ("first_game", user['games'] >= 1),
-            ("ten_games", user['games'] >= 10),
-            ("fifty_games", user['games'] >= 50),
-            ("hundred_games", user['games'] >= 100),
-            ("first_win", user['wins'] >= 1),
-            ("ten_wins", user['wins'] >= 10),
-            ("hundred_points", user['points'] >= 100),
-            ("streak_3", user['streak'] >= 3),
-            ("streak_5", user['streak'] >= 5),
-            ("all_games", len(user.get('games_played', '').split(',')) >= 12)
-        ]
-        
-        for achievement_id, condition in checks:
-            if condition and achievement_id not in unlocked:
-                if self.unlock_achievement(user_id, achievement_id):
-                    achievement = Config.ACHIEVEMENTS[achievement_id]
-                    self.add_points(user_id, achievement['points'])
-                    new_achievements.append(achievement)
-        
-        return new_achievements
     
-    def cleanup_inactive_users(self):
-        cutoff = (datetime.now() - timedelta(days=Config.INACTIVE_DAYS)).isoformat()
-        with self._get_conn() as conn:
-            result = conn.execute(
-                "DELETE FROM users WHERE last_active < ? AND withdrawn=0",
-                (cutoff,)
-            )
-            deleted = result.rowcount
-            conn.execute("DELETE FROM achievements WHERE user_id NOT IN (SELECT user_id FROM users)")
-            logger.info(f"Cleaned up {deleted} inactive users")
+    @staticmethod
+    def set_theme(user_id, theme):
+        try:
+            with DB.conn() as c:
+                c.execute('''UPDATE users SET theme = ?, activity = CURRENT_TIMESTAMP 
+                            WHERE user_id = ?''', 
+                         (theme, user_id))
+            logger.info(f"Updated theme for {user_id}: {theme}")
+            return True
+        except Exception as e:
+            logger.error(f"Error setting theme for {user_id}: {e}")
+            return False
     
-    def set_changing_name(self, user_id):
-        with self._lock:
-            self._changing_names[user_id] = time.time()
+    @staticmethod
+    def get_user_theme(user_id):
+        user = DB.get_user(user_id)
+        return user['theme'] if user else 'light'
     
-    def is_changing_name(self, user_id):
-        with self._lock:
-            return user_id in self._changing_names
+    @staticmethod
+    def cleanup_inactive_users(days=7):
+        """Remove users inactive for specified days"""
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            with DB.conn() as c:
+                # Delete history first (foreign key)
+                c.execute('''DELETE FROM history WHERE user_id IN (
+                            SELECT user_id FROM users 
+                            WHERE activity < ?
+                        )''', (cutoff_date,))
+                
+                # Delete inactive users
+                result = c.execute('''DELETE FROM users 
+                                     WHERE activity < ?''', 
+                                  (cutoff_date,))
+                deleted = result.rowcount
+            
+            logger.info(f"Cleaned up {deleted} inactive users (older than {days} days)")
+            return deleted
+        except Exception as e:
+            logger.error(f"Cleanup error: {e}")
+            return 0
     
-    def clear_changing_name(self, user_id):
-        with self._lock:
-            self._changing_names.pop(user_id, None)
+    @staticmethod
+    def backup_database():
+        """Create database backup"""
+        try:
+            import shutil
+            backup_path = DB_PATH + '.backup'
+            shutil.copy2(DB_PATH, backup_path)
+            logger.info(f"Backup created: {backup_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Backup failed: {e}")
+            return False
     
-    def set_game_progress(self, user_id, game_obj):
-        with self._lock:
-            self._game_progress[user_id] = game_obj
-    
-    def get_game_progress(self, user_id):
-        with self._lock:
-            return self._game_progress.get(user_id)
-    
-    def clear_game_progress(self, user_id):
-        with self._lock:
-            self._game_progress.pop(user_id, None)
-    
-    def has_active_game(self, user_id):
-        with self._lock:
-            return user_id in self._game_progress
-    
-    def cleanup_memory(self, timeout=1800):
-        now = time.time()
-        with self._lock:
-            old_count = len(self._changing_names)
-            self._changing_names = {
-                k: v for k, v in self._changing_names.items()
-                if now - v < timeout
-            }
-            cleaned = old_count - len(self._changing_names)
-            if cleaned > 0:
-                logger.info(f"Cleaned {cleaned} expired name change sessions")
+    @staticmethod
+    def get_stats():
+        """Get database statistics"""
+        try:
+            with DB.conn() as c:
+                users_count = c.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
+                games_count = c.execute('SELECT COUNT(*) as count FROM history').fetchone()['count']
+                total_points = c.execute('SELECT SUM(points) as total FROM users').fetchone()['total'] or 0
+                
+                # Get inactive users count (7 days)
+                cutoff = datetime.now() - timedelta(days=7)
+                inactive_count = c.execute(
+                    'SELECT COUNT(*) as count FROM users WHERE activity < ?', 
+                    (cutoff,)
+                ).fetchone()['count']
+                
+                return {
+                    'users': users_count,
+                    'games': games_count,
+                    'total_points': total_points,
+                    'inactive_users': inactive_count,
+                    'db_path': DB_PATH,
+                    'db_size': os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+                }
+        except Exception as e:
+            logger.error(f"Error getting stats: {e}")
+            return None
