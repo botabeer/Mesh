@@ -44,7 +44,7 @@ class UI:
     def welcome(name, registered, theme="light"):
         c = UI._c(theme)
         contents = [
-            {"type": "text", "text": "Bot 65", "size": "xxl", "weight": "bold", "align": "center", "color": c["primary"]},
+            {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "align": "center", "color": c["primary"]},
             {"type": "text", "text": f"مرحبا {name}", "size": "md", "align": "center", "color": c["text2"], "margin": "xs"},
             {"type": "separator", "margin": "lg", "color": c["border"]}
         ]
@@ -59,7 +59,7 @@ class UI:
                 "backgroundColor": c["card"], "paddingAll": "12px", "cornerRadius": "8px"
             })
         
-        # السطر الاول: تسجيل - انسحب
+        # First row: تسجيل - انسحب
         contents.append({
             "type": "box", "layout": "horizontal", "spacing": "xs", "margin": "lg",
             "contents": [
@@ -68,7 +68,7 @@ class UI:
             ]
         })
         
-        # السطر الثاني: نقاطي - الصدارة
+        # Second row: نقاطي - الصدارة
         contents.append({
             "type": "box", "layout": "horizontal", "spacing": "xs", "margin": "sm",
             "contents": [
@@ -77,7 +77,7 @@ class UI:
             ]
         })
         
-        # السطر الثالث: نص - العاب
+        # Third row: نص - العاب
         contents.append({
             "type": "box", "layout": "horizontal", "spacing": "xs", "margin": "sm",
             "contents": [
@@ -86,7 +86,7 @@ class UI:
             ]
         })
         
-        # السطر الرابع: ثيم - مساعدة
+        # Fourth row: ثيم - مساعدة
         contents.append({
             "type": "box", "layout": "horizontal", "spacing": "xs", "margin": "sm",
             "contents": [
@@ -97,7 +97,7 @@ class UI:
         
         contents.extend([
             {"type": "separator", "margin": "lg", "color": c["border"]},
-            {"type": "text", "text": "تم انشاء هذا البوت بواسطة عبير الدوسري 2025", "size": "xxs", "color": c["text3"], "align": "center", "margin": "md"}
+            {"type": "text", "text": "Bot Mesh 2025", "size": "xxs", "color": c["text3"], "align": "center", "margin": "md"}
         ])
         
         return {
@@ -131,7 +131,7 @@ class UI:
             }
         ]
         
-        # اضافة الازرار في صفوف (3 ازرار في كل صف)
+        # Add buttons in rows (3 buttons per row)
         for i in range(0, len(commands), 3):
             row_buttons = []
             for label, text in commands[i:i+3]:
@@ -145,7 +145,7 @@ class UI:
                 "contents": row_buttons
             })
         
-        # زر الرجوع
+        # Back button
         contents.extend([
             {
                 "type": "separator",
@@ -177,7 +177,7 @@ class UI:
         c = UI._c(theme)
         sections = [
             {"title": "الاوامر الاساسية", "items": ["بداية - القائمة الرئيسية", "تسجيل - تسجيل اسمك", "نقاطي - احصائياتك", "الصدارة - قائمة المتصدرين", "ثيم - تغيير المظهر", "انسحب - الخروج من اللعبة"]},
-            {"title": "اوامر النصوص", "items": ["نص - قائمة النصوص", "سؤال - اسئلة متنوعة", "تحدي - تحديات", "اعتراف - اعترافات", "منشن - منشن اصدقائك", "اقتباس - اقتباسات ملهمة", "نصيحة - نصائح يومية", "مجهول - رسائل مجهولة", "خاص - رسائل خاصة", "شعر - قصائد", "موقف - مواقف"]},
+            {"title": "اوامر النصوص", "items": ["نص - قائمة النصوص", "سؤال - اسئلة متنوعة", "تحدي - تحديات", "اعتراف - اعترافات", "منشن - منشن اصدقائك", "اقتباس - اقتباسات ملهمة", "نصيحة - نصائح يومية", "مجهول - رسائل مجهولة", "خاص - رسائل خاصة", "موقف - مواقف"]},
             {"title": "اوامر اللعب", "items": ["لمح - تلميح للاجابة", "جاوب - اظهار الجواب", "ايقاف - ايقاف اللعبة", "انسحب - الانسحاب من الدورة"]},
             {"title": "ملاحظات مهمة", "items": ["يجب التسجيل قبل اللعب", "النقاط تحفظ تلقائيا", "يمكن تغيير الثيم بين فاتح وداكن", "الالعاب متعددة اللاعبين في المجموعات"]}
         ]
@@ -204,7 +204,6 @@ class UI:
     @staticmethod
     def games_menu(theme="light"):
         c = UI._c(theme)
-        # بدون روليت
         games = [
             ("فئه", "فئه"), ("اسرع", "اسرع"), ("توافق", "توافق"),
             ("اغنيه", "اغنيه"), ("ضد", "ضد"), ("سلسله", "سلسله"),
