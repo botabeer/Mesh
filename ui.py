@@ -6,13 +6,13 @@ class UI:
     THEMES = {
         "light": {
             "primary": "#2C3E50", "text": "#34495E", "text2": "#7F8C8D",
-            "text3": "#95A5A6", "bg": "#FFFFFF", "card": "#F8F9FA",
+            "text3": "#95A5A6", "bg": "#FFFFFF", "card": "#FFFFFF",
             "border": "#E9ECEF", "button": "#F2F2F7", "success": "#27AE60",
             "warning": "#F39C12", "error": "#E74C3C", "accent": "#3498DB"
         },
         "dark": {
             "primary": "#ECF0F1", "text": "#BDC3C7", "text2": "#95A5A6",
-            "text3": "#7F8C8D", "bg": "#1C2833", "card": "#273746",
+            "text3": "#7F8C8D", "bg": "#1C2833", "card": "#1C2833",
             "border": "#34495E", "button": "#F2F2F7", "success": "#27AE60",
             "warning": "#F39C12", "error": "#E74C3C", "accent": "#3498DB"
         }
