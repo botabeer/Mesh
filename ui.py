@@ -41,10 +41,10 @@ class UI:
     @staticmethod
     def _c(theme):
         """الحصول على ألوان الثيم"""
-        return UI.THEMES.get(theme, UI.THEMES["light"])
+        return UI.THEMES.get(theme, UI.THEMES["dark"])
 
     @staticmethod
-    def _btn(label, text, theme="light", style="primary"):
+    def _btn(label, text, theme="dark", style="primary"):
         """إنشاء زر"""
         c = UI._c(theme)
         
@@ -93,7 +93,7 @@ class UI:
         )
 
     @staticmethod
-    def welcome(name, registered, theme="light"):
+    def welcome(name, registered, theme="dark"):
         """شاشة الترحيب"""
         c = UI._c(theme)
         
@@ -218,7 +218,7 @@ class UI:
         }
 
     @staticmethod
-    def text_commands_menu(theme="light"):
+    def text_commands_menu(theme="dark"):
         """قائمة الأوامر النصية"""
         c = UI._c(theme)
         
@@ -287,7 +287,7 @@ class UI:
         }
 
     @staticmethod
-    def games_menu(theme="light"):
+    def games_menu(theme="dark"):
         """قائمة الألعاب"""
         c = UI._c(theme)
         
@@ -366,7 +366,7 @@ class UI:
         }
 
     @staticmethod
-    def help_card(theme="light"):
+    def help_card(theme="dark"):
         """بطاقة المساعدة"""
         c = UI._c(theme)
         
@@ -476,7 +476,7 @@ class UI:
         }
 
     @staticmethod
-    def stats(user, theme="light"):
+    def stats(user, theme="dark"):
         """بطاقة الاحصائيات"""
         c = UI._c(theme)
         win_rate = int((user['wins'] / user['games'] * 100)) if user['games'] > 0 else 0
@@ -626,7 +626,7 @@ class UI:
         }
 
     @staticmethod
-    def leaderboard(leaders, theme="light"):
+    def leaderboard(leaders, theme="dark"):
         """لوحة المتصدرين"""
         c = UI._c(theme)
         
