@@ -1,52 +1,63 @@
 import random
-from games.base import BaseGame
-from config import Config
+from games.base_game import BaseGame
 
-
-class LettersWordsGame(BaseGame):
-    def __init__(self, db, theme="light"):
-        super().__init__(db, theme)
+class LettersGame(BaseGame):
+    def __init__(self, line_bot_api, difficulty=3, theme='light'):
+        super().__init__(line_bot_api, difficulty=difficulty, theme=theme)
         self.game_name = "تكوين"
-        self.supports_hint = True
-        self.supports_reveal = True
-        
-        self.letter_sets = [
-            ["ق", "ل", "م", "ع", "ر", "ب"],
-            ["س", "ا", "ر", "ه", "ي", "م"],
-            ["ك", "ت", "ا", "ب", "م", "ل"],
-            ["د", "ر", "س", "ه", "م", "ا"],
-            ["ح", "د", "ي", "ق", "ه", "ر"]
-        ]
-        random.shuffle(self.letter_sets)
-        
+
+        # كل الأحرف العربية الممكنة للاختيار العشوائي
+        self.arabic_letters = list("ابتثجحخدذرزسشصضطظعغفقكلمنهويء")
+        self.current_set = None
         self.found_words = set()
-        self.required = 3
-        self.current_letters = None
+        self.required_words = 3
+        self.current_question = 0
+
+    def generate_random_set(self, size=6):
+        """توليد مجموعة أحرف عشوائية"""
+        return random.sample(self.arabic_letters, size)
 
     def get_question(self):
-        self.current_letters = self.letter_sets[self.current_q % len(self.letter_sets)]
-        self.current_answer = self.current_letters
+        # توليد مجموعة جديدة لكل سؤال
+        self.current_set = self.generate_random_set()
         self.found_words.clear()
-        
-        letters_display = ' - '.join(self.current_letters)
-        hint = f"السؤال {self.current_q + 1}/{self.total_q} - مطلوب {self.required} كلمات"
-        question = f"كون كلمات من هذه الاحرف:\n\n{letters_display}\n\nاستخدم كل حرف مرة واحدة فقط"
-        
-        return self.build_question_flex(question, hint)
+        letters_display = " ".join(self.current_set)
+        return self.build_question_message(
+            f"كون كلمات من:\n{letters_display}",
+            f"مطلوب {self.required_words} كلمات",
+        )
 
-    def check_answer(self, answer):
-        normalized = Config.normalize(answer)
-        
-        if len(normalized) < 2 or normalized in self.found_words:
-            return False
-        
-        available = [Config.normalize(letter) for letter in self.current_letters]
-        
-        for char in normalized:
-            if char in available:
-                available.remove(char)
-            else:
-                return False
-        
-        self.found_words.add(normalized)
-        return len(self.found_words) >= self.required
+    def check_answer(self, user_answer, user_id, display_name):
+        if not self.game_active:
+            return None
+
+        normalized = self.normalize_text(user_answer)
+
+        if normalized in ["ايقاف", "ايقاف"]:
+            return self.handle_withdrawal(user_id, display_name)
+
+        # التحقق أن كل أحرف الكلمة موجودة في المجموعة الحالية
+        if all(c in self.current_set for c in normalized):
+            if normalized not in self.found_words:
+                self.found_words.add(normalized)
+                points = 1
+                self.scores.setdefault(user_id, {"name": display_name, "score": 0})
+                self.scores[user_id]["score"] += points
+
+                # إذا اكتملت الكلمات المطلوبة للانتقال للسؤال التالي
+                if len(self.found_words) >= self.required_words:
+                    self.current_question += 1
+                    self.answered_users.clear()
+                    self.found_words.clear()
+                    return {"response": self.get_question(), "points": points, "next_question": True}
+
+                remaining = self.required_words - len(self.found_words)
+                return {
+                    "response": self.build_text_message(f"صحيح تبقى {remaining}"),
+                    "points": points,
+                }
+
+        return {
+            "response": self.build_text_message("الكلمة غير صحيحة أو مستخدمة مسبقًا"),
+            "points": 0,
+        }
