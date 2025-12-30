@@ -1,14 +1,15 @@
 services:
   - type: web
-    name: bot-mesh
+    name: bot-65
     env: python
     region: oregon
     plan: free
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 30
     healthCheckPath: /health
+    # إضافة قرص دائم لحفظ قاعدة البيانات
     disk:
-      name: botmesh-data
+      name: bot65-data
       mountPath: /opt/render/project/src/data
       sizeGB: 1
     envVars:
@@ -17,6 +18,6 @@ services:
       - key: LINE_CHANNEL_SECRET
         sync: false
       - key: DB_PATH
-        value: /opt/render/project/src/data/botmesh.db
+        value: /opt/render/project/src/data/bot65.db
       - key: PYTHON_VERSION
         value: 3.11.7
