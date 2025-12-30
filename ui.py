@@ -97,7 +97,7 @@ class UI:
         
         contents.extend([
             {"type": "separator", "margin": "lg", "color": c["border"]},
-            {"type": "text", "text": "Bot Mesh 2025", "size": "xxs", "color": c["text3"], "align": "center", "margin": "md"}
+            {"type": "text", "text": "تم إنشاء هذا البوت بواسطة عبير الدوسري @ 2025", "size": "xxs", "color": c["text3"], "align": "center", "margin": "md"}
         ])
         
         return {
