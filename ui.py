@@ -44,7 +44,7 @@ class UI:
     def welcome(name, registered, theme="light"):
         c = UI._c(theme)
         contents = [
-            {"type": "text", "text": "Bot 65", "size": "xxl", "weight": "bold", "align": "center", "color": c["primary"]},
+            {"type": "text", "text": "Bot Mesh", "size": "xxl", "weight": "bold", "align": "center", "color": c["primary"]},
             {"type": "text", "text": f"مرحبا {name}", "size": "md", "align": "center", "color": c["text2"], "margin": "xs"},
             {"type": "separator", "margin": "lg", "color": c["border"]}
         ]
