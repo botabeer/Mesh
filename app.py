@@ -276,7 +276,7 @@ def create_welcome_message(user, theme):
     name = user['name'] if user else 'مستخدم'
     is_registered = bool(user)
     msg = FlexMessage(
-        alt_text="Bot 65",
+        alt_text="Bot Mesh",
         contents=FlexContainer.from_dict(
             UI.welcome(name, is_registered, theme)
         )
@@ -346,7 +346,7 @@ def health():
 
 @app.route('/')
 def index():
-    return "Bot 65 - Running", 200
+    return "Bot Mesh - Running", 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
