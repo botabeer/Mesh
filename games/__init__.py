@@ -12,16 +12,7 @@ from games.category_letter_game import CategoryGame
 from games.letter_game import LetterGame
 
 __all__ = [
-    'CategoryGame',
-    'FastGame',
-    'CompatibilityGame',
-    'SongGame',
-    'OppositeGame',
-    'ChainGame',
-    'LettersGame',
-    'RiddleGame',
-    'ScrambleGame',
-    'MafiaGame',
-    'WordColorGame',
-    'LetterGame'
+    'CategoryGame', 'FastGame', 'CompatibilityGame', 'SongGame',
+    'OppositeGame', 'ChainGame', 'LettersGame', 'RiddleGame',
+    'ScrambleGame', 'MafiaGame', 'WordColorGame', 'LetterGame'
 ]
